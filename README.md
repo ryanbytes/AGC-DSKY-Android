@@ -2,8 +2,6 @@
 
 Android Apollo Block II DSKY clock/screensaver project, currently at **v6**.
 
-![v6 DSKY preview](docs/agc_v6_preview.png)
-
 ## Current v6 build
 
 The APK currently being tested is a lightweight native Android/WebView shell with a locally bundled DSKY face. It is **not yet the full offline yaAGC CPU emulator**.
@@ -57,15 +55,15 @@ When a real AGC core is integrated, emulator mode should use authentic AGC COMP 
 - `app/src/main/assets/index.html` — DSKY structure and fixed EL SVG coordinate system.
 - `app/src/main/assets/style.css` — physical faceplate, annunciators, keys, display treatment.
 - `app/src/main/assets/app.js` — DSKY input, clock, lamp test, dimming, network COMP ACTY, dream pixel drift.
-- `MainActivity.java` — immersive interactive WebView shell.
-- `AgcDreamService.java` — Android screen saver shell.
-- `NetClient.java` — aggregate traffic bridge.
+- `app/src/main/java/org/apollo/agcdsky/MainActivity.java` — immersive interactive WebView shell.
+- `app/src/main/java/org/apollo/agcdsky/AgcDreamService.java` — Android screen saver shell.
+- `app/src/main/java/org/apollo/agcdsky/NetClient.java` — aggregate traffic bridge.
 - `docs/IMPLEMENTATION_NOTES.md` — design/build history and remaining work.
 - `docs/REFERENCES.md` — Apollo/VirtualAGC/CuriousMarc references used during development.
 
 ## Android Studio build
 
-The repository now includes a conventional Android Gradle project for continued development:
+The repository includes a conventional Android Gradle project for continued development:
 
 - JDK 17
 - compile/target SDK 37
