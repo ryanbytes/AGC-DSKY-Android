@@ -7,8 +7,11 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
 /**
  * Serves packaged assets from a synthetic HTTPS origin so WebAssembly and rope
@@ -52,7 +55,14 @@ public final class NetClient extends WebViewClient {
     }
 
     private static WebResourceResponse notFound() {
-        return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found", null, null);
+        byte[] body = "Not Found".getBytes(StandardCharsets.UTF_8);
+        return new WebResourceResponse(
+                "text/plain",
+                "UTF-8",
+                404,
+                "Not Found",
+                Collections.emptyMap(),
+                new ByteArrayInputStream(body));
     }
 
     private static String encoding(String path) {
