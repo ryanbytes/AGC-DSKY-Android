@@ -12,7 +12,15 @@ Ship an Android DSKY that keeps the phone clock / DreamService mode but also con
 - DSKY face, keys, annunciators, and fixed-coordinate SVG EL display exist.
 - Phone clock mode is implemented as V16 N65.
 - V35 lamp test is implemented in clock mode.
-- Dim mode and DreamService brightness/pixel drift are implemented.
+- Normal-app DIM is independent from Dream/screensaver brightness.
+- DreamService is display-only and retains pixel drift for burn-in mitigation.
+- Dream brightness now has three persistent modes: `DIM`, `BRIGHT`, and `SOLAR`.
+- `SOLAR` requests coarse/fine device location only when first selected, stores latitude/longitude locally, then computes sunrise/sunset offline.
+- Solar mode uses a smooth one-hour transition centered on local sunrise and sunset. EL brightness, Android Dream window brightness, and tick volume all follow the same transition factor.
+- Night solar tick volume bottoms at roughly 8% rather than abruptly muting; the master TICK option remains independent.
+- Display-only mode hides the keypad, app controls, hint, and lower fasteners. A hidden long hold exits display-only in the normal app; DreamService remains non-interactive.
+- EL rendering now uses a brighter mint-green phosphor core with restrained glass bloom rather than an LED-like halo.
+- Clock-mode relay sound now follows Block II latching-relay state changes: five relay bits per character plus the row discrete/sign bit, not one invented relay per seven-segment stroke.
 - EL digit segments were redrawn in commit `a70c2437d69729b6217d5cfa1cbbb57e7be04ad6`.
 - `AGENTS.md` contains durable handoff/rules for other coding agents (`747f693`).
 - webAGC is pinned as `vendor/webAGC` at upstream commit `0575ea7a1231e3948bae7d2c22a6ac146da0c38d` (`31a9ebd`).
@@ -26,6 +34,44 @@ Ship an Android DSKY that keeps the phone clock / DreamService mode but also con
 - Third-party/core provenance and protocol references are current (`754c2dc`, `fda2fd1`).
 - README and implementation notes describe v0.7 rather than the obsolete network-light architecture (`ba88a43`, `9273d7b`).
 - No GitHub Actions build workflow should be added. Builds are local/manual.
+
+## Prototype-fidelity pass
+
+### Clock display servicing
+
+Clock mode is synthetic, but it now imitates the real Block II DSKY electrical organization instead of acting like an LCD clock.
+
+- No hundredths animation.
+- The face is not repainted continuously.
+- Dirty DSKY relay rows are serviced individually at about 120 ms spacing.
+- The visible EL update follows the relay operation after a short settle interval.
+- Each decimal character is represented by the actual five-bit DSKY relay code used by channel `010`.
+- Audible clicks are based on the Hamming delta of those relay states, so a digit transition can produce several tightly grouped mechanical clicks.
+- The seven visible EL strokes are the contact-matrix result of the five relay bits; they are not treated as seven independent relays.
+
+AGC mode does not use the synthetic clock scheduler. It continues to follow actual yaAGC channel `010` words.
+
+### Dream brightness modes
+
+The hidden control cycles:
+
+1. `DREAM DIM` — fixed low EL level and low Android window brightness.
+2. `DREAM BRIGHT` — full EL level and high window brightness for daytime charging.
+3. `DREAM SOLAR` — local astronomical sunrise/sunset control.
+
+Solar setup/behavior:
+
+- MainActivity enables WebView geolocation and requests Android location permission only when `navigator.geolocation` is actually invoked by selecting SOLAR.
+- Coordinates are retained only in local DOM storage by the frontend.
+- After location is saved, sunrise/sunset computation is offline.
+- Solar event calculation uses the standard apparent sunrise/sunset altitude of `-0.833°`.
+- A smooth transition runs from 30 minutes before through 30 minutes after each sunrise/sunset.
+- Dream window brightness tracks approximately `0.05 .. 0.85` across that factor.
+- EL face brightness tracks approximately `0.20 .. 1.00` with saturation also restored toward daytime values.
+- Tick amplitude tracks approximately `0.08 .. 1.00` on the same curve.
+- Solar state is recomputed once per minute while DreamService is active.
+
+The Wabash-area sanity check for 2026-08-22 produced approximately 07:01 sunrise and 20:33 sunset, within a few minutes of published local values. This is a calculation check only, not Android runtime verification.
 
 ## Confirmed authentic mappings now implemented
 
@@ -144,8 +190,10 @@ git submodule update --init --recursive
 - Channel `011` COMP ACTY/UPLINK bit masks were rechecked against VirtualAGC/webAGC.
 - Normal key versus PRO handling was rechecked against webAGC's DSKY event path and the VirtualAGC protocol documentation.
 - Channel `0163` VN-flash and EL-off state now has corresponding CSS instead of being a no-op UI class.
+- Solar sunrise/sunset math was sanity-checked against published local times for 2026-08-22.
+- Current committed JavaScript was manually/static reviewed after the solar-mode update; this does not replace execution in Android WebView.
 
-These checks do not substitute for running the WASM in Android.
+These checks do not substitute for running the WASM and Dream/permission paths in Android.
 
 ## Verification status
 
@@ -153,12 +201,14 @@ These checks do not substitute for running the WASM in Android.
 
 The source path from Android WebView -> local HTTPS asset interception -> `yaAGC.wasm` -> minimal WASI -> `Luminary099.bin` -> CPU stepping -> packet drain is implemented, but has **not yet been executed on an Android device/emulator in this environment**.
 
-Therefore do **not** yet claim that the onboard AGC is operational.
+The latest native source also adds runtime location permission and a JavaScript Dream brightness bridge. Those changes require a real native rebuild; do not represent them as verified merely because older repacked APK shells install.
+
+Therefore do **not** yet claim that the onboard AGC, SOLAR Dream mode, or native brightness bridge is operational until a current native APK is built and run.
 
 ### Verification gates still required
 
 - [ ] Clean recursive clone contains `vendor/webAGC/src/yaAGC.wasm` and `vendor/webAGC/demo/agc/Luminary099.bin`.
-- [ ] Local Gradle build succeeds with the v0.7 asset source sets.
+- [ ] Local Gradle build succeeds with the current native source and v0.7 asset source sets.
 - [ ] Main page loads from the synthetic HTTPS asset origin.
 - [ ] `fetch('yaAGC.wasm')` returns the packaged WASM offline.
 - [ ] Minimal WASI shim satisfies the pinned yaAGC binary at instantiation/runtime.
@@ -168,6 +218,13 @@ Therefore do **not** yet claim that the onboard AGC is operational.
 - [ ] COMP ACTY visibly follows channel `011`, bit 2.
 - [ ] At least one real DSKY keypress through channel `015` produces the expected Pinball response.
 - [ ] PRO through channel `032`, bit 14 is accepted.
+- [ ] DISPLAY mode crops/scales the upper DSKY correctly on portrait and landscape phones.
+- [ ] DreamService is always display-only and remains non-interactive.
+- [ ] `DREAM DIM` sets the expected low EL and Android-window brightness.
+- [ ] `DREAM BRIGHT` visibly reaches daytime charging brightness.
+- [ ] First selection of `DREAM SOLAR` requests location permission and persists coordinates locally.
+- [ ] `DREAM SOLAR` changes brightness/tick amplitude around computed sunrise/sunset as designed.
+- [ ] TICK remains independently switchable in all Dream brightness modes.
 - [ ] APK installs and runs on an Android device/emulator.
 
 ## Known risks / likely first debugging points
@@ -175,13 +232,21 @@ Therefore do **not** yet claim that the onboard AGC is operational.
 1. **Minimal WASI semantics.** The import list is known, but libc may expect more detailed `fd_fdstat_get` behavior than the current shim provides. If instantiation succeeds but an exported call traps, inspect the trap before adding a large WASI dependency.
 2. **WebView asset interception.** Confirm main-frame and subresource requests are intercepted by `NetClient` under the synthetic HTTPS host.
 3. **Submodule checkout.** A non-recursive clone will not contain the WASM/rope binaries and the Android build/runtime assets will be incomplete.
-4. **Display relay edge cases.** Verify sign clearing, blank relay codes, VN flashing polarity, and EL-off behavior against real yaAGC output.
+4. **Display relay edge cases.** Verify sign clearing, blank relay codes, VN flashing polarity, EL-off behavior, and click counting against real yaAGC output/hardware references.
 5. **CPU timing.** The 60 Hz scheduling approach mirrors webAGC but Android WebView throttling/background behavior may require compensation.
+6. **Geolocation permission.** GrapheneOS/Android can deny or grant approximate location; SOLAR must degrade to DIM cleanly when location is unavailable.
+7. **Dream brightness bridge.** Verify WebView JavaScript interface calls continue while DreamService is active and that the system does not override `screenBrightness`.
+8. **Polar locations.** If the standard sunrise/sunset event does not occur on a date, the current SOLAR fallback is night/dim. A future refinement may choose a solar-elevation model for polar day/night behavior.
 
 ## Build/signing note
 
 The original private v5/v6 signing key is not committed. A locally generated replacement key cannot update an APK signed by that original key; Android requires matching signatures for in-place updates. Never commit private signing material.
 
+Older hand-repacked APKs do not include the latest native location-permission and DreamBridge code. Do not label one of those as the current SOLAR build.
+
 ## Next concrete checkpoint
 
-Perform a real local v0.7 build from a recursive checkout, run it on Android, capture the first yaAGC initialization/output behavior, and fix only the concrete runtime failures observed. The first success criterion is not a polished UI: it is `Luminary099` executing and producing authentic channel packets inside the APK.
+Perform a real local native build from a recursive checkout, run it on Android, and verify both paths:
+
+1. `Luminary099` executes and produces authentic channel packets inside the APK.
+2. DreamService DIM/BRIGHT/SOLAR, display-only crop, location permission, solar brightness curve, and tick-volume taper work on an actual phone.
