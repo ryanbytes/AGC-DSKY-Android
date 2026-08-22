@@ -6,7 +6,7 @@ import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-/** Charging/idle Android screen saver that starts directly in clock + dim mode. */
+/** Charging/idle Android screen saver that starts directly in display-only clock + dim mode. */
 public final class AgcDreamService extends DreamService {
     private WebView webView;
 
@@ -32,10 +32,11 @@ public final class AgcDreamService extends DreamService {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
         webView.setWebViewClient(new NetClient(this));
         setContentView(webView);
         webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX
-                + "index.html?dream=1&clock=1&dim=1");
+                + "index.html?dream=1&clock=1&dim=1&display=1");
     }
 
     @Override
