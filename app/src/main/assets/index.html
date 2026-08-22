@@ -29,9 +29,14 @@
          acquire independent CSS aspect ratios. -->
     <svg id="elpanel" class="elpanel" viewBox="0 0 106 190" preserveAspectRatio="none" aria-label="DSKY electroluminescent display">
       <defs>
-        <filter id="elSoft" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="0.18" result="b"/>
+        <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
+          <feGaussianBlur stdDeviation="0.24" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="elGlow" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.05" result="halo"/>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.30" result="near"/>
+          <feMerge><feMergeNode in="halo"/><feMergeNode in="near"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
       <g class="el-static" aria-hidden="true">
@@ -79,7 +84,7 @@
     <i class="fastener f1"></i><i class="fastener f2"></i><i class="fastener f3"></i><i class="fastener f4"></i>
   </section>
   <div class="app-controls" id="controls">
-    <button id="dim">DIM</button><button id="sound">SOUND ON</button><button id="agc">AGC</button><span id="mode">V16 N65 · PHONE CLOCK</span>
+    <button id="dim">DIM</button><button id="sound">TICK ON</button><button id="display">DISPLAY</button><button id="agc">AGC</button><span id="mode">V16 N65 · PHONE CLOCK</span>
   </div>
   <div class="hint" id="hint">Hold panel for controls</div>
 </main>
