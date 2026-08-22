@@ -14,15 +14,17 @@ Ship an Android DSKY that keeps the phone clock / DreamService mode but also con
 - V35 lamp test is implemented in clock mode.
 - Dim mode and DreamService brightness/pixel drift are implemented.
 - EL digit segments were redrawn in commit `a70c2437d69729b6217d5cfa1cbbb57e7be04ad6`.
-- `AGENTS.md` now contains durable handoff/rules for other coding agents (`747f693`).
+- `AGENTS.md` contains durable handoff/rules for other coding agents (`747f693`).
 - webAGC is pinned as `vendor/webAGC` at upstream commit `0575ea7a1231e3948bae7d2c22a6ac146da0c38d` (`31a9ebd`).
-- Gradle v0.7 source sets now package the pinned `yaAGC.wasm` and Apollo 11 rope files when the repository is cloned recursively (`05e6786`).
-- The native `TrafficStats` / `agcnet://poll` COMP ACTY surrogate has been removed. `NetClient` now serves packaged assets from a synthetic local HTTPS origin (`61bfd05`).
+- Gradle v0.7 source sets package the pinned `yaAGC.wasm` and Apollo 11 rope files when the repository is cloned recursively (`05e6786`).
+- The native `TrafficStats` / `agcnet://poll` COMP ACTY surrogate has been removed. `NetClient` serves packaged assets from a synthetic local HTTPS origin (`61bfd05`) and its error responses were hardened in `4609c89`.
 - MainActivity and DreamService both use the synthetic HTTPS asset origin (`4ddd97f`, `6d9f657`).
 - `agc-core.js` implements an offline yaAGC embedding wrapper with a minimal WASI shim, rope loading, CPU stepping, packet I/O, input-channel masks, normal DSKY keys, and PRO (`75cc247`).
 - The UI has an onboard AGC/CLOCK mode control (`c1fb49d`).
-- `app.js` now decodes authentic AGC DSKY I/O and sends authentic Pinball key codes (`60749ac`).
-- Third-party/core provenance is updated (`754c2dc`).
+- `app.js` decodes authentic AGC DSKY I/O and sends authentic Pinball key codes (`60749ac`).
+- yaAGC VERB/NOUN flashing and EL-off states now have visible CSS behavior (`408aaaf`, `d4e72f8`).
+- Third-party/core provenance and protocol references are current (`754c2dc`, `fda2fd1`).
+- README and implementation notes describe v0.7 rather than the obsolete network-light architecture (`ba88a43`, `9273d7b`).
 - No GitHub Actions build workflow should be added. Builds are local/manual.
 
 ## Confirmed authentic mappings now implemented
@@ -55,6 +57,8 @@ Implemented relay selectors:
 
 The 5-bit digit relay-code table is taken from Apollo/VirtualAGC DSKY handling, not a decimal assumption.
 
+A source consistency pass rechecked the register mapping against VirtualAGC `convertNasspLog.py`; notably relay 8 correctly takes R1 digit 1 from the right-hand (`D`) 5-bit field.
+
 ### Other DSKY lamps
 
 - Channel `011`: COMP ACTY and UPLINK ACTY.
@@ -81,6 +85,8 @@ The embedded peripheral sets yaAGC U-bit masks so it only owns the DSKY key bits
 
 - channel `015` mask `00037`
 - channel `032` mask `20000`
+
+The U-bit behavior was cross-checked against the VirtualAGC developer protocol. webAGC's frontend behavior was also checked: normal key events are passed to `keyPress`, while PRO is delivered as a separate pressed/released state.
 
 ## Core/runtime implementation
 
@@ -130,6 +136,16 @@ or, for an existing checkout:
 ```bash
 git submodule update --init --recursive
 ```
+
+## Static consistency checks completed
+
+- Repository search finds no remaining `TrafficStats`, `agcnet`, `phoneTraffic`, or old `realagc` references.
+- Channel `010` register-relay placement was rechecked against VirtualAGC's own playback generator.
+- Channel `011` COMP ACTY/UPLINK bit masks were rechecked against VirtualAGC/webAGC.
+- Normal key versus PRO handling was rechecked against webAGC's DSKY event path and the VirtualAGC protocol documentation.
+- Channel `0163` VN-flash and EL-off state now has corresponding CSS instead of being a no-op UI class.
+
+These checks do not substitute for running the WASM in Android.
 
 ## Verification status
 
