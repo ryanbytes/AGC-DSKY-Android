@@ -10,8 +10,20 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 6
-        versionName '0.6'
+        versionCode 7
+        versionName '0.7'
+    }
+
+    // The pinned webAGC submodule supplies yaAGC.wasm plus the Apollo 11
+    // Luminary099/Comanche055 rope images. Clone with --recurse-submodules.
+    sourceSets {
+        main {
+            assets.srcDirs = [
+                'src/main/assets',
+                '../vendor/webAGC/src',
+                '../vendor/webAGC/demo/agc'
+            ]
+        }
     }
 
     compileOptions {
