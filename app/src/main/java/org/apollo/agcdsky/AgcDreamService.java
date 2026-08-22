@@ -32,9 +32,10 @@ public final class AgcDreamService extends DreamService {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
-        webView.setWebViewClient(new NetClient());
+        webView.setWebViewClient(new NetClient(this));
         setContentView(webView);
-        webView.loadUrl("file:///android_asset/index.html?dream=1&clock=1&dim=1");
+        webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX
+                + "index.html?dream=1&clock=1&dim=1");
     }
 
     @Override
