@@ -1,88 +1,121 @@
 # AGC DSKY Android
 
-Android Apollo Block II DSKY clock/screensaver project, currently at **v6**.
+Android Apollo Block II DSKY clock/screensaver plus onboard AGC emulator project. Source development is currently at **v0.7**.
 
-## Current v6 build
+## Current source state
 
-The APK currently being tested is a lightweight native Android/WebView shell with a locally bundled DSKY face. It is **not yet the full offline yaAGC CPU emulator**.
+The v0.7 source integrates a pinned real VirtualAGC `yaAGC` WebAssembly core and Apollo 11 flight-software rope images. The complete Android runtime path has been implemented but has **not yet been device/emulator verified**, so see `docs/PROGRESS.md` before treating AGC mode as proven working.
 
-Current features:
+Current source features:
 
 - Apollo Block II-inspired 19-key DSKY layout.
 - Apollo 11-era LM 2×7 annunciator layout, including the two blank positions.
 - Fixed-coordinate SVG electroluminescent display so digit fields cannot be independently stretched by CSS.
-- 14×24 numeric character envelope and 7×24 sign envelope derived from Apollo DSKY artwork.
-- Chamfered/slanted EL segment geometry based on close inspection of restored real DSKY hardware and Apollo-derived drawings.
+- Custom narrow EL segment vectors rather than a generic seven-segment font.
 - `V16 N65` phone clock mode.
-- `V35E` lamp test.
+- `V35E` clock-mode lamp test.
 - Dim mode.
 - Android `DreamService` screen saver intended for charging/idle use.
 - Small periodic position drift in dream mode to reduce completely static OLED content.
-- `COMP ACTY` repurposed in clock mode to pulse from **aggregate device network traffic** using `TrafficStats.getTotalRxBytes()` + `getTotalTxBytes()`. No packet contents, destinations, UIDs, or app identities are inspected.
-- `WEB AGC` control opens the webAGC demo. This is the only current part that requires Internet access.
+- Pinned `webAGC` submodule containing `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin`.
+- Offline yaAGC WebAssembly wrapper with a minimal WASI shim.
+- AGC/CLOCK mode control.
+- Authentic Block II DSKY output-channel decoding for numeric registers and annunciators.
+- Authentic DSKY key codes back into yaAGC, including separate PRO/Proceed handling.
+- `COMP ACTY` in AGC mode is tied directly to **output channel 011 octal, bit 2**. The old phone-network activity surrogate has been removed.
 
-The tested v6 APK is checked in at [`releases/AGC-DSKY-Android-v6.apk`](releases/AGC-DSKY-Android-v6.apk).
+## AGC mode
 
-## Important distinction: DSKY clock vs. real AGC
+The initial AGC mode uses the Apollo 11 Lunar Module rope **Luminary 099**.
 
-The current v6 APK implements the DSKY/clock/screensaver locally. The complete Apollo Guidance Computer execution core is **not bundled into v6**. The next major implementation step is to package yaAGC/WebAssembly and Apollo rope images locally and drive this DSKY from real AGC I/O channels.
+The emulator path is:
 
-That work should preserve the current v6 face as the UI while replacing the clock-mode state machine with actual AGC output when emulator mode is active.
+1. Android loads the DSKY page from a synthetic local HTTPS asset origin.
+2. `agc-core.js` loads packaged `yaAGC.wasm` and supplies its four WASI imports locally.
+3. `Luminary099.bin` is copied into yaAGC fixed memory with `set_fixed()`.
+4. The CPU is stepped at approximately real AGC timing.
+5. `packet_read()` output drives the DSKY.
+6. DSKY key presses are sent back through `packet_write()`.
 
-## Screen saver
+Implemented DSKY channels include:
 
-Android uses a `DreamService` for system screen savers. After installing:
+- `010` octal — display relay words and six annunciators.
+- `011` octal — COMP ACTY and UPLINK ACTY.
+- `0163` octal — yaAGC's modulated DSKY caution/blink states.
+- `015` octal — normal DSKY keyboard input.
+- `032` octal — PRO/Proceed discrete input.
+
+See `docs/PROGRESS.md` for the exact verification status and known risks.
+
+## Clock / screen saver
+
+Android uses a `DreamService` for system screen savers. After installing a verified APK:
 
 1. Open Android **Screen saver** settings.
 2. Select **AGC DSKY Clock** / AGC DSKY as the screen saver.
 3. Set the system start condition to **While charging**.
 
-The dream URL starts in clock + dim mode and uses a low screen brightness in the native service.
+Dream mode remains the low-power phone clock rather than running the AGC core continuously. It starts dim and uses low native screen brightness.
 
-## COMP ACTY behavior
+## Repository checkout
 
-On a real DSKY, COMP ACTY represented AGC computer activity. In the phone clock mode it is deliberately repurposed as a phone-activity indicator:
+The emulator core and rope binaries are supplied by a pinned Git submodule, so clone recursively:
 
-1. The page requests a sample about every 400 ms using the private `agcnet://poll` URL scheme.
-2. `NetClient` intercepts it in the WebView.
-3. Android `TrafficStats` supplies only aggregate RX+TX byte counters.
-4. Increases of at least 512 bytes pulse COMP ACTY for a short period.
+```bash
+git clone --recurse-submodules <repository-url>
+```
 
-When a real AGC core is integrated, emulator mode should use authentic AGC COMP ACTY state instead.
+For an existing clone:
+
+```bash
+git submodule update --init --recursive
+```
+
+A checkout without the submodule does not contain the AGC binary assets required by v0.7.
 
 ## Source layout
 
 - `app/src/main/assets/index.html` — DSKY structure and fixed EL SVG coordinate system.
 - `app/src/main/assets/style.css` — physical faceplate, annunciators, keys, display treatment.
-- `app/src/main/assets/app.js` — DSKY input, clock, lamp test, dimming, network COMP ACTY, dream pixel drift.
+- `app/src/main/assets/app.js` — clock mode, AGC/clock coordination, authentic DSKY channel/relay decoding, key routing.
+- `app/src/main/assets/agc-core.js` — offline yaAGC WASM loader, minimal WASI shim, rope loading, CPU stepping, packet I/O.
 - `app/src/main/java/org/apollo/agcdsky/MainActivity.java` — immersive interactive WebView shell.
 - `app/src/main/java/org/apollo/agcdsky/AgcDreamService.java` — Android screen saver shell.
-- `app/src/main/java/org/apollo/agcdsky/NetClient.java` — aggregate traffic bridge.
-- `docs/IMPLEMENTATION_NOTES.md` — design/build history and remaining work.
-- `docs/REFERENCES.md` — Apollo/VirtualAGC/CuriousMarc references used during development.
+- `app/src/main/java/org/apollo/agcdsky/NetClient.java` — local HTTPS-to-AssetManager resource server.
+- `vendor/webAGC` — pinned upstream core/rope submodule.
+- `docs/PROGRESS.md` — live implementation/verification status and next checkpoint.
+- `AGENTS.md` — durable instructions for coding agents continuing the work.
+- `docs/IMPLEMENTATION_NOTES.md` — design/build history.
+- `docs/REFERENCES.md` — Apollo/VirtualAGC/CuriousMarc references.
 
-## Android Studio build
+## Android Studio / Gradle build
 
-The repository includes a conventional Android Gradle project for continued development:
+Requirements currently declared by the project:
 
 - JDK 17
 - compile/target SDK 37
 - Android Gradle Plugin 9.3.0
+- initialized Git submodules
 
 ```bash
+git submodule update --init --recursive
 gradle :app:assembleDebug
 ```
 
-The locally produced v6 APK was built in a restricted environment using a minimal direct APK toolchain rather than this Gradle project, so the checked-in Gradle source is the maintainable source form of the same shell/UI rather than a byte-for-byte reproduction of `classes.dex`.
+Do not report a successful v0.7 build until this command has actually completed in an Android build environment and the resulting APK has been run.
+
+## Historical APK
+
+`releases/AGC-DSKY-Android-v6.apk` predates the onboard-core work. It does **not** represent the current v0.7 source and should not be used to evaluate AGC mode.
 
 ## Signing
 
-The private v5+ signing key is intentionally **not committed**. v5 and v6 were signed with the same retained key so v6 can install over v5. Keep signing keys outside the repository.
+The private v5/v6 signing key is intentionally **not committed**. Any build signed with a different key cannot update an installation signed by the old key. Keep signing keys outside the repository.
 
 ## GitHub Actions
 
-No GitHub Actions workflow is enabled. Builds are intentionally local/manual at present.
+No GitHub Actions workflow is enabled. Per project-owner instruction, builds are local/manual; do not add or use GitHub Actions unless that instruction is explicitly reversed.
 
 ## License
 
-Android/frontend code in this repository is GPL-2.0. See `THIRD_PARTY.md` for upstream/reference attribution.
+Android/frontend code in this repository is GPL-2.0. See `THIRD_PARTY.md` for upstream/core attribution and licensing notes.
