@@ -1,7 +1,7 @@
 const q=new URLSearchParams(location.search),dream=q.get('dream')==='1';
 const $=x=>document.getElementById(x);
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
-let entryMode='',entry='',verb='16',noun='65',mode='clock',dim=dream||store.get('dim')==='1',lampTestActive=false,controlsTimer=0;
+let entryMode='',entry='',verb='16',noun='65',mode='clock',dim=dream||store.get('dim')==='1',ticks=store.get('ticks')!=='0',lampTestActive=false,controlsTimer=0;
 let agcCore=null,agcLoaded=false;
 
 // Apollo DSKY EL numerals are seven-segment, but the glass geometry is not a
@@ -37,7 +37,7 @@ function set2(id,text){renderDigits($(id),String(text).padEnd(2,' ').slice(0,2))
 function setReg(id,sign,digits){renderReg($(id),(sign||' ')+String(digits).padEnd(5,' ').slice(0,5))}
 function pad(n,len){return String(n).padStart(len,'0').slice(-len)}
 function show(v,n){verb=v;noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
-function tick(){if(mode!=='clock')return;const d=new Date(),h=d.getHours(),m=d.getMinutes(),s=d.getSeconds(),cs=Math.floor(d.getMilliseconds()/10);setReg('r1','+',pad(h,5));setReg('r2','+',pad(m,5));setReg('r3','+',pad(s*100+cs,5))}
+function tick(){if(mode!=='clock')return;const d=new Date(),h=d.getHours(),m=d.getMinutes(),s=d.getSeconds(),cs=ticks?Math.floor(d.getMilliseconds()/10):0;setReg('r1','+',pad(h,5));setReg('r2','+',pad(m,5));setReg('r3','+',pad(s*100+cs,5))}
 function setLamp(name,on){const x=document.querySelector(`[data-lamp="${name}"]`);if(x)x.classList.toggle('on',!!on)}
 function clearLamps(){document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.remove('on'));document.body.classList.remove('vn-flash-off','el-off')}
 function lampTest(){
@@ -121,13 +121,14 @@ function press(k){
   if(k==='V'){entryMode='V';entry='';set2('verb','  ');return}if(k==='N'){entryMode='N';entry='';set2('noun','  ');return}if(k==='C'){entry='';if(entryMode==='V')set2('verb','  ');else if(entryMode==='N')set2('noun','  ');return}if(k==='R'){mode='clock';verb='16';noun='65';set2('prog','00');show(verb,noun);clearLamps();tick();return}if(k==='K'){setLamp('keyrel',false);return}if(k==='P'){setLamp('prog',!document.querySelector('[data-lamp="prog"]').classList.contains('on'));return}if(k==='E'){if(entryMode==='V'&&entry.length)verb=entry.padStart(2,'0').slice(-2);if(entryMode==='N'&&entry.length)noun=entry.padStart(2,'0').slice(-2);entryMode='';entry='';show(verb,noun);executeClock();return}if(/^\d$/.test(k)&&entryMode){entry=(entry+k).slice(-2);if(entryMode==='V')set2('verb',entry.padEnd(2,' '));else set2('noun',entry.padEnd(2,' '))}
 }
 function applyDim(){document.body.classList.toggle('dim',dim);store.set('dim',dim?'1':'0')}
+function applyTicks(){store.set('ticks',ticks?'1':'0');$('ticks').textContent=ticks?'TICKS ON':'TICKS OFF';tick()}
 function showControls(){if(dream)return;document.body.classList.add('controls-visible');clearTimeout(controlsTimer);controlsTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),5500)}
 let holdTimer=0;
 document.addEventListener('pointerdown',e=>{if(e.target.closest('[data-key],.app-controls'))return;holdTimer=setTimeout(showControls,620)},{passive:true});
 document.addEventListener('pointerup',()=>clearTimeout(holdTimer),{passive:true});document.addEventListener('pointercancel',()=>clearTimeout(holdTimer),{passive:true});
 document.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();b.classList.add('pressed');press(b.dataset.key);setTimeout(()=>b.classList.remove('pressed'),90)}));
-$('dim').addEventListener('click',()=>{dim=!dim;applyDim();showControls()});$('agc').addEventListener('click',()=>{enterAgc();showControls()});
+$('dim').addEventListener('click',()=>{dim=!dim;applyDim();showControls()});$('ticks').addEventListener('click',()=>{ticks=!ticks;applyTicks();showControls()});$('agc').addEventListener('click',()=>{enterAgc();showControls()});
 window.AGCDSKY={agcChannel:onAgcChannel,getCore:()=>agcCore};
 document.body.classList.toggle('dream',dream);if(!dream&&store.get('hinted')!=='1'){document.body.classList.add('first-run');setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200)}
-applyDim();clearLamps();set2('prog','00');show(verb,noun);tick();setInterval(tick,50);
+applyDim();applyTicks();clearLamps();set2('prog','00');show(verb,noun);tick();setInterval(tick,50);
 if(dream){let pos=[[0,0],[3,-2],[-3,2],[2,3],[-2,-3],[1,-1]],i=0;setInterval(()=>{let p=pos[i++%pos.length];$('dsky').style.transform=`translate(${p[0]}px,${p[1]}px)`},60000)}
