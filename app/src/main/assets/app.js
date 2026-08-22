@@ -1,7 +1,9 @@
 const q=new URLSearchParams(location.search),dream=q.get('dream')==='1';
 const $=x=>document.getElementById(x);
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
-let entryMode='',entry='',verb='16',noun='65',mode='clock',dim=dream||store.get('dim')==='1',tickSound=store.get('audioTickV2')!=='0',lampTestActive=false,controlsTimer=0,lastTickSecond=-1,audioCtx=null;
+let entryMode='',entry='',verb='16',noun='65',mode='clock',dim=dream||store.get('dim')==='1',tickSound=store.get('audioTickV3')!=='0',lampTestActive=false,controlsTimer=0,audioCtx=null;
+const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20;
+let clockDigits={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']},relayQueue=[],relayBusy=false;
 let agcCore=null,agcLoaded=false;
 
 // Apollo DSKY EL numerals are seven-segment, but the glass geometry is not a
@@ -37,14 +39,39 @@ function set2(id,text){renderDigits($(id),String(text).padEnd(2,' ').slice(0,2))
 function setReg(id,sign,digits){renderReg($(id),(sign||' ')+String(digits).padEnd(5,' ').slice(0,5))}
 function pad(n,len){return String(n).padStart(len,'0').slice(-len)}
 function show(v,n){verb=v;noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
-function tick(){if(mode!=='clock')return;const d=new Date(),h=d.getHours(),m=d.getMinutes(),s=d.getSeconds(),cs=Math.floor(d.getMilliseconds()/10);setReg('r1','+',pad(h,5));setReg('r2','+',pad(m,5));setReg('r3','+',pad(s*100+cs,5));const secKey=Math.floor(d.getTime()/1000);if(secKey!==lastTickSecond){lastTickSecond=secKey;if(tickSound)playTick()}}
+// Synthetic phone-clock mode follows the DSKY relay-word update path instead
+// of repainting the complete EL face continuously. Changed relay banks are
+// serviced separately at about the T4RUPT/DSPOUT cadence (~120 ms), and the
+// relay click is tied to that operation. AGC mode still follows real channel 010.
+const CLOCK_GROUPS=[
+  {relay:8,cells:[['r1',0]]},{relay:7,cells:[['r1',1],['r1',2]]},{relay:6,cells:[['r1',3],['r1',4]]},
+  {relay:5,cells:[['r2',0],['r2',1]]},{relay:4,cells:[['r2',2],['r2',3]]},{relay:3,cells:[['r2',4],['r3',0]]},
+  {relay:2,cells:[['r3',1],['r3',2]]},{relay:1,cells:[['r3',3],['r3',4]]}
+];
+function desiredClockDigits(){const d=new Date();return {r1:pad(d.getHours(),5).split(''),r2:pad(d.getMinutes(),5).split(''),r3:pad(d.getSeconds(),5).split('')}}
+function renderClockReg(name){setReg(name,'+',clockDigits[name].join(''))}
+function syncClockFace(){const want=desiredClockDigits();for(const name of ['r1','r2','r3'])clockDigits[name]=want[name].slice();['r1','r2','r3'].forEach(renderClockReg)}
+function runRelayQueue(){
+  const job=relayQueue.shift();
+  if(!job){relayBusy=false;return}
+  if(tickSound)playTick();
+  setTimeout(()=>{if(mode!=='clock')return;const touched=new Set();for(const [name,i] of job.cells){clockDigits[name][i]=job.want[name][i];touched.add(name)}touched.forEach(renderClockReg)},CLOCK_SETTLE_MS);
+  setTimeout(runRelayQueue,CLOCK_RELAY_MS)
+}
+function tick(){
+  if(mode!=='clock'||lampTestActive||relayBusy)return;
+  const want=desiredClockDigits(),jobs=[];
+  for(const group of CLOCK_GROUPS){if(group.cells.some(([name,i])=>clockDigits[name][i]!==want[name][i]))jobs.push({cells:group.cells,want})}
+  if(!jobs.length)return;
+  relayQueue=jobs;relayBusy=true;runRelayQueue()
+}
 function setLamp(name,on){const x=document.querySelector(`[data-lamp="${name}"]`);if(x)x.classList.toggle('on',!!on)}
 function clearLamps(){document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.remove('on'));document.body.classList.remove('vn-flash-off','el-off')}
 function lampTest(){
   lampTestActive=true;document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.add('on'));set2('prog','88');set2('verb','88');set2('noun','88');['r1','r2','r3'].forEach(x=>setReg(x,'+','88888'));
-  setTimeout(()=>{lampTestActive=false;if(mode!=='clock')return;clearLamps();set2('prog','00');show(verb,noun);tick()},1800)
+  setTimeout(()=>{lampTestActive=false;if(mode!=='clock')return;clearLamps();set2('prog','00');show(verb,noun);syncClockFace()},1800)
 }
-function executeClock(){if(verb==='35'){lampTest();return}if(verb==='16'&&noun==='65'){mode='clock';$('mode').textContent='V16 N65 · PHONE CLOCK';tick();return}$('mode').textContent=`V${verb} N${noun} · DSKY INPUT`}
+function executeClock(){if(verb==='35'){lampTest();return}if(verb==='16'&&noun==='65'){mode='clock';$('mode').textContent='V16 N65 · PHONE CLOCK';relayQueue=[];relayBusy=false;syncClockFace();return}$('mode').textContent=`V${verb} N${noun} · DSKY INPUT`}
 
 // Authentic Block II keyboard codes from Pinball. PRO/Proceed is not a normal
 // key code; it is a separate discrete on input channel 032 and is handled by
@@ -102,12 +129,12 @@ function onAgcChannel(channel,value){
   if(channel===0o10)decodeChannel10(value);else if(channel===0o11)decodeChannel11(value);else if(channel===0o163)decodeChannel163(value)
 }
 function agcFailure(error){
-  console.error('AGC core stopped',error);if(agcCore)agcCore.stop();mode='clock';$('agc').textContent='AGC';$('mode').textContent='AGC ERROR · PHONE CLOCK';clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);tick()
+  console.error('AGC core stopped',error);if(agcCore)agcCore.stop();mode='clock';$('agc').textContent='AGC';$('mode').textContent='AGC ERROR · PHONE CLOCK';clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);relayQueue=[];relayBusy=false;syncClockFace()
 }
 async function enterAgc(){
   if(dream||mode==='agc-loading')return;
-  if(mode==='agc'){if(agcCore)agcCore.stop();mode='clock';$('agc').textContent='AGC';$('mode').textContent='V16 N65 · PHONE CLOCK';clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);tick();return}
-  mode='agc-loading';$('agc').textContent='...';$('mode').textContent='LOADING LUMINARY099 · AGC';resetAgcFace();
+  if(mode==='agc'){if(agcCore)agcCore.stop();mode='clock';$('agc').textContent='AGC';$('mode').textContent='V16 N65 · PHONE CLOCK';clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);relayQueue=[];relayBusy=false;syncClockFace();return}
+  mode='agc-loading';relayQueue=[];relayBusy=false;$('agc').textContent='...';$('mode').textContent='LOADING LUMINARY099 · AGC';resetAgcFace();
   try{
     if(!agcCore)agcCore=new AgcCore({onChannelUpdate:onAgcChannel,onError:agcFailure});
     if(!agcLoaded){await agcCore.load({wasmUrl:'yaAGC.wasm',ropeUrl:'Luminary099.bin'});agcLoaded=true}else{agcCore.reset();agcCore.configureInputMasks()}
@@ -118,13 +145,18 @@ async function enterAgc(){
 function press(k){
   if(mode==='agc'){if(k==='P'){agcCore.proceedPulse();return}const code=AGC_KEY[k];if(code!==undefined)agcCore.keyPress(code);return}
   if(mode!=='clock')return;
-  if(k==='V'){entryMode='V';entry='';set2('verb','  ');return}if(k==='N'){entryMode='N';entry='';set2('noun','  ');return}if(k==='C'){entry='';if(entryMode==='V')set2('verb','  ');else if(entryMode==='N')set2('noun','  ');return}if(k==='R'){mode='clock';verb='16';noun='65';set2('prog','00');show(verb,noun);clearLamps();tick();return}if(k==='K'){setLamp('keyrel',false);return}if(k==='P'){setLamp('prog',!document.querySelector('[data-lamp="prog"]').classList.contains('on'));return}if(k==='E'){if(entryMode==='V'&&entry.length)verb=entry.padStart(2,'0').slice(-2);if(entryMode==='N'&&entry.length)noun=entry.padStart(2,'0').slice(-2);entryMode='';entry='';show(verb,noun);executeClock();return}if(/^\d$/.test(k)&&entryMode){entry=(entry+k).slice(-2);if(entryMode==='V')set2('verb',entry.padEnd(2,' '));else set2('noun',entry.padEnd(2,' '))}
+  if(k==='V'){entryMode='V';entry='';set2('verb','  ');return}if(k==='N'){entryMode='N';entry='';set2('noun','  ');return}if(k==='C'){entry='';if(entryMode==='V')set2('verb','  ');else if(entryMode==='N')set2('noun','  ');return}if(k==='R'){mode='clock';verb='16';noun='65';set2('prog','00');show(verb,noun);clearLamps();relayQueue=[];relayBusy=false;syncClockFace();return}if(k==='K'){setLamp('keyrel',false);return}if(k==='P'){setLamp('prog',!document.querySelector('[data-lamp="prog"]').classList.contains('on'));return}if(k==='E'){if(entryMode==='V'&&entry.length)verb=entry.padStart(2,'0').slice(-2);if(entryMode==='N'&&entry.length)noun=entry.padStart(2,'0').slice(-2);entryMode='';entry='';show(verb,noun);executeClock();return}if(/^\d$/.test(k)&&entryMode){entry=(entry+k).slice(-2);if(entryMode==='V')set2('verb',entry.padEnd(2,' '));else set2('noun',entry.padEnd(2,' '))}
 }
 function applyDim(){document.body.classList.toggle('dim',dim);store.set('dim',dim?'1':'0')}
 function ensureAudio(){if(!audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;audioCtx=new AC()}if(audioCtx.state==='suspended')audioCtx.resume().catch(()=>{});return audioCtx}
-function emitTick(ctx){const now=ctx.currentTime,osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='square';osc.frequency.setValueAtTime(1850,now);osc.frequency.exponentialRampToValueAtTime(650,now+.020);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.32,now+.001);gain.gain.exponentialRampToValueAtTime(.0001,now+.024);osc.connect(gain);gain.connect(ctx.destination);osc.start(now);osc.stop(now+.030)}
+function emitTick(ctx){
+  const now=ctx.currentTime,n=Math.max(1,Math.floor(ctx.sampleRate*.018)),buf=ctx.createBuffer(1,n,ctx.sampleRate),data=buf.getChannelData(0);
+  for(let i=0;i<n;i++){const env=Math.exp(-i/(n*.18));data[i]=(Math.random()*2-1)*env}
+  const src=ctx.createBufferSource(),snap=ctx.createGain();src.buffer=buf;snap.gain.setValueAtTime(.42,now);snap.gain.exponentialRampToValueAtTime(.0001,now+.020);src.connect(snap);snap.connect(ctx.destination);src.start(now);
+  const osc=ctx.createOscillator(),thump=ctx.createGain();osc.type='triangle';osc.frequency.setValueAtTime(230,now);osc.frequency.exponentialRampToValueAtTime(105,now+.028);thump.gain.setValueAtTime(.14,now);thump.gain.exponentialRampToValueAtTime(.0001,now+.032);osc.connect(thump);thump.connect(ctx.destination);osc.start(now);osc.stop(now+.034)
+}
 function playTick(){const ctx=ensureAudio();if(!ctx)return;if(ctx.state==='running')emitTick(ctx);else ctx.resume().then(()=>emitTick(ctx)).catch(()=>{})}
-function applyTickSound(){store.set('audioTickV2',tickSound?'1':'0');$('sound').textContent=tickSound?'SOUND ON':'SOUND OFF'}
+function applyTickSound(){store.set('audioTickV3',tickSound?'1':'0');$('sound').textContent=tickSound?'SOUND ON':'SOUND OFF'}
 function showControls(){if(dream)return;document.body.classList.add('controls-visible');clearTimeout(controlsTimer);controlsTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),5500)}
 let holdTimer=0;
 document.addEventListener('pointerdown',e=>{if(e.target.closest('[data-key],.app-controls'))return;holdTimer=setTimeout(showControls,620)},{passive:true});
@@ -134,5 +166,5 @@ $('dim').addEventListener('click',()=>{dim=!dim;applyDim();showControls()});$('s
 document.addEventListener('pointerdown',()=>{if(tickSound)ensureAudio()},{passive:true});
 window.AGCDSKY={agcChannel:onAgcChannel,getCore:()=>agcCore};
 document.body.classList.toggle('dream',dream);if(!dream&&store.get('hinted')!=='1'){document.body.classList.add('first-run');setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200)}
-applyDim();applyTickSound();clearLamps();set2('prog','00');show(verb,noun);tick();setInterval(tick,50);
+applyDim();applyTickSound();clearLamps();set2('prog','00');show(verb,noun);syncClockFace();setInterval(tick,80);
 if(dream){let pos=[[0,0],[3,-2],[-3,2],[2,3],[-2,-3],[1,-1]],i=0;setInterval(()=>{let p=pos[i++%pos.length];$('dsky').style.transform=`translate(${p[0]}px,${p[1]}px)`},60000)}
