@@ -33,9 +33,9 @@ public final class MainActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
-        webView.setWebViewClient(new NetClient());
+        webView.setWebViewClient(new NetClient(this));
         setContentView(webView);
-        webView.loadUrl("file:///android_asset/index.html");
+        webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX + "index.html");
     }
 
     @Override
