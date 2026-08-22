@@ -3,10 +3,11 @@ package org.apollo.agcdsky;
 import android.service.dreams.DreamService;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-/** Charging/idle Android screen saver that starts directly in display-only clock + dim mode. */
+/** Charging/idle Android screen saver with display-only DSKY clock modes. */
 public final class AgcDreamService extends DreamService {
     private WebView webView;
 
@@ -17,9 +18,7 @@ public final class AgcDreamService extends DreamService {
         setFullscreen(true);
         setScreenBright(true);
 
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.screenBrightness = 0.06f;
-        getWindow().setAttributes(lp);
+        setWindowBrightness(0.06f);
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
@@ -33,10 +32,25 @@ public final class AgcDreamService extends DreamService {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        webView.addJavascriptInterface(new DreamBridge(), "DreamBridge");
         webView.setWebViewClient(new NetClient(this));
         setContentView(webView);
         webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX
-                + "index.html?dream=1&clock=1&dim=1&display=1");
+                + "index.html?dream=1&clock=1&display=1");
+    }
+
+    private void setWindowBrightness(float value) {
+        float clamped = Math.max(0.01f, Math.min(1.0f, value));
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.screenBrightness = clamped;
+        getWindow().setAttributes(lp);
+    }
+
+    private final class DreamBridge {
+        @JavascriptInterface
+        public void setBrightness(final double value) {
+            runOnUiThread(() -> setWindowBrightness((float) value));
+        }
     }
 
     @Override
