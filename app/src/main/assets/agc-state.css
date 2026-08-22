@@ -1,0 +1,13 @@
+/* States supplied by yaAGC's modulated DSKY channel 0163. */
+.vn-flash-off #verb,
+.vn-flash-off #noun {
+  opacity: .08;
+}
+
+/* The real DSKY could remove electroluminescent panel excitation. Leave only
+   a trace of the glass geometry instead of deleting layout elements. */
+.el-off .el-static,
+.el-off .el-field,
+.el-off .comp-el {
+  opacity: .025;
+}
