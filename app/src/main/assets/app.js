@@ -4,18 +4,18 @@ const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},se
 let entryMode='',entry='',verb='16',noun='65',clock=true,dim=dream||store.get('dim')==='1',lampTestActive=false,lastTraffic=null,compTimer=0,controlsTimer=0;
 
 // Apollo DSKY EL numerals are seven-segment, but the glass geometry is not a
-// generic LED font. These paths use the original 14x24 character envelope,
-// with the characteristic slightly left-leaning vertical strokes and short,
-// chamfered horizontal elements visible on real Block II EL glass.
+// generic LED font. Keep the original 14x24 character envelope while using
+// slimmer, more rectilinear EL elements with restrained chamfers and only a
+// slight lean in the vertical segments.
 const SEG={0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',8:'abcdefg',9:'abcdfg'};
 const PATH={
-  a:'M2.15 1.05 L11.28 1.05 L12.38 2.02 L11.25 3.04 L2.03 3.04 L1.18 2.05 Z',
-  g:'M1.05 11.02 L2.08 10.04 L11.25 10.04 L12.28 11.02 L11.22 12.03 L2.02 12.03 Z',
-  d:'M0.02 21.95 L1.08 20.96 L10.26 20.96 L11.28 21.95 L10.15 22.95 L0.98 22.95 Z',
-  f:'M1.55 3.42 L2.68 4.32 L1.43 10.47 L0.34 11.38 L-0.28 10.54 L0.94 4.27 Z',
-  b:'M11.74 3.42 L12.87 4.31 L11.62 10.47 L10.53 11.38 L9.91 10.54 L11.13 4.27 Z',
-  e:'M0.29 12.60 L1.42 13.48 L0.17 19.66 L-0.92 20.57 L-1.54 19.72 L-0.32 13.43 Z',
-  c:'M10.48 12.60 L11.61 13.48 L10.36 19.66 L9.27 20.57 L8.65 19.72 L9.87 13.43 Z'
+  a:'M1.62 1.28 L11.72 1.28 L12.32 1.84 L11.70 2.42 L1.60 2.42 L1.02 1.84 Z',
+  g:'M0.88 10.92 L1.50 10.34 L10.90 10.34 L11.52 10.92 L10.88 11.50 L1.48 11.50 Z',
+  d:'M-0.02 21.46 L0.60 20.88 L10.00 20.88 L10.62 21.46 L9.98 22.04 L0.58 22.04 Z',
+  f:'M1.36 2.84 L2.42 3.36 L1.56 10.10 L0.54 10.68 L0.16 10.12 L1.02 3.40 Z',
+  b:'M11.44 2.84 L12.50 3.36 L11.64 10.10 L10.62 10.68 L10.24 10.12 L11.10 3.40 Z',
+  e:'M0.26 11.92 L1.32 12.44 L0.46 19.18 L-0.56 19.76 L-0.94 19.20 L-0.08 12.48 Z',
+  c:'M10.34 11.92 L11.40 12.44 L10.54 19.18 L9.52 19.76 L9.14 19.20 L10.00 12.48 Z'
 };
 function pathEl(name,on){return `<path class="el-seg ${on?'on':'off'}" data-seg="${name}" d="${PATH[name]}"/>`}
 function glyph(ch,x){
@@ -27,9 +27,9 @@ function glyph(ch,x){
 function signGlyph(sign){
   const plus=sign==='+';
   return `<g class="el-sign">`+
-    `<path class="el-seg on" d="M.45 11.02 L1.35 10.04 L5.75 10.04 L6.62 11.02 L5.72 12.03 L1.32 12.03 Z"/>`+
-    `<path class="el-seg ${plus?'on':'off'}" d="M3.78 4.18 L4.77 4.98 L3.71 10.10 L2.74 10.91 L2.20 10.18 L3.24 4.94 Z"/>`+
-    `<path class="el-seg ${plus?'on':'off'}" d="M2.69 12.96 L3.68 13.74 L2.62 18.88 L1.66 19.69 L1.11 18.95 L2.16 13.70 Z"/>`+
+    `<path class="el-seg on" d="M.54 10.92 L1.12 10.34 L5.74 10.34 L6.32 10.92 L5.72 11.50 L1.10 11.50 Z"/>`+
+    `<path class="el-seg ${plus?'on':'off'}" d="M3.56 4.26 L4.46 4.72 L3.76 10.06 L2.90 10.56 L2.58 10.10 L3.26 4.76 Z"/>`+
+    `<path class="el-seg ${plus?'on':'off'}" d="M2.70 11.88 L3.60 12.34 L2.90 17.70 L2.04 18.20 L1.72 17.74 L2.40 12.38 Z"/>`+
     `</g>`;
 }
 function renderDigits(el,text){
