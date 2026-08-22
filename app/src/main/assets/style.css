@@ -1,0 +1,102 @@
+:root{
+  color-scheme:dark;
+  --face:#b9b8af;
+  --face-hi:#d1d0c7;
+  --face-lo:#8e8f88;
+  --frame:#6b6c67;
+  --ann:#9c9c95;
+  --key:#1d1e1c;
+  --el:#9cff9f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}
+body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000;padding:2px}
+
+/* Physical faceplate. Geometry remains normalized to the 320x372 Apollo-derived drawing. */
+.dsky{
+  position:relative;
+  width:min(99vw,calc(99vh * 320 / 372));
+  aspect-ratio:320/372;
+  flex:0 0 auto;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 12%,rgba(255,255,255,.10) 0 1px,transparent 1.4px),
+    radial-gradient(circle at 74% 38%,rgba(0,0,0,.055) 0 1px,transparent 1.5px),
+    repeating-linear-gradient(94deg,rgba(255,255,255,.017) 0 1px,rgba(0,0,0,.012) 1px 3px),
+    linear-gradient(145deg,#c7c6bd 0%,#bab9b0 34%,#aeafa8 72%,#c2c1b8 100%);
+  border:clamp(2px,.43vmin,4px) solid #171817;
+  border-radius:.25vmin;
+  box-shadow:
+    inset 0 0 0 .22vmin #dddcd3,
+    inset 0 0 0 .55vmin #9b9c95,
+    inset 0 0 1.7vmin rgba(0,0,0,.34),
+    0 .35vmin .7vmin rgba(0,0,0,.6);
+  transform-origin:center;
+}
+.dsky:before{content:"";position:absolute;inset:.72%;z-index:1;pointer-events:none;border:.12vmin solid rgba(36,36,34,.58);box-shadow:inset 0 .1vmin .22vmin rgba(255,255,255,.34),0 .08vmin .12vmin rgba(255,255,255,.16)}
+.dsky:after{content:"";position:absolute;inset:0;z-index:12;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.045),transparent 29%,rgba(0,0,0,.025) 72%,rgba(255,255,255,.025));mix-blend-mode:overlay}
+.dim .dsky{filter:brightness(.20) saturate(.62)}
+
+/* Upper modules are recessed behind machined metal frames. */
+.ann-well{
+  position:absolute;left:6.72%;top:3.08%;width:36.99%;height:54.05%;z-index:1;
+  background:#71726c;
+  border:.72vmin solid #777872;
+  outline:.18vmin solid #343532;
+  box-shadow:inset .35vmin .35vmin .7vmin rgba(0,0,0,.58),inset -.2vmin -.18vmin .35vmin rgba(255,255,255,.15),0 .13vmin .16vmin rgba(255,255,255,.2)
+}
+.display-well{
+  position:absolute;left:55.55%;top:2.93%;width:38.27%;height:54.9%;z-index:1;
+  background:linear-gradient(135deg,#101410,#171b16 58%,#0c100d);
+  border:.76vmin solid #70716b;
+  outline:.18vmin solid #292a28;
+  box-shadow:inset .4vmin .45vmin 1.1vmin #020302,inset -.18vmin -.18vmin .35vmin rgba(255,255,255,.11),0 .13vmin .16vmin rgba(255,255,255,.16)
+}
+
+.ann-grid{position:absolute;left:8.4574%;top:5.4006%;width:33.3340%;height:50.1196%;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(7,1fr);column-gap:1.902%;row-gap:1.73%;z-index:3}
+.lamp{
+  display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;
+  background:linear-gradient(#aaa9a1,#96968f);
+  color:#282925;border:.11vmin solid #777871;
+  box-shadow:inset .12vmin .12vmin .2vmin rgba(255,255,255,.22),inset -.12vmin -.12vmin .22vmin rgba(0,0,0,.20);
+  font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:clamp(7px,2.05vmin,15px);line-height:.94;letter-spacing:-.025em;text-shadow:0 .04em rgba(255,255,255,.25)
+}
+.lamp:nth-child(even){background:linear-gradient(#c6c5bd,#b6b5ad)}
+.lamp.blank{color:transparent}
+.lamp.on.white{background:linear-gradient(#fffef1,#e8eadb);color:#1d1e1a;box-shadow:0 0 .62vmin rgba(245,255,229,.72),inset 0 0 .46vmin #fff}
+.lamp.on.yellow{background:linear-gradient(#f2de62,#d9bd2e);color:#1e1b0c;box-shadow:0 0 .7vmin rgba(255,219,67,.72),inset 0 0 .4vmin #fff1a1}
+
+/* Entire numeric display is one EL glass layer. Coordinates below are the
+   Apollo-derived 106 x 190 display area, not independent flex boxes. */
+.elpanel{
+  position:absolute;left:57.50%;top:5.1075%;width:33.125%;height:51.0753%;z-index:4;
+  overflow:visible;
+}
+.el-static,.el-field,.comp-el{filter:url(#elSoft)}
+.el-label{
+  fill:#acdca7;opacity:.86;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
+  font-size:5.1px;font-weight:700;letter-spacing:.22px;
+}
+.el-rule{stroke:#b5e6ac;stroke-width:2.05;stroke-linecap:round;opacity:.83}
+.comp-el text{
+  fill:#4e6a4e;opacity:.24;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
+  font-size:5.2px;font-weight:700;letter-spacing:.05px;
+}
+.comp-el.on text{fill:#b8e7b0;opacity:.91}
+.el-seg{fill:#90c88d;stroke:none}
+.el-seg.off{opacity:.027}
+.el-seg.on{fill:#b8e9b0;opacity:.91}
+/* No LED-style bloom: the original phosphor is a flat surface emitter. */
+.dim .el-seg.on,.dim .el-label,.dim .el-rule,.dim .comp-el.on text{opacity:.56}
+
+/* Illuminated black keycaps with deep mechanical bevel. */
+.key{position:absolute;width:13.125%;height:11.2903%;z-index:6;border:.12vmin solid #090a09;border-radius:4.2%;background:linear-gradient(145deg,#353633 0%,#262724 36%,#181917 78%,#111210 100%);color:#eef2e8;font:800 clamp(12px,3.25vmin,24px)/1 Arial,Helvetica,sans-serif;letter-spacing:-.02em;text-shadow:0 0 .12vmin rgba(241,255,227,.34),0 .09em #000;box-shadow:inset .20vmin .18vmin .22vmin rgba(255,255,255,.16),inset -.22vmin -.25vmin .26vmin rgba(0,0,0,.76),0 .15vmin .1vmin #66665f;-webkit-tap-highlight-color:transparent;padding:0}
+.key.fn{font-size:clamp(8px,2.2vmin,17px)}.key.keyrel{line-height:.86}.key:active,.key.pressed{transform:translateY(.30vmin);background:linear-gradient(#191a18,#111210);box-shadow:inset .08vmin .12vmin .12vmin rgba(255,255,255,.08),inset 0 0 .35vmin #000}
+.k-r1c1,.k-r2c1{left:1.25%}.k-r1c2,.k-r2c2,.k-r3c2{left:15.3125%}.k-r1c3,.k-r2c3,.k-r3c3{left:29.375%}.k-r1c4,.k-r2c4,.k-r3c4{left:43.4375%}.k-r1c5,.k-r2c5,.k-r3c5{left:57.5%}.k-r1c6,.k-r2c6,.k-r3c6{left:71.5625%}.k-r1c7,.k-r2c7{left:85.625%}[class*="k-r1"]{top:63.1720%}[class*="k-r2"]{top:75.2688%}[class*="k-r3"]{top:87.3656%}
+
+.fastener{position:absolute;z-index:7;width:2.55%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 37% 32%,#4a4b47 0 18%,#242522 44%,#121311 75%);border:.11vmin solid #a5a59e;box-shadow:0 .08vmin .12vmin rgba(0,0,0,.6)}.fastener:after{content:"";position:absolute;left:15%;right:15%;top:46%;height:9%;background:#8b8c86;transform:rotate(-14deg);box-shadow:0 -.04vmin #151515}.f1{left:.9%;top:.9%}.f2{right:.9%;top:.9%}.f3{left:.9%;bottom:.9%}.f4{right:.9%;bottom:.9%}
+
+.app-controls{position:fixed;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%) translateY(18px);display:flex;gap:7px;align-items:center;padding:6px 8px;background:rgba(12,12,12,.92);border:1px solid #3a3a3a;border-radius:5px;opacity:0;pointer-events:none;transition:.16s ease;z-index:20}.controls-visible .app-controls{opacity:.96;pointer-events:auto;transform:translateX(-50%) translateY(0)}.app-controls button{border:1px solid #666;background:#181818;color:#ddd;border-radius:3px;padding:7px 10px;font:700 11px Arial}.app-controls span{color:#aaa;font:700 9px monospace;white-space:nowrap}
+.hint{position:fixed;bottom:max(8px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);font:10px Arial;color:#333;opacity:0;transition:.3s;pointer-events:none}body:not(.dream).first-run .hint{opacity:1}.dream .app-controls,.dream .hint{display:none}.dream .dsky{width:min(99vw,calc(99vh * 320 / 372));box-shadow:none;transition:transform 1.6s ease}.dream .key{filter:brightness(.7)}
+@media (orientation:landscape){.dsky,.dream .dsky{width:min(92vw,calc(99vh * 320 / 372))}}
