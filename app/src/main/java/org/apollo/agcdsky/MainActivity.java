@@ -46,7 +46,10 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void startDsky() {
+    // Package-private intentionally. Some Android DEX pipelines translate a
+    // private Java method reference to invoke-virtual, which ART rejects.
+    // Keeping this non-private makes the generated invocation verifier-safe.
+    void startDsky() {
         if (webView != null) return;
 
         webView = new WebView(this);
