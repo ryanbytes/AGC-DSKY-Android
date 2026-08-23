@@ -30,19 +30,31 @@ public final class NetClient extends WebViewClient {
 
     @Override
     public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+        if (request == null) return null;
+
         Uri uri = request.getUrl();
-        if (!"https".equals(uri.getScheme())
+        if (uri == null
+                || !"https".equals(uri.getScheme())
                 || !"appassets.androidplatform.net".equals(uri.getHost())) {
             return null;
         }
 
         String path = uri.getPath();
-        if (path == null || !path.startsWith(ASSET_PREFIX)) {
+        if (path == null) return notFound();
+
+        // Be deliberately defensive here. A previous hand-built diagnostic APK
+        // reached substring() with a negative index on an unexpected WebView
+        // request. Never derive an index from the request path itself.
+        final int prefixLength = ASSET_PREFIX.length();
+        if (path.length() <= prefixLength
+                || !path.regionMatches(0, ASSET_PREFIX, 0, prefixLength)) {
             return notFound();
         }
 
-        String assetPath = path.substring(ASSET_PREFIX.length());
-        if (assetPath.isEmpty() || assetPath.contains("..")) {
+        String assetPath = path.substring(prefixLength);
+        if (assetPath.isEmpty()
+                || assetPath.startsWith("/")
+                || assetPath.contains("..")) {
             return notFound();
         }
 
