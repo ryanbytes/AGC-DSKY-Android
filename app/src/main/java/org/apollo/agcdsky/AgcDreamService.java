@@ -49,7 +49,11 @@ public final class AgcDreamService extends DreamService {
     private final class DreamBridge {
         @JavascriptInterface
         public void setBrightness(final double value) {
-            runOnUiThread(() -> setWindowBrightness((float) value));
+            // JavascriptInterface calls are not guaranteed to run on the UI
+            // thread. Post through the WebView before touching Window state.
+            if (webView != null) {
+                webView.post(() -> setWindowBrightness((float) value));
+            }
         }
     }
 
