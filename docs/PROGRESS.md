@@ -35,6 +35,41 @@ Ship an Android DSKY that keeps the phone clock / DreamService mode but also con
 - README and implementation notes describe v0.7 rather than the obsolete network-light architecture (`ba88a43`, `9273d7b`).
 - No GitHub Actions build workflow should be added. Builds are local/manual.
 
+## Local build recovery checkpoint — 2026-08-22
+
+The current objective is a **clean, self-contained native APK built from source**, not another repacked diagnostic shell.
+
+Hard requirements for the test/final APK:
+
+- Runtime must be self-contained. No Internet/network dependency is permitted.
+- Device location is the only external runtime input and is used only for `DREAM SOLAR` sunrise/sunset behavior.
+- The final manifest should not request `android.permission.INTERNET`; the committed manifest must be checked/updated before the clean build if that permission is still present.
+- All HTML, CSS, JavaScript, sounds, `yaAGC.wasm`, and Apollo rope data must be packaged in the APK.
+- Build, packaging, signing, and verification are local/manual. **Do not build with GitHub Actions, Codespaces, or other GitHub-hosted build infrastructure.** GitHub may be used only as a source/code repository.
+- The deliverable must be compiled from the normal Java/Gradle source tree. Do not use hand-edited Dalvik/DEX bytecode, repacked diagnostic APKs, or other emergency binary surgery as the final implementation.
+- Keep the native shell small and conventional: `MainActivity`, `AgcDreamService`, `NetClient`, and `DebugReporter` plus the local web/AGC assets. Avoid duplicate loading paths and fallback network code.
+
+Recent diagnostic history, retained only so the same failures are not rediscovered:
+
+1. An emergency hand-built diagnostic APK reported `targetSdk 29` / version `0` and was not the real v0.7 Gradle build.
+2. GrapheneOS/ART first rejected that diagnostic DEX because `MainActivity.onCreate()` used `invoke-virtual` for private `startDsky()`. Current Java source fixes this structurally by keeping `startDsky()` non-private (`e6405f7a4aaf93537917dc8e99f74a8ba4a0c4ea`).
+3. After that verifier issue was bypassed in the diagnostic APK, the next crash was `StringIndexOutOfBoundsException` in `NetClient.shouldInterceptRequest()` caused by unsafe substring/prefix arithmetic. The clean source build must use bounds-safe URI/path handling rather than reproducing the diagnostic implementation.
+4. Those diagnostic APKs are not candidates for release and must not be used as the base of the final build.
+
+Binary-integrity status during local recovery:
+
+- Pinned `yaAGC.wasm`: **132,617 bytes**, independently reconstructed and verified against Git blob SHA `713685680492098d05437b99c26403f683d56009`. Treat this byte sequence as verified.
+- Apollo 11 `Luminary099.bin`: expected **73,728 bytes**, pinned Git blob SHA `cd2ec9992d5863e1c7234fa760020f68ef946202`.
+- A manually relayed/reconstructed rope copy reached the expected length but failed the pinned blob hash. It is rejected and must not be packaged.
+- Work is continuing to obtain/reconstruct `Luminary099.bin` through a clean path and the entire file must match the pinned blob SHA before it is accepted.
+- Do not claim a self-contained APK is complete until both binaries are hash-verified and present inside the built APK.
+
+Build-environment status:
+
+- The current sandbox has Java available but did not initially contain Gradle or an Android SDK/build-tools installation.
+- A proper Android build toolchain is required for the final APK. Do not substitute another hand-written/repacked DEX path merely to produce an installable file.
+- A successful build is not sufficient by itself: inspect the resulting APK manifest and packaged assets, verify signatures/integrity, then test it on Android/GrapheneOS.
+
 ## Prototype-fidelity pass
 
 ### Clock display servicing
