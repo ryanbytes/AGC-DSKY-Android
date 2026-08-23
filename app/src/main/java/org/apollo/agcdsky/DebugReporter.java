@@ -2,9 +2,9 @@ package org.apollo.agcdsky;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Build;
 import android.webkit.JavascriptInterface;
 
@@ -21,14 +21,12 @@ import java.util.Locale;
 /**
  * Local crash recorder for prototype builds.
  *
- * No GitHub credential is embedded in the APK. Reports are stored in the app's
- * private files directory and, on the next launch, can be opened as a prefilled
- * issue in the private repository using the user's normal GitHub session.
+ * Reports are stored in the app's private files directory. The app never sends
+ * them anywhere and has no Internet permission; the user can copy the report to
+ * the clipboard when needed.
  */
 public final class DebugReporter {
     private static final String REPORT_FILE = "debug-last.txt";
-    private static final String ISSUE_URL =
-            "https://github.com/ryanbytes/AGC-DSKY-Android/issues/new";
     private static final int MAX_REPORT_CHARS = 12000;
 
     private static boolean installed;
@@ -69,9 +67,12 @@ public final class DebugReporter {
 
         new AlertDialog.Builder(activity)
                 .setTitle("AGC DSKY DEBUG REPORT")
-                .setMessage("The previous run produced a crash/error report. Report it before starting the DSKY again?")
+                .setMessage("The previous run produced a crash/error report. Copy it before starting the DSKY again?")
                 .setCancelable(false)
-                .setPositiveButton("REPORT TO GITHUB", (dialog, which) -> openGitHubIssue(activity))
+                .setPositiveButton("COPY REPORT", (dialog, which) -> {
+                    copyReport(activity);
+                    continueStartup.run();
+                })
                 .setNegativeButton("CONTINUE", (dialog, which) -> continueStartup.run())
                 .setNeutralButton("CLEAR", (dialog, which) -> {
                     clear(activity);
@@ -99,18 +100,16 @@ public final class DebugReporter {
         }
     }
 
-    private static void openGitHubIssue(Activity activity) {
+    private static void copyReport(Activity activity) {
         String report = readReport(activity);
         if (report.length() > MAX_REPORT_CHARS) {
             report = report.substring(report.length() - MAX_REPORT_CHARS);
         }
-
-        String title = "Android debug report - " + Build.MANUFACTURER + " " + Build.MODEL;
-        String body = "Crash report from AGC DSKY prototype.\n\n```text\n"
-                + report + "\n```\n";
-        Uri uri = Uri.parse(ISSUE_URL + "?title=" + Uri.encode(title)
-                + "&body=" + Uri.encode(body));
-        activity.startActivity(new Intent(Intent.ACTION_VIEW, uri));
+        ClipboardManager clipboard =
+                (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(ClipData.newPlainText("AGC DSKY debug report", report));
+        }
     }
 
     private static synchronized void writeReport(Context context, String source, String detail) {
@@ -124,7 +123,7 @@ public final class DebugReporter {
         out.append("Device: ").append(Build.MANUFACTURER).append(' ')
                 .append(Build.MODEL).append('\n');
         out.append("Package: ").append(context.getPackageName()).append('\n');
-        out.append("Note: location coordinates are intentionally not included.\n\n");
+        out.append("Note: local report only; location coordinates are intentionally not included.\n\n");
         out.append(detail == null ? "(no detail)" : detail).append('\n');
 
         byte[] bytes = out.toString().getBytes(StandardCharsets.UTF_8);
