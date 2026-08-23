@@ -3,7 +3,9 @@ package org.apollo.agcdsky;
 import android.service.dreams.DreamService;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
@@ -36,6 +38,18 @@ public final class AgcDreamService extends DreamService {
         webView.addJavascriptInterface(new DreamBridge(), "DreamBridge");
         webView.addJavascriptInterface(new DebugReporter.JsBridge(this), "DebugBridge");
         webView.setWebViewClient(new NetClient(this));
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage message) {
+                if (message != null
+                        && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    DebugReporter.appendWebError(AgcDreamService.this,
+                            message.sourceId() + ":" + message.lineNumber()
+                                    + "\n" + message.message());
+                }
+                return super.onConsoleMessage(message);
+            }
+        });
         setContentView(webView);
         webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX
                 + "index.html?dream=1&clock=1&display=1");
