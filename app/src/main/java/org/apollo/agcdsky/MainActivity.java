@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.ConsoleMessage;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -71,6 +72,17 @@ public final class MainActivity extends Activity {
                         Manifest.permission.ACCESS_COARSE_LOCATION,
                         Manifest.permission.ACCESS_FINE_LOCATION
                 }, GEO_PERMISSION_REQUEST);
+            }
+
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage message) {
+                if (message != null
+                        && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    DebugReporter.appendWebError(MainActivity.this,
+                            message.sourceId() + ":" + message.lineNumber()
+                                    + "\n" + message.message());
+                }
+                return super.onConsoleMessage(message);
             }
         });
         setContentView(webView);
