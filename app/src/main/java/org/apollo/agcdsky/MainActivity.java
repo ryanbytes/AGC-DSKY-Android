@@ -22,6 +22,7 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle state) {
+        DebugReporter.install(this);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(state);
 
@@ -37,12 +38,23 @@ public final class MainActivity extends Activity {
                         | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
 
+        // If the prior run crashed, stop before constructing a WebView. This
+        // keeps the report dialog usable even when WebView init is the fault.
+        if (!DebugReporter.showPendingReport(this, this::startDsky)) {
+            startDsky();
+        }
+    }
+
+    private void startDsky() {
+        if (webView != null) return;
+
         webView = new WebView(this);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        webView.addJavascriptInterface(new DebugReporter.JsBridge(this), "DebugBridge");
         webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
