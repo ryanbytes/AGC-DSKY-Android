@@ -3,6 +3,7 @@ package org.apollo.agcdsky;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
@@ -16,6 +17,8 @@ import android.webkit.WebView;
 /** Main interactive DSKY activity. */
 public final class MainActivity extends Activity {
     private static final int GEO_PERMISSION_REQUEST = 41;
+    /** Approximation of the Apollo CM main-console FS 36231 panel finish. */
+    private static final int CM_PANEL_COLOR = 0xFF7F8484;
 
     private WebView webView;
     private String pendingGeoOrigin;
@@ -27,23 +30,50 @@ public final class MainActivity extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(state);
 
-        getWindow().setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        configureWindow();
 
         // If the prior run crashed, stop before constructing a WebView. This
         // keeps the report dialog usable even when WebView init is the fault.
         if (!DebugReporter.showPendingReport(this, this::startDsky)) {
             startDsky();
         }
+    }
+
+    /**
+     * Keep the Apollo panel surface behind the WebView at all times. In
+     * particular, this prevents Android's compositor from exposing a black
+     * status/navigation/cutout surface while the viewport changes orientation.
+     */
+    private void configureWindow() {
+        Window window = getWindow();
+        window.setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        window.addFlags(
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        | WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        window.setStatusBarColor(CM_PANEL_COLOR);
+        window.setNavigationBarColor(CM_PANEL_COLOR);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            WindowManager.LayoutParams params = window.getAttributes();
+            params.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            window.setAttributes(params);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false);
+        }
+
+        View decor = window.getDecorView();
+        decor.setBackgroundColor(CM_PANEL_COLOR);
+        decor.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
     }
 
     // Package-private intentionally. Some Android DEX pipelines translate a
@@ -53,6 +83,7 @@ public final class MainActivity extends Activity {
         if (webView != null) return;
 
         webView = new WebView(this);
+        webView.setBackgroundColor(CM_PANEL_COLOR);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
