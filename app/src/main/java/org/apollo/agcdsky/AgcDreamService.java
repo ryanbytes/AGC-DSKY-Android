@@ -13,6 +13,7 @@ public final class AgcDreamService extends DreamService {
 
     @Override
     public void onAttachedToWindow() {
+        DebugReporter.install(this);
         super.onAttachedToWindow();
         setInteractive(false);
         setFullscreen(true);
@@ -33,6 +34,7 @@ public final class AgcDreamService extends DreamService {
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         webView.addJavascriptInterface(new DreamBridge(), "DreamBridge");
+        webView.addJavascriptInterface(new DebugReporter.JsBridge(this), "DebugBridge");
         webView.setWebViewClient(new NetClient(this));
         setContentView(webView);
         webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX
