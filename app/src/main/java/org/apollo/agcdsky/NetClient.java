@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * Serves packaged assets from a synthetic HTTPS origin so WebAssembly and rope
@@ -21,6 +22,8 @@ import java.util.Collections;
 public final class NetClient extends WebViewClient {
     public static final String ASSET_ORIGIN = "https://appassets.androidplatform.net";
     public static final String ASSET_PREFIX = "/assets/";
+    private static final String ASSET_HOST = "appassets.androidplatform.net";
+    private static final String ASSET_ROOT_SEGMENT = "assets";
 
     private final Context context;
 
@@ -35,32 +38,42 @@ public final class NetClient extends WebViewClient {
         Uri uri = request.getUrl();
         if (uri == null
                 || !"https".equals(uri.getScheme())
-                || !"appassets.androidplatform.net".equals(uri.getHost())) {
+                || !ASSET_HOST.equals(uri.getHost())) {
             return null;
         }
 
-        String path = uri.getPath();
-        if (path == null) return notFound();
-
-        // Be deliberately defensive here. A previous hand-built diagnostic APK
-        // reached substring() with a negative index on an unexpected WebView
-        // request. Never derive an index from the request path itself.
-        final int prefixLength = ASSET_PREFIX.length();
-        if (path.length() <= prefixLength
-                || !path.regionMatches(0, ASSET_PREFIX, 0, prefixLength)) {
+        // Parse by URI path segments rather than by substring arithmetic. This
+        // avoids the negative/out-of-range index crash seen in the old
+        // diagnostic APK and also gives us one place to reject traversal or
+        // encoded separator tricks before opening an AssetManager path.
+        List<String> segments = uri.getPathSegments();
+        if (segments == null
+                || segments.size() < 2
+                || !ASSET_ROOT_SEGMENT.equals(segments.get(0))) {
             return notFound();
         }
 
-        String assetPath = path.substring(prefixLength);
-        if (assetPath.isEmpty()
-                || assetPath.startsWith("/")
-                || assetPath.contains("..")) {
-            return notFound();
+        StringBuilder assetPath = new StringBuilder();
+        for (int i = 1; i < segments.size(); i++) {
+            String segment = segments.get(i);
+            if (segment == null
+                    || segment.isEmpty()
+                    || ".".equals(segment)
+                    || "..".equals(segment)
+                    || segment.indexOf('/') >= 0
+                    || segment.indexOf('\\') >= 0) {
+                return notFound();
+            }
+            if (assetPath.length() > 0) assetPath.append('/');
+            assetPath.append(segment);
         }
+
+        if (assetPath.length() == 0) return notFound();
+        String path = assetPath.toString();
 
         try {
-            InputStream input = context.getAssets().open(assetPath);
-            return new WebResourceResponse(mimeType(assetPath), encoding(assetPath), input);
+            InputStream input = context.getAssets().open(path);
+            return new WebResourceResponse(mimeType(path), encoding(path), input);
         } catch (IOException ignored) {
             return notFound();
         }
