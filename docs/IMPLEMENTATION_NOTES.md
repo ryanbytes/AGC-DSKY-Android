@@ -66,13 +66,13 @@ Gradle merges the webAGC `src` directory and its `demo/agc` directory into Andro
 
 Modern WebView binary `fetch()` behavior is more predictable on an HTTP(S) origin than on `file:///android_asset/`.
 
-`NetClient` now intercepts:
+`NetClient` intercepts:
 
 `https://appassets.androidplatform.net/assets/...`
 
 and serves matching paths directly from Android `AssetManager`. MainActivity and DreamService both load the DSKY page through that origin.
 
-This is a local/offline resource mechanism; the app does not need to fetch the AGC core or rope from the Internet.
+This is a local/offline resource mechanism; the app does not need to fetch the AGC core or rope from the Internet. Current `NetClient` resolves the request with URI path segments, rejects traversal/separator tricks, and deliberately avoids substring/index arithmetic on untrusted request paths. This specifically prevents recurrence of the `StringIndexOutOfBoundsException` seen in an old hand-built diagnostic APK.
 
 ### Minimal WASI wrapper
 
@@ -89,13 +89,34 @@ This avoids pulling `@wasmer/wasi` and `@wasmer/wasmfs` into the Android WebView
 
 The minimal WASI implementation is source-complete but still requires runtime testing on Android. If an exported yaAGC call traps, inspect the actual trap before expanding the WASI layer.
 
-### AGC clocking
+### AGC mission selection
+
+Apollo 11 LM `Luminary099.bin` remains the default rope. The hidden normal-app controls now also allow selecting CM `Comanche055.bin`.
+
+- The mission choice is stored in local storage.
+- Switching mission while AGC mode is running stops the current core, loads a new core with the selected rope, and starts from reset.
+- Switching mission while in phone-clock mode changes only the selected mission; the selected rope is loaded when AGC mode is next entered.
+- DreamService never enters AGC mode and ignores the mission control path.
+
+Mission selection changes the fixed-memory rope only. It does not pretend to model the different spacecraft's complete external environment or peripherals beyond the DSKY interface currently implemented.
+
+### AGC clocking and lifecycle
 
 The wrapper follows webAGC's approximate timing model:
 
 - ~11.72 microseconds per AGC instruction.
 - JavaScript timer/drain loop at approximately 60 Hz.
 - A maximum catch-up threshold prevents a delayed WebView timer from trying to execute an unbounded instruction burst.
+
+The normal app now explicitly coordinates Activity/WebView visibility with the frontend:
+
+- MainActivity signals hidden before `WebView.onPause()`.
+- If the same WebView/JavaScript heap survives, the running yaAGC timer is stopped but the in-memory core is retained.
+- On resume, the same core timer is restarted without a CPU reset.
+- MainActivity also calls `WebView.saveState()` / `restoreState()` for Activity recreation and the frontend persists selected mission plus requested AGC/CLOCK mode in local storage.
+- A recreated page/process does **not** preserve the yaAGC JavaScript heap, CPU registers, or erasable memory. It re-enters the selected AGC mission from a fresh reset. Full AGC snapshot serialization has not been implemented.
+
+This distinction is intentional: ordinary screen-off/screen-on should not unnecessarily kick a surviving AGC session back to phone-clock mode, while process recreation must not falsely claim exact AGC continuation.
 
 ### DSKY output decoding
 
@@ -142,15 +163,32 @@ This prevents the DSKY peripheral model from claiming unrelated spacecraft input
 
 `AgcDreamService` uses the same local HTTPS asset page with:
 
-`?dream=1&clock=1&dim=1`
+`?dream=1&clock=1&display=1`
 
 Dream mode:
 
-- hides app controls;
-- remains in phone-clock mode rather than running yaAGC continuously;
-- starts in dim mode;
-- sets a low native screen brightness;
-- drifts the DSKY by a few pixels once per minute.
+- is a separate WebView from MainActivity;
+- is always the synthetic phone-clock presentation rather than running yaAGC continuously;
+- is display-only and non-interactive;
+- hides the keypad, app controls, hint, and lower fasteners;
+- uses independent persistent `DIM`, `BRIGHT`, and `SOLAR` dream-brightness choices;
+- sets Android-window brightness through the `DreamBridge` JavaScript interface;
+- drifts the cropped upper DSKY by a few pixels once per minute.
+
+Because DreamService has its own page and `dream=1` forces display-only only for that page, Dream presentation is not intended to latch MainActivity into display-only/clock state. MainActivity's own saved `displayOnly` preference remains independent.
+
+## Controls
+
+The normal app's hidden controls currently include:
+
+- DIM
+- DREAM DIM/BRIGHT/SOLAR selector
+- TICK ON/OFF
+- DISPLAY
+- mission selector (`LM L99` / `CM C55`)
+- AGC/CLOCK toggle
+
+The control strip has a separate small responsive stylesheet so the added mission selector can wrap on narrow portrait phones instead of running offscreen.
 
 ## Signing
 
@@ -171,12 +209,14 @@ See `AGENTS.md` and `docs/PROGRESS.md` for current handoff and verification gate
 
 ## Remaining high-value work
 
-1. Perform the first real recursive-checkout v0.7 Gradle build.
-2. Run on Android and verify the synthetic HTTPS asset origin serves WASM and rope files.
+1. Perform the first real recursive-checkout v0.7 Gradle build from the current source revision.
+2. Run on Android and verify the synthetic HTTPS asset origin serves WASM plus both rope files.
 3. Verify the minimal WASI shim by actually instantiating and stepping yaAGC.
 4. Capture first real channel packets from Luminary099 and compare displayed state against VirtualAGC/webAGC.
 5. Verify every physical DSKY key, especially PRO and RSET behavior.
 6. Verify channel-010 sign clearing, blank codes, VN flash polarity, and EL-off behavior.
-7. Add selectable Comanche055 CM mode only after the first Luminary099 path is stable.
-8. Add user-adjustable dream brightness (target 2–25%) through a settings Activity.
-9. Do screenshot comparison against close-up genuine DSKY imagery on the actual phone.
+7. Verify Comanche055 can be selected, loads cleanly, and produces sensible DSKY output.
+8. Verify screen-off/screen-on resumes an in-memory AGC core without switching to synthetic clock mode.
+9. Verify DreamService activation/deactivation leaves the normal app's mode/display state correct.
+10. Add user-adjustable dream brightness (target 2–25%) through a settings Activity if the three current dream modes prove insufficient.
+11. Do screenshot comparison against close-up genuine DSKY imagery on the actual phone.
