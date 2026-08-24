@@ -2,7 +2,7 @@
 'use strict';
 
 /*
- * Dependency-free smoke test for app/src/main/assets/app.js.
+ * Dependency-free smoke test for the Android web frontend and source invariants.
  *
  * This is intentionally not a substitute for Android/WebView testing. It
  * catches ordinary JavaScript initialization regressions and exercises the
@@ -14,7 +14,11 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const APP_JS = path.resolve(__dirname, '../app/src/main/assets/app.js');
+const ROOT = path.resolve(__dirname, '..');
+const APP_JS = path.join(ROOT, 'app/src/main/assets/app.js');
+const INDEX_HTML = path.join(ROOT, 'app/src/main/assets/index.html');
+const MANIFEST = path.join(ROOT, 'app/src/main/AndroidManifest.xml');
+const APP_GRADLE = path.join(ROOT, 'app/build.gradle');
 
 class Classes {
     constructor() {
@@ -190,7 +194,24 @@ function flushAsync() {
     return new Promise((resolve) => setImmediate(resolve));
 }
 
+function checkSourceInvariants() {
+    const manifest = fs.readFileSync(MANIFEST, 'utf8');
+    assert(!manifest.includes('android.permission.INTERNET'), 'manifest must remain offline/no-INTERNET');
+    assert(manifest.includes('android.permission.BIND_DREAM_SERVICE'), 'DreamService bind permission missing');
+    assert(manifest.includes('android.service.dreams.DreamService'), 'DreamService intent registration missing');
+
+    const gradle = fs.readFileSync(APP_GRADLE, 'utf8');
+    assert(gradle.includes("'../vendor/webAGC/src'"), 'yaAGC WASM asset source directory missing');
+    assert(gradle.includes("'../vendor/webAGC/demo/agc'"), 'Apollo rope asset source directory missing');
+
+    const html = fs.readFileSync(INDEX_HTML, 'utf8');
+    assert(html.includes('id="mission"'), 'mission selector control missing from index.html');
+    assert(html.includes('controls-layout.css'), 'responsive controls stylesheet missing from index.html');
+}
+
 async function main() {
+    checkSourceInvariants();
+
     const first = createEnvironment();
     assert(first.elements.mission.textContent === 'LM L99', 'LM must be the default mission');
 
@@ -227,7 +248,7 @@ async function main() {
     assert(dream.context.AGCDSKY.getCore() === null, 'DreamService page must not start yaAGC');
     assert(dream.document.body.classList.contains('dream'), 'DreamService page must enter dream mode');
 
-    console.log('frontend mission/lifecycle smoke: PASS');
+    console.log('frontend/source smoke: PASS');
 }
 
 main().catch((error) => {
