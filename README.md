@@ -4,7 +4,7 @@ Android Apollo Block II DSKY clock/screensaver plus onboard AGC emulator project
 
 ## Current source state
 
-The v0.7 source integrates a pinned real VirtualAGC `yaAGC` WebAssembly core and Apollo 11 flight-software rope images. The complete Android runtime path has been implemented but has **not yet been device/emulator verified**, so see `docs/PROGRESS.md` before treating AGC mode as proven working.
+The v0.7 source integrates a pinned real VirtualAGC `yaAGC` WebAssembly core and Apollo 11 flight-software rope images. The complete Android runtime path has been implemented but has **not yet been device/emulator verified from the current source revision**, so see `docs/PROGRESS.md` before treating AGC mode as proven working.
 
 Current source features:
 
@@ -20,20 +20,24 @@ Current source features:
 - Pinned `webAGC` submodule containing `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin`.
 - Offline yaAGC WebAssembly wrapper with a minimal WASI shim.
 - AGC/CLOCK mode control.
+- Persistent mission selector: Apollo 11 LM **Luminary 099** or CM **Comanche 055**.
+- AGC execution pauses while the normal app is hidden and resumes in place when the same WebView returns.
+- Requested AGC/CLOCK mode and selected mission persist across Activity/page recreation; recreated AGC mode starts from a fresh core reset rather than pretending CPU/erasable-memory state was serialized.
 - Authentic Block II DSKY output-channel decoding for numeric registers and annunciators.
 - Authentic DSKY key codes back into yaAGC, including separate PRO/Proceed handling.
 - `COMP ACTY` in AGC mode is tied directly to **output channel 011 octal, bit 2**. The old phone-network activity surrogate has been removed.
+- Local asset interception uses URI path segments rather than substring offsets, avoiding the old diagnostic APK's request-path index crash.
 
 ## AGC mode
 
-The initial AGC mode uses the Apollo 11 Lunar Module rope **Luminary 099**.
+The default AGC mission uses the Apollo 11 Lunar Module rope **Luminary 099**. The hidden controls can switch to the Apollo 11 Command Module rope **Comanche 055**; the selection is stored locally.
 
 The emulator path is:
 
 1. Android loads the DSKY page from a synthetic local HTTPS asset origin.
 2. `agc-core.js` loads packaged `yaAGC.wasm` and supplies its four WASI imports locally.
-3. `Luminary099.bin` is copied into yaAGC fixed memory with `set_fixed()`.
-4. The CPU is stepped at approximately real AGC timing.
+3. The selected packaged rope (`Luminary099.bin` or `Comanche055.bin`) is copied into yaAGC fixed memory with `set_fixed()`.
+4. The CPU is stepped at approximately real AGC timing while the normal app is visible.
 5. `packet_read()` output drives the DSKY.
 6. DSKY key presses are sent back through `packet_write()`.
 
@@ -55,7 +59,7 @@ Android uses a `DreamService` for system screen savers. After installing a verif
 2. Select **AGC DSKY Clock** / AGC DSKY as the screen saver.
 3. Set the system start condition to **While charging**.
 
-Dream mode remains the low-power phone clock rather than running the AGC core continuously. It starts dim and uses low native screen brightness.
+Dream mode remains a separate display-only phone clock rather than running the AGC core continuously. It uses independent DIM/BRIGHT/SOLAR dream brightness behavior and periodic pixel drift. Returning to the normal app does not intentionally switch the normal app into Dream/clock presentation.
 
 ## Repository checkout
 
@@ -77,9 +81,10 @@ A checkout without the submodule does not contain the AGC binary assets required
 
 - `app/src/main/assets/index.html` — DSKY structure and fixed EL SVG coordinate system.
 - `app/src/main/assets/style.css` — physical faceplate, annunciators, keys, display treatment.
-- `app/src/main/assets/app.js` — clock mode, AGC/clock coordination, authentic DSKY channel/relay decoding, key routing.
+- `app/src/main/assets/controls-layout.css` — wrapping behavior for the hidden phone controls.
+- `app/src/main/assets/app.js` — clock mode, mission selection, lifecycle coordination, authentic DSKY channel/relay decoding, key routing.
 - `app/src/main/assets/agc-core.js` — offline yaAGC WASM loader, minimal WASI shim, rope loading, CPU stepping, packet I/O.
-- `app/src/main/java/org/apollo/agcdsky/MainActivity.java` — immersive interactive WebView shell.
+- `app/src/main/java/org/apollo/agcdsky/MainActivity.java` — immersive interactive WebView shell and Activity/WebView lifecycle coordination.
 - `app/src/main/java/org/apollo/agcdsky/AgcDreamService.java` — Android screen saver shell.
 - `app/src/main/java/org/apollo/agcdsky/NetClient.java` — local HTTPS-to-AssetManager resource server.
 - `vendor/webAGC` — pinned upstream core/rope submodule.
