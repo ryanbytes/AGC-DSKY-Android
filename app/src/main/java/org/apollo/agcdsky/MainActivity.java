@@ -19,8 +19,13 @@ public final class MainActivity extends Activity {
     private static final int GEO_PERMISSION_REQUEST = 41;
     /** Approximation of the Apollo CM main-console FS 36231 panel finish. */
     private static final int CM_PANEL_COLOR = 0xFF7F8484;
+    private static final String JS_APP_HIDDEN =
+            "if(window.AGCDSKY&&AGCDSKY.setAppVisible){AGCDSKY.setAppVisible(false)}";
+    private static final String JS_APP_VISIBLE =
+            "if(window.AGCDSKY&&AGCDSKY.setAppVisible){AGCDSKY.setAppVisible(true)}";
 
     private WebView webView;
+    private Bundle pendingWebViewState;
     private String pendingGeoOrigin;
     private GeolocationPermissions.Callback pendingGeoCallback;
 
@@ -30,6 +35,7 @@ public final class MainActivity extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(state);
 
+        pendingWebViewState = state;
         configureWindow();
 
         // If the prior run crashed, stop before constructing a WebView. This
@@ -120,7 +126,20 @@ public final class MainActivity extends Activity {
             }
         });
         setContentView(webView);
-        webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX + "index.html");
+
+        boolean restored = false;
+        if (pendingWebViewState != null) {
+            try {
+                restored = webView.restoreState(pendingWebViewState) != null;
+            } catch (RuntimeException ignored) {
+                // A stale/incompatible WebView state should never make the app
+                // unlaunchable. Fall back to the packaged start page.
+            }
+            pendingWebViewState = null;
+        }
+        if (!restored) {
+            webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX + "index.html");
+        }
     }
 
     private boolean hasLocationPermission() {
@@ -141,6 +160,36 @@ public final class MainActivity extends Activity {
             pendingGeoOrigin = null;
             pendingGeoCallback = null;
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        configureWindow();
+        if (webView != null) {
+            webView.onResume();
+            webView.evaluateJavascript(JS_APP_VISIBLE, null);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        if (webView != null) {
+            // Pause the synthetic scheduler/AGC execution before WebView itself
+            // is paused. Waking the phone resumes the same in-memory AGC core
+            // instead of forcing the UI back into clock mode.
+            webView.evaluateJavascript(JS_APP_HIDDEN, null);
+            webView.onPause();
+        }
+        super.onPause();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        if (webView != null) {
+            webView.saveState(outState);
+        }
+        super.onSaveInstanceState(outState);
     }
 
     @Override
