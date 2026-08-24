@@ -95,11 +95,12 @@ A checkout without the submodule does not contain the AGC binary assets required
 
 ## Android Studio / Gradle build
 
-Requirements currently declared by the project:
+Compatibility for the currently declared Android Gradle Plugin 9.3.0:
 
-- JDK 17
+- JDK 17 or newer compatible runtime
+- Gradle **9.5.0 or newer compatible 9.x release** (AGP 9.3.0 minimum is 9.5.0)
 - compile/target SDK 37
-- Android Gradle Plugin 9.3.0
+- SDK Build Tools 36.0.0 or compatible newer installed build tools
 - initialized Git submodules
 
 ```bash
