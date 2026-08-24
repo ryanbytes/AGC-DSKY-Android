@@ -1,6 +1,6 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-08-22
+Last updated: 2026-08-24
 
 ## Goal
 
@@ -24,16 +24,41 @@ Ship an Android DSKY that keeps the phone clock / DreamService mode but also con
 - EL digit segments were redrawn in commit `a70c2437d69729b6217d5cfa1cbbb57e7be04ad6`.
 - `AGENTS.md` contains durable handoff/rules for other coding agents (`747f693`).
 - webAGC is pinned as `vendor/webAGC` at upstream commit `0575ea7a1231e3948bae7d2c22a6ac146da0c38d` (`31a9ebd`).
-- Gradle v0.7 source sets package the pinned `yaAGC.wasm` and Apollo 11 rope files when the repository is cloned recursively (`05e6786`).
+- Gradle v0.7 source sets package the pinned `yaAGC.wasm` plus `Luminary099.bin` and `Comanche055.bin` when the repository is cloned recursively (`05e6786`).
 - The native `TrafficStats` / `agcnet://poll` COMP ACTY surrogate has been removed. `NetClient` serves packaged assets from a synthetic local HTTPS origin (`61bfd05`) and its error responses were hardened in `4609c89`.
+- `NetClient` now parses the synthetic local URL by URI path segments and performs no request-path substring arithmetic, eliminating the old negative/out-of-range substring crash class (`c2610ec`).
 - MainActivity and DreamService both use the synthetic HTTPS asset origin (`4ddd97f`, `6d9f657`).
+- MainActivity now saves/restores WebView state and explicitly signals app visibility to the frontend before WebView pause/resume, so an in-memory AGC core can pause while the phone sleeps and resume without being forced into clock mode (`8c9a63b`).
 - `agc-core.js` implements an offline yaAGC embedding wrapper with a minimal WASI shim, rope loading, CPU stepping, packet I/O, input-channel masks, normal DSKY keys, and PRO (`75cc247`).
 - The UI has an onboard AGC/CLOCK mode control (`c1fb49d`).
+- The UI now has a persistent LM/CM mission selector. Apollo 11 LM `Luminary099` remains the default; CM `Comanche055` can be selected and the selected rope is used on the next/current AGC start (`3a456a0`, `d1486f6`).
+- The frontend persists the selected mission and requested AGC/CLOCK run mode. A page/activity reload can re-enter the selected AGC mission, but this is a fresh yaAGC reset after process/page recreation; it is not a serialized AGC erasable-memory/CPU snapshot (`d1486f6`).
+- While the existing WebView remains alive, AGC execution is stopped on app hide/pause and restarted on visibility/resume without resetting the core (`d1486f6`).
+- Expanded app controls wrap on narrow phone screens rather than extending offscreen (`c1f48c2`, `5f3ce9c`).
 - `app.js` decodes authentic AGC DSKY I/O and sends authentic Pinball key codes (`60749ac`).
 - yaAGC VERB/NOUN flashing and EL-off states now have visible CSS behavior (`408aaaf`, `d4e72f8`).
 - Third-party/core provenance and protocol references are current (`754c2dc`, `fda2fd1`).
 - README and implementation notes describe v0.7 rather than the obsolete network-light architecture (`ba88a43`, `9273d7b`).
 - No GitHub Actions build workflow should be added. Builds are local/manual.
+
+## Source continuation checkpoint — 2026-08-24
+
+The user confirmed that the reconstructed v0.7 APK produced during local recovery launches on the test phone. That establishes that the recovered package shell is installable/runnable, but it is **not** proof that the current source commits build or that the current yaAGC/rope path works. The current repository changes still require a clean Gradle build and device test.
+
+Changes committed in this pass:
+
+1. Bounds-safe URI-segment asset resolution in `NetClient`; no substring-derived path indices.
+2. MainActivity WebView state save/restore plus explicit frontend pause/resume visibility signaling.
+3. Persistent mission selection between `Luminary099.bin` and `Comanche055.bin`.
+4. Persistent requested AGC/CLOCK mode with automatic re-entry after a page/activity recreation.
+5. In-memory AGC pause/resume across ordinary Activity sleep/wake without core reset.
+6. Responsive wrapping for the enlarged hidden control strip.
+
+Important state distinction:
+
+- Ordinary phone sleep/wake while the same WebView/process survives: the yaAGC instance is paused and resumed in place.
+- Activity/page/process recreation: the selected mission and requested mode are restored, but yaAGC starts from reset. Full CPU/erasable-memory serialization is not implemented and must not be claimed.
+- DreamService remains a separate synthetic phone-clock presentation and does not run the AGC core.
 
 ## Local build recovery checkpoint — 2026-08-22
 
@@ -43,7 +68,7 @@ Hard requirements for the test/final APK:
 
 - Runtime must be self-contained. No Internet/network dependency is permitted.
 - Device location is the only external runtime input and is used only for `DREAM SOLAR` sunrise/sunset behavior.
-- The final manifest should not request `android.permission.INTERNET`; the committed manifest must be checked/updated before the clean build if that permission is still present.
+- The final manifest should not request `android.permission.INTERNET`; the committed manifest currently requests only coarse/fine location for SOLAR and must remain network-permission-free.
 - All HTML, CSS, JavaScript, sounds, `yaAGC.wasm`, and Apollo rope data must be packaged in the APK.
 - Build, packaging, signing, and verification are local/manual. **Do not build with GitHub Actions, Codespaces, or other GitHub-hosted build infrastructure.** GitHub may be used only as a source/code repository.
 - The deliverable must be compiled from the normal Java/Gradle source tree. Do not use hand-edited Dalvik/DEX bytecode, repacked diagnostic APKs, or other emergency binary surgery as the final implementation.
@@ -53,7 +78,7 @@ Recent diagnostic history, retained only so the same failures are not rediscover
 
 1. An emergency hand-built diagnostic APK reported `targetSdk 29` / version `0` and was not the real v0.7 Gradle build.
 2. GrapheneOS/ART first rejected that diagnostic DEX because `MainActivity.onCreate()` used `invoke-virtual` for private `startDsky()`. Current Java source fixes this structurally by keeping `startDsky()` non-private (`e6405f7a4aaf93537917dc8e99f74a8ba4a0c4ea`).
-3. After that verifier issue was bypassed in the diagnostic APK, the next crash was `StringIndexOutOfBoundsException` in `NetClient.shouldInterceptRequest()` caused by unsafe substring/prefix arithmetic. The clean source build must use bounds-safe URI/path handling rather than reproducing the diagnostic implementation.
+3. After that verifier issue was bypassed in the diagnostic APK, the next crash was `StringIndexOutOfBoundsException` in `NetClient.shouldInterceptRequest()` caused by unsafe substring/prefix arithmetic. Current source now avoids request-path substring arithmetic entirely (`c2610ec`).
 4. Those diagnostic APKs are not candidates for release and must not be used as the base of the final build.
 
 Binary-integrity status during local recovery:
@@ -61,8 +86,9 @@ Binary-integrity status during local recovery:
 - Pinned `yaAGC.wasm`: **132,617 bytes**, independently reconstructed and verified against Git blob SHA `713685680492098d05437b99c26403f683d56009`. Treat this byte sequence as verified.
 - Apollo 11 `Luminary099.bin`: expected **73,728 bytes**, pinned Git blob SHA `cd2ec9992d5863e1c7234fa760020f68ef946202`.
 - A manually relayed/reconstructed rope copy reached the expected length but failed the pinned blob hash. It is rejected and must not be packaged.
-- Work is continuing to obtain/reconstruct `Luminary099.bin` through a clean path and the entire file must match the pinned blob SHA before it is accepted.
-- Do not claim a self-contained APK is complete until both binaries are hash-verified and present inside the built APK.
+- Work is continuing to obtain/reconstruct `Luminary099.bin` through a clean path and the entire file must match the pinned blob SHA before it is accepted outside a recursive submodule checkout.
+- `Comanche055.bin` is referenced by the new source selector and is supplied by the pinned recursive webAGC submodule; its presence/integrity must also be checked in the clean build tree before CM mode is called verified.
+- Do not claim a self-contained APK is complete until required binaries are verified and present inside the built APK.
 
 Build-environment status:
 
@@ -194,9 +220,9 @@ The wrapper currently uses these yaAGC exports:
 - `packet_read`
 - optional `version`
 
-Initial/default rope: Apollo 11 LM `Luminary099.bin`.
+Initial/default rope: Apollo 11 LM `Luminary099.bin`. CM `Comanche055.bin` is now selectable from the hidden app controls; changing mission creates/loads a fresh core for that rope.
 
-CPU scheduling follows webAGC's approximate 11.72 microseconds per AGC instruction and drains output packets at roughly 60 Hz.
+CPU scheduling follows webAGC's approximate 11.72 microseconds per AGC instruction and drains output packets at roughly 60 Hz. MainActivity/frontend lifecycle signaling now stops this scheduler while the app is hidden and restarts it in place when the same WebView resumes.
 
 ## Android asset design
 
@@ -204,7 +230,7 @@ The app no longer starts from `file:///android_asset/`. It uses:
 
 `https://appassets.androidplatform.net/assets/`
 
-`NetClient.shouldInterceptRequest()` serves that host directly from the APK's `AssetManager`. This is intended to let `fetch('yaAGC.wasm')` and `fetch('Luminary099.bin')` behave like normal same-origin HTTPS requests while remaining completely offline.
+`NetClient.shouldInterceptRequest()` serves that host directly from the APK's `AssetManager`. This is intended to let local `fetch()` requests for `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin` behave like normal same-origin HTTPS requests while remaining completely offline.
 
 Gradle expects a recursive clone because the actual WASM/rope binaries live in the pinned submodule:
 
@@ -226,7 +252,8 @@ git submodule update --init --recursive
 - Normal key versus PRO handling was rechecked against webAGC's DSKY event path and the VirtualAGC protocol documentation.
 - Channel `0163` VN-flash and EL-off state now has corresponding CSS instead of being a no-op UI class.
 - Solar sunrise/sunset math was sanity-checked against published local times for 2026-08-22.
-- Current committed JavaScript was manually/static reviewed after the solar-mode update; this does not replace execution in Android WebView.
+- Current committed JavaScript was manually/static reviewed after the mission/lifecycle update; this does not replace execution in Android WebView.
+- Current manifest contains no `android.permission.INTERNET`; only location permissions used by optional SOLAR mode are declared.
 
 These checks do not substitute for running the WASM and Dream/permission paths in Android.
 
@@ -234,15 +261,15 @@ These checks do not substitute for running the WASM and Dream/permission paths i
 
 ### Implemented but not yet runtime-proven
 
-The source path from Android WebView -> local HTTPS asset interception -> `yaAGC.wasm` -> minimal WASI -> `Luminary099.bin` -> CPU stepping -> packet drain is implemented, but has **not yet been executed on an Android device/emulator in this environment**.
+The source path from Android WebView -> local HTTPS asset interception -> `yaAGC.wasm` -> minimal WASI -> selected rope -> CPU stepping -> packet drain is implemented, but has **not yet been executed from the current source revision on an Android device/emulator in this environment**.
 
-The latest native source also adds runtime location permission and a JavaScript Dream brightness bridge. Those changes require a real native rebuild; do not represent them as verified merely because older repacked APK shells install.
+The reconstructed v0.7 APK from recovery was reported by the user to launch, but it predates the source changes above and is not a clean Gradle proof for this revision.
 
-Therefore do **not** yet claim that the onboard AGC, SOLAR Dream mode, or native brightness bridge is operational until a current native APK is built and run.
+Therefore do **not** yet claim that the onboard AGC, CM mission selector, SOLAR Dream mode, native brightness bridge, or new lifecycle behavior is operational until a current native APK is built and run.
 
 ### Verification gates still required
 
-- [ ] Clean recursive clone contains `vendor/webAGC/src/yaAGC.wasm` and `vendor/webAGC/demo/agc/Luminary099.bin`.
+- [ ] Clean recursive clone contains `vendor/webAGC/src/yaAGC.wasm`, `vendor/webAGC/demo/agc/Luminary099.bin`, and `vendor/webAGC/demo/agc/Comanche055.bin`.
 - [ ] Local Gradle build succeeds with the current native source and v0.7 asset source sets.
 - [ ] Main page loads from the synthetic HTTPS asset origin.
 - [ ] `fetch('yaAGC.wasm')` returns the packaged WASM offline.
@@ -253,35 +280,35 @@ Therefore do **not** yet claim that the onboard AGC, SOLAR Dream mode, or native
 - [ ] COMP ACTY visibly follows channel `011`, bit 2.
 - [ ] At least one real DSKY keypress through channel `015` produces the expected Pinball response.
 - [ ] PRO through channel `032`, bit 14 is accepted.
+- [ ] Selecting `CM C55` loads `Comanche055.bin`; selecting `LM L99` returns to `Luminary099.bin`.
+- [ ] Selected mission persists across Activity/page recreation.
+- [ ] If AGC mode is active, ordinary screen-off/screen-on resumes the same in-memory core without dropping into phone-clock mode.
+- [ ] If the Activity/page is recreated, requested AGC mode re-enters with the selected mission from a fresh AGC reset; no false claim of full core-state serialization.
 - [ ] DISPLAY mode crops/scales the upper DSKY correctly on portrait and landscape phones.
 - [ ] DreamService is always display-only and remains non-interactive.
+- [ ] DreamService activity does not latch the normal app into display-only/clock presentation after wake.
 - [ ] `DREAM DIM` sets the expected low EL and Android-window brightness.
 - [ ] `DREAM BRIGHT` visibly reaches daytime charging brightness.
 - [ ] First selection of `DREAM SOLAR` requests location permission and persists coordinates locally.
 - [ ] `DREAM SOLAR` changes brightness/tick amplitude around computed sunrise/sunset as designed.
 - [ ] TICK remains independently switchable in all Dream brightness modes.
+- [ ] Expanded hidden controls fit/wrap correctly on the Pixel-class portrait viewport.
 - [ ] APK installs and runs on an Android device/emulator.
 
 ## Known risks / likely first debugging points
 
 1. **Minimal WASI semantics.** The import list is known, but libc may expect more detailed `fd_fdstat_get` behavior than the current shim provides. If instantiation succeeds but an exported call traps, inspect the trap before adding a large WASI dependency.
-2. **WebView asset interception.** Confirm main-frame and subresource requests are intercepted by `NetClient` under the synthetic HTTPS host.
+2. **WebView asset interception.** Confirm main-frame and subresource requests are intercepted by `NetClient` under the synthetic HTTPS host, including both rope filenames.
 3. **Submodule checkout.** A non-recursive clone will not contain the WASM/rope binaries and the Android build/runtime assets will be incomplete.
 4. **Display relay edge cases.** Verify sign clearing, blank relay codes, VN flashing polarity, EL-off behavior, and click counting against real yaAGC output/hardware references.
-5. **CPU timing.** The 60 Hz scheduling approach mirrors webAGC but Android WebView throttling/background behavior may require compensation.
+5. **CPU timing/lifecycle.** The 60 Hz scheduling approach mirrors webAGC. The new app-hide pause/resume logic should avoid background catch-up, but Android/WebView runtime behavior still requires device verification.
 6. **Geolocation permission.** GrapheneOS/Android can deny or grant approximate location; SOLAR must degrade to DIM cleanly when location is unavailable.
 7. **Dream brightness bridge.** Verify WebView JavaScript interface calls continue while DreamService is active and that the system does not override `screenBrightness`.
 8. **Polar locations.** If the standard sunrise/sunset event does not occur on a date, the current SOLAR fallback is night/dim. A future refinement may choose a solar-elevation model for polar day/night behavior.
+9. **Recreation state.** WebView history/state plus local preferences are restored, but yaAGC CPU/erasable memory is not serialized across process/page destruction. Implement a real snapshot mechanism only if exact AGC continuation across process death becomes a requirement.
 
 ## Build/signing note
 
 The original private v5/v6 signing key is not committed. A locally generated replacement key cannot update an APK signed by that original key; Android requires matching signatures for in-place updates. Never commit private signing material.
 
-Older hand-repacked APKs do not include the latest native location-permission and DreamBridge code. Do not label one of those as the current SOLAR build.
-
-## Next concrete checkpoint
-
-Perform a real local native build from a recursive checkout, run it on Android, and verify both paths:
-
-1. `Luminary099` executes and produces authentic channel packets inside the APK.
-2. DreamService DIM/BRIGHT/SOLAR, display-only crop, location permission, solar brightness curve, and tick-volume taper work on an actual phone.
+Older hand-repacked APKs do not include the latest native location-permission, DreamBridge, mission-selection, or lifecycle code. Do not label one of those as the current source build.
