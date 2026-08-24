@@ -1,0 +1,12 @@
+.app-controls{
+  max-width:calc(100vw - 12px);
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.app-controls button{flex:0 0 auto}
+.app-controls span{
+  flex:1 0 100%;
+  text-align:center;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
