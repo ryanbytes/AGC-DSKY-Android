@@ -2,6 +2,12 @@ const q=new URLSearchParams(location.search),dream=q.get('dream')==='1';
 const $=x=>document.getElementById(x);
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const oldDreamBright=store.get('dreamBright')==='1';
+const MISSIONS=Object.freeze({
+  luminary099:{label:'LUMINARY099',short:'LM L99',rope:'Luminary099.bin'},
+  comanche055:{label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}
+});
+let selectedMission=store.get('agcMission')==='comanche055'?'comanche055':'luminary099';
+const restoreAgcOnLoad=!dream&&store.get('runMode')==='agc';
 let dreamMode=store.get('dreamMode')||(oldDreamBright?'bright':'dim');
 let entryMode='',entry='',verb='16',noun='65',mode='clock',
     dim=store.get('dim')==='1',
@@ -12,7 +18,7 @@ const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20,RELAY_CLICK_SPREAD_MS=2.5;
 let clockDigits={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']},
     clockRelayWords={},relayQueue=[],relayBusy=false;
 const agcRelayWords={};
-let agcCore=null,agcLoaded=false;
+let agcCore=null,agcLoadedMission='',appVisible=!document.hidden,agcPausedForVisibility=false;
 
 const SEG={0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',8:'abcdefg',9:'abcdfg'};
 const PATH={
@@ -97,6 +103,15 @@ function lampTest(){
 }
 function executeClock(){if(verb==='35'){lampTest();return}if(verb==='16'&&noun==='65'){mode='clock';$('mode').textContent='V16 N65 · PHONE CLOCK';stopClockQueue();syncClockFace();return}$('mode').textContent=`V${verb} N${noun} · DSKY INPUT`}
 
+function missionSpec(){return MISSIONS[selectedMission]}
+function applyMissionButton(){const b=$('mission');if(b)b.textContent=missionSpec().short}
+function rememberRunMode(next){if(!dream)store.set('runMode',next)}
+function enterClock(status='V16 N65 · PHONE CLOCK'){
+  if(agcCore)agcCore.stop();
+  agcPausedForVisibility=false;mode='clock';rememberRunMode('clock');
+  $('agc').textContent='AGC';$('mode').textContent=status;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
+}
+
 const AGC_KEY={
   '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
   V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
@@ -114,6 +129,7 @@ function renderAgcReg(name){const r=agcDisplay[name];setReg(name,regSign(r),r.di
 function resetAgcFace(){
   agcDisplay.prog.fill(' ');agcDisplay.verb.fill(' ');agcDisplay.noun.fill(' ');
   ['r1','r2','r3'].forEach(name=>{agcDisplay[name].digits.fill(' ');agcDisplay[name].plus=false;agcDisplay[name].minus=false});
+  Object.keys(agcRelayWords).forEach(key=>delete agcRelayWords[key]);
   set2('prog','  ');set2('verb','  ');set2('noun','  ');['r1','r2','r3'].forEach(renderAgcReg);clearLamps();
 }
 function decodeChannel10(value){
@@ -143,17 +159,44 @@ function onAgcChannel(channel,value){
   if(channel===0o10)decodeChannel10(value);else if(channel===0o11)decodeChannel11(value);else if(channel===0o163)decodeChannel163(value);
 }
 function agcFailure(error){
-  console.error('AGC core stopped',error);if(agcCore)agcCore.stop();mode='clock';$('agc').textContent='AGC';$('mode').textContent='AGC ERROR · PHONE CLOCK';clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
+  console.error('AGC core stopped',error);enterClock('AGC ERROR · PHONE CLOCK');
 }
 async function enterAgc(){
   if(dream||mode==='agc-loading')return;
-  if(mode==='agc'){if(agcCore)agcCore.stop();mode='clock';$('agc').textContent='AGC';$('mode').textContent='V16 N65 · PHONE CLOCK';clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();return}
-  mode='agc-loading';stopClockQueue();$('agc').textContent='...';$('mode').textContent='LOADING LUMINARY099 · AGC';resetAgcFace();
+  if(mode==='agc'){enterClock();return}
+
+  const selected=missionSpec();
+  mode='agc-loading';stopClockQueue();$('agc').textContent='...';$('mode').textContent=`LOADING ${selected.label} · AGC`;resetAgcFace();
   try{
-    if(!agcCore)agcCore=new AgcCore({onChannelUpdate:onAgcChannel,onError:agcFailure});
-    if(!agcLoaded){await agcCore.load({wasmUrl:'yaAGC.wasm',ropeUrl:'Luminary099.bin'});agcLoaded=true}else{agcCore.reset();agcCore.configureInputMasks()}
-    mode='agc';$('agc').textContent='CLOCK';$('mode').textContent=`LUMINARY099 · ${agcCore.version()}`;agcCore.start(1);
+    if(!agcCore||agcLoadedMission!==selectedMission){
+      if(agcCore)agcCore.stop();
+      agcCore=new AgcCore({onChannelUpdate:onAgcChannel,onError:agcFailure});
+      await agcCore.load({wasmUrl:'yaAGC.wasm',ropeUrl:selected.rope});
+      agcLoadedMission=selectedMission;
+    }else{
+      agcCore.reset();agcCore.configureInputMasks();
+    }
+    mode='agc';rememberRunMode('agc');$('agc').textContent='CLOCK';$('mode').textContent=`${selected.label} · ${agcCore.version()}`;
+    if(appVisible){agcCore.start(1);agcPausedForVisibility=false}else{agcPausedForVisibility=true}
   }catch(error){agcFailure(error)}
+}
+function cycleMission(){
+  if(dream||mode==='agc-loading')return;
+  const restartAgc=mode==='agc';
+  if(agcCore)agcCore.stop();
+  selectedMission=selectedMission==='luminary099'?'comanche055':'luminary099';
+  store.set('agcMission',selectedMission);agcCore=null;agcLoadedMission='';agcPausedForVisibility=false;applyMissionButton();
+  if(restartAgc){mode='clock';enterAgc()}
+  else $('mode').textContent=`${missionSpec().label} SELECTED · PHONE CLOCK`;
+}
+function setAppVisible(visible){
+  appVisible=!!visible;
+  if(mode!=='agc'||!agcCore)return;
+  if(!appVisible){
+    if(agcCore.running){agcCore.stop();agcPausedForVisibility=true}
+    return;
+  }
+  if(agcPausedForVisibility){agcPausedForVisibility=false;agcCore.start(1)}
 }
 function press(k){
   if(mode==='agc'){if(k==='P'){agcCore.proceedPulse();return}const code=AGC_KEY[k];if(code!==undefined)agcCore.keyPress(code);return}
@@ -256,17 +299,21 @@ document.addEventListener('pointerdown',e=>{
 },{passive:true});
 document.addEventListener('pointerup',()=>clearTimeout(holdTimer),{passive:true});
 document.addEventListener('pointercancel',()=>clearTimeout(holdTimer),{passive:true});
+document.addEventListener('visibilitychange',()=>setAppVisible(!document.hidden));
 document.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();b.classList.add('pressed');press(b.dataset.key);setTimeout(()=>b.classList.remove('pressed'),90)}));
 $('dim').addEventListener('click',()=>{dim=!dim;applyDim();showControls()});
 $('dreambright').addEventListener('click',()=>{cycleDreamMode();showControls()});
 $('sound').addEventListener('click',()=>{ensureAudio();tickSound=!tickSound;applyTickSound();if(tickSound)playRelayBurst(1);showControls()});
 $('display').addEventListener('click',()=>{displayOnly=true;applyDisplayOnly()});
+$('mission').addEventListener('click',()=>{cycleMission();showControls()});
 $('agc').addEventListener('click',()=>{enterAgc();showControls()});
 document.addEventListener('pointerdown',()=>{if(tickSound)ensureAudio()},{passive:true});
-window.AGCDSKY={agcChannel:onAgcChannel,getCore:()=>agcCore};
+window.AGCDSKY={agcChannel:onAgcChannel,getCore:()=>agcCore,setAppVisible,getMission:()=>selectedMission};
 document.body.classList.toggle('dream',dream);
 if(!dream&&!displayOnly&&store.get('hinted')!=='1'){document.body.classList.add('first-run');setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200)}
-applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();clearLamps();set2('prog','00');show(verb,noun);syncClockFace();setInterval(tick,80);
+applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(verb,noun);syncClockFace();setInterval(tick,80);
+if(!dream&&!restoreAgcOnLoad)rememberRunMode('clock');
+if(restoreAgcOnLoad)setTimeout(()=>enterAgc(),0);
 if(dream){
   updateDreamEnvironment();setInterval(updateDreamEnvironment,60000);
   const pos=[[0,0],[3,-2],[-3,2],[2,3],[-2,-3],[1,-1]],dsky=$('dsky');let i=0;
