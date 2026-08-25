@@ -110,6 +110,7 @@ printf 'webAGC: %s\n' "$WEBAGC_HEAD"
 node tools/frontend-smoke.js
 node tools/agc-core-smoke.js
 node tools/runtime-debug-smoke.js
+node tools/native-diagnostic-smoke.js
 node tools/dsky-mapping-smoke.js
 node tools/asset-reference-smoke.js
 node tools/wasm-runtime-smoke.js
