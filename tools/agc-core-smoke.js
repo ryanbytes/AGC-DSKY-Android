@@ -4,10 +4,9 @@
 /*
  * Dependency-free source smoke test for app/src/main/assets/agc-core.js.
  *
- * This does not emulate WebAssembly or prove Android/WebView compatibility.
- * It exercises wrapper invariants that can be checked with fake yaAGC exports:
- * reset/prime/reset ordering, I/O queue draining, DSKY U-bit masks, packet-write
- * failure handling, and exact Apollo fixed-rope length validation.
+ * This does not emulate the real yaAGC WebAssembly binary or prove Android/
+ * WebView compatibility. It exercises wrapper invariants and the complete JS
+ * load pipeline with controlled fake WebAssembly/fetch implementations.
  */
 
 const fs = require('fs');
@@ -21,7 +20,7 @@ function assert(condition, message) {
     if (!condition) throw new Error(message);
 }
 
-function createCore() {
+function createEnvironment(overrides = {}) {
     const context = {
         window: null,
         console,
@@ -34,15 +33,20 @@ function createCore() {
         setInterval: () => 1,
         clearInterval: () => {},
         setTimeout: () => 1,
-        clearTimeout: () => {}
+        clearTimeout: () => {},
+        ...overrides
     };
     context.window = context;
     vm.createContext(context);
     vm.runInContext(source, context, { filename: 'agc-core.js' });
-    return new context.AgcCore();
+    return context;
 }
 
-async function main() {
+function createCore() {
+    return new (createEnvironment().AgcCore)();
+}
+
+async function testWrapperInvariants() {
     const core = createCore();
     const calls = [];
     const output = [(0o10 << 16) | 0o12345, 0];
@@ -83,7 +87,8 @@ async function main() {
     assert(structural[1][0] === 'step' && structural[1][1] === 1,
         'I/O initialization must use exactly one disposable CPU step');
     assert(structural[2][0] === 'reset', 'final reset must restore the reset vector');
-    assert(core.totalSteps === 0, 'disposable initialization step must not count as mission execution');
+    assert(core.totalSteps === 0,
+        'disposable initialization step must not count as mission execution');
 
     calls.length = 0;
     core.configureInputMasks();
@@ -124,9 +129,115 @@ async function main() {
     await core.loadRope(new ArrayBuffer(73728));
     assert(calls.some(([name, size]) => name === 'malloc' && size === 73728),
         'valid fixed rope must allocate exactly 73728 bytes');
-    assert(calls.some(([name]) => name === 'set_fixed'), 'valid fixed rope must call set_fixed');
-    assert(calls.some(([name]) => name === 'free'), 'rope allocation must be freed');
+    assert(calls.some(([name]) => name === 'set_fixed'),
+        'valid fixed rope must call set_fixed');
+    assert(calls.some(([name]) => name === 'free'),
+        'rope allocation must be freed');
+}
 
+async function testLoadPipeline() {
+    const calls = [];
+    let memory;
+
+    class FakeMemory {
+        constructor(options) {
+            calls.push(['memory', options.initial]);
+            this.buffer = new ArrayBuffer(256 * 1024);
+            memory = this;
+        }
+    }
+
+    const fakeExports = {
+        malloc(size) {
+            calls.push(['malloc', size]);
+            return 1024;
+        },
+        free(ptr) {
+            calls.push(['free', ptr]);
+        },
+        set_fixed(ptr) {
+            calls.push(['set_fixed', ptr]);
+        },
+        cpu_reset() {
+            calls.push(['reset']);
+        },
+        cpu_step(steps) {
+            calls.push(['step', steps]);
+        },
+        packet_write(channel, value) {
+            calls.push(['write', channel, value]);
+            return 4;
+        },
+        packet_read() {
+            calls.push(['read']);
+            return 0;
+        }
+    };
+
+    const fakeWebAssembly = {
+        Memory: FakeMemory,
+        async compile(bytes) {
+            calls.push(['compile', bytes.byteLength]);
+            return { fakeModule: true };
+        },
+        async instantiate(module, imports) {
+            calls.push(['instantiate']);
+            assert(module && module.fakeModule, 'compiled module must reach instantiate');
+            assert(imports.env && imports.env.memory === memory,
+                'env.memory must be the allocated AGC memory');
+            const wasi = imports.wasi_snapshot_preview1;
+            assert(wasi && typeof wasi.fd_close === 'function', 'fd_close WASI import missing');
+            assert(typeof wasi.fd_fdstat_get === 'function', 'fd_fdstat_get WASI import missing');
+            assert(typeof wasi.fd_seek === 'function', 'fd_seek WASI import missing');
+            assert(typeof wasi.fd_write === 'function', 'fd_write WASI import missing');
+            return { exports: fakeExports };
+        }
+    };
+
+    const fakeFetch = async (url) => {
+        calls.push(['fetch', url]);
+        const isWasm = String(url).endsWith('.wasm');
+        return {
+            ok: true,
+            status: 200,
+            async arrayBuffer() {
+                calls.push(['arrayBuffer', url]);
+                return new ArrayBuffer(isWasm ? 32 : 73728);
+            }
+        };
+    };
+
+    const context = createEnvironment({
+        WebAssembly: fakeWebAssembly,
+        fetch: fakeFetch
+    });
+    const core = new context.AgcCore();
+    await core.load({ wasmUrl: 'yaAGC.wasm', ropeUrl: 'Luminary099.bin' });
+
+    assert(calls.some(([name, initial]) => name === 'memory' && initial === 5),
+        'load must allocate five initial WASM pages');
+    assert(calls.some(([name, url]) => name === 'fetch' && url === 'yaAGC.wasm'),
+        'load must fetch the requested WASM asset');
+    assert(calls.some(([name, url]) => name === 'fetch' && url === 'Luminary099.bin'),
+        'load must fetch the requested rope asset');
+    assert(calls.some(([name, size]) => name === 'malloc' && size === 73728),
+        'load must allocate the full rope image');
+    assert(calls.filter(([name]) => name === 'reset').length === 2,
+        'load reset path must end at a fresh AGC reset state');
+    assert(calls.some(([name, steps]) => name === 'step' && steps === 1),
+        'load must prime lazy yaAGC I/O with one disposable step');
+
+    const writes = calls.filter(([name]) => name === 'write');
+    assert(writes.length === 2, 'load must queue exactly two DSKY U-bit masks');
+    assert(writes[0][1] === (0x100 | 0o15) && writes[0][2] === 0o37,
+        'load normal-key mask is wrong');
+    assert(writes[1][1] === (0x100 | 0o32) && writes[1][2] === 0o20000,
+        'load PRO mask is wrong');
+}
+
+async function main() {
+    await testWrapperInvariants();
+    await testLoadPipeline();
     console.log('agc-core source smoke: PASS');
 }
 
