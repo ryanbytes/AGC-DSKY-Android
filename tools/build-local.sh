@@ -30,6 +30,15 @@ SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 [[ -d "$SDK/platforms/android-37" ]] \
   || fail "Android SDK platform 37 is not installed under $SDK/platforms/android-37"
 
+PINNED_WEBAGC=0575ea7a1231e3948bae7d2c22a6ac146da0c38d
+[[ -d vendor/webAGC/.git || -f vendor/webAGC/.git ]] \
+  || fail "vendor/webAGC submodule is not initialized; run: git submodule update --init --recursive"
+WEBAGC_HEAD="$(git -C vendor/webAGC rev-parse HEAD 2>/dev/null || true)"
+[[ "$WEBAGC_HEAD" == "$PINNED_WEBAGC" ]] \
+  || fail "vendor/webAGC is at ${WEBAGC_HEAD:-unknown}; expected $PINNED_WEBAGC. Run: git submodule update --init --recursive"
+[[ -z "$(git -C vendor/webAGC status --porcelain)" ]] \
+  || fail "vendor/webAGC has local modifications; refusing a non-reproducible build"
+
 required_assets=(
   vendor/webAGC/src/yaAGC.wasm
   vendor/webAGC/demo/agc/Luminary099.bin
@@ -45,6 +54,7 @@ java -version 2>&1 | sed 's/^/  /'
 printf 'Gradle:\n'
 gradle --version | sed 's/^/  /'
 printf 'Android SDK: %s\n' "$SDK"
+printf 'webAGC: %s\n' "$WEBAGC_HEAD"
 
 if command -v node >/dev/null 2>&1; then
   node tools/frontend-smoke.js
