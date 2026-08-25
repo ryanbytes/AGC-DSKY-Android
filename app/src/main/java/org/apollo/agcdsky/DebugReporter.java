@@ -70,7 +70,11 @@ public final class DebugReporter {
                 .setMessage("The previous run produced a crash/error report. Copy it before starting the DSKY again?")
                 .setCancelable(false)
                 .setPositiveButton("COPY REPORT", (dialog, which) -> {
-                    copyReport(activity);
+                    if (copyReport(activity)) {
+                        // Once it is safely on the clipboard, do not show the
+                        // same stale report again on every app launch.
+                        clear(activity);
+                    }
                     continueStartup.run();
                 })
                 .setNegativeButton("CONTINUE", (dialog, which) -> continueStartup.run())
@@ -100,16 +104,16 @@ public final class DebugReporter {
         }
     }
 
-    private static void copyReport(Activity activity) {
+    private static boolean copyReport(Activity activity) {
         String report = readReport(activity);
         if (report.length() > MAX_REPORT_CHARS) {
             report = report.substring(report.length() - MAX_REPORT_CHARS);
         }
         ClipboardManager clipboard =
                 (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard != null) {
-            clipboard.setPrimaryClip(ClipData.newPlainText("AGC DSKY debug report", report));
-        }
+        if (clipboard == null) return false;
+        clipboard.setPrimaryClip(ClipData.newPlainText("AGC DSKY debug report", report));
+        return true;
     }
 
     private static synchronized void writeReport(Context context, String source, String detail) {
