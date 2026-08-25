@@ -12,7 +12,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Serves packaged assets from a synthetic HTTPS origin so WebAssembly and rope
@@ -25,6 +27,16 @@ public final class NetClient extends WebViewClient {
     public static final String ASSET_PREFIX = "/assets/";
     private static final String ASSET_HOST = "appassets.androidplatform.net";
     private static final String ASSET_ROOT_SEGMENT = "assets";
+    private static final Map<String, String> LOCAL_RESPONSE_HEADERS;
+
+    static {
+        Map<String, String> headers = new HashMap<>();
+        // The URL stays constant across APK updates, so caching intercepted
+        // responses risks running stale JS against new native code/assets.
+        headers.put("Cache-Control", "no-store");
+        headers.put("X-Content-Type-Options", "nosniff");
+        LOCAL_RESPONSE_HEADERS = Collections.unmodifiableMap(headers);
+    }
 
     private final Context context;
 
@@ -77,7 +89,13 @@ public final class NetClient extends WebViewClient {
 
         try {
             InputStream input = context.getAssets().open(path);
-            return new WebResourceResponse(mimeType(path), encoding(path), input);
+            return new WebResourceResponse(
+                    mimeType(path),
+                    encoding(path),
+                    200,
+                    "OK",
+                    LOCAL_RESPONSE_HEADERS,
+                    input);
         } catch (IOException ignored) {
             return notFound();
         }
@@ -108,7 +126,7 @@ public final class NetClient extends WebViewClient {
                 "UTF-8",
                 404,
                 "Not Found",
-                Collections.emptyMap(),
+                LOCAL_RESPONSE_HEADERS,
                 new ByteArrayInputStream(body));
     }
 
