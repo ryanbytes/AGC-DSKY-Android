@@ -12,7 +12,7 @@ fail() {
 # Numeric dotted-version comparison without GNU sort -V. This must work with
 # the Bash 3.2 / BSD userland still present on many macOS installations.
 version_ge() {
-  local lhs="${1%%-*}" rhs="${2%%-*}"
+  local lhs="$1" rhs="$2"
   local l1=0 l2=0 l3=0 r1=0 r2=0 r3=0
   IFS=. read -r l1 l2 l3 <<<"$lhs"
   IFS=. read -r r1 r2 r3 <<<"$rhs"
@@ -25,10 +25,14 @@ version_ge() {
   (( 10#$l3 >= 10#$r3 ))
 }
 
+is_stable_triplet() {
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
 command -v git >/dev/null 2>&1 || fail "git is required"
 command -v java >/dev/null 2>&1 || fail "Java/JDK is required"
 command -v gradle >/dev/null 2>&1 \
-  || fail "Gradle is not installed. This repository does not currently contain a Gradle wrapper; install Gradle 9.5.0 or newer before building."
+  || fail "Gradle is not installed. This repository does not currently contain a Gradle wrapper; install stable Gradle 9.5.0 or newer before building."
 
 JAVA_VERSION="$(java -version 2>&1 | awk -F '"' '/version/ { print $2; exit }')"
 [[ -n "$JAVA_VERSION" ]] || fail "unable to determine Java version"
@@ -42,6 +46,8 @@ fi
 
 GRADLE_VERSION="$(gradle --version | awk '/^Gradle / { print $2; exit }')"
 [[ -n "$GRADLE_VERSION" ]] || fail "unable to determine Gradle version"
+is_stable_triplet "$GRADLE_VERSION" \
+  || fail "use a stable Gradle release, not preview/prerelease $GRADLE_VERSION"
 version_ge "$GRADLE_VERSION" 9.5.0 \
   || fail "AGP 9.3.0 requires Gradle 9.5.0 or newer; found $GRADLE_VERSION"
 
@@ -56,13 +62,14 @@ if [[ -d "$SDK/build-tools" ]]; then
   for dir in "$SDK"/build-tools/*; do
     [[ -d "$dir" ]] || continue
     version="${dir##*/}"
+    is_stable_triplet "$version" || continue
     if [[ -z "$BUILD_TOOLS_VERSION" ]] || version_ge "$version" "$BUILD_TOOLS_VERSION"; then
       BUILD_TOOLS_VERSION="$version"
     fi
   done
 fi
 [[ -n "$BUILD_TOOLS_VERSION" ]] \
-  || fail "Android SDK Build Tools are not installed under $SDK/build-tools"
+  || fail "stable Android SDK Build Tools are not installed under $SDK/build-tools"
 version_ge "$BUILD_TOOLS_VERSION" 36.0.0 \
   || fail "AGP 9.3.0 requires SDK Build Tools 36.0.0 or newer; found $BUILD_TOOLS_VERSION"
 
