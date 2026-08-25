@@ -8,6 +8,10 @@
         android:label="AGC DSKY"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
+        <meta-data
+            android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
