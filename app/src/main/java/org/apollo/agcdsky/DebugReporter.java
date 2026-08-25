@@ -10,6 +10,7 @@ import android.os.Build;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -187,11 +188,21 @@ public final class DebugReporter {
     private static String readReport(Context context) {
         File file = reportFile(context);
         if (!file.isFile()) return "(report file missing)";
-        try (FileInputStream stream = new FileInputStream(file)) {
-            byte[] data = new byte[(int) Math.min(file.length(), 256 * 1024)];
-            int count = stream.read(data);
-            return count <= 0 ? "(empty report)"
-                    : new String(data, 0, count, StandardCharsets.UTF_8);
+        int capacity = (int) Math.min(file.length(), MAX_REPORT_BYTES);
+        try (FileInputStream stream = new FileInputStream(file);
+             ByteArrayOutputStream output = new ByteArrayOutputStream(capacity)) {
+            byte[] buffer = new byte[4096];
+            int remaining = capacity;
+            while (remaining > 0) {
+                int count = stream.read(buffer, 0, Math.min(buffer.length, remaining));
+                if (count < 0) break;
+                if (count == 0) continue;
+                output.write(buffer, 0, count);
+                remaining -= count;
+            }
+            byte[] data = output.toByteArray();
+            return data.length == 0 ? "(empty report)"
+                    : new String(data, StandardCharsets.UTF_8);
         } catch (Exception error) {
             return "Unable to read report: " + error;
         }
