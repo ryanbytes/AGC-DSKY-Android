@@ -36,6 +36,12 @@ command -v node >/dev/null 2>&1 \
 command -v gradle >/dev/null 2>&1 \
   || fail "Gradle is not installed. This repository does not currently contain a Gradle wrapper; install stable Gradle 9.5.0 or newer before building."
 
+ROOT_HEAD="$(git rev-parse HEAD 2>/dev/null || true)"
+[[ "$ROOT_HEAD" =~ ^[0-9a-fA-F]{40}$ ]] \
+  || fail "repository HEAD could not be resolved to a Git commit"
+[[ -z "$(git status --porcelain --untracked-files=all)" ]] \
+  || fail "repository has uncommitted/untracked source changes; commit or remove them before producing a verified APK"
+
 JAVA_VERSION="$(java -version 2>&1 | awk -F '"' '/version/ { print $2; exit }')"
 [[ -n "$JAVA_VERSION" ]] || fail "unable to determine Java version"
 JAVA_MAJOR="${JAVA_VERSION%%.*}"
@@ -99,6 +105,7 @@ for script in tools/*.sh; do
   bash -n "$script" || fail "shell syntax check failed: $script"
 done
 
+printf 'Source commit: %s\n' "$ROOT_HEAD"
 printf 'Java: %s\n' "$JAVA_VERSION"
 printf 'Node: %s\n' "$NODE_VERSION"
 printf 'Gradle: %s\n' "$GRADLE_VERSION"
@@ -127,4 +134,5 @@ APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 bash tools/verify-apk.sh "$APK"
 
 printf 'Local debug build: PASS\n'
+printf 'Source commit: %s\n' "$ROOT_HEAD"
 printf 'APK: %s\n' "$APK"
