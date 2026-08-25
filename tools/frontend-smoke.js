@@ -26,6 +26,8 @@ const DREAM_SERVICE = path.join(
     ROOT, 'app/src/main/java/org/apollo/agcdsky/AgcDreamService.java');
 const NET_CLIENT = path.join(
     ROOT, 'app/src/main/java/org/apollo/agcdsky/NetClient.java');
+const DEBUG_REPORTER = path.join(
+    ROOT, 'app/src/main/java/org/apollo/agcdsky/DebugReporter.java');
 
 class Classes {
     constructor() {
@@ -214,6 +216,13 @@ function checkWebViewLockdown(source, label) {
         `${label} must disable content:// access`);
 }
 
+function checkDebugOnlyWebViewInspection(source, label) {
+    const flag = source.indexOf('ApplicationInfo.FLAG_DEBUGGABLE');
+    const enable = source.indexOf('WebView.setWebContentsDebuggingEnabled(true)');
+    assert(flag >= 0 && enable > flag,
+        `${label} must gate WebView remote debugging on FLAG_DEBUGGABLE`);
+}
+
 function checkSourceInvariants() {
     const manifest = fs.readFileSync(MANIFEST, 'utf8');
     assert(!manifest.includes('android.permission.INTERNET'),
@@ -240,6 +249,8 @@ function checkSourceInvariants() {
         'pinned AGC binary verification task missing');
     assert(gradle.includes("tasks.register('stagePinnedAgcAssets', Sync)"),
         'verified AGC binary staging task missing');
+    assert(gradle.includes("it.name == 'preBuild'"),
+        'ordinary Android preBuild must stage verified AGC assets');
 
     const assetRoots = gradle.match(/assets\.srcDirs\s*=\s*\[([\s\S]*?)\]/);
     assert(assetRoots, 'Android asset roots missing');
@@ -268,11 +279,13 @@ function checkSourceInvariants() {
 
     const activity = fs.readFileSync(MAIN_ACTIVITY, 'utf8');
     checkWebViewLockdown(activity, 'MainActivity');
+    checkDebugOnlyWebViewInspection(activity, 'MainActivity');
     assert(activity.includes('isLocalAssetOrigin(origin)'),
         'MainActivity geolocation must be restricted to the packaged origin');
 
     const dreamService = fs.readFileSync(DREAM_SERVICE, 'utf8');
     checkWebViewLockdown(dreamService, 'AgcDreamService');
+    checkDebugOnlyWebViewInspection(dreamService, 'AgcDreamService');
 
     const netClient = fs.readFileSync(NET_CLIENT, 'utf8');
     assert(netClient.includes('shouldOverrideUrlLoading'),
@@ -285,6 +298,14 @@ function checkSourceInvariants() {
         'packaged WebView assets must disable MIME sniffing');
     assert(netClient.includes('200,\n                    "OK"'),
         'packaged WebView success responses must have explicit HTTP 200 status');
+
+    const debugReporter = fs.readFileSync(DEBUG_REPORTER, 'utf8');
+    assert(debugReporter.includes('packageVersion(context)'),
+        'debug report must include the exact app version');
+    assert(debugReporter.includes('WebView.getCurrentWebViewPackage()'),
+        'debug report must include the installed WebView/Trichrome package version');
+    assert(debugReporter.includes('location coordinates are intentionally not included'),
+        'debug report must continue excluding saved SOLAR coordinates');
 }
 
 function testRuntimeDebugHooks() {
