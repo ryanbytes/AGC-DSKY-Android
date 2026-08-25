@@ -29,7 +29,9 @@ import java.util.Locale;
  */
 public final class DebugReporter {
     private static final String REPORT_FILE = "debug-last.txt";
-    private static final int MAX_REPORT_CHARS = 12000;
+    private static final int MAX_REPORT_CHARS = 20000;
+    private static final int MAX_EVENT_DETAIL_CHARS = 20000;
+    private static final long MAX_REPORT_BYTES = 64L * 1024L;
 
     private static boolean installed;
 
@@ -119,6 +121,12 @@ public final class DebugReporter {
     }
 
     private static synchronized void writeReport(Context context, String source, String detail) {
+        String safeDetail = detail == null ? "(no detail)" : detail;
+        if (safeDetail.length() > MAX_EVENT_DETAIL_CHARS) {
+            safeDetail = safeDetail.substring(0, MAX_EVENT_DETAIL_CHARS)
+                    + "\n...(event detail truncated)";
+        }
+
         StringBuilder out = new StringBuilder();
         out.append("AGC DSKY prototype debug report\n");
         out.append("Time: ").append(new SimpleDateFormat(
@@ -132,11 +140,18 @@ public final class DebugReporter {
                 .append(Build.MODEL).append('\n');
         out.append("WebView: ").append(webViewVersion()).append('\n');
         out.append("Note: local report only; location coordinates are intentionally not included.\n\n");
-        out.append(detail == null ? "(no detail)" : detail).append('\n');
+        out.append(safeDetail).append('\n');
 
-        byte[] bytes = out.toString().getBytes(StandardCharsets.UTF_8);
-        try (FileOutputStream stream = new FileOutputStream(reportFile(context), false)) {
-            stream.write(bytes);
+        File file = reportFile(context);
+        byte[] event = out.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] separator = "\n---\n".getBytes(StandardCharsets.UTF_8);
+        boolean append = file.isFile()
+                && file.length() > 0
+                && file.length() + separator.length + event.length <= MAX_REPORT_BYTES;
+
+        try (FileOutputStream stream = new FileOutputStream(file, append)) {
+            if (append) stream.write(separator);
+            stream.write(event);
             stream.flush();
         } catch (Exception ignored) {
         }
