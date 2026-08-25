@@ -35,6 +35,8 @@ public final class AgcDreamService extends DreamService {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
         webView.addJavascriptInterface(new DreamBridge(), "DreamBridge");
         webView.addJavascriptInterface(new DebugReporter.JsBridge(this), "DebugBridge");
         webView.setWebViewClient(new NetClient(this));
