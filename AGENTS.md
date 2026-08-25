@@ -1,15 +1,16 @@
 # Instructions for coding agents
 
-This repository is an Android Apollo DSKY project. Read `docs/PROGRESS.md` and `docs/IMPLEMENTATION_NOTES.md` before changing code.
+This repository is an Android Apollo DSKY project. Read `docs/PROGRESS.md`, `docs/LOCAL_BUILD.md`, and `docs/IMPLEMENTATION_NOTES.md` before changing code.
 
 ## Owner requirements
 
 - Keep the repository updated during substantial work. Prefer small, coherent commits over one giant end-of-session dump.
 - Maintain `docs/PROGRESS.md` whenever architecture, blockers, completed checkpoints, or the next action changes materially.
-- Do **not** add or use GitHub Actions for builds unless the owner explicitly reverses this instruction.
-- Build and sign APKs locally/manual when build tooling is available.
+- Do **not** add or use GitHub Actions, Codespaces, or other GitHub-hosted build infrastructure unless the owner explicitly reverses this instruction.
+- Build, sign, inspect, and test APKs locally/manual when build tooling is available.
 - Never commit private signing keys, passwords, tokens, or other credentials.
 - Do not claim an APK builds, installs, or runs unless that specific result was actually verified.
+- Do not replace the normal Java/Gradle application with hand-written/repacked DEX or diagnostic APK surgery as the final implementation.
 
 ## Product intent
 
@@ -20,6 +21,34 @@ The app has two distinct purposes:
 
 Do not blur these modes. Phone clock state is synthetic. AGC mode must be driven by authentic AGC I/O.
 
+The runtime must remain self-contained/offline. The only intended external runtime input is device location for DREAM SOLAR sunrise/sunset behavior. The merged app must not request `android.permission.INTERNET`.
+
+## Current v0.7 core state
+
+The intended core is the pinned VirtualAGC `yaAGC` WebAssembly binary supplied by the `vendor/webAGC` submodule at:
+
+```text
+0575ea7a1231e3948bae7d2c22a6ac146da0c38d
+```
+
+Required exact binary inputs:
+
+- `vendor/webAGC/src/yaAGC.wasm`
+- `vendor/webAGC/demo/agc/Luminary099.bin`
+- `vendor/webAGC/demo/agc/Comanche055.bin`
+
+The build already verifies exact byte sizes and Git-blob SHA-1 values before packaging. Do not weaken or bypass those checks.
+
+The pinned WASM import table has been inspected directly. It imports exactly:
+
+- `env.memory`
+- `wasi_snapshot_preview1.fd_close`
+- `wasi_snapshot_preview1.fd_fdstat_get`
+- `wasi_snapshot_preview1.fd_seek`
+- `wasi_snapshot_preview1.fd_write`
+
+`app/src/main/assets/agc-core.js` supplies that minimal WASI shim. The verified build path also instantiates the **real pinned WASM under Node** with both real ropes before Gradle starts. Do not replace this with a mock-only check.
+
 ## Authenticity rules
 
 - COMP ACTY in AGC mode must come from Block II output channel `011` octal, bit 2 (`0b10`).
@@ -27,53 +56,92 @@ Do not blur these modes. Phone clock state is synthetic. AGC mode must be driven
 - Preserve the fixed SVG EL display coordinate system. Do not replace the custom segment vectors with a generic seven-segment font.
 - Keep EL styling restrained and green/green-white; avoid modern LED bloom effects.
 - Verify Apollo/VirtualAGC mappings against primary or established VirtualAGC/webAGC sources before changing channel/bit/key assignments.
+- Normal DSKY keys use channel `015` octal with authentic Pinball key codes.
+- PRO/Proceed uses channel `032` octal, bit `020000`, and must remain press-and-hold capable rather than being reduced to a fixed synthetic pulse.
+- webAGC/yaAGC channel `0163` is emulator-provided modulation for DSKY hardware/blink states; preserve the distinction between this and ordinary AGC output channels.
 
-## Core direction
+## CM/LM limitation
 
-The current intended core is VirtualAGC `yaAGC`, using the WebAssembly build/API pattern demonstrated by `michaelfranzl/webAGC` unless a materially cleaner offline integration is proven.
+The pinned WASM engine's upstream `CmOrLm` global defaults to LM (`0`) and its exported WASM API does not expose a setter. Desktop yaAGC normally changes this through CLI/configuration code that the WebAssembly wrapper bypasses.
 
-Expected useful yaAGC exports include:
+Current policy:
 
-- `cpu_step`
-- `cpu_reset`
-- `packet_read`
-- `packet_write`
-- `set_fixed`
-- `get_erasable_ptr`
-- `malloc` / `free`
-
-The upstream webAGC WASM build expects WASI support. Do not simply call `WebAssembly.instantiate()` with guessed imports and declare failure/success. Inspect imports and provide the required runtime shim, or rebuild the core with a cleaner embedding interface.
-
-## DSKY I/O targets
-
-- Normal DSKY key channel: `015` octal.
-- PRO/Proceed path: `032` octal, handled separately.
-- COMP ACTY: output channel `011` octal, bit 2.
-- webAGC also consumes channel `0163` octal as yaAGC's fictitious/modulated blinking-light output; preserve the distinction between real AGC output and emulator-provided hardware modulation.
-
-When implementing additional display decoding, cite/source the mapping in `docs/PROGRESS.md` or `docs/REFERENCES.md`.
+- Luminary099 is the native/default LM path.
+- Comanche055 is an exact pinned CM rope and remains a supported selectable mission for DSKY execution/testing.
+- Do **not** claim full CM peripheral-mode fidelity.
+- In the ring-buffer path used by webAGC, the known `CmOrLm`-dependent behavior is LM rotational-hand-controller bookkeeping on channel `013`; this app currently supplies no RHC inputs.
+- Do not binary-patch the pinned WASM to change this flag.
+- If exact CM peripheral mode becomes required, rebuild yaAGC from audited VirtualAGC source with an explicit exported LM/CM configuration API, then pin and verify that new binary separately.
 
 ## Code organization
 
-Prefer separating emulator integration from UI state:
+Keep emulator integration separate from UI state:
 
-- `app/src/main/assets/app.js`: DSKY UI/mode coordination only.
-- Add a dedicated AGC runtime module (for example `agc-core.js`) for WASM loading, rope loading, CPU stepping, packet I/O, and key injection.
-- Keep Android shell code minimal unless native code is required for a capability that WebView cannot provide cleanly.
-- Remove obsolete bridges once no longer needed. In particular, the `TrafficStats`/`agcnet://poll` COMP ACTY bridge should disappear when real AGC I/O is connected.
+- `app/src/main/assets/app.js`: DSKY UI/mode/lifecycle coordination and authentic channel decoding.
+- `app/src/main/assets/agc-core.js`: WASM loading, rope loading, CPU stepping, packet I/O, input masks, key/PRO injection.
+- `app/src/main/assets/runtime-debug.js`: early JavaScript/runtime diagnostics and debug-build frontend readiness marker.
+- Android shell code should stay small: `MainActivity`, `AgcDreamService`, `NetClient`, and `DebugReporter` unless a native capability is genuinely required.
+- Do not reintroduce the removed `TrafficStats` / `agcnet://poll` COMP ACTY surrogate or fallback network loading.
 
-## Core integration sequence
+## Important runtime sequencing
 
-1. Make yaAGC instantiate offline from packaged assets.
-2. Load a packaged rope image.
-3. Reset and step the CPU.
-4. Drain `packet_read()` output and prove real channel values are arriving.
-5. Wire channel `011` bit 2 to COMP ACTY.
-6. Decode DSKY display/annunciator outputs.
-7. Map keypad input back through `packet_write()`.
-8. Only then call AGC mode functional.
+The ring-buffer backend initializes lazily. The correct reset/load sequence is already implemented and must be preserved:
 
-Prefer Apollo 11 `Luminary099.bin` as the first rope for LM/DSKY testing. Add CM `Comanche055.bin` as a selectable option after the first complete path works.
+1. Load the exact 73,728-byte rope into fixed memory.
+2. `cpu_reset()`.
+3. Perform one disposable `cpu_step(1)` solely to force lazy ring-buffer/channel-mask initialization and consume stale peripheral input.
+4. Drain/discard transient output from that disposable step.
+5. `cpu_reset()` again so mission execution begins at the true reset state.
+6. Queue DSKY U-bit masks for channel `015` and channel `032`.
+7. Start ordinary mission stepping.
+
+Do not queue input masks before the first engine pass; upstream `ChannelSetup()` would reinitialize the ring buffer/masks and discard them.
+
+## Build gate
+
+The canonical build entrypoint is:
+
+```bash
+bash tools/build-local.sh
+```
+
+The current local toolchain contract is documented in `docs/LOCAL_BUILD.md` and includes:
+
+- JDK 17+
+- Node.js 18+
+- stable Gradle 9.5+
+- Android SDK platform 37
+- Android SDK Build Tools **36.0.0 exactly**
+- exact clean pinned `vendor/webAGC` checkout
+
+The canonical build path must continue to run:
+
+- shell syntax checks
+- frontend/source smoke
+- AGC wrapper smoke
+- runtime-debug smoke
+- DSKY mapping smoke
+- asset-reference smoke
+- real pinned yaAGC WASM + both-rope runtime smoke
+- clean Gradle build
+- post-build APK verification
+
+`tools/verify-apk.sh` must continue verifying package/version/SDK metadata, debuggable status for the test APK, required location permissions, absence of INTERNET, exact pinned binary blobs, byte-for-byte frontend assets, absence of unused vendor trees, and APK signature validity.
+
+## Device verification discipline
+
+`tools/device-smoke.sh` is the immediate ADB gate for the debug APK. It must preserve app state, clear only the stale private debug report, install/update, launch, capture evidence, and require the debug-only `FRONTEND READY app` marker. A process that merely stays alive while the WebView is blank or partially initialized is not a pass.
+
+A successful immediate device smoke still does not prove AGC runtime behavior. Manual/device gates still include:
+
+- enter LM AGC mode and observe real channel-driven display output
+- exercise ordinary DSKY keys
+- press and hold PRO, including standby behavior
+- switch to CM and confirm the correct rope loads
+- screen off/on same-WebView pause/resume
+- Activity/page recreation fresh-reset behavior
+- DreamService display-only behavior
+- DREAM DIM / BRIGHT / SOLAR and location permission/state
 
 ## Verification discipline
 
@@ -81,10 +149,11 @@ For every significant checkpoint, record what was actually tested in `docs/PROGR
 
 Examples:
 
-- Good: `WASM import table inspected; requires wasi_snapshot_preview1.fd_write, ...`
-- Good: `Luminary099 loaded; packet_read produced channel 010 values after N steps.`
+- Good: `Pinned WASM import table inspected; exact imports are env.memory + four WASI fd functions.`
+- Good: `Real pinned WASM instantiated under Node with Luminary099 and Comanche055; both ran CPU/DSKY input smoke.`
+- Good: `Built APK passed tools/verify-apk.sh and device-smoke.sh on GrapheneOS.`
 - Bad: `Core integrated` when only files were copied.
-- Bad: `Build passes` when syntax checks only were run.
+- Bad: `Build passes` when only syntax/source checks were run.
 
 If a blocker appears, document the blocker and the shortest next experiment. Do not hide it by substituting a mock behavior.
 
