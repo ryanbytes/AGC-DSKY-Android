@@ -107,7 +107,7 @@ public final class NetClient extends WebViewClient {
             WebView view,
             WebResourceRequest request,
             WebResourceError error) {
-        if (request != null) {
+        if (shouldReportLoadFailure(request)) {
             StringBuilder detail = new StringBuilder("WEBVIEW RESOURCE LOAD ERROR\n");
             detail.append("URL: ").append(request.getUrl()).append('\n');
             detail.append("Main frame: ").append(request.isForMainFrame()).append('\n');
@@ -125,7 +125,7 @@ public final class NetClient extends WebViewClient {
             WebView view,
             WebResourceRequest request,
             WebResourceResponse errorResponse) {
-        if (request != null) {
+        if (shouldReportLoadFailure(request)) {
             StringBuilder detail = new StringBuilder("WEBVIEW HTTP ERROR\n");
             detail.append("URL: ").append(request.getUrl()).append('\n');
             detail.append("Main frame: ").append(request.isForMainFrame()).append('\n');
@@ -136,6 +136,11 @@ public final class NetClient extends WebViewClient {
             DebugReporter.appendWebError(context, detail.toString());
         }
         super.onReceivedHttpError(view, request, errorResponse);
+    }
+
+    private static boolean shouldReportLoadFailure(WebResourceRequest request) {
+        return request != null
+                && (request.isForMainFrame() || isPackagedAssetUri(request.getUrl()));
     }
 
     private static boolean isAssetOrigin(Uri uri) {
