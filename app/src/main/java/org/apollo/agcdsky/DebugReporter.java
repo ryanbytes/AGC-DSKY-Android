@@ -5,8 +5,10 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.os.Build;
+import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
@@ -30,6 +32,7 @@ import java.util.Locale;
  */
 public final class DebugReporter {
     private static final String REPORT_FILE = "debug-last.txt";
+    private static final String LOG_TAG = "AGC-DSKY";
     private static final int MAX_REPORT_CHARS = 20000;
     private static final int MAX_EVENT_DETAIL_CHARS = 20000;
     private static final long MAX_REPORT_BYTES = 64L * 1024L;
@@ -107,6 +110,24 @@ public final class DebugReporter {
         public void report(String detail) {
             appendWebError(app, detail);
         }
+
+        /**
+         * A debug-build-only log marker used by tools/device-smoke.sh to prove
+         * that app.js reached the end of frontend initialization. No user data
+         * is included and release/non-debuggable builds emit nothing.
+         */
+        @JavascriptInterface
+        public void ready(String detail) {
+            if (!isDebuggable(app)) return;
+            String safe = detail == null ? "unknown"
+                    : detail.replace('\n', ' ').replace('\r', ' ');
+            if (safe.length() > 80) safe = safe.substring(0, 80);
+            Log.i(LOG_TAG, "FRONTEND READY " + safe);
+        }
+    }
+
+    private static boolean isDebuggable(Context context) {
+        return (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
     }
 
     private static boolean copyReport(Activity activity) {
