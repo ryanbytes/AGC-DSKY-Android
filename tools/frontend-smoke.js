@@ -78,6 +78,7 @@ class FakeAgcCore {
     constructor() {
         this.running = false;
         this.rope = null;
+        this.proceedStates = [];
     }
 
     async load(options) {
@@ -100,6 +101,11 @@ class FakeAgcCore {
     }
 
     keyPress() {}
+
+    proceedKey(state) {
+        this.proceedStates.push(!!state);
+    }
+
     proceedPulse() {}
 }
 
@@ -196,7 +202,7 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
     vm.createContext(context);
     vm.runInContext(fs.readFileSync(APP_JS, 'utf8'), context, { filename: 'app.js' });
 
-    return { context, document, elements, storage, windowListeners };
+    return { context, document, elements, keyElements, storage, windowListeners };
 }
 
 function assert(condition, message) {
@@ -374,7 +380,26 @@ async function main() {
     assert(first.storage.get('runMode') === 'agc',
         'AGC mode must persist');
 
+    const pro = first.keyElements.find((element) => element.dataset.key === 'P');
+    assert(pro && typeof pro.listeners.pointerdown === 'function',
+        'PRO pointer handler must be installed');
+    pro.listeners.pointerdown({ pointerId: 7, preventDefault() {} });
+    assert(core.proceedStates.length === 1 && core.proceedStates[0] === true,
+        'PRO pointer-down must assert channel 032');
+    assert(pro.classList.contains('pressed'),
+        'PRO must remain visibly pressed while held');
+    first.document.listeners.pointerup({ pointerId: 7 });
+    assert(core.proceedStates.length === 2 && core.proceedStates[1] === false,
+        'PRO pointer-up must release channel 032');
+    assert(!pro.classList.contains('pressed'),
+        'PRO pressed state must clear on pointer-up');
+
+    pro.listeners.pointerdown({ pointerId: 8, preventDefault() {} });
+    assert(core.proceedStates.length === 3 && core.proceedStates[2] === true,
+        'second PRO hold must assert channel 032');
     first.context.AGCDSKY.setAppVisible(false);
+    assert(core.proceedStates.length === 4 && core.proceedStates[3] === false,
+        'native visibility pause must release a held PRO');
     assert(!core.running, 'hidden app must pause the AGC core');
     first.context.AGCDSKY.setAppVisible(true);
     assert(core.running, 'visible app must resume the same AGC core');
