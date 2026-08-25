@@ -1,5 +1,6 @@
 package org.apollo.agcdsky;
 
+import android.content.pm.ApplicationInfo;
 import android.service.dreams.DreamService;
 import android.view.View;
 import android.view.WindowManager;
@@ -29,6 +30,10 @@ public final class AgcDreamService extends DreamService {
                         | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
 
         webView = new WebView(this);
         WebSettings settings = webView.getSettings();
