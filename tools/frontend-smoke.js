@@ -16,6 +16,7 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const APP_JS = path.join(ROOT, 'app/src/main/assets/app.js');
+const RUNTIME_DEBUG_JS = path.join(ROOT, 'app/src/main/assets/runtime-debug.js');
 const INDEX_HTML = path.join(ROOT, 'app/src/main/assets/index.html');
 const MANIFEST = path.join(ROOT, 'app/src/main/AndroidManifest.xml');
 const APP_GRADLE = path.join(ROOT, 'app/build.gradle');
@@ -163,6 +164,7 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
         }
     };
 
+    const windowListeners = {};
     const context = {
         console,
         document,
@@ -182,14 +184,17 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
             callback();
             return 1;
         },
-        clearTimeout: () => {}
+        clearTimeout: () => {},
+        addEventListener(name, callback) {
+            windowListeners[name] = callback;
+        }
     };
     context.window = context;
 
     vm.createContext(context);
     vm.runInContext(fs.readFileSync(APP_JS, 'utf8'), context, { filename: 'app.js' });
 
-    return { context, document, elements, storage };
+    return { context, document, elements, storage, windowListeners };
 }
 
 function assert(condition, message) {
@@ -233,6 +238,18 @@ function checkSourceInvariants() {
         'mission selector control missing from index.html');
     assert(html.includes('controls-layout.css'),
         'responsive controls stylesheet missing from index.html');
+    const debugIndex = html.indexOf('<script src="runtime-debug.js"></script>');
+    const coreIndex = html.indexOf('<script src="agc-core.js"></script>');
+    assert(debugIndex >= 0 && coreIndex > debugIndex,
+        'runtime-debug.js must load before the AGC runtime');
+
+    const runtimeDebug = fs.readFileSync(RUNTIME_DEBUG_JS, 'utf8');
+    assert(runtimeDebug.includes("addEventListener('error'"),
+        'runtime debug hook must capture unhandled JavaScript errors');
+    assert(runtimeDebug.includes("addEventListener('unhandledrejection'"),
+        'runtime debug hook must capture unhandled promise rejections');
+    assert(runtimeDebug.includes('DebugBridge.report'),
+        'runtime debug hook must report through the local native bridge');
 
     const activity = fs.readFileSync(MAIN_ACTIVITY, 'utf8');
     checkWebViewLockdown(activity, 'MainActivity');
