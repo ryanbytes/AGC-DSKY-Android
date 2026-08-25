@@ -55,8 +55,8 @@ verify_blob assets/yaAGC.wasm 132617 713685680492098d05437b99c26403f683d56009
 verify_blob assets/Luminary099.bin 73728 cd2ec9992d5863e1c7234fa760020f68ef946202
 verify_blob assets/Comanche055.bin 73728 9e4ec167dc99ac12b233df07b6b91fef585e5015
 
-# Prove that the APK contains the frontend from this checkout, including the
-# early runtime crash hook, rather than stale assets from an older build tree.
+# Prove that the APK contains the frontend/metadata from this checkout rather
+# than stale assets from an older build tree.
 verify_source_asset assets/index.html "$ROOT/app/src/main/assets/index.html"
 verify_source_asset assets/runtime-debug.js "$ROOT/app/src/main/assets/runtime-debug.js"
 verify_source_asset assets/agc-core.js "$ROOT/app/src/main/assets/agc-core.js"
@@ -64,6 +64,7 @@ verify_source_asset assets/app.js "$ROOT/app/src/main/assets/app.js"
 verify_source_asset assets/style.css "$ROOT/app/src/main/assets/style.css"
 verify_source_asset assets/controls-layout.css "$ROOT/app/src/main/assets/controls-layout.css"
 verify_source_asset assets/agc-state.css "$ROOT/app/src/main/assets/agc-state.css"
+verify_source_asset assets/BUILD_SOURCE.txt "$ROOT/app/src/main/assets/BUILD_SOURCE.txt"
 
 # The Android build stages only the three required vendor binaries. Whole
 # upstream source/demo trees must never leak into the APK again.
@@ -79,21 +80,20 @@ for forbidden in \
 done
 
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+[[ -n "$SDK" ]] \
+  || fail "ANDROID_SDK_ROOT or ANDROID_HOME must be set so verification uses pinned Build Tools $PINNED_BUILD_TOOLS"
+[[ -d "$SDK" ]] || fail "Android SDK directory does not exist: $SDK"
 
 find_verifier_tool() {
   local name="$1"
-  if [[ -n "$SDK" ]]; then
-    local pinned="$SDK/build-tools/$PINNED_BUILD_TOOLS/$name"
-    [[ -x "$pinned" ]] || return 1
-    printf '%s\n' "$pinned"
-    return 0
-  fi
-  command -v "$name" 2>/dev/null || return 1
+  local pinned="$SDK/build-tools/$PINNED_BUILD_TOOLS/$name"
+  [[ -x "$pinned" ]] || return 1
+  printf '%s\n' "$pinned"
 }
 
 AAPT2="$(find_verifier_tool aapt2 || true)"
 [[ -n "$AAPT2" ]] \
-  || fail "aapt2 not found at pinned Build Tools $PINNED_BUILD_TOOLS (or PATH when no SDK is configured)"
+  || fail "aapt2 not found at pinned Build Tools $PINNED_BUILD_TOOLS under $SDK/build-tools"
 
 badging="$($AAPT2 dump badging "$APK")"
 grep -Eq "^package: name='org\.apollo\.agcdsky' versionCode='7' versionName='0\.7'" <<<"$badging" \
@@ -117,7 +117,7 @@ grep -Fq 'android.permission.ACCESS_FINE_LOCATION' <<<"$permissions" \
 
 APKSIGNER="$(find_verifier_tool apksigner || true)"
 [[ -n "$APKSIGNER" ]] \
-  || fail "apksigner not found at pinned Build Tools $PINNED_BUILD_TOOLS (or PATH when no SDK is configured)"
+  || fail "apksigner not found at pinned Build Tools $PINNED_BUILD_TOOLS under $SDK/build-tools"
 "$APKSIGNER" verify --verbose "$APK" >/dev/null \
   || fail "APK signature verification failed"
 
@@ -126,7 +126,7 @@ printf '  %s\n' "$APK"
 printf '  package/version/minSdk/targetSdk match v0.7 source\n'
 printf '  APK is debuggable for the ADB smoke/report workflow\n'
 printf '  pinned yaAGC/WASM + both ropes match exact Git blobs\n'
-printf '  packaged frontend matches the current checkout byte-for-byte\n'
+printf '  packaged frontend/build metadata matches the current checkout byte-for-byte\n'
 printf '  unused upstream vendor assets are absent\n'
 printf '  merged manifest has location permissions and no INTERNET permission\n'
 printf '  verifier Build Tools: %s\n' "$PINNED_BUILD_TOOLS"
