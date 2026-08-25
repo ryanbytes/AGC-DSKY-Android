@@ -170,7 +170,15 @@
     }
 
     writeIo(channel, value){
-      this.exports.packet_write(channel, value);
+      const result = this.exports.packet_write(channel, value);
+      if (result > 0) return result;
+      if (result === 0) {
+        throw new Error('yaAGC input queue full for channel 0o'
+            + Number(channel).toString(8));
+      }
+      throw new Error('yaAGC rejected I/O packet for channel 0o'
+          + Number(channel).toString(8) + ' value 0o'
+          + Number(value).toString(8));
     }
 
     keyPress(keyCode){
@@ -184,7 +192,13 @@
 
     proceedPulse(durationMs=120){
       this.proceedKey(true);
-      setTimeout(() => this.proceedKey(false), durationMs);
+      setTimeout(() => {
+        try {
+          this.proceedKey(false);
+        } catch (error) {
+          this.onError(error);
+        }
+      }, durationMs);
     }
 
     readIo(){
