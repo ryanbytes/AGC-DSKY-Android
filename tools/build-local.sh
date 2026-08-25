@@ -107,6 +107,7 @@ printf 'SDK platform: android-37\n'
 printf 'Build Tools: %s\n' "$BUILD_TOOLS_VERSION"
 printf 'webAGC: %s\n' "$WEBAGC_HEAD"
 
+node tools/manifest-policy-smoke.js
 node tools/frontend-smoke.js
 node tools/agc-core-smoke.js
 node tools/runtime-debug-smoke.js
