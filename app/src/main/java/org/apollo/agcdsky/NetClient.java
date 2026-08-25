@@ -17,7 +17,8 @@ import java.util.List;
 /**
  * Serves packaged assets from a synthetic HTTPS origin so WebAssembly and rope
  * images can be fetched normally from the local Android APK. Nothing under the
- * appassets host is fetched from the network.
+ * appassets host is fetched from the network, and top-level navigation is kept
+ * on the packaged asset origin.
  */
 public final class NetClient extends WebViewClient {
     public static final String ASSET_ORIGIN = "https://appassets.androidplatform.net";
@@ -32,15 +33,18 @@ public final class NetClient extends WebViewClient {
     }
 
     @Override
+    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+        if (request == null) return true;
+        Uri uri = request.getUrl();
+        return !isPackagedAssetUri(uri);
+    }
+
+    @Override
     public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
         if (request == null) return null;
 
         Uri uri = request.getUrl();
-        if (uri == null
-                || !"https".equals(uri.getScheme())
-                || !ASSET_HOST.equals(uri.getHost())) {
-            return null;
-        }
+        if (!isAssetOrigin(uri)) return null;
 
         // Parse by URI path segments rather than by substring arithmetic. This
         // avoids the negative/out-of-range index crash seen in the old
@@ -77,6 +81,24 @@ public final class NetClient extends WebViewClient {
         } catch (IOException ignored) {
             return notFound();
         }
+    }
+
+    private static boolean isAssetOrigin(Uri uri) {
+        if (uri == null
+                || !"https".equalsIgnoreCase(uri.getScheme())
+                || !ASSET_HOST.equalsIgnoreCase(uri.getHost())) {
+            return false;
+        }
+        int port = uri.getPort();
+        return port == -1 || port == 443;
+    }
+
+    private static boolean isPackagedAssetUri(Uri uri) {
+        if (!isAssetOrigin(uri)) return false;
+        List<String> segments = uri.getPathSegments();
+        return segments != null
+                && segments.size() >= 2
+                && ASSET_ROOT_SEGMENT.equals(segments.get(0));
     }
 
     private static WebResourceResponse notFound() {
