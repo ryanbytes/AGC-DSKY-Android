@@ -51,9 +51,12 @@ public final class AgcDreamService extends DreamService {
             public boolean onConsoleMessage(ConsoleMessage message) {
                 if (message != null
                         && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
-                    DebugReporter.appendWebError(AgcDreamService.this,
-                            message.sourceId() + ":" + message.lineNumber()
-                                    + "\n" + message.message());
+                    String text = message.message();
+                    if (text == null || !text.startsWith("[yaAGC]")) {
+                        DebugReporter.appendWebError(AgcDreamService.this,
+                                message.sourceId() + ":" + message.lineNumber()
+                                        + "\n" + String.valueOf(text));
+                    }
                 }
                 return super.onConsoleMessage(message);
             }
