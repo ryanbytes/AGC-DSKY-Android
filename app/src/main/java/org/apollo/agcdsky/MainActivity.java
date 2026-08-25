@@ -97,6 +97,10 @@ public final class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        // Runtime networking is forbidden even if INTERNET is accidentally
+        // added to a future manifest. Packaged HTTPS requests are satisfied by
+        // NetClient.shouldInterceptRequest() rather than the network stack.
+        settings.setBlockNetworkLoads(true);
         // The app is intentionally served only from the synthetic packaged
         // HTTPS origin. Do not let JavaScript use file:// or content:// as an
         // alternate path around that boundary.
