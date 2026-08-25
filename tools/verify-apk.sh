@@ -40,6 +40,19 @@ verify_blob assets/yaAGC.wasm 132617 713685680492098d05437b99c26403f683d56009
 verify_blob assets/Luminary099.bin 73728 cd2ec9992d5863e1c7234fa760020f68ef946202
 verify_blob assets/Comanche055.bin 73728 9e4ec167dc99ac12b233df07b6b91fef585e5015
 
+# The Android build stages only the three required vendor binaries. Whole
+# upstream source/demo trees must never leak into the APK again.
+apk_entries="$(unzip -Z1 "$APK")"
+for forbidden in \
+  assets/Validation.bin \
+  assets/webAGC.js \
+  assets/lib/wasm_c_utilities/load.js \
+  assets/lib/wasm_c_utilities/strings.js; do
+  if grep -Fxq "$forbidden" <<<"$apk_entries"; then
+    fail "unexpected unused vendor asset packaged: $forbidden"
+  fi
+done
+
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 
 find_latest_tool() {
@@ -73,5 +86,6 @@ APKSIGNER="$(find_latest_tool apksigner || true)"
 printf 'APK verification: PASS\n'
 printf '  %s\n' "$APK"
 printf '  pinned yaAGC/WASM + both ropes match exact Git blobs\n'
+printf '  unused upstream vendor assets are absent\n'
 printf '  merged manifest has no INTERNET permission\n'
 printf '  APK signature verifies\n'
