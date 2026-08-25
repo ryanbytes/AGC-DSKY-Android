@@ -99,7 +99,10 @@ else
   printf 'NOTE: node not found; JavaScript smoke tests skipped.\n' >&2
 fi
 
-gradle --no-daemon --stacktrace :app:verifyPinnedAgcAssets :app:assembleDebug
+# The accepted v0.7 APK is deliberately produced from a clean app build tree.
+# Asset staging is a Sync task and the APK verifier checks bytes again, but a
+# clean assemble removes one more source of misleading stale intermediates.
+gradle --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleDebug
 
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 [[ -f "$APK" ]] || fail "Gradle reported success but debug APK is missing: $APK"
