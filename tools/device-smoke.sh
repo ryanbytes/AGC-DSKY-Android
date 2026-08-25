@@ -25,6 +25,14 @@ find_adb() {
   return 1
 }
 
+capture_private_report() {
+  local report
+  report="$($ADB exec-out run-as "$PACKAGE" cat files/debug-last.txt 2>/dev/null || true)"
+  if [[ -n "$report" ]]; then
+    printf '%s\n' "$report" > "$LOG_DIR/debug-last.txt"
+  fi
+}
+
 ADB="$(find_adb || true)"
 [[ -n "$ADB" ]] || fail "adb not found; install Android SDK Platform Tools or set ANDROID_SDK_ROOT"
 [[ -f "$APK" ]] || fail "APK not found: $APK"
@@ -58,18 +66,33 @@ printf '%s\n' "$START_OUTPUT"
 
 sleep 2
 PID="$($ADB shell pidof -s "$PACKAGE" 2>/dev/null | tr -d '\r' || true)"
-[[ -n "$PID" ]] || fail "app process is not running after launch"
-printf 'Process: %s (pid %s)\n' "$PACKAGE" "$PID"
 
-if ! $ADB logcat -d -v threadtime --pid="$PID" > "$LOG_DIR/logcat.txt" 2>/dev/null; then
-  # Older adb/logcat combinations may not support --pid. Keep a useful fallback.
+if [[ -n "$PID" ]]; then
+  printf 'Process: %s (pid %s)\n' "$PACKAGE" "$PID"
+  if ! $ADB logcat -d -v threadtime --pid="$PID" > "$LOG_DIR/logcat.txt" 2>/dev/null; then
+    # Older adb/logcat combinations may not support --pid. Keep a useful fallback.
+    $ADB logcat -d -v threadtime > "$LOG_DIR/logcat.txt" 2>/dev/null || true
+  fi
+else
+  # Capture global logcat before returning a launch failure; the process may
+  # already be gone and its PID-filtered buffer is no longer addressable.
   $ADB logcat -d -v threadtime > "$LOG_DIR/logcat.txt" 2>/dev/null || true
 fi
 
 # Debug builds are debuggable, so run-as can inspect the app-private local crash
 # report without adding storage/export permissions to the application itself.
-if $ADB shell run-as "$PACKAGE" test -s files/debug-last.txt >/dev/null 2>&1; then
-  $ADB exec-out run-as "$PACKAGE" cat files/debug-last.txt > "$LOG_DIR/debug-last.txt" 2>/dev/null || true
+capture_private_report
+
+if [[ -z "$PID" ]]; then
+  if [[ -s "$LOG_DIR/debug-last.txt" ]]; then
+    printf '\nApp-local debug report:\n' >&2
+    cat "$LOG_DIR/debug-last.txt" >&2
+  fi
+  printf '\nRecent AGC DSKY logcat:\n' >&2
+  grep -Ei 'FATAL EXCEPTION|AndroidRuntime|org\.apollo\.agcdsky|chromium|crash_dump' \
+    "$LOG_DIR/logcat.txt" | tail -n 160 >&2 || true
+  printf '\nSaved log: %s\n' "$LOG_DIR/logcat.txt" >&2
+  fail "app process is not running after launch"
 fi
 
 if [[ -s "$LOG_DIR/debug-last.txt" ]]; then
