@@ -112,6 +112,7 @@ node tools/agc-core-smoke.js
 node tools/runtime-debug-smoke.js
 node tools/dsky-mapping-smoke.js
 node tools/asset-reference-smoke.js
+node tools/wasm-runtime-smoke.js
 
 # The accepted v0.7 APK is deliberately produced from a clean app build tree.
 # Asset staging is a Sync task and the APK verifier checks bytes again, but a
