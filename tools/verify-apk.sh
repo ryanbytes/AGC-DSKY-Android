@@ -3,28 +3,11 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
+PINNED_BUILD_TOOLS=36.0.0
 
 fail() {
   printf 'VERIFY FAIL: %s\n' "$*" >&2
   exit 1
-}
-
-version_ge() {
-  local lhs="$1" rhs="$2"
-  local l1=0 l2=0 l3=0 r1=0 r2=0 r3=0
-  IFS=. read -r l1 l2 l3 <<<"$lhs"
-  IFS=. read -r r1 r2 r3 <<<"$rhs"
-  l1="${l1:-0}"; l2="${l2:-0}"; l3="${l3:-0}"
-  r1="${r1:-0}"; r2="${r2:-0}"; r3="${r3:-0}"
-  (( 10#$l1 > 10#$r1 )) && return 0
-  (( 10#$l1 < 10#$r1 )) && return 1
-  (( 10#$l2 > 10#$r2 )) && return 0
-  (( 10#$l2 < 10#$r2 )) && return 1
-  (( 10#$l3 >= 10#$r3 ))
-}
-
-is_stable_triplet() {
-  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 }
 
 [[ -f "$APK" ]] || fail "APK not found: $APK"
@@ -97,35 +80,20 @@ done
 
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 
-find_latest_tool() {
+find_verifier_tool() {
   local name="$1"
-  local best_path="" best_version="" dir candidate version
-  if [[ -n "$SDK" && -d "$SDK/build-tools" ]]; then
-    for dir in "$SDK"/build-tools/*; do
-      [[ -d "$dir" ]] || continue
-      version="${dir##*/}"
-      is_stable_triplet "$version" || continue
-      candidate="$dir/$name"
-      [[ -x "$candidate" ]] || continue
-      if [[ -z "$best_path" ]] || version_ge "$version" "$best_version"; then
-        best_path="$candidate"
-        best_version="$version"
-      fi
-    done
-  fi
-  if [[ -n "$best_path" ]]; then
-    printf '%s\n' "$best_path"
+  if [[ -n "$SDK" ]]; then
+    local pinned="$SDK/build-tools/$PINNED_BUILD_TOOLS/$name"
+    [[ -x "$pinned" ]] || return 1
+    printf '%s\n' "$pinned"
     return 0
   fi
-  if command -v "$name" >/dev/null 2>&1; then
-    command -v "$name"
-    return 0
-  fi
-  return 1
+  command -v "$name" 2>/dev/null || return 1
 }
 
-AAPT2="$(find_latest_tool aapt2 || true)"
-[[ -n "$AAPT2" ]] || fail "aapt2 not found; cannot verify merged APK metadata"
+AAPT2="$(find_verifier_tool aapt2 || true)"
+[[ -n "$AAPT2" ]] \
+  || fail "aapt2 not found at pinned Build Tools $PINNED_BUILD_TOOLS (or PATH when no SDK is configured)"
 
 badging="$($AAPT2 dump badging "$APK")"
 grep -Eq "^package: name='org\.apollo\.agcdsky' versionCode='7' versionName='0\.7'" <<<"$badging" \
@@ -134,22 +102,32 @@ grep -Fq "sdkVersion:'26'" <<<"$badging" \
   || fail "APK minSdk is not 26"
 grep -Fq "targetSdkVersion:'37'" <<<"$badging" \
   || fail "APK targetSdk is not 37"
+grep -Fq "application-debuggable" <<<"$badging" \
+  || fail "test APK is not debuggable; device-smoke run-as diagnostics would not work"
 
 permissions="$($AAPT2 dump permissions "$APK")"
 if grep -Fq 'android.permission.INTERNET' <<<"$permissions"; then
   fail "merged APK requests android.permission.INTERNET"
 fi
 
-APKSIGNER="$(find_latest_tool apksigner || true)"
-[[ -n "$APKSIGNER" ]] || fail "apksigner not found; cannot verify APK signature"
+grep -Fq 'android.permission.ACCESS_COARSE_LOCATION' <<<"$permissions" \
+  || fail "merged APK is missing coarse location required for DREAM SOLAR"
+grep -Fq 'android.permission.ACCESS_FINE_LOCATION' <<<"$permissions" \
+  || fail "merged APK is missing fine location required for WebView geolocation compatibility"
+
+APKSIGNER="$(find_verifier_tool apksigner || true)"
+[[ -n "$APKSIGNER" ]] \
+  || fail "apksigner not found at pinned Build Tools $PINNED_BUILD_TOOLS (or PATH when no SDK is configured)"
 "$APKSIGNER" verify --verbose "$APK" >/dev/null \
   || fail "APK signature verification failed"
 
 printf 'APK verification: PASS\n'
 printf '  %s\n' "$APK"
 printf '  package/version/minSdk/targetSdk match v0.7 source\n'
+printf '  APK is debuggable for the ADB smoke/report workflow\n'
 printf '  pinned yaAGC/WASM + both ropes match exact Git blobs\n'
 printf '  packaged frontend matches the current checkout byte-for-byte\n'
 printf '  unused upstream vendor assets are absent\n'
-printf '  merged manifest has no INTERNET permission\n'
+printf '  merged manifest has location permissions and no INTERNET permission\n'
+printf '  verifier Build Tools: %s\n' "$PINNED_BUILD_TOOLS"
 printf '  APK signature verifies\n'
