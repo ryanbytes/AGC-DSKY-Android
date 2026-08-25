@@ -3,6 +3,7 @@ package org.apollo.agcdsky;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -23,6 +24,7 @@ public final class MainActivity extends Activity {
             "if(window.AGCDSKY&&AGCDSKY.setAppVisible){AGCDSKY.setAppVisible(false)}";
     private static final String JS_APP_VISIBLE =
             "if(window.AGCDSKY&&AGCDSKY.setAppVisible){AGCDSKY.setAppVisible(true)}";
+    private static final Uri LOCAL_ASSET_ORIGIN = Uri.parse(NetClient.ASSET_ORIGIN);
 
     private WebView webView;
     private Bundle pendingWebViewState;
@@ -95,6 +97,11 @@ public final class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        // The app is intentionally served only from the synthetic packaged
+        // HTTPS origin. Do not let JavaScript use file:// or content:// as an
+        // alternate path around that boundary.
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
         webView.addJavascriptInterface(new DebugReporter.JsBridge(this), "DebugBridge");
         webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient() {
@@ -102,6 +109,12 @@ public final class MainActivity extends Activity {
             public void onGeolocationPermissionsShowPrompt(
                     String origin,
                     GeolocationPermissions.Callback callback) {
+                // Device location is exclusively for the packaged DREAM SOLAR
+                // page. Never grant the bridge to an arbitrary WebView origin.
+                if (!isLocalAssetOrigin(origin)) {
+                    callback.invoke(origin, false, false);
+                    return;
+                }
                 if (hasLocationPermission()) {
                     callback.invoke(origin, true, false);
                     return;
@@ -142,6 +155,19 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private boolean isLocalAssetOrigin(String origin) {
+        if (origin == null) return false;
+        try {
+            Uri candidate = Uri.parse(origin);
+            return "https".equalsIgnoreCase(candidate.getScheme())
+                    && LOCAL_ASSET_ORIGIN.getHost() != null
+                    && LOCAL_ASSET_ORIGIN.getHost().equalsIgnoreCase(candidate.getHost())
+                    && candidate.getPort() == LOCAL_ASSET_ORIGIN.getPort();
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
     private boolean hasLocationPermission() {
         return checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
                         == PackageManager.PERMISSION_GRANTED
@@ -156,7 +182,8 @@ public final class MainActivity extends Activity {
             int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == GEO_PERMISSION_REQUEST && pendingGeoCallback != null) {
-            pendingGeoCallback.invoke(pendingGeoOrigin, hasLocationPermission(), false);
+            boolean grant = isLocalAssetOrigin(pendingGeoOrigin) && hasLocationPermission();
+            pendingGeoCallback.invoke(pendingGeoOrigin, grant, false);
             pendingGeoOrigin = null;
             pendingGeoCallback = null;
         }
@@ -194,6 +221,8 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        pendingGeoOrigin = null;
+        pendingGeoCallback = null;
         if (webView != null) {
             webView.destroy();
             webView = null;
