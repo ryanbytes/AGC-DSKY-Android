@@ -81,6 +81,9 @@ BUILD_TOOLS_DIR="$SDK/build-tools/$BUILD_TOOLS_VERSION"
   || fail "Build Tools $BUILD_TOOLS_VERSION apksigner is missing or not executable"
 
 PINNED_WEBAGC=0575ea7a1231e3948bae7d2c22a6ac146da0c38d
+WEBAGC_GITLINK="$(git rev-parse HEAD:vendor/webAGC 2>/dev/null || true)"
+[[ "$WEBAGC_GITLINK" == "$PINNED_WEBAGC" ]] \
+  || fail "repository gitlink for vendor/webAGC is ${WEBAGC_GITLINK:-unknown}; expected $PINNED_WEBAGC"
 [[ -d vendor/webAGC/.git || -f vendor/webAGC/.git ]] \
   || fail "vendor/webAGC submodule is not initialized; run: git submodule update --init --recursive"
 WEBAGC_HEAD="$(git -C vendor/webAGC rev-parse HEAD 2>/dev/null || true)"
@@ -112,7 +115,8 @@ printf 'Gradle: %s\n' "$GRADLE_VERSION"
 printf 'Android SDK: %s\n' "$SDK"
 printf 'SDK platform: android-37\n'
 printf 'Build Tools: %s\n' "$BUILD_TOOLS_VERSION"
-printf 'webAGC: %s\n' "$WEBAGC_HEAD"
+printf 'webAGC gitlink: %s\n' "$WEBAGC_GITLINK"
+printf 'webAGC checkout: %s\n' "$WEBAGC_HEAD"
 
 node tools/manifest-policy-smoke.js
 node tools/frontend-smoke.js
