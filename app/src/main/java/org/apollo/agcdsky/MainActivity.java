@@ -2,6 +2,7 @@ package org.apollo.agcdsky;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -89,6 +90,13 @@ public final class MainActivity extends Activity {
     // Keeping this non-private makes the generated invocation verifier-safe.
     void startDsky() {
         if (webView != null) return;
+
+        // Remote WebView inspection is useful for the prototype/debug APK when
+        // validating WASM and rope fetches on GrapheneOS. Never enable it in a
+        // non-debuggable/release build.
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
 
         webView = new WebView(this);
         webView.setBackgroundColor(CM_PANEL_COLOR);
