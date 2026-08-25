@@ -39,7 +39,38 @@ Ship an Android DSKY that keeps the phone clock / DreamService mode but also con
 - yaAGC VERB/NOUN flashing and EL-off states now have visible CSS behavior (`408aaaf`, `d4e72f8`).
 - Third-party/core provenance and protocol references are current (`754c2dc`, `fda2fd1`).
 - README and implementation notes describe v0.7 rather than the obsolete network-light architecture (`ba88a43`, `9273d7b`).
+- The obsolete GitHub-hosted APK workflow was removed from `main` (`ed1178c`); builds remain local/manual only.
+- Android `preBuild` now verifies exact sizes and Git-blob SHA-1 values for `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin`, refusing to package a missing, truncated, corrupted, or drifted binary (`f5be2c5`).
+- `agc-core.js` now rejects any fixed rope that is not exactly 73,728 bytes and primes yaAGC's lazily initialized ring-buffer I/O before queuing DSKY U-bit masks; a second CPU reset preserves the true mission reset state (`73ba983`).
+- A dependency-free `tools/agc-core-smoke.js` checks reset/prime/reset ordering, DSKY U-bit masks, and rope-length rejection (`22db059`). Its equivalent logic passed under Node 22 on the current execution host.
 - No GitHub Actions build workflow should be added. Builds are local/manual.
+
+## AGC I/O initialization checkpoint — 2026-08-24
+
+A source-level review against VirtualAGC exposed an initialization bug that was not visible from the JavaScript API alone.
+
+VirtualAGC's ring-buffer backend initializes `ringbuffer_in`, `ringbuffer_out`, and channel masks lazily in `ChannelSetup()`, reached from `ChannelInput()` / `ChannelOutput()`. The AGC engine calls `ChannelInput()` during a CPU pass. Therefore a U-bit mask packet queued into `ringbuffer_in` before the first CPU pass can be discarded when `ChannelSetup()` initializes that buffer.
+
+The wrapper now handles this explicitly:
+
+1. `cpu_reset()` establishes valid AGC reset state.
+2. One disposable `cpu_step(1)` forces the ring-buffer backend to initialize and consumes any stale peripheral input from a reused core.
+3. Any transient output from that disposable step is discarded locally.
+4. `cpu_reset()` is called again, returning the mission CPU to its true reset vector/state.
+5. Only then are the channel `015` and `032` U-bit masks queued.
+
+This also prevents queued DSKY input from a prior AGC run from leaking through a later explicit AGC reset while still preserving the existing same-WebView sleep/wake pause/resume behavior, which does not call reset.
+
+The exact upstream `packet_write()` contract was also rechecked: channel bit 8 is the U/mask bit, confirming the wrapper's use of `U_BIT | channel` rather than the suspicious `&` expression present in the pinned webAGC JavaScript helper.
+
+Additional integrity work in this pass:
+
+- The local Gradle build now validates the exact pinned Git blobs before Android `preBuild`.
+- Expected binary inputs are `yaAGC.wasm` 132,617 bytes / blob `713685680492098d05437b99c26403f683d56009`, `Luminary099.bin` 73,728 bytes / blob `cd2ec9992d5863e1c7234fa760020f68ef946202`, and `Comanche055.bin` 73,728 bytes / blob `9e4ec167dc99ac12b233df07b6b91fef585e5015`.
+- Runtime rope loading rejects any byte length other than the full 36-bank 73,728-byte image before `set_fixed()` can read it.
+- `tools/agc-core-smoke.js` was added. The reset/mask/rope logic passed under local Node 22; this is not a real WASM or Android runtime test.
+
+Current host limitation remains concrete: Java 21 and Node are present, but Gradle and the Android SDK/build-tools are not installed, and this host's shell cannot resolve GitHub directly. GitHub repository access through the connected GitHub tool remains usable. No native APK build from the current source revision is claimed.
 
 ## Source continuation checkpoint — 2026-08-24
 
@@ -117,7 +148,7 @@ AGC mode does not use the synthetic clock scheduler. It continues to follow actu
 The hidden control cycles:
 
 1. `DREAM DIM` — fixed low EL level and low Android window brightness.
-2. `DREAM BRIGHT` — full EL level and high window brightness for daytime charging.
+2. `DREAM BRIGHT` — full EL level and high Android window brightness for daytime charging.
 3. `DREAM SOLAR` — local astronomical sunrise/sunset control.
 
 Solar setup/behavior:
@@ -254,6 +285,8 @@ git submodule update --init --recursive
 - Solar sunrise/sunset math was sanity-checked against published local times for 2026-08-22.
 - Current committed JavaScript was manually/static reviewed after the mission/lifecycle update; this does not replace execution in Android WebView.
 - Current manifest contains no `android.permission.INTERNET`; only location permissions used by optional SOLAR mode are declared.
+- VirtualAGC's lazy ring-buffer initialization and `packet_write()` U-bit semantics were checked directly against the upstream C implementation.
+- Dependency-free Node smoke logic passes for reset/prime/reset ordering, U-bit masks, and fixed-rope size rejection.
 
 These checks do not substitute for running the WASM and Dream/permission paths in Android.
 
@@ -270,6 +303,7 @@ Therefore do **not** yet claim that the onboard AGC, CM mission selector, SOLAR 
 ### Verification gates still required
 
 - [ ] Clean recursive clone contains `vendor/webAGC/src/yaAGC.wasm`, `vendor/webAGC/demo/agc/Luminary099.bin`, and `vendor/webAGC/demo/agc/Comanche055.bin`.
+- [ ] `verifyPinnedAgcAssets` passes for all three exact pinned Git blobs in the real build checkout.
 - [ ] Local Gradle build succeeds with the current native source and v0.7 asset source sets.
 - [ ] Main page loads from the synthetic HTTPS asset origin.
 - [ ] `fetch('yaAGC.wasm')` returns the packaged WASM offline.
@@ -299,13 +333,14 @@ Therefore do **not** yet claim that the onboard AGC, CM mission selector, SOLAR 
 
 1. **Minimal WASI semantics.** The import list is known, but libc may expect more detailed `fd_fdstat_get` behavior than the current shim provides. If instantiation succeeds but an exported call traps, inspect the trap before adding a large WASI dependency.
 2. **WebView asset interception.** Confirm main-frame and subresource requests are intercepted by `NetClient` under the synthetic HTTPS host, including both rope filenames.
-3. **Submodule checkout.** A non-recursive clone will not contain the WASM/rope binaries and the Android build/runtime assets will be incomplete.
+3. **Submodule checkout.** A non-recursive clone will not contain the WASM/rope binaries. The new Gradle verification task should now fail such a build rather than allowing an incomplete APK to be packaged.
 4. **Display relay edge cases.** Verify sign clearing, blank relay codes, VN flashing polarity, EL-off behavior, and click counting against real yaAGC output/hardware references.
 5. **CPU timing/lifecycle.** The 60 Hz scheduling approach mirrors webAGC. The new app-hide pause/resume logic should avoid background catch-up, but Android/WebView runtime behavior still requires device verification.
 6. **Geolocation permission.** GrapheneOS/Android can deny or grant approximate location; SOLAR must degrade to DIM cleanly when location is unavailable.
 7. **Dream brightness bridge.** Verify WebView JavaScript interface calls continue while DreamService is active and that the system does not override `screenBrightness`.
 8. **Polar locations.** If the standard sunrise/sunset event does not occur on a date, the current SOLAR fallback is night/dim. A future refinement may choose a solar-elevation model for polar day/night behavior.
 9. **Recreation state.** WebView history/state plus local preferences are restored, but yaAGC CPU/erasable memory is not serialized across process/page destruction. Implement a real snapshot mechanism only if exact AGC continuation across process death becomes a requirement.
+10. **I/O queue return handling.** `packet_write()` can report a full input ring buffer; the wrapper currently assumes the very low-rate DSKY writes are accepted. Runtime testing should confirm this and add explicit failure handling if needed.
 
 ## Build/signing note
 
