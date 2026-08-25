@@ -1,0 +1,75 @@
+# Device runtime smoke
+
+The current-source debug APK has two device-level smoke layers. Neither replaces visual/manual verification, but together they turn several former manual guesses into reproducible runtime checks.
+
+## Prerequisites
+
+- A current debug APK built from the repository source.
+- Exactly one authorized Android device visible to `adb`.
+- Android SDK Platform Tools (`adb`).
+- Node.js 18 or newer on the host running the smoke.
+- The debug APK must remain debuggable so Android WebView exposes its local DevTools socket. Release builds intentionally do not enable WebView inspection.
+
+## One-command gate
+
+```bash
+bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+```
+
+This runs the immediate install/launch/frontend smoke first and then the live AGC runtime smoke.
+
+### Immediate device smoke
+
+`tools/device-smoke.sh`:
+
+- calculates the APK SHA-256 and records the source commit
+- installs/updates the APK without intentionally clearing app data
+- launches the interactive Activity
+- captures logcat and the app-private debug report
+- requires the debug-only `FRONTEND READY app` marker
+- rejects obvious fatal Android/WebView events
+
+A process that merely stays alive with a blank or partially initialized WebView is not a pass.
+
+### Live AGC runtime smoke
+
+`tools/device-agc-smoke.sh` waits for the actual `webview_devtools_remote_*` socket belonging to the app process, forwards it with `adb`, and runs the dependency-free `tools/device-agc-smoke.js` Chrome DevTools Protocol driver.
+
+The driver uses the app's real packaged WebView. It does not inject a mock `AgcCore`.
+
+It currently checks:
+
+- the interactive packaged frontend is initialized
+- Apollo 11 LM `Luminary099.bin` can enter AGC mode
+- the real yaAGC core is present, running, and reports a version
+- real DSKY output channels are observed from the running core
+- VERB input is delivered through the actual DSKY pointer handler without stopping the core
+- PRO is asserted on pointer-down, remains visibly held, and releases on pointer-up
+- an in-memory AGC instance pauses and resumes through `AGCDSKY.setAppVisible(false/true)` without being replaced
+- Apollo 11 CM `Comanche055.bin` can enter AGC mode in a separate mission run
+- the CM run also produces real DSKY output without an AGC error
+
+The smoke snapshots the persistent mission/run-mode settings and attempts to restore them afterward. If the pre-test state was an active AGC run, restoration necessarily starts that mission from a fresh AGC reset; exact CPU/erasable-memory state is not serialized by the app.
+
+## Resume/held-PRO guard
+
+`MainActivity.onResume()` deliberately sends a hidden transition immediately before the visible transition. `evaluateJavascript()` issued during `onPause()` is asynchronous, and Android may freeze WebView before that callback executes. The extra idempotent hidden transition guarantees that any stale held PRO input is released before the same in-memory core resumes.
+
+`tools/native-diagnostic-smoke.js` guards this native/frontend contract at source-test time.
+
+## Still manual or separate
+
+A passing full-device smoke does **not** by itself prove:
+
+- pixel-perfect DSKY relay/sign/annunciator appearance on the physical screen
+- real OS screen-off/screen-on behavior rather than the direct lifecycle bridge check
+- Activity/process recreation behavior
+- exact Pinball semantic response to every DSKY key sequence
+- PRO standby semantics for a long physical hold
+- DreamService selection/startup and non-interactivity
+- DREAM DIM / BRIGHT / SOLAR physical brightness behavior
+- first-use Android/GrapheneOS location permission behavior for SOLAR
+- portrait/landscape DISPLAY cropping on the target phone
+- full CM peripheral fidelity; the pinned upstream WASM still lacks an exported `CmOrLm` setter
+
+Those remain explicit acceptance gates. Do not upgrade them to verified status from this smoke alone.
