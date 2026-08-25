@@ -10,7 +10,7 @@ fail() {
 }
 
 version_ge() {
-  local lhs="${1%%-*}" rhs="${2%%-*}"
+  local lhs="$1" rhs="$2"
   local l1=0 l2=0 l3=0 r1=0 r2=0 r3=0
   IFS=. read -r l1 l2 l3 <<<"$lhs"
   IFS=. read -r r1 r2 r3 <<<"$rhs"
@@ -21,6 +21,10 @@ version_ge() {
   (( 10#$l2 > 10#$r2 )) && return 0
   (( 10#$l2 < 10#$r2 )) && return 1
   (( 10#$l3 >= 10#$r3 ))
+}
+
+is_stable_triplet() {
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 }
 
 [[ -f "$APK" ]] || fail "APK not found: $APK"
@@ -95,25 +99,29 @@ SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 
 find_latest_tool() {
   local name="$1"
-  local best_path="" best_version=""
-  if command -v "$name" >/dev/null 2>&1; then
-    command -v "$name"
-    return 0
-  fi
+  local best_path="" best_version="" dir candidate version
   if [[ -n "$SDK" && -d "$SDK/build-tools" ]]; then
     for dir in "$SDK"/build-tools/*; do
       [[ -d "$dir" ]] || continue
+      version="${dir##*/}"
+      is_stable_triplet "$version" || continue
       candidate="$dir/$name"
       [[ -x "$candidate" ]] || continue
-      version="${dir##*/}"
       if [[ -z "$best_path" ]] || version_ge "$version" "$best_version"; then
         best_path="$candidate"
         best_version="$version"
       fi
     done
   fi
-  [[ -n "$best_path" ]] || return 1
-  printf '%s\n' "$best_path"
+  if [[ -n "$best_path" ]]; then
+    printf '%s\n' "$best_path"
+    return 0
+  fi
+  if command -v "$name" >/dev/null 2>&1; then
+    command -v "$name"
+    return 0
+  fi
+  return 1
 }
 
 AAPT2="$(find_latest_tool aapt2 || true)"
