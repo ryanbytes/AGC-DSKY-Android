@@ -57,6 +57,14 @@ printf '%s\n' "$INSTALL_OUTPUT"
 $ADB logcat -c >/dev/null 2>&1 || true
 $ADB shell am force-stop "$PACKAGE" >/dev/null
 
+# `adb install -r` preserves app-private state. Remove only the prior diagnostic
+# file so an old handled/crash report cannot make a clean new launch look bad.
+# Preferences, WebView storage, mission selection, and SOLAR coordinates remain
+# untouched. A debug APK is expected here, so run-as must be available.
+if ! $ADB shell run-as "$PACKAGE" rm -f files/debug-last.txt >/dev/null 2>&1; then
+  fail "run-as could not clear the stale private debug report; verify this is the debuggable APK"
+fi
+
 printf 'Launching %s\n' "$ACTIVITY"
 START_OUTPUT="$($ADB shell am start -W -n "$ACTIVITY" 2>&1)" || {
   printf '%s\n' "$START_OUTPUT" >&2
