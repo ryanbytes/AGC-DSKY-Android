@@ -18,7 +18,8 @@ const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20,RELAY_CLICK_SPREAD_MS=2.5;
 let clockDigits={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']},
     clockRelayWords={},relayQueue=[],relayBusy=false;
 const agcRelayWords={};
-let agcCore=null,agcLoadedMission='',appVisible=!document.hidden,agcPausedForVisibility=false;
+let agcCore=null,agcLoadedMission='',appVisible=!document.hidden,agcPausedForVisibility=false,
+    agcProceedPointer=null,agcProceedButton=null;
 
 const SEG={0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',8:'abcdefg',9:'abcdfg'};
 const PATH={
@@ -106,7 +107,15 @@ function executeClock(){if(verb==='35'){lampTest();return}if(verb==='16'&&noun==
 function missionSpec(){return MISSIONS[selectedMission]}
 function applyMissionButton(){const b=$('mission');if(b)b.textContent=missionSpec().short}
 function rememberRunMode(next){if(!dream)store.set('runMode',next)}
+function releaseAgcProceed(){
+  const hadPointer=agcProceedPointer!==null,button=agcProceedButton;
+  agcProceedPointer=null;agcProceedButton=null;
+  if(button)button.classList.remove('pressed');
+  if(!hadPointer||mode!=='agc'||!agcCore)return;
+  try{agcCore.proceedKey(false)}catch(error){agcFailure(error)}
+}
 function enterClock(status='V16 N65 · PHONE CLOCK'){
+  releaseAgcProceed();
   if(agcCore)agcCore.stop();
   agcPausedForVisibility=false;mode='clock';rememberRunMode('clock');
   $('agc').textContent='AGC';$('mode').textContent=status;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
@@ -183,6 +192,7 @@ async function enterAgc(){
 function cycleMission(){
   if(dream||mode==='agc-loading')return;
   const restartAgc=mode==='agc';
+  releaseAgcProceed();
   if(agcCore)agcCore.stop();
   selectedMission=selectedMission==='luminary099'?'comanche055':'luminary099';
   store.set('agcMission',selectedMission);agcCore=null;agcLoadedMission='';agcPausedForVisibility=false;applyMissionButton();
@@ -199,7 +209,7 @@ function setAppVisible(visible){
   if(agcPausedForVisibility){agcPausedForVisibility=false;agcCore.start(1)}
 }
 function press(k){
-  if(mode==='agc'){if(k==='P'){agcCore.proceedPulse();return}const code=AGC_KEY[k];if(code!==undefined)agcCore.keyPress(code);return}
+  if(mode==='agc'){if(k==='P')return;const code=AGC_KEY[k];if(code!==undefined)agcCore.keyPress(code);return}
   if(mode!=='clock')return;
   if(k==='V'){entryMode='V';entry='';set2('verb','  ');return}
   if(k==='N'){entryMode='N';entry='';set2('noun','  ');return}
@@ -297,10 +307,20 @@ document.addEventListener('pointerdown',e=>{
   if(e.target.closest('[data-key],.app-controls'))return;
   holdTimer=setTimeout(showControls,620);
 },{passive:true});
-document.addEventListener('pointerup',()=>clearTimeout(holdTimer),{passive:true});
-document.addEventListener('pointercancel',()=>clearTimeout(holdTimer),{passive:true});
-document.addEventListener('visibilitychange',()=>setAppVisible(!document.hidden));
-document.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();b.classList.add('pressed');press(b.dataset.key);setTimeout(()=>b.classList.remove('pressed'),90)}));
+document.addEventListener('pointerup',e=>{clearTimeout(holdTimer);if(e.pointerId===agcProceedPointer)releaseAgcProceed()},{passive:true});
+document.addEventListener('pointercancel',e=>{clearTimeout(holdTimer);if(e.pointerId===agcProceedPointer)releaseAgcProceed()},{passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAgcProceed();setAppVisible(!document.hidden)});
+document.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('pointerdown',e=>{
+  e.preventDefault();b.classList.add('pressed');
+  if(mode==='agc'&&b.dataset.key==='P'){
+    if(agcProceedPointer!==null)return;
+    agcProceedPointer=e.pointerId;agcProceedButton=b;
+    try{if(b.setPointerCapture)b.setPointerCapture(e.pointerId)}catch(_){}
+    try{agcCore.proceedKey(true)}catch(error){agcProceedPointer=null;agcProceedButton=null;b.classList.remove('pressed');agcFailure(error)}
+    return;
+  }
+  press(b.dataset.key);setTimeout(()=>b.classList.remove('pressed'),90);
+}));
 $('dim').addEventListener('click',()=>{dim=!dim;applyDim();showControls()});
 $('dreambright').addEventListener('click',()=>{cycleDreamMode();showControls()});
 $('sound').addEventListener('click',()=>{ensureAudio();tickSound=!tickSound;applyTickSound();if(tickSound)playRelayBurst(1);showControls()});
