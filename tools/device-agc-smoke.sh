@@ -37,25 +37,40 @@ DEVICE_COUNT="$($ADB devices | awk 'NR>1 && $2=="device" {n++} END {print n+0}')
   || fail "expected exactly one authorized ADB device; found $DEVICE_COUNT"
 
 # Launch the interactive Activity if needed. The debug build enables WebView
-# inspection only when FLAG_DEBUGGABLE is present, so a release build should
-# fail later with a clear missing-DevTools-socket message.
+# inspection only when FLAG_DEBUGGABLE is present. Process creation can precede
+# WebView's localabstract DevTools socket, so poll for the actual socket rather
+# than relying on a fixed cold-start sleep.
 $ADB shell am start -W -n "$ACTIVITY" >/dev/null 2>&1 \
   || fail "could not launch $ACTIVITY"
-sleep 1
 
-PID="$($ADB shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r' | awk '{print $1}')"
+PID=""
+SOCKET=""
+for _ in {1..40}; do
+  PID="$($ADB shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r' | awk '{print $1}')"
+  if [[ "$PID" =~ ^[0-9]+$ ]]; then
+    SOCKET="$($ADB shell cat /proc/net/unix 2>/dev/null \
+      | tr -d '\r' \
+      | awk -v pid="$PID" '
+          $8 ~ /^@webview_devtools_remote_/ {
+            name=$8
+            if (name ~ ("(^|[^0-9])" pid "([^0-9]|$)")) {
+              sub(/^@/, "", name)
+              print name
+              exit
+            }
+          }')"
+    [[ -n "$SOCKET" ]] && break
+  fi
+  sleep 0.25
+done
+
 [[ "$PID" =~ ^[0-9]+$ ]] || fail "$PACKAGE process is not running after launch"
-
-SOCKET="$($ADB shell cat /proc/net/unix 2>/dev/null \
-  | tr -d '\r' \
-  | awk -v pid="$PID" '$8 ~ /^@webview_devtools_remote_/ && $8 ~ pid {sub(/^@/, "", $8); print $8; exit}')"
-if [[ -z "$SOCKET" ]]; then
-  SOCKET="webview_devtools_remote_$PID"
-fi
+[[ -n "$SOCKET" ]] \
+  || fail "WebView DevTools socket did not appear for PID $PID; ensure the installed APK is the debuggable current-source build"
 
 PORT="$($ADB forward tcp:0 "localabstract:$SOCKET" 2>/dev/null || true)"
 [[ "$PORT" =~ ^[0-9]+$ ]] \
-  || fail "could not forward WebView DevTools socket $SOCKET; ensure the installed APK is debuggable"
+  || fail "could not forward WebView DevTools socket $SOCKET"
 
 cleanup() {
   $ADB forward --remove "tcp:$PORT" >/dev/null 2>&1 || true
