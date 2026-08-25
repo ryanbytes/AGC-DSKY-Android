@@ -9,6 +9,22 @@ fail() {
   exit 1
 }
 
+# Numeric dotted-version comparison without GNU sort -V. This must work with
+# the Bash 3.2 / BSD userland still present on many macOS installations.
+version_ge() {
+  local lhs="${1%%-*}" rhs="${2%%-*}"
+  local l1=0 l2=0 l3=0 r1=0 r2=0 r3=0
+  IFS=. read -r l1 l2 l3 <<<"$lhs"
+  IFS=. read -r r1 r2 r3 <<<"$rhs"
+  l1="${l1:-0}"; l2="${l2:-0}"; l3="${l3:-0}"
+  r1="${r1:-0}"; r2="${r2:-0}"; r3="${r3:-0}"
+  (( 10#$l1 > 10#$r1 )) && return 0
+  (( 10#$l1 < 10#$r1 )) && return 1
+  (( 10#$l2 > 10#$r2 )) && return 0
+  (( 10#$l2 < 10#$r2 )) && return 1
+  (( 10#$l3 >= 10#$r3 ))
+}
+
 command -v git >/dev/null 2>&1 || fail "git is required"
 command -v java >/dev/null 2>&1 || fail "Java/JDK is required"
 command -v gradle >/dev/null 2>&1 \
@@ -26,14 +42,8 @@ fi
 
 GRADLE_VERSION="$(gradle --version | awk '/^Gradle / { print $2; exit }')"
 [[ -n "$GRADLE_VERSION" ]] || fail "unable to determine Gradle version"
-GRADLE_NUMERIC="${GRADLE_VERSION%%-*}"
-IFS=. read -r GRADLE_MAJOR GRADLE_MINOR GRADLE_PATCH <<<"$GRADLE_NUMERIC"
-GRADLE_MAJOR="${GRADLE_MAJOR:-0}"
-GRADLE_MINOR="${GRADLE_MINOR:-0}"
-GRADLE_PATCH="${GRADLE_PATCH:-0}"
-if (( GRADLE_MAJOR < 9 || (GRADLE_MAJOR == 9 && GRADLE_MINOR < 5) )); then
-  fail "AGP 9.3.0 requires Gradle 9.5.0 or newer; found $GRADLE_VERSION"
-fi
+version_ge "$GRADLE_VERSION" 9.5.0 \
+  || fail "AGP 9.3.0 requires Gradle 9.5.0 or newer; found $GRADLE_VERSION"
 
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 [[ -n "$SDK" ]] || fail "ANDROID_SDK_ROOT or ANDROID_HOME must point to the Android SDK"
@@ -43,20 +53,18 @@ SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 
 BUILD_TOOLS_VERSION=""
 if [[ -d "$SDK/build-tools" ]]; then
-  BUILD_TOOLS_VERSION="$(find "$SDK/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null \
-    | sort -V | tail -n 1)"
-fi
-# BSD/macOS find does not support -printf; fall back to basename expansion.
-if [[ -z "$BUILD_TOOLS_VERSION" && -d "$SDK/build-tools" ]]; then
-  BUILD_TOOLS_VERSION="$(for d in "$SDK"/build-tools/*; do
-    [[ -d "$d" ]] && basename "$d"
-  done | sort -V | tail -n 1)"
+  for dir in "$SDK"/build-tools/*; do
+    [[ -d "$dir" ]] || continue
+    version="${dir##*/}"
+    if [[ -z "$BUILD_TOOLS_VERSION" ]] || version_ge "$version" "$BUILD_TOOLS_VERSION"; then
+      BUILD_TOOLS_VERSION="$version"
+    fi
+  done
 fi
 [[ -n "$BUILD_TOOLS_VERSION" ]] \
   || fail "Android SDK Build Tools are not installed under $SDK/build-tools"
-if [[ "$(printf '%s\n%s\n' 36.0.0 "$BUILD_TOOLS_VERSION" | sort -V | head -n 1)" != "36.0.0" ]]; then
-  fail "AGP 9.3.0 requires SDK Build Tools 36.0.0 or newer; found $BUILD_TOOLS_VERSION"
-fi
+version_ge "$BUILD_TOOLS_VERSION" 36.0.0 \
+  || fail "AGP 9.3.0 requires SDK Build Tools 36.0.0 or newer; found $BUILD_TOOLS_VERSION"
 
 PINNED_WEBAGC=0575ea7a1231e3948bae7d2c22a6ac146da0c38d
 [[ -d vendor/webAGC/.git || -f vendor/webAGC/.git ]] \
