@@ -2,6 +2,7 @@ package org.apollo.agcdsky;
 
 import android.content.Context;
 import android.net.Uri;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
@@ -99,6 +100,42 @@ public final class NetClient extends WebViewClient {
         } catch (IOException ignored) {
             return notFound();
         }
+    }
+
+    @Override
+    public void onReceivedError(
+            WebView view,
+            WebResourceRequest request,
+            WebResourceError error) {
+        if (request != null) {
+            StringBuilder detail = new StringBuilder("WEBVIEW RESOURCE LOAD ERROR\n");
+            detail.append("URL: ").append(request.getUrl()).append('\n');
+            detail.append("Main frame: ").append(request.isForMainFrame()).append('\n');
+            if (error != null) {
+                detail.append("Code: ").append(error.getErrorCode()).append('\n');
+                detail.append("Description: ").append(error.getDescription()).append('\n');
+            }
+            DebugReporter.appendWebError(context, detail.toString());
+        }
+        super.onReceivedError(view, request, error);
+    }
+
+    @Override
+    public void onReceivedHttpError(
+            WebView view,
+            WebResourceRequest request,
+            WebResourceResponse errorResponse) {
+        if (request != null) {
+            StringBuilder detail = new StringBuilder("WEBVIEW HTTP ERROR\n");
+            detail.append("URL: ").append(request.getUrl()).append('\n');
+            detail.append("Main frame: ").append(request.isForMainFrame()).append('\n');
+            if (errorResponse != null) {
+                detail.append("Status: ").append(errorResponse.getStatusCode()).append(' ')
+                        .append(errorResponse.getReasonPhrase()).append('\n');
+            }
+            DebugReporter.appendWebError(context, detail.toString());
+        }
+        super.onReceivedHttpError(view, request, errorResponse);
     }
 
     private static boolean isAssetOrigin(Uri uri) {
