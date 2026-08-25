@@ -226,12 +226,23 @@ function checkSourceInvariants() {
         'DreamService intent registration missing');
 
     const gradle = fs.readFileSync(APP_GRADLE, 'utf8');
-    assert(gradle.includes("'../vendor/webAGC/src'"),
-        'yaAGC WASM asset source directory missing');
-    assert(gradle.includes("'../vendor/webAGC/demo/agc'"),
-        'Apollo rope asset source directory missing');
+    assert(gradle.includes("file('../vendor/webAGC/src/yaAGC.wasm')"),
+        'pinned yaAGC WASM input missing');
+    assert(gradle.includes("file('../vendor/webAGC/demo/agc/Luminary099.bin')"),
+        'pinned Luminary099 input missing');
+    assert(gradle.includes("file('../vendor/webAGC/demo/agc/Comanche055.bin')"),
+        'pinned Comanche055 input missing');
     assert(gradle.includes('verifyPinnedAgcAssets'),
         'pinned AGC binary verification task missing');
+    assert(gradle.includes("tasks.register('stagePinnedAgcAssets', Sync)"),
+        'verified AGC binary staging task missing');
+
+    const assetRoots = gradle.match(/assets\.srcDirs\s*=\s*\[([\s\S]*?)\]/);
+    assert(assetRoots, 'Android asset roots missing');
+    assert(assetRoots[1].includes('generatedAgcAssetsDir'),
+        'generated verified AGC asset root missing');
+    assert(!assetRoots[1].includes('vendor/webAGC'),
+        'whole webAGC vendor directories must not be Android asset roots');
 
     const html = fs.readFileSync(INDEX_HTML, 'utf8');
     assert(html.includes('id="mission"'),
@@ -266,8 +277,52 @@ function checkSourceInvariants() {
         'NetClient packaged-asset navigation guard missing');
 }
 
+function testRuntimeDebugHooks() {
+    const listeners = {};
+    const reports = [];
+    const context = {
+        window: null,
+        DebugBridge: {
+            report(detail) {
+                reports.push(String(detail));
+            }
+        },
+        addEventListener(name, callback) {
+            listeners[name] = callback;
+        }
+    };
+    context.window = context;
+    vm.createContext(context);
+    vm.runInContext(fs.readFileSync(RUNTIME_DEBUG_JS, 'utf8'), context,
+        { filename: 'runtime-debug.js' });
+
+    assert(typeof listeners.error === 'function',
+        'runtime debug error listener did not register');
+    assert(typeof listeners.unhandledrejection === 'function',
+        'runtime debug rejection listener did not register');
+
+    listeners.error({
+        message: 'boom',
+        filename: 'https://appassets.androidplatform.net/assets/app.js',
+        lineno: 12,
+        colno: 3,
+        error: { stack: 'Error: boom\n at app.js:12:3' }
+    });
+    listeners.unhandledrejection({ reason: { stack: 'Error: async boom' } });
+
+    assert(reports.length === 2,
+        'runtime debug hook must report both unhandled failure types');
+    assert(reports[0].includes('UNHANDLED JAVASCRIPT ERROR')
+        && reports[0].includes('boom'),
+        'JavaScript error report missing useful details');
+    assert(reports[1].includes('UNHANDLED PROMISE REJECTION')
+        && reports[1].includes('async boom'),
+        'promise rejection report missing useful details');
+}
+
 async function main() {
     checkSourceInvariants();
+    testRuntimeDebugHooks();
 
     const first = createEnvironment();
     assert(first.elements.mission.textContent === 'LM L99',
