@@ -50,7 +50,8 @@ find_latest_tool() {
     return 0
   fi
   if [[ -n "$SDK" && -d "$SDK/build-tools" ]]; then
-    candidate="$(find "$SDK/build-tools" -type f -name "$name" -perm -111 2>/dev/null | sort | tail -n 1)"
+    candidate="$(find "$SDK/build-tools" -type f -name "$name" -perm -111 2>/dev/null \
+      | sort -V | tail -n 1)"
   fi
   [[ -n "$candidate" ]] || return 1
   printf '%s\n' "$candidate"
