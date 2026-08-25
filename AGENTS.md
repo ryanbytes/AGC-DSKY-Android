@@ -120,6 +120,7 @@ The canonical build path must continue to run:
 - frontend/source smoke
 - AGC wrapper smoke
 - runtime-debug smoke
+- native diagnostic smoke
 - DSKY mapping smoke
 - asset-reference smoke
 - real pinned yaAGC WASM + both-rope runtime smoke
@@ -130,18 +131,24 @@ The canonical build path must continue to run:
 
 ## Device verification discipline
 
-`tools/device-smoke.sh` is the immediate ADB gate for the debug APK. It must preserve app state, clear only the stale private debug report, install/update, launch, capture evidence, and require the debug-only `FRONTEND READY app` marker. A process that merely stays alive while the WebView is blank or partially initialized is not a pass.
+`tools/device-smoke.sh` is the immediate ADB install/launch gate for the debug APK. It must preserve app data, clear only the stale private debug report, capture APK/source provenance, launch the Activity, collect evidence, and require the debug-only `FRONTEND READY app` marker. A process that merely stays alive while the WebView is blank or partially initialized is not a pass.
 
-A successful immediate device smoke still does not prove AGC runtime behavior. Manual/device gates still include:
+`tools/device-agc-smoke.sh` is the live WebView/AGC runtime gate. It waits for the app process's real `webview_devtools_remote_*` socket, forwards that socket with `adb`, and runs the dependency-free `tools/device-agc-smoke.js` Chrome DevTools Protocol driver against the actual packaged WebView. It must continue using the real `AgcCore`; do not replace it with a mock.
 
-- enter LM AGC mode and observe real channel-driven display output
-- exercise ordinary DSKY keys
-- press and hold PRO, including standby behavior
-- switch to CM and confirm the correct rope loads
-- screen off/on same-WebView pause/resume
+The live gate currently enters both Luminary099 and Comanche055, requires a running yaAGC core/version and real DSKY output channels, exercises VERB through the actual DSKY pointer path, exercises held PRO pointer-down/release, and verifies same-WebView pause/resume preserves the same core object. See `docs/DEVICE_RUNTIME_SMOKE.md` for the exact proof boundary.
+
+`tools/device-full-smoke.sh <apk>` chains the immediate install/launch gate and the live AGC gate. Use it as the preferred automated device checkpoint for a current debug APK.
+
+A successful full device smoke still does not prove every user-visible behavior. Manual/device gates still include:
+
+- visually inspect LM AGC channel-driven display output and annunciators
+- verify a real Pinball semantic response for representative DSKY sequences, not merely queue acceptance/no crash
+- press and hold PRO long enough to verify intended standby behavior
+- real OS screen off/on behavior in addition to the direct lifecycle bridge smoke
 - Activity/page recreation fresh-reset behavior
 - DreamService display-only behavior
-- DREAM DIM / BRIGHT / SOLAR and location permission/state
+- DREAM DIM / BRIGHT / SOLAR and location permission/state on the target OS
+- portrait/landscape DISPLAY cropping/scaling
 
 ## Verification discipline
 
@@ -151,7 +158,7 @@ Examples:
 
 - Good: `Pinned WASM import table inspected; exact imports are env.memory + four WASI fd functions.`
 - Good: `Real pinned WASM instantiated under Node with Luminary099 and Comanche055; both ran CPU/DSKY input smoke.`
-- Good: `Built APK passed tools/verify-apk.sh and device-smoke.sh on GrapheneOS.`
+- Good: `Built APK passed tools/verify-apk.sh and device-full-smoke.sh on GrapheneOS.`
 - Bad: `Core integrated` when only files were copied.
 - Bad: `Build passes` when only syntax/source checks were run.
 
