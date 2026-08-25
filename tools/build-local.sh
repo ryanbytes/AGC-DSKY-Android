@@ -31,6 +31,8 @@ is_stable_triplet() {
 
 command -v git >/dev/null 2>&1 || fail "git is required"
 command -v java >/dev/null 2>&1 || fail "Java/JDK is required"
+command -v node >/dev/null 2>&1 \
+  || fail "Node.js is required for the repository JavaScript/source smoke tests"
 command -v gradle >/dev/null 2>&1 \
   || fail "Gradle is not installed. This repository does not currently contain a Gradle wrapper; install stable Gradle 9.5.0 or newer before building."
 
@@ -44,6 +46,12 @@ fi
 (( JAVA_MAJOR >= 17 )) \
   || fail "AGP 9.3.0 requires JDK 17 or newer; found Java $JAVA_VERSION"
 
+NODE_VERSION="$(node --version | sed 's/^v//')"
+NODE_MAJOR="${NODE_VERSION%%.*}"
+[[ "$NODE_MAJOR" =~ ^[0-9]+$ ]] || fail "unable to parse Node.js version: $NODE_VERSION"
+(( NODE_MAJOR >= 18 )) \
+  || fail "Node.js 18 or newer is required for source smoke tests; found $NODE_VERSION"
+
 GRADLE_VERSION="$(gradle --version | awk '/^Gradle / { print $2; exit }')"
 [[ -n "$GRADLE_VERSION" ]] || fail "unable to determine Gradle version"
 is_stable_triplet "$GRADLE_VERSION" \
@@ -54,24 +62,17 @@ version_ge "$GRADLE_VERSION" 9.5.0 \
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 [[ -n "$SDK" ]] || fail "ANDROID_SDK_ROOT or ANDROID_HOME must point to the Android SDK"
 [[ -d "$SDK" ]] || fail "Android SDK directory does not exist: $SDK"
-[[ -d "$SDK/platforms/android-37" ]] \
-  || fail "Android SDK platform 37 is not installed under $SDK/platforms/android-37"
+[[ -f "$SDK/platforms/android-37/android.jar" ]] \
+  || fail "Android SDK platform 37/android.jar is not installed under $SDK/platforms/android-37"
 
-BUILD_TOOLS_VERSION=""
-if [[ -d "$SDK/build-tools" ]]; then
-  for dir in "$SDK"/build-tools/*; do
-    [[ -d "$dir" ]] || continue
-    version="${dir##*/}"
-    is_stable_triplet "$version" || continue
-    if [[ -z "$BUILD_TOOLS_VERSION" ]] || version_ge "$version" "$BUILD_TOOLS_VERSION"; then
-      BUILD_TOOLS_VERSION="$version"
-    fi
-  done
-fi
-[[ -n "$BUILD_TOOLS_VERSION" ]] \
-  || fail "stable Android SDK Build Tools are not installed under $SDK/build-tools"
-version_ge "$BUILD_TOOLS_VERSION" 36.0.0 \
-  || fail "AGP 9.3.0 requires SDK Build Tools 36.0.0 or newer; found $BUILD_TOOLS_VERSION"
+BUILD_TOOLS_VERSION=36.0.0
+BUILD_TOOLS_DIR="$SDK/build-tools/$BUILD_TOOLS_VERSION"
+[[ -d "$BUILD_TOOLS_DIR" ]] \
+  || fail "Android SDK Build Tools $BUILD_TOOLS_VERSION is required at $BUILD_TOOLS_DIR"
+[[ -x "$BUILD_TOOLS_DIR/aapt2" ]] \
+  || fail "Build Tools $BUILD_TOOLS_VERSION aapt2 is missing or not executable"
+[[ -x "$BUILD_TOOLS_DIR/apksigner" ]] \
+  || fail "Build Tools $BUILD_TOOLS_VERSION apksigner is missing or not executable"
 
 PINNED_WEBAGC=0575ea7a1231e3948bae7d2c22a6ac146da0c38d
 [[ -d vendor/webAGC/.git || -f vendor/webAGC/.git ]] \
@@ -92,22 +93,25 @@ for asset in "${required_assets[@]}"; do
     || fail "missing $asset; run: git submodule update --init --recursive"
 done
 
+# Catch shell portability/syntax regressions in every repository helper before
+# Gradle starts doing expensive work.
+for script in tools/*.sh; do
+  bash -n "$script" || fail "shell syntax check failed: $script"
+done
+
 printf 'Java: %s\n' "$JAVA_VERSION"
+printf 'Node: %s\n' "$NODE_VERSION"
 printf 'Gradle: %s\n' "$GRADLE_VERSION"
 printf 'Android SDK: %s\n' "$SDK"
 printf 'SDK platform: android-37\n'
 printf 'Build Tools: %s\n' "$BUILD_TOOLS_VERSION"
 printf 'webAGC: %s\n' "$WEBAGC_HEAD"
 
-if command -v node >/dev/null 2>&1; then
-  node tools/frontend-smoke.js
-  node tools/agc-core-smoke.js
-  node tools/runtime-debug-smoke.js
-  node tools/dsky-mapping-smoke.js
-  node tools/asset-reference-smoke.js
-else
-  printf 'NOTE: node not found; JavaScript smoke tests skipped.\n' >&2
-fi
+node tools/frontend-smoke.js
+node tools/agc-core-smoke.js
+node tools/runtime-debug-smoke.js
+node tools/dsky-mapping-smoke.js
+node tools/asset-reference-smoke.js
 
 # The accepted v0.7 APK is deliberately produced from a clean app build tree.
 # Asset staging is a Sync task and the APK verifier checks bytes again, but a
