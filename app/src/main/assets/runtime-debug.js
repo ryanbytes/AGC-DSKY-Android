@@ -21,16 +21,20 @@
     }
   }
 
-  // app.js deliberately handles AGC/WASM failures by logging them and falling
-  // back to clock mode. Because those errors are handled, window.onerror does
-  // not see them. Mirror console.error into the local native report while still
-  // calling the real console so Chrome/WebView inspection keeps working.
+  // app.js deliberately handles AGC/WASM failures by logging an Error object
+  // and falling back to clock mode. Because those failures are handled,
+  // window.onerror does not see them. Mirror stack-bearing console errors into
+  // the local native report while keeping string-only stderr (including any
+  // ordinary yaAGC/WASI text) out of the failure file. WebChromeClient still
+  // sees all console errors for interactive debugging.
   if (global.console && typeof global.console.error === 'function') {
     const originalConsoleError = global.console.error.bind(global.console);
     global.console.error = function(){
       const args = Array.prototype.slice.call(arguments);
       originalConsoleError.apply(null, args);
-      report('CONSOLE ERROR', args.map(describe).join('\n'));
+      if (args.some(function(value){ return value && value.stack; })) {
+        report('CONSOLE ERROR', args.map(describe).join('\n'));
+      }
     };
   }
 
