@@ -113,14 +113,6 @@
       const ropeResponse = await requireOk(await fetch(ropeUrl), ropeUrl);
       await this.loadRope(await ropeResponse.arrayBuffer());
       this.reset();
-
-      // ringbuffer_api.c initializes both yaAGC I/O ring buffers lazily from
-      // ChannelInput/ChannelOutput. A mask packet queued before that first CPU
-      // pass is discarded when ChannelSetup() resets ringbuffer_in. Prime one
-      // instruction first, then queue the DSKY U-bit masks.
-      this.exports.cpu_step(1);
-      this.totalSteps = 1;
-      this.drainIo();
       this.configureInputMasks();
       return this;
     }
@@ -158,8 +150,21 @@
     }
 
     reset(){
-      this.channels = Object.create(null);
+      this.stop();
+
+      // ringbuffer_api.c initializes ringbuffer_in/out lazily from the first
+      // ChannelInput/ChannelOutput call. U-bit packets queued before that are
+      // discarded by ChannelSetup(). Prime one engine pass solely to force I/O
+      // setup and consume any pending peripheral input, discard transient output,
+      // then reset again so mission execution still begins at the true reset
+      // vector. On later resets this also prevents stale queued key packets from
+      // leaking into the next run.
       this.exports.cpu_reset();
+      this.exports.cpu_step(1);
+      this.discardIo();
+      this.exports.cpu_reset();
+
+      this.channels = Object.create(null);
       this.totalSteps = 0;
       this.startTime = performance.now();
     }
@@ -185,6 +190,14 @@
     readIo(){
       const packed = this.exports.packet_read() >>> 0;
       return [packed >>> 16, packed & 0xffff];
+    }
+
+    discardIo(){
+      for (let i = 0; i < 10000; i++) {
+        const [channel, value] = this.readIo();
+        if (channel === 0 && value === 0) return;
+      }
+      throw new Error('yaAGC I/O queue did not drain during reset');
     }
 
     drainIo(){
