@@ -52,4 +52,28 @@
     const detail = reason && reason.stack ? String(reason.stack) : String(reason || 'unknown rejection');
     report('UNHANDLED PROMISE REJECTION', detail);
   });
+
+  // Device smoke tests need more than a live Android process: prove the local
+  // frontend initialized far enough to create the public AGCDSKY API and render
+  // actual EL glyph markup. This callback runs after all ordinary page scripts.
+  // The native ready() bridge emits only in debuggable builds.
+  global.addEventListener('load', function(){
+    try {
+      const doc = global.document;
+      const prog = doc && doc.getElementById ? doc.getElementById('prog') : null;
+      const mission = doc && doc.getElementById ? doc.getElementById('mission') : null;
+      const initialized = !!(global.AGCDSKY
+          && prog && typeof prog.innerHTML === 'string' && prog.innerHTML.indexOf('el-glyph') >= 0
+          && mission && String(mission.textContent || '').length > 0);
+      if (initialized
+          && global.DebugBridge
+          && typeof global.DebugBridge.ready === 'function') {
+        const dream = doc.body && doc.body.classList && doc.body.classList.contains('dream');
+        global.DebugBridge.ready(dream ? 'dream' : 'app');
+      }
+    } catch (_) {
+      // A missing readiness marker will fail the device smoke. Do not turn the
+      // diagnostic helper itself into a second app error.
+    }
+  });
 })(window);
