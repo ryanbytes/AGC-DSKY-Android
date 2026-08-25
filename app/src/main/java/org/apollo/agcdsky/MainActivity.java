@@ -163,10 +163,11 @@ public final class MainActivity extends Activity {
         if (origin == null) return false;
         try {
             Uri candidate = Uri.parse(origin);
+            int port = candidate.getPort();
             return "https".equalsIgnoreCase(candidate.getScheme())
                     && LOCAL_ASSET_ORIGIN.getHost() != null
                     && LOCAL_ASSET_ORIGIN.getHost().equalsIgnoreCase(candidate.getHost())
-                    && candidate.getPort() == LOCAL_ASSET_ORIGIN.getPort();
+                    && (port == -1 || port == 443);
         } catch (RuntimeException ignored) {
             return false;
         }
