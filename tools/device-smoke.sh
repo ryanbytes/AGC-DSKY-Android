@@ -72,6 +72,9 @@ START_OUTPUT="$($ADB shell am start -W -n "$ACTIVITY" 2>&1)" || {
 }
 printf '%s\n' "$START_OUTPUT"
 
+# Give WebView enough time to load the local page and execute the frontend. A
+# debug-only native marker emitted from runtime-debug.js proves initialization
+# got past script setup and EL rendering; process-alive alone is not sufficient.
 sleep 2
 PID="$($ADB shell pidof -s "$PACKAGE" 2>/dev/null | tr -d '\r' || true)"
 
@@ -97,7 +100,7 @@ if [[ -z "$PID" ]]; then
     cat "$LOG_DIR/debug-last.txt" >&2
   fi
   printf '\nRecent AGC DSKY logcat:\n' >&2
-  grep -Ei 'FATAL EXCEPTION|AndroidRuntime|org\.apollo\.agcdsky|chromium|crash_dump' \
+  grep -Ei 'FATAL EXCEPTION|AndroidRuntime|org\.apollo\.agcdsky|AGC-DSKY|chromium|crash_dump' \
     "$LOG_DIR/logcat.txt" | tail -n 160 >&2 || true
   printf '\nSaved log: %s\n' "$LOG_DIR/logcat.txt" >&2
   fail "app process is not running after launch"
@@ -112,14 +115,23 @@ fi
 
 if grep -Eiq 'FATAL EXCEPTION|AndroidRuntime.*FATAL|Process: org\.apollo\.agcdsky.*has died|crash_dump.*org\.apollo\.agcdsky' "$LOG_DIR/logcat.txt"; then
   printf '\nPotential fatal event found in logcat:\n' >&2
-  grep -Ei 'FATAL EXCEPTION|AndroidRuntime|org\.apollo\.agcdsky|crash_dump' "$LOG_DIR/logcat.txt" | tail -n 120 >&2 || true
+  grep -Ei 'FATAL EXCEPTION|AndroidRuntime|org\.apollo\.agcdsky|AGC-DSKY|crash_dump' "$LOG_DIR/logcat.txt" | tail -n 120 >&2 || true
   printf '\nFull log: %s\n' "$LOG_DIR/logcat.txt" >&2
   exit 1
 fi
 
+if ! grep -Fq 'FRONTEND READY app' "$LOG_DIR/logcat.txt"; then
+  printf '\nFrontend readiness marker was not observed. Relevant logcat:\n' >&2
+  grep -Ei 'AGC-DSKY|chromium|org\.apollo\.agcdsky|WebView' "$LOG_DIR/logcat.txt" \
+    | tail -n 160 >&2 || true
+  printf '\nFull log: %s\n' "$LOG_DIR/logcat.txt" >&2
+  fail "Android process survived, but packaged frontend initialization was not proven"
+fi
+
 printf 'Immediate device smoke: PASS\n'
 printf '  process stayed alive after launch\n'
+printf '  packaged frontend emitted FRONTEND READY app\n'
 printf '  no app-local debug report was produced\n'
 printf '  no obvious fatal event was found in captured logcat\n'
 printf '  log: %s\n' "$LOG_DIR/logcat.txt"
-printf '\nManual gates still required: enter AGC mode, exercise DSKY keys/PRO, switch LM/CM, screen off/on, and test DreamService/SOLAR.\n'
+printf '\nManual gates still required: enter AGC mode, exercise DSKY keys/hold PRO, switch LM/CM, screen off/on, and test DreamService/SOLAR.\n'
