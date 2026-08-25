@@ -11,11 +11,24 @@ fail() {
 
 command -v git >/dev/null 2>&1 || fail "git is required"
 command -v gradle >/dev/null 2>&1 \
-  || fail "Gradle is not installed. This repository does not currently contain a Gradle wrapper; install a compatible real Gradle distribution before building."
+  || fail "Gradle is not installed. This repository does not currently contain a Gradle wrapper; install Gradle 9.5.0 or newer before building."
+
+GRADLE_VERSION="$(gradle --version | awk '/^Gradle / { print $2; exit }')"
+[[ -n "$GRADLE_VERSION" ]] || fail "unable to determine Gradle version"
+GRADLE_NUMERIC="${GRADLE_VERSION%%-*}"
+IFS=. read -r GRADLE_MAJOR GRADLE_MINOR GRADLE_PATCH <<<"$GRADLE_NUMERIC"
+GRADLE_MAJOR="${GRADLE_MAJOR:-0}"
+GRADLE_MINOR="${GRADLE_MINOR:-0}"
+GRADLE_PATCH="${GRADLE_PATCH:-0}"
+if (( GRADLE_MAJOR < 9 || (GRADLE_MAJOR == 9 && GRADLE_MINOR < 5) )); then
+  fail "AGP 9.3.0 requires Gradle 9.5.0 or newer; found $GRADLE_VERSION"
+fi
 
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 [[ -n "$SDK" ]] || fail "ANDROID_SDK_ROOT or ANDROID_HOME must point to the Android SDK"
 [[ -d "$SDK" ]] || fail "Android SDK directory does not exist: $SDK"
+[[ -d "$SDK/platforms/android-37" ]] \
+  || fail "Android SDK platform 37 is not installed under $SDK/platforms/android-37"
 
 required_assets=(
   vendor/webAGC/src/yaAGC.wasm
