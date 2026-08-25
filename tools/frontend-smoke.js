@@ -19,6 +19,10 @@ const APP_JS = path.join(ROOT, 'app/src/main/assets/app.js');
 const INDEX_HTML = path.join(ROOT, 'app/src/main/assets/index.html');
 const MANIFEST = path.join(ROOT, 'app/src/main/AndroidManifest.xml');
 const APP_GRADLE = path.join(ROOT, 'app/build.gradle');
+const MAIN_ACTIVITY = path.join(
+    ROOT, 'app/src/main/java/org/apollo/agcdsky/MainActivity.java');
+const DREAM_SERVICE = path.join(
+    ROOT, 'app/src/main/java/org/apollo/agcdsky/AgcDreamService.java');
 
 class Classes {
     constructor() {
@@ -194,37 +198,68 @@ function flushAsync() {
     return new Promise((resolve) => setImmediate(resolve));
 }
 
+function checkWebViewLockdown(source, label) {
+    assert(source.includes('setBlockNetworkLoads(true)'),
+        `${label} must explicitly block WebView network loads`);
+    assert(source.includes('setAllowFileAccess(false)'),
+        `${label} must disable file:// access`);
+    assert(source.includes('setAllowContentAccess(false)'),
+        `${label} must disable content:// access`);
+}
+
 function checkSourceInvariants() {
     const manifest = fs.readFileSync(MANIFEST, 'utf8');
-    assert(!manifest.includes('android.permission.INTERNET'), 'manifest must remain offline/no-INTERNET');
-    assert(manifest.includes('android.permission.BIND_DREAM_SERVICE'), 'DreamService bind permission missing');
-    assert(manifest.includes('android.service.dreams.DreamService'), 'DreamService intent registration missing');
+    assert(!manifest.includes('android.permission.INTERNET'),
+        'manifest must remain offline/no-INTERNET');
+    assert(manifest.includes('android.permission.BIND_DREAM_SERVICE'),
+        'DreamService bind permission missing');
+    assert(manifest.includes('android.service.dreams.DreamService'),
+        'DreamService intent registration missing');
 
     const gradle = fs.readFileSync(APP_GRADLE, 'utf8');
-    assert(gradle.includes("'../vendor/webAGC/src'"), 'yaAGC WASM asset source directory missing');
-    assert(gradle.includes("'../vendor/webAGC/demo/agc'"), 'Apollo rope asset source directory missing');
+    assert(gradle.includes("'../vendor/webAGC/src'"),
+        'yaAGC WASM asset source directory missing');
+    assert(gradle.includes("'../vendor/webAGC/demo/agc'"),
+        'Apollo rope asset source directory missing');
+    assert(gradle.includes('verifyPinnedAgcAssets'),
+        'pinned AGC binary verification task missing');
 
     const html = fs.readFileSync(INDEX_HTML, 'utf8');
-    assert(html.includes('id="mission"'), 'mission selector control missing from index.html');
-    assert(html.includes('controls-layout.css'), 'responsive controls stylesheet missing from index.html');
+    assert(html.includes('id="mission"'),
+        'mission selector control missing from index.html');
+    assert(html.includes('controls-layout.css'),
+        'responsive controls stylesheet missing from index.html');
+
+    const activity = fs.readFileSync(MAIN_ACTIVITY, 'utf8');
+    checkWebViewLockdown(activity, 'MainActivity');
+    assert(activity.includes('isLocalAssetOrigin(origin)'),
+        'MainActivity geolocation must be restricted to the packaged origin');
+
+    const dreamService = fs.readFileSync(DREAM_SERVICE, 'utf8');
+    checkWebViewLockdown(dreamService, 'AgcDreamService');
 }
 
 async function main() {
     checkSourceInvariants();
 
     const first = createEnvironment();
-    assert(first.elements.mission.textContent === 'LM L99', 'LM must be the default mission');
+    assert(first.elements.mission.textContent === 'LM L99',
+        'LM must be the default mission');
 
     first.elements.mission.listeners.click();
-    assert(first.elements.mission.textContent === 'CM C55', 'mission button must switch to CM');
-    assert(first.storage.get('agcMission') === 'comanche055', 'mission selection must persist');
+    assert(first.elements.mission.textContent === 'CM C55',
+        'mission button must switch to CM');
+    assert(first.storage.get('agcMission') === 'comanche055',
+        'mission selection must persist');
 
     first.elements.agc.listeners.click();
     await flushAsync();
     const core = first.context.AGCDSKY.getCore();
     assert(core, 'AGC mode must create a core');
-    assert(core.rope === 'Comanche055.bin', 'CM mode must load Comanche055.bin');
-    assert(first.storage.get('runMode') === 'agc', 'AGC mode must persist');
+    assert(core.rope === 'Comanche055.bin',
+        'CM mode must load Comanche055.bin');
+    assert(first.storage.get('runMode') === 'agc',
+        'AGC mode must persist');
 
     first.context.AGCDSKY.setAppVisible(false);
     assert(!core.running, 'hidden app must pause the AGC core');
@@ -236,17 +271,21 @@ async function main() {
     });
     await flushAsync();
     const restoredCore = restored.context.AGCDSKY.getCore();
-    assert(restored.elements.mission.textContent === 'CM C55', 'saved mission must restore');
+    assert(restored.elements.mission.textContent === 'CM C55',
+        'saved mission must restore');
     assert(restoredCore, 'saved AGC run mode must re-enter AGC mode');
-    assert(restoredCore.rope === 'Comanche055.bin', 'restored AGC mode must use saved rope');
+    assert(restoredCore.rope === 'Comanche055.bin',
+        'restored AGC mode must use saved rope');
 
     const dream = createEnvironment({
         search: '?dream=1&clock=1&display=1',
         initialStorage: { agcMission: 'comanche055', runMode: 'agc' }
     });
     await flushAsync();
-    assert(dream.context.AGCDSKY.getCore() === null, 'DreamService page must not start yaAGC');
-    assert(dream.document.body.classList.contains('dream'), 'DreamService page must enter dream mode');
+    assert(dream.context.AGCDSKY.getCore() === null,
+        'DreamService page must not start yaAGC');
+    assert(dream.document.body.classList.contains('dream'),
+        'DreamService page must enter dream mode');
 
     console.log('frontend/source smoke: PASS');
 }
