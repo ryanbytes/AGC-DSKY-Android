@@ -211,6 +211,8 @@ function checkSourceInvariants() {
     const manifest = fs.readFileSync(MANIFEST, 'utf8');
     assert(!manifest.includes('android.permission.INTERNET'),
         'manifest must remain offline/no-INTERNET');
+    assert(manifest.includes('android:allowBackup="false"'),
+        'application backup must remain disabled for local-only state');
     assert(manifest.includes('android.permission.BIND_DREAM_SERVICE'),
         'DreamService bind permission missing');
     assert(manifest.includes('android.service.dreams.DreamService'),
