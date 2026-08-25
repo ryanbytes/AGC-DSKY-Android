@@ -95,7 +95,15 @@ find_latest_tool() {
 }
 
 AAPT2="$(find_latest_tool aapt2 || true)"
-[[ -n "$AAPT2" ]] || fail "aapt2 not found; cannot verify merged APK permissions"
+[[ -n "$AAPT2" ]] || fail "aapt2 not found; cannot verify merged APK metadata"
+
+badging="$($AAPT2 dump badging "$APK")"
+grep -Eq "^package: name='org\.apollo\.agcdsky' versionCode='7' versionName='0\.7'" <<<"$badging" \
+  || fail "APK package/version is not org.apollo.agcdsky versionCode 7 versionName 0.7"
+grep -Fq "sdkVersion:'26'" <<<"$badging" \
+  || fail "APK minSdk is not 26"
+grep -Fq "targetSdkVersion:'37'" <<<"$badging" \
+  || fail "APK targetSdk is not 37"
 
 permissions="$($AAPT2 dump permissions "$APK")"
 if grep -Fq 'android.permission.INTERNET' <<<"$permissions"; then
@@ -109,6 +117,7 @@ APKSIGNER="$(find_latest_tool apksigner || true)"
 
 printf 'APK verification: PASS\n'
 printf '  %s\n' "$APK"
+printf '  package/version/minSdk/targetSdk match v0.7 source\n'
 printf '  pinned yaAGC/WASM + both ropes match exact Git blobs\n'
 printf '  packaged frontend matches the current checkout byte-for-byte\n'
 printf '  unused upstream vendor assets are absent\n'
