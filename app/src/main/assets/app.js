@@ -203,6 +203,7 @@ function setAppVisible(visible){
   appVisible=!!visible;
   if(mode!=='agc'||!agcCore)return;
   if(!appVisible){
+    releaseAgcProceed();
     if(agcCore.running){agcCore.stop();agcPausedForVisibility=true}
     return;
   }
