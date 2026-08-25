@@ -23,6 +23,8 @@ const MAIN_ACTIVITY = path.join(
     ROOT, 'app/src/main/java/org/apollo/agcdsky/MainActivity.java');
 const DREAM_SERVICE = path.join(
     ROOT, 'app/src/main/java/org/apollo/agcdsky/AgcDreamService.java');
+const NET_CLIENT = path.join(
+    ROOT, 'app/src/main/java/org/apollo/agcdsky/NetClient.java');
 
 class Classes {
     constructor() {
@@ -239,6 +241,12 @@ function checkSourceInvariants() {
 
     const dreamService = fs.readFileSync(DREAM_SERVICE, 'utf8');
     checkWebViewLockdown(dreamService, 'AgcDreamService');
+
+    const netClient = fs.readFileSync(NET_CLIENT, 'utf8');
+    assert(netClient.includes('shouldOverrideUrlLoading'),
+        'NetClient must prevent navigation away from packaged content');
+    assert(netClient.includes('isPackagedAssetUri'),
+        'NetClient packaged-asset navigation guard missing');
 }
 
 async function main() {
