@@ -18,17 +18,19 @@ Current source features:
 - Android `DreamService` screen saver intended for charging/idle use.
 - Small periodic position drift in dream mode to reduce completely static OLED content.
 - Pinned `webAGC` submodule containing `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin`.
-- Offline yaAGC WebAssembly wrapper with a minimal WASI shim.
+- Offline yaAGC WebAssembly wrapper with a minimal four-function WASI shim.
 - AGC/CLOCK mode control.
 - Persistent mission selector: Apollo 11 LM **Luminary 099** or CM **Comanche 055**.
 - AGC execution pauses while the normal app is hidden and resumes in place when the same WebView returns.
 - Requested AGC/CLOCK mode and selected mission persist across Activity/page recreation; recreated AGC mode starts from a fresh core reset rather than pretending CPU/erasable-memory state was serialized.
 - Authentic Block II DSKY output-channel decoding for numeric registers and annunciators.
-- Authentic DSKY key codes back into yaAGC, including separate PRO/Proceed handling.
+- Authentic DSKY key codes back into yaAGC, including separate press-and-hold PRO/Proceed handling.
 - `COMP ACTY` in AGC mode is tied directly to **output channel 011 octal, bit 2**. The old phone-network activity surrogate has been removed.
 - Local asset interception uses URI path segments rather than substring offsets, avoiding the old diagnostic APK's request-path index crash.
 - yaAGC input writes are checked for queue-full/invalid-packet failures rather than silently dropping DSKY input.
 - Local builds verify the exact pinned webAGC gitlink and exact Git-blob identities of `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin` before packaging.
+- The verified build path instantiates the **real pinned yaAGC WASM under Node** before Gradle runs, validates its complete import/export contract, loads both real ropes, executes CPU cycles and DSKY inputs, and proves each mission gets its own WASM instance/memory.
+- Debug APK device smoke requires a native `FRONTEND READY app` marker after the WebView frontend completes initialization; a surviving Android process with a blank/partially initialized page does not count as a pass.
 
 ## AGC mode
 
@@ -50,7 +52,11 @@ Implemented DSKY channels include:
 - `011` octal — COMP ACTY and UPLINK ACTY.
 - `0163` octal — yaAGC's modulated DSKY caution/blink states.
 - `015` octal — normal DSKY keyboard input.
-- `032` octal — PRO/Proceed discrete input.
+- `032` octal — PRO/Proceed discrete input, held for the actual pointer-down duration and released on pointer-up/cancel/lifecycle exit.
+
+### CM-mode fidelity note
+
+The pinned upstream WASM engine defaults its internal `CmOrLm` global to LM and does not expose a WASM setter. `Comanche055.bin` is still the exact pinned CM rope and is exercised by the real-WASM preflight, but **full CM peripheral-mode fidelity is not currently claimed**. In the ring-buffer path used by webAGC, the known mode-dependent branch is LM rotational-hand-controller bookkeeping on channel `013`; this app does not provide RHC inputs. See `docs/LOCAL_BUILD.md` for the exact limitation and the safe path if an explicit CM mode API is later required.
 
 See `docs/PROGRESS.md` for the exact verification status and known risks.
 
@@ -93,6 +99,8 @@ A checkout without the submodule does not contain the AGC binary assets required
 - `vendor/webAGC` — pinned upstream core/rope submodule.
 - `tools/build-local.sh` — deterministic local source build entrypoint.
 - `tools/verify-apk.sh` — post-build APK asset/manifest/signature verification.
+- `tools/wasm-runtime-smoke.js` — real pinned yaAGC/rope Node runtime preflight.
+- `tools/device-smoke.sh` — immediate ADB install/launch/frontend-readiness diagnostic smoke.
 - `docs/LOCAL_BUILD.md` — exact local build requirements and verification gates.
 - `docs/PROGRESS.md` — live implementation/verification status and next checkpoint.
 - `AGENTS.md` — durable instructions for coding agents continuing the work.
@@ -104,9 +112,10 @@ A checkout without the submodule does not contain the AGC binary assets required
 Compatibility for the currently declared Android Gradle Plugin 9.3.0:
 
 - JDK 17 or newer compatible runtime
-- Gradle **9.5.0 or newer compatible 9.x release** (AGP 9.3.0 minimum is 9.5.0)
+- Node.js **18 or newer**
+- Gradle **9.5.0 or newer stable compatible release**
 - compile/target SDK 37
-- SDK Build Tools 36.0.0 or compatible newer installed build tools
+- SDK Build Tools **36.0.0 exactly**
 - initialized Git submodules at the exact pinned revision
 
 Set `ANDROID_SDK_ROOT` or `ANDROID_HOME`, then use the repository build entrypoint:
@@ -116,7 +125,7 @@ git submodule update --init --recursive
 bash tools/build-local.sh
 ```
 
-That path runs the JavaScript source smoke tests when Node is available, verifies the exact pinned webAGC checkout and binary blobs, builds the debug APK, then verifies the packaged assets, merged manifest, and APK signature. See `docs/LOCAL_BUILD.md` for details.
+That path requires and runs all JavaScript/source smoke tests, executes the real pinned yaAGC WASM with both actual ropes under Node, verifies the exact pinned webAGC checkout and binary blobs, builds from a clean app build tree, then verifies packaged frontend/binaries, merged APK metadata/permissions, debug status, and APK signature. See `docs/LOCAL_BUILD.md` for details.
 
 A passing build is still not proof that the current AGC runtime works on Android. Do not report v0.7 as runtime-verified until the resulting APK has actually been installed and exercised on an Android device/emulator.
 
