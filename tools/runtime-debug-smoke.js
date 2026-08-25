@@ -45,12 +45,20 @@ assert(typeof listeners.error === 'function',
 assert(typeof listeners.unhandledrejection === 'function',
     'unhandled promise rejection listener did not register');
 
+// String-only stderr from yaAGC/WASI remains visible in the real console but
+// must not create a persistent failure report by itself.
+context.console.error('[yaAGC] informational stderr text');
+assert(originalConsoleCalls.length === 1,
+    'wrapped console.error must preserve string-only console output');
+assert(reports.length === 0,
+    'string-only yaAGC stderr must not create a persistent failure report');
+
 const handled = new Error('handled AGC failure');
 context.console.error('AGC core stopped', handled);
-assert(originalConsoleCalls.length === 1,
+assert(originalConsoleCalls.length === 2,
     'wrapped console.error must still call the original console');
 assert(reports.length === 1,
-    'handled console.error must be mirrored to DebugBridge');
+    'stack-bearing handled console.error must be mirrored to DebugBridge');
 assert(reports[0].includes('CONSOLE ERROR')
         && reports[0].includes('AGC core stopped')
         && reports[0].includes('handled AGC failure'),
