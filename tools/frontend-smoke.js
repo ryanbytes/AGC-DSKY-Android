@@ -279,6 +279,12 @@ function checkSourceInvariants() {
         'NetClient must prevent navigation away from packaged content');
     assert(netClient.includes('isPackagedAssetUri'),
         'NetClient packaged-asset navigation guard missing');
+    assert(netClient.includes('headers.put("Cache-Control", "no-store")'),
+        'packaged WebView assets must not be served from stale cache');
+    assert(netClient.includes('headers.put("X-Content-Type-Options", "nosniff")'),
+        'packaged WebView assets must disable MIME sniffing');
+    assert(netClient.includes('200,\n                    "OK"'),
+        'packaged WebView success responses must have explicit HTTP 200 status');
 }
 
 function testRuntimeDebugHooks() {
