@@ -8,6 +8,7 @@
   const PROCEED_CHANNEL = 0o32;
   const NORMAL_KEY_MASK = 0o37;
   const PROCEED_MASK = 0o20000; // Input channel 032, bit 14.
+  const FIXED_ROPE_BYTES = 36 * 0o2000 * 2;
   const WASI_ESPIPE = 70;
 
   function makeWasi(memory){
@@ -112,6 +113,14 @@
       const ropeResponse = await requireOk(await fetch(ropeUrl), ropeUrl);
       await this.loadRope(await ropeResponse.arrayBuffer());
       this.reset();
+
+      // ringbuffer_api.c initializes both yaAGC I/O ring buffers lazily from
+      // ChannelInput/ChannelOutput. A mask packet queued before that first CPU
+      // pass is discarded when ChannelSetup() resets ringbuffer_in. Prime one
+      // instruction first, then queue the DSKY U-bit masks.
+      this.exports.cpu_step(1);
+      this.totalSteps = 1;
+      this.drainIo();
       this.configureInputMasks();
       return this;
     }
@@ -127,6 +136,10 @@
 
     async loadRope(buffer){
       const rope = new Uint8Array(buffer);
+      if (rope.byteLength !== FIXED_ROPE_BYTES) {
+        throw new Error('Invalid AGC rope size: ' + rope.byteLength
+            + ' bytes; expected ' + FIXED_ROPE_BYTES);
+      }
       const ptr = this.exports.malloc(rope.byteLength);
       if (!ptr) throw new Error('yaAGC malloc failed for rope image');
       try {
