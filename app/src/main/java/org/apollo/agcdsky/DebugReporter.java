@@ -5,8 +5,10 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -122,11 +124,13 @@ public final class DebugReporter {
         out.append("Time: ").append(new SimpleDateFormat(
                 "yyyy-MM-dd HH:mm:ss Z", Locale.US).format(new Date())).append('\n');
         out.append("Source: ").append(source).append('\n');
+        out.append("App: ").append(context.getPackageName()).append(' ')
+                .append(packageVersion(context)).append('\n');
         out.append("Android: ").append(Build.VERSION.RELEASE)
                 .append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
         out.append("Device: ").append(Build.MANUFACTURER).append(' ')
                 .append(Build.MODEL).append('\n');
-        out.append("Package: ").append(context.getPackageName()).append('\n');
+        out.append("WebView: ").append(webViewVersion()).append('\n');
         out.append("Note: local report only; location coordinates are intentionally not included.\n\n");
         out.append(detail == null ? "(no detail)" : detail).append('\n');
 
@@ -135,6 +139,33 @@ public final class DebugReporter {
             stream.write(bytes);
             stream.flush();
         } catch (Exception ignored) {
+        }
+    }
+
+    private static String packageVersion(Context context) {
+        try {
+            PackageInfo info = context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), 0);
+            long code = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? info.getLongVersionCode() : info.versionCode;
+            return String.valueOf(info.versionName) + " (" + code + ")";
+        } catch (Exception ignored) {
+            return "unknown";
+        }
+    }
+
+    private static String webViewVersion() {
+        try {
+            PackageInfo info = WebView.getCurrentWebViewPackage();
+            if (info == null) return "unknown";
+            long code = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? info.getLongVersionCode() : info.versionCode;
+            return info.packageName + " " + String.valueOf(info.versionName)
+                    + " (" + code + ")";
+        } catch (Throwable ignored) {
+            // A crash can occur before WebView is fully usable. Reporting must
+            // remain best-effort and must never mask the original failure.
+            return "unavailable";
         }
     }
 
