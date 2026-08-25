@@ -31,3 +31,71 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+// Refuse to build if the recursive submodule checkout is missing or if any of
+// the three binary inputs differs from the exact pinned Git blob. This catches
+// truncated/manual rope reconstruction and accidental submodule drift before
+// Android packaging can produce a misleading APK.
+def pinnedAgcAssets = [
+        [
+                label: 'yaAGC.wasm',
+                file: file('../vendor/webAGC/src/yaAGC.wasm'),
+                size: 132617L,
+                gitBlobSha1: '713685680492098d05437b99c26403f683d56009'
+        ],
+        [
+                label: 'Luminary099.bin',
+                file: file('../vendor/webAGC/demo/agc/Luminary099.bin'),
+                size: 73728L,
+                gitBlobSha1: 'cd2ec9992d5863e1c7234fa760020f68ef946202'
+        ],
+        [
+                label: 'Comanche055.bin',
+                file: file('../vendor/webAGC/demo/agc/Comanche055.bin'),
+                size: 73728L,
+                gitBlobSha1: '9e4ec167dc99ac12b233df07b6b91fef585e5015'
+        ]
+]
+
+def verifyPinnedAgcAssets = tasks.register('verifyPinnedAgcAssets') {
+    group = 'verification'
+    description = 'Verify the exact pinned yaAGC WASM and Apollo rope assets.'
+
+    inputs.files(pinnedAgcAssets.collect { it.file })
+
+    doLast {
+        pinnedAgcAssets.each { spec ->
+            File asset = spec.file
+            if (!asset.isFile()) {
+                throw new GradleException(
+                        "Missing ${spec.label}: ${asset}. "
+                                + 'Run git submodule update --init --recursive before building.')
+            }
+
+            byte[] bytes = asset.bytes
+            if (bytes.length != spec.size) {
+                throw new GradleException(
+                        "${spec.label} has ${bytes.length} bytes; expected ${spec.size}.")
+            }
+
+            def digest = java.security.MessageDigest.getInstance('SHA-1')
+            digest.update("blob ${bytes.length}\u0000"
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8))
+            digest.update(bytes)
+            String actual = digest.digest().collect {
+                String.format('%02x', it & 0xff)
+            }.join()
+
+            if (!actual.equalsIgnoreCase(spec.gitBlobSha1)) {
+                throw new GradleException(
+                        "${spec.label} Git blob SHA-1 ${actual}; expected ${spec.gitBlobSha1}.")
+            }
+        }
+    }
+}
+
+// Every Android build variant passes through preBuild, so binary provenance is
+// checked before resources/assets are packaged.
+tasks.matching { it.name == 'preBuild' }.configureEach {
+    dependsOn verifyPinnedAgcAssets
+}
