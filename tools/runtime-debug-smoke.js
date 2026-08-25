@@ -14,13 +14,35 @@ function assert(condition, message) {
 
 const listeners = {};
 const reports = [];
+const readyMarkers = [];
 const originalConsoleCalls = [];
+const elements = {
+    prog: { innerHTML: '' },
+    mission: { textContent: '' }
+};
+let dreamClass = false;
 
 const context = {
     window: null,
+    AGCDSKY: null,
     DebugBridge: {
         report(detail) {
             reports.push(String(detail));
+        },
+        ready(detail) {
+            readyMarkers.push(String(detail));
+        }
+    },
+    document: {
+        body: {
+            classList: {
+                contains(name) {
+                    return name === 'dream' && dreamClass;
+                }
+            }
+        },
+        getElementById(id) {
+            return elements[id] || null;
         }
     },
     console: {
@@ -44,6 +66,26 @@ assert(typeof listeners.error === 'function',
     'unhandled JavaScript error listener did not register');
 assert(typeof listeners.unhandledrejection === 'function',
     'unhandled promise rejection listener did not register');
+assert(typeof listeners.load === 'function',
+    'frontend readiness load listener did not register');
+
+// A page load is not sufficient by itself. Before app.js has exposed AGCDSKY
+// and rendered EL glyph markup, no native readiness marker may be emitted.
+listeners.load();
+assert(readyMarkers.length === 0,
+    'partial/uninitialized frontend must not emit a readiness marker');
+
+context.AGCDSKY = {};
+elements.prog.innerHTML = '<g class="el-glyph"></g>';
+elements.mission.textContent = 'LM L99';
+listeners.load();
+assert(readyMarkers.length === 1 && readyMarkers[0] === 'app',
+    'initialized normal frontend must emit FRONTEND READY app');
+
+dreamClass = true;
+listeners.load();
+assert(readyMarkers.length === 2 && readyMarkers[1] === 'dream',
+    'initialized DreamService frontend must emit FRONTEND READY dream');
 
 // String-only stderr from yaAGC/WASI remains visible in the real console but
 // must not create a persistent failure report by itself.
