@@ -50,7 +50,9 @@ async function testWrapperInvariants() {
     const core = createCore();
     const calls = [];
     const output = [(0o10 << 16) | 0o12345, 0];
+    const reportedErrors = [];
     let packetWriteResult = 4;
+    core.onError = (error) => reportedErrors.push(error);
 
     core.exports = {
         cpu_reset() {
@@ -99,13 +101,17 @@ async function testWrapperInvariants() {
         && calls[1][2] === 0o20000, 'PRO U-bit mask is wrong');
 
     packetWriteResult = 0;
-    let queueFullRaised = false;
-    try {
-        core.keyPress(0o21);
-    } catch (error) {
-        queueFullRaised = /input queue full/.test(String(error));
-    }
-    assert(queueFullRaised, 'packet_write=0 must surface an input queue full error');
+    reportedErrors.length = 0;
+    core.keyPress(0o21);
+    assert(reportedErrors.length === 1
+        && /input queue full/.test(String(reportedErrors[0])),
+        'key packet_write=0 must route input queue full through onError');
+
+    reportedErrors.length = 0;
+    core.proceedPulse();
+    assert(reportedErrors.length === 1
+        && /input queue full/.test(String(reportedErrors[0])),
+        'PRO packet_write=0 must route input queue full through onError');
 
     packetWriteResult = -1;
     let invalidPacketRaised = false;
@@ -114,7 +120,8 @@ async function testWrapperInvariants() {
     } catch (error) {
         invalidPacketRaised = /rejected I\/O packet/.test(String(error));
     }
-    assert(invalidPacketRaised, 'packet_write<0 must surface an invalid packet error');
+    assert(invalidPacketRaised,
+        'direct packet_write<0 must surface an invalid packet error');
     packetWriteResult = 4;
 
     let rejectedShortRope = false;
