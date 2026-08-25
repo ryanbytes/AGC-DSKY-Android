@@ -2,6 +2,8 @@ plugins {
     id 'com.android.application'
 }
 
+def generatedAgcAssetsDir = layout.buildDirectory.dir('generated/agcAssets').get().asFile
+
 android {
     namespace 'org.apollo.agcdsky'
     compileSdk 37
@@ -14,14 +16,15 @@ android {
         versionName '0.7'
     }
 
-    // The pinned webAGC submodule supplies yaAGC.wasm plus the Apollo 11
-    // Luminary099/Comanche055 rope images. Clone with --recurse-submodules.
+    // Only the three required pinned webAGC binary inputs are staged into this
+    // generated asset directory. Do not add the whole vendor source/demo trees
+    // as Android asset roots; doing so packages unused upstream JS/Validation
+    // files and weakens the exact-input boundary.
     sourceSets {
         main {
             assets.srcDirs = [
                 'src/main/assets',
-                '../vendor/webAGC/src',
-                '../vendor/webAGC/demo/agc'
+                generatedAgcAssetsDir
             ]
         }
     }
@@ -94,8 +97,19 @@ def verifyPinnedAgcAssets = tasks.register('verifyPinnedAgcAssets') {
     }
 }
 
-// Every Android build variant passes through preBuild, so binary provenance is
-// checked before resources/assets are packaged.
+def stagePinnedAgcAssets = tasks.register('stagePinnedAgcAssets', Sync) {
+    group = 'build setup'
+    description = 'Stage only the verified yaAGC WASM and two selected Apollo ropes.'
+    dependsOn verifyPinnedAgcAssets
+    from pinnedAgcAssets.collect { it.file }
+    into generatedAgcAssetsDir
+}
+
+// Every Android build variant passes through preBuild, and every asset merge
+// waits for the exact verified binary staging task.
 tasks.matching { it.name == 'preBuild' }.configureEach {
     dependsOn verifyPinnedAgcAssets
+}
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
+    dependsOn stagePinnedAgcAssets
 }
