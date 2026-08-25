@@ -24,7 +24,8 @@ public final class MainActivity extends Activity {
     private static final String JS_APP_HIDDEN =
             "if(window.AGCDSKY&&AGCDSKY.setAppVisible){AGCDSKY.setAppVisible(false)}";
     private static final String JS_APP_VISIBLE =
-            "if(window.AGCDSKY&&AGCDSKY.setAppVisible){AGCDSKY.setAppVisible(true)}";
+            "if(window.AGCDSKY&&AGCDSKY.setAppVisible){"
+                    + "AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)}";
     private static final Uri LOCAL_ASSET_ORIGIN = Uri.parse(NetClient.ASSET_ORIGIN);
 
     private WebView webView;
@@ -215,6 +216,11 @@ public final class MainActivity extends Activity {
         configureWindow();
         if (webView != null) {
             webView.onResume();
+            // evaluateJavascript() from the previous onPause is asynchronous.
+            // If WebView was frozen before that callback ran, a held PRO could
+            // still be logically asserted. Force one hidden transition first;
+            // it is idempotent when pause already completed and guarantees the
+            // frontend releases any stale held input before resuming the core.
             webView.evaluateJavascript(JS_APP_VISIBLE, null);
         }
     }
