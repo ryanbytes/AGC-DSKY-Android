@@ -143,9 +143,16 @@ public final class MainActivity extends Activity {
             public boolean onConsoleMessage(ConsoleMessage message) {
                 if (message != null
                         && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
-                    DebugReporter.appendWebError(MainActivity.this,
-                            message.sourceId() + ":" + message.lineNumber()
-                                    + "\n" + message.message());
+                    String text = message.message();
+                    // yaAGC's WASI stderr is surfaced through console.error so
+                    // it remains visible in chrome://inspect/logcat. Upstream
+                    // informational stderr must not create a persistent app
+                    // failure report merely because its console level is ERROR.
+                    if (text == null || !text.startsWith("[yaAGC]")) {
+                        DebugReporter.appendWebError(MainActivity.this,
+                                message.sourceId() + ":" + message.lineNumber()
+                                        + "\n" + String.valueOf(text));
+                    }
                 }
                 return super.onConsoleMessage(message);
             }
