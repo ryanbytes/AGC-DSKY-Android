@@ -6,8 +6,8 @@
  *
  * This does not emulate WebAssembly or prove Android/WebView compatibility.
  * It exercises wrapper invariants that can be checked with fake yaAGC exports:
- * reset/prime/reset ordering, I/O queue draining, DSKY U-bit masks, and exact
- * Apollo fixed-rope length validation.
+ * reset/prime/reset ordering, I/O queue draining, DSKY U-bit masks, packet-write
+ * failure handling, and exact Apollo fixed-rope length validation.
  */
 
 const fs = require('fs');
@@ -46,6 +46,7 @@ async function main() {
     const core = createCore();
     const calls = [];
     const output = [(0o10 << 16) | 0o12345, 0];
+    let packetWriteResult = 4;
 
     core.exports = {
         cpu_reset() {
@@ -60,7 +61,7 @@ async function main() {
         },
         packet_write(channel, value) {
             calls.push(['write', channel, value]);
-            return 4;
+            return packetWriteResult;
         },
         malloc(size) {
             calls.push(['malloc', size]);
@@ -91,6 +92,25 @@ async function main() {
         && calls[0][2] === 0o37, 'normal DSKY U-bit mask is wrong');
     assert(calls[1][0] === 'write' && calls[1][1] === (0x100 | 0o32)
         && calls[1][2] === 0o20000, 'PRO U-bit mask is wrong');
+
+    packetWriteResult = 0;
+    let queueFullRaised = false;
+    try {
+        core.keyPress(0o21);
+    } catch (error) {
+        queueFullRaised = /input queue full/.test(String(error));
+    }
+    assert(queueFullRaised, 'packet_write=0 must surface an input queue full error');
+
+    packetWriteResult = -1;
+    let invalidPacketRaised = false;
+    try {
+        core.writeIo(0x3ff, 0xffff);
+    } catch (error) {
+        invalidPacketRaised = /rejected I\/O packet/.test(String(error));
+    }
+    assert(invalidPacketRaised, 'packet_write<0 must surface an invalid packet error');
+    packetWriteResult = 4;
 
     let rejectedShortRope = false;
     try {
