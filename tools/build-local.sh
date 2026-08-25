@@ -102,6 +102,7 @@ printf 'webAGC: %s\n' "$WEBAGC_HEAD"
 if command -v node >/dev/null 2>&1; then
   node tools/frontend-smoke.js
   node tools/agc-core-smoke.js
+  node tools/runtime-debug-smoke.js
 else
   printf 'NOTE: node not found; JavaScript smoke tests skipped.\n' >&2
 fi
