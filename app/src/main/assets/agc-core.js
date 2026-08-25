@@ -183,7 +183,11 @@
 
     keyPress(keyCode){
       if (!keyCode) return;
-      this.writeIo(NORMAL_KEY_CHANNEL, keyCode & 0o37);
+      try {
+        this.writeIo(NORMAL_KEY_CHANNEL, keyCode & 0o37);
+      } catch (error) {
+        this.onError(error);
+      }
     }
 
     proceedKey(state){
@@ -191,7 +195,12 @@
     }
 
     proceedPulse(durationMs=120){
-      this.proceedKey(true);
+      try {
+        this.proceedKey(true);
+      } catch (error) {
+        this.onError(error);
+        return;
+      }
       setTimeout(() => {
         try {
           this.proceedKey(false);
