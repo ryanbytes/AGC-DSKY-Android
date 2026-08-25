@@ -113,6 +113,12 @@ async function smokeMission(context, ropeName) {
 
     await core.load({ wasmUrl: 'yaAGC.wasm', ropeUrl: ropeName });
     assert(errors.length === 0, `${ropeName}: error during real WASM load`);
+    assert(core.instance && core.exports && core.memory,
+        `${ropeName}: real WASM instance did not initialize completely`);
+
+    const version = core.version();
+    assert(typeof version === 'string' && version.length > 0,
+        `${ropeName}: yaAGC version export returned no usable string`);
 
     // Execute enough real AGC cycles to process the queued U-bit masks and
     // exercise ordinary output production/draining without starting a timer.
@@ -138,7 +144,12 @@ async function smokeMission(context, ropeName) {
     core.configureInputMasks();
     assert(core.totalSteps === 0, `${ropeName}: reset did not clear mission step count`);
 
-    return channelUpdates.length;
+    return {
+        instance: core.instance,
+        memory: core.memory,
+        version,
+        channelUpdates: channelUpdates.length
+    };
 }
 
 async function main() {
@@ -151,10 +162,18 @@ async function main() {
     }
 
     const context = makeContext(filesByUrl);
+    const runs = [];
     for (const [name] of ROPES) {
-        const updates = await smokeMission(context, name);
-        console.log(`real yaAGC ${name}: PASS (${updates} channel updates observed)`);
+        const result = await smokeMission(context, name);
+        runs.push(result);
+        console.log(`real yaAGC ${name}: PASS (${result.channelUpdates} channel updates observed; ${result.version})`);
     }
+
+    assert(runs.length === 2, 'expected exactly two real mission runs');
+    assert(runs[0].instance !== runs[1].instance,
+        'LM and CM mission loads must use distinct WebAssembly instances');
+    assert(runs[0].memory !== runs[1].memory,
+        'LM and CM mission loads must use distinct WebAssembly memories');
 
     console.log('real yaAGC WASM runtime smoke: PASS');
 }
