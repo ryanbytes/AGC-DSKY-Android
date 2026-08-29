@@ -33,12 +33,13 @@ A process that merely stays alive with a blank or partially initialized WebView 
 
 ### Live AGC runtime smoke
 
-`tools/device-agc-smoke.sh` waits for the actual `webview_devtools_remote_*` socket belonging to the app process, forwards it with `adb`, and runs two dependency-free Chrome DevTools Protocol drivers against that same packaged WebView:
+`tools/device-agc-smoke.sh` waits for the actual `webview_devtools_remote_*` socket belonging to the app process, forwards it with `adb`, and runs three dependency-free Chrome DevTools Protocol drivers against that same packaged WebView:
 
 1. `tools/device-agc-smoke.js` checks core startup, both pinned missions, basic pointer input, held PRO behavior, and same-WebView pause/resume identity.
 2. `tools/device-v35-smoke.js` performs a semantic Pinball test: it selects Luminary099, drives `V37E00E` and then `V35E` through the actual on-screen DSKY pointer handlers, decodes the rendered SVG segment state, and requires PROG/VERB/NOUN `88` plus `88888` in R1/R2/R3.
+3. `tools/device-recreation-smoke.js` selects Comanche055 in AGC mode, tags the live core object, reloads the actual packaged page with DevTools `Page.reload`, and requires the persisted CM mission + requested AGC mode to re-enter on a newly constructed core object.
 
-Neither driver injects a mock `AgcCore`.
+None of these drivers injects a mock `AgcCore`.
 
 The live gate now checks:
 
@@ -53,8 +54,13 @@ The live gate now checks:
 - the CM run also produces real DSKY output without an AGC error
 - Luminary accepts the authentic `V37E00E` P00 sequence through the pointer path before the semantic test
 - Luminary accepts `V35E` through the pointer path and the real AGC output path renders the complete all-8 numerical DSKY light-test pattern
+- page recreation restores the persisted `Comanche055` mission selection
+- page recreation restores requested AGC mode and starts the selected mission again
+- the pre-reload core tag does not survive page recreation, proving a new JavaScript/yaAGC core object is constructed rather than presenting the old in-memory core as serialized state
 
 The smoke snapshots the persistent mission/run-mode settings and attempts to restore them afterward. If the pre-test state was an active AGC run, restoration necessarily starts that mission from a fresh AGC reset; exact CPU/erasable-memory state is not serialized by the app.
+
+The recreation driver proves **page reload/recreation**, not Android process-death restoration. A future ADB force-stop/relaunch gate is still required before process recreation can be called automated.
 
 ## Build-time semantic counterpart
 
@@ -74,7 +80,7 @@ A passing full-device smoke does **not** by itself prove:
 
 - pixel-perfect DSKY relay/sign/annunciator appearance on the physical screen
 - real OS screen-off/screen-on behavior rather than the direct lifecycle bridge check
-- Activity/process recreation behavior
+- Android Activity/process-death recreation behavior beyond the automated same-WebView page reload
 - Pinball semantics beyond the automated V35E light-test sequence
 - PRO standby semantics for a long physical hold
 - DreamService selection/startup and non-interactivity
