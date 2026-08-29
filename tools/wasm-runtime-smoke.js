@@ -7,7 +7,8 @@
  *
  * This is still not an Android/WebView test, but unlike agc-core-smoke.js it
  * proves the checked-out WASM import contract, real instantiation, rope copy,
- * reset/I-O initialization, packet I/O, and short CPU execution paths.
+ * reset/I-O initialization, packet I/O, short CPU execution paths, and a real
+ * Pinball semantic response (V35E DSKY light test) from each pinned rope.
  */
 
 const fs = require('fs');
@@ -22,6 +23,9 @@ const ROPES = [
     ['Luminary099.bin', path.join(ROOT, 'vendor/webAGC/demo/agc/Luminary099.bin')],
     ['Comanche055.bin', path.join(ROOT, 'vendor/webAGC/demo/agc/Comanche055.bin')]
 ];
+
+const CHANNEL_DSKY = 0o10;
+const RELAY_EIGHT = 0o35;
 
 function assert(condition, message) {
     if (!condition) throw new Error(message);
@@ -99,6 +103,73 @@ function makeContext(filesByUrl) {
     return context;
 }
 
+function updateRelayState(relays, value) {
+    const relay = (value >> 11) & 0o17;
+    if (relay >= 1 && relay <= 12) relays.set(relay, value);
+}
+
+function pairIsEight(value) {
+    return ((value >> 5) & 0o37) === RELAY_EIGHT
+        && (value & 0o37) === RELAY_EIGHT;
+}
+
+function lightTestNumericsPresent(relays) {
+    // V35 lights every numerical DSKY position. Relay 8 only carries R1D1 in
+    // its right-hand digit field; the remaining numerical relay words carry
+    // two digits each. Requiring every selector 1..11 prevents a partial or
+    // synthetic-looking output burst from counting as the Pinball response.
+    for (const relay of [11, 10, 9, 7, 6, 5, 4, 3, 2, 1]) {
+        const value = relays.get(relay);
+        if (value === undefined || !pairIsEight(value)) return false;
+    }
+    const relay8 = relays.get(8);
+    return relay8 !== undefined && (relay8 & 0o37) === RELAY_EIGHT;
+}
+
+function keyAndRun(core, keyCode, steps = 12000) {
+    core.keyPress(keyCode);
+    core.step(steps);
+}
+
+function proveV35LightTest(core, ropeName, errors, channelUpdates) {
+    // Let the freshly reset flight program settle before invoking the P00 DSKY
+    // light test. At the AGC's ~11.72 us instruction cadence this is a little
+    // over one second of simulated execution without wall-clock waiting.
+    core.step(100000);
+
+    // Authentic Pinball codes: VERB=021, digits 3/5, ENTER=034.
+    keyAndRun(core, 0o21);
+    keyAndRun(core, 0o03);
+    keyAndRun(core, 0o05);
+
+    // Ignore startup and key-entry display traffic. Semantic proof starts with
+    // the ENTER that asks the actual rope software to execute Verb 35.
+    channelUpdates.length = 0;
+    core.keyPress(0o34);
+
+    const relays = new Map();
+    let eventIndex = 0;
+    let responseSteps = 0;
+    const maxResponseSteps = 350000;
+    const chunkSteps = 10000;
+
+    while (responseSteps < maxResponseSteps && !lightTestNumericsPresent(relays)) {
+        core.step(chunkSteps);
+        responseSteps += chunkSteps;
+        for (; eventIndex < channelUpdates.length; eventIndex++) {
+            const [channel, value] = channelUpdates[eventIndex];
+            if (channel === CHANNEL_DSKY) updateRelayState(relays, value);
+        }
+    }
+
+    assert(errors.length === 0, `${ropeName}: error while executing real V35E`);
+    assert(lightTestNumericsPresent(relays),
+        `${ropeName}: V35E did not produce the complete all-8 DSKY numerical light-test pattern `
+        + `within ${maxResponseSteps} AGC steps`);
+
+    return { responseSteps, channelUpdates: channelUpdates.length };
+}
+
 async function smokeMission(context, ropeName) {
     const errors = [];
     const channelUpdates = [];
@@ -125,6 +196,17 @@ async function smokeMission(context, ropeName) {
     core.step(2000);
     assert(errors.length === 0, `${ropeName}: error during initial CPU execution`);
 
+    const v35 = proveV35LightTest(core, ropeName, errors, channelUpdates);
+
+    // Reset after the semantic test so the generic I/O smoke below still starts
+    // from a clean mission state and retains its exact step-count assertion.
+    core.reset();
+    core.configureInputMasks();
+    channelUpdates.length = 0;
+    errors.length = 0;
+
+    core.step(2000);
+
     // Exercise the two DSKY input paths against the actual packet/ring-buffer
     // implementation. Pinball key 021 is VERB; PRO is channel 032 bit 020000.
     core.keyPress(0o21);
@@ -148,7 +230,8 @@ async function smokeMission(context, ropeName) {
         instance: core.instance,
         memory: core.memory,
         version,
-        channelUpdates: channelUpdates.length
+        channelUpdates: channelUpdates.length,
+        v35
     };
 }
 
@@ -166,7 +249,8 @@ async function main() {
     for (const [name] of ROPES) {
         const result = await smokeMission(context, name);
         runs.push(result);
-        console.log(`real yaAGC ${name}: PASS (${result.channelUpdates} channel updates observed; ${result.version})`);
+        console.log(`real yaAGC ${name}: PASS (${result.channelUpdates} generic channel updates; ${result.version})`);
+        console.log(`  V35E semantic light test: PASS (${result.v35.channelUpdates} channel updates; response within ${result.v35.responseSteps} steps)`);
     }
 
     assert(runs.length === 2, 'expected exactly two real mission runs');
