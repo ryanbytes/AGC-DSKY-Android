@@ -53,6 +53,21 @@
     report('UNHANDLED PROMISE REJECTION', detail);
   });
 
+  // A strict CSP intentionally protects the offline page. If a WebView version
+  // rejects the WASM exception or a future edit tries to load an unauthorized
+  // resource, make the violation visible in the native debug report instead of
+  // leaving only a blank/partially initialized WebView as evidence.
+  global.addEventListener('securitypolicyviolation', function(event){
+    const directive = event && event.effectiveDirective
+      ? String(event.effectiveDirective) : '(unknown directive)';
+    const blocked = event && event.blockedURI ? String(event.blockedURI) : '(unknown resource)';
+    const source = event && event.sourceFile ? String(event.sourceFile) : '(unknown source)';
+    const line = event && event.lineNumber
+      ? ':' + event.lineNumber + ':' + (event.columnNumber || 0) : '';
+    report('CONTENT SECURITY POLICY VIOLATION',
+      'Directive: ' + directive + '\nBlocked: ' + blocked + '\nSource: ' + source + line);
+  });
+
   // Device smoke tests need more than a live Android process: prove the local
   // frontend initialized far enough to create the public AGCDSKY API and render
   // actual EL glyph markup. This callback runs after all ordinary page scripts.
