@@ -66,6 +66,8 @@ assert(typeof listeners.error === 'function',
     'unhandled JavaScript error listener did not register');
 assert(typeof listeners.unhandledrejection === 'function',
     'unhandled promise rejection listener did not register');
+assert(typeof listeners.securitypolicyviolation === 'function',
+    'Content Security Policy violation listener did not register');
 assert(typeof listeners.load === 'function',
     'frontend readiness load listener did not register');
 
@@ -119,5 +121,19 @@ assert(reports.length === 2 && reports[1].includes('UNHANDLED JAVASCRIPT ERROR')
 listeners.unhandledrejection({ reason: new Error('async boom') });
 assert(reports.length === 3 && reports[2].includes('UNHANDLED PROMISE REJECTION'),
     'unhandled promise rejection must be reported');
+
+listeners.securitypolicyviolation({
+    effectiveDirective: 'script-src',
+    blockedURI: 'wasm-eval',
+    sourceFile: 'https://appassets.androidplatform.net/assets/agc-core.js',
+    lineNumber: 97,
+    columnNumber: 22
+});
+assert(reports.length === 4
+        && reports[3].includes('CONTENT SECURITY POLICY VIOLATION')
+        && reports[3].includes('Directive: script-src')
+        && reports[3].includes('Blocked: wasm-eval')
+        && reports[3].includes('agc-core.js:97:22'),
+    'CSP violation report must identify the directive, blocked operation, and source');
 
 console.log('runtime-debug smoke: PASS');
