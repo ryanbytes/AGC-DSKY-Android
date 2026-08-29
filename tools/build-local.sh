@@ -124,6 +124,7 @@ printf 'webAGC gitlink: %s\n' "$WEBAGC_GITLINK"
 printf 'webAGC checkout: %s\n' "$WEBAGC_HEAD"
 
 node tools/manifest-policy-smoke.js
+node tools/csp-smoke.js
 node tools/frontend-smoke.js
 node tools/agc-core-smoke.js
 node tools/runtime-debug-smoke.js
