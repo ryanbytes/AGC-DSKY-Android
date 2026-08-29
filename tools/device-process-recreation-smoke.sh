@@ -77,6 +77,33 @@ DEVICE_COUNT="$($ADB devices | awk 'NR>1 && $2=="device" {n++} END {print n+0}')
 [[ "$DEVICE_COUNT" == "1" ]] \
   || fail "expected exactly one authorized ADB device; found $DEVICE_COUNT"
 
+OLD_PORT=""
+NEW_PORT=""
+RESTORE_NEEDED=0
+
+cleanup() {
+  remove_forward "${OLD_PORT:-}"
+  remove_forward "${NEW_PORT:-}"
+
+  if [[ "${RESTORE_NEEDED:-0}" == "1" ]]; then
+    # Best-effort recovery: the prepare phase may have persisted temporary
+    # smoke markers and switched the app into CM/AGC mode before a later ADB or
+    # DevTools step failed. Relaunch and ask the helper to restore the user's
+    # original mission/run-mode preferences whenever possible.
+    $ADB shell am start -W -n "$ACTIVITY" >/dev/null 2>&1 || true
+    local recovery_pid="" recovery_socket="" recovery_port=""
+    read -r recovery_pid recovery_socket < <(find_process_socket || true)
+    if [[ "$recovery_pid" =~ ^[0-9]+$ && -n "$recovery_socket" ]]; then
+      recovery_port="$(forward_socket "$recovery_socket" || true)"
+      if [[ "$recovery_port" =~ ^[0-9]+$ ]]; then
+        node "$ROOT/tools/device-process-state-smoke.js" "$recovery_port" restore >/dev/null 2>&1 || true
+        remove_forward "$recovery_port"
+      fi
+    fi
+  fi
+}
+trap cleanup EXIT INT TERM
+
 $ADB shell am start -W -n "$ACTIVITY" >/dev/null 2>&1 \
   || fail "could not launch $ACTIVITY before process recreation"
 
@@ -87,12 +114,8 @@ read -r OLD_PID OLD_SOCKET < <(find_process_socket || true)
 OLD_PORT="$(forward_socket "$OLD_SOCKET" || true)"
 [[ "$OLD_PORT" =~ ^[0-9]+$ ]] || fail "could not forward initial WebView DevTools socket"
 
-cleanup() {
-  remove_forward "${OLD_PORT:-}"
-  remove_forward "${NEW_PORT:-}"
-}
-trap cleanup EXIT INT TERM
-
+# Set this before prepare so even a partially completed prepare gets cleanup.
+RESTORE_NEEDED=1
 node "$ROOT/tools/device-process-state-smoke.js" "$OLD_PORT" prepare
 remove_forward "$OLD_PORT"
 OLD_PORT=""
@@ -122,10 +145,11 @@ read -r NEW_PID NEW_SOCKET < <(find_process_socket || true)
 NEW_PORT="$(forward_socket "$NEW_SOCKET" || true)"
 [[ "$NEW_PORT" =~ ^[0-9]+$ ]] || fail "could not forward relaunched WebView DevTools socket"
 
-if ! node "$ROOT/tools/device-process-state-smoke.js" "$NEW_PORT" verify; then
-  node "$ROOT/tools/device-process-state-smoke.js" "$NEW_PORT" restore >/dev/null 2>&1 || true
-  fail "recreated process did not restore persisted CM/AGC state"
-fi
+node "$ROOT/tools/device-process-state-smoke.js" "$NEW_PORT" verify \
+  || fail "recreated process did not restore persisted CM/AGC state"
+
+# verify restores the user's pre-smoke preferences and removes temporary keys.
+RESTORE_NEEDED=0
 
 printf 'Device process recreation: PASS\n'
 printf '  old PID: %s\n' "$OLD_PID"
