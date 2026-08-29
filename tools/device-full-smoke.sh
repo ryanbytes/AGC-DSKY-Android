@@ -11,5 +11,6 @@ APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
 
 bash "$ROOT/tools/device-smoke.sh" "$APK"
 bash "$ROOT/tools/device-agc-smoke.sh"
+bash "$ROOT/tools/device-process-recreation-smoke.sh"
 
 printf 'Device full smoke: PASS\n'
