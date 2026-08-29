@@ -102,10 +102,15 @@ for asset in "${required_assets[@]}"; do
     || fail "missing $asset; run: git submodule update --init --recursive"
 done
 
-# Catch shell portability/syntax regressions in every repository helper before
-# Gradle starts doing expensive work.
+# Catch helper syntax regressions before any source smoke or expensive Gradle
+# work. This includes device-only scripts that are not executed during a normal
+# host build but still need to remain syntactically valid.
 for script in tools/*.sh; do
   bash -n "$script" || fail "shell syntax check failed: $script"
+done
+for script in tools/*.js; do
+  node --check "$script" >/dev/null \
+    || fail "JavaScript syntax check failed: $script"
 done
 
 printf 'Source commit: %s\n' "$ROOT_HEAD"
