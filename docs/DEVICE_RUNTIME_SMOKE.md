@@ -1,6 +1,6 @@
 # Device runtime smoke
 
-The current-source debug APK has two device-level smoke layers. Neither replaces visual/manual verification, but together they turn several former manual guesses into reproducible runtime checks.
+The current-source debug APK has layered device-level smoke gates. They do not replace visual/manual verification, but they turn several former manual guesses into reproducible runtime checks.
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ The current-source debug APK has two device-level smoke layers. Neither replaces
 bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 ```
 
-This runs the immediate install/launch/frontend smoke first and then the live AGC runtime smoke.
+This runs the immediate install/launch/frontend smoke, live AGC/WebView checks, page-recreation check, and finally an Android process force-stop/relaunch check.
 
 ### Immediate device smoke
 
@@ -41,7 +41,7 @@ A process that merely stays alive with a blank or partially initialized WebView 
 
 None of these drivers injects a mock `AgcCore`.
 
-The live gate now checks:
+The live gate checks:
 
 - the interactive packaged frontend is initialized
 - Apollo 11 LM `Luminary099.bin` can enter AGC mode
@@ -60,13 +60,34 @@ The live gate now checks:
 
 The smoke snapshots the persistent mission/run-mode settings and attempts to restore them afterward. If the pre-test state was an active AGC run, restoration necessarily starts that mission from a fresh AGC reset; exact CPU/erasable-memory state is not serialized by the app.
 
-The recreation driver proves **page reload/recreation**, not Android process-death restoration. A future ADB force-stop/relaunch gate is still required before process recreation can be called automated.
+### Android process recreation smoke
+
+`tools/device-process-recreation-smoke.sh` is intentionally separate from the same-WebView CDP run because `adb shell am force-stop` destroys the app process and its DevTools socket.
+
+The process gate:
+
+1. launches the current app and finds its real process/WebView socket
+2. stores the user's original mission/run-mode preferences in temporary localStorage smoke keys
+3. selects `Comanche055` and enters AGC mode
+4. records the original PID
+5. performs `adb shell am force-stop org.apollo.agcdsky`
+6. requires `pidof` to become empty, proving the process actually disappeared rather than inferring death from a PID change
+7. relaunches the Activity and discovers the new process/WebView socket
+8. reconnects through CDP
+9. requires the persisted smoke nonce, CM mission, requested AGC mode, a running yaAGC version, and real DSKY output channels
+10. restores the user's original frontend mission/run-mode preferences and removes the temporary smoke keys
+
+A numeric PID difference is reported but is not the proof boundary because Linux can theoretically reuse a PID. The observed no-process interval after `force-stop` is the relevant evidence.
+
+This proves Android process-death preference restoration and fresh core construction. It still does **not** claim CPU/erasable-memory continuation across process death; the intended behavior is a fresh AGC reset with the selected mission and requested AGC mode restored.
 
 ## Build-time semantic counterpart
 
-`tools/wasm-runtime-smoke.js`, already part of `tools/build-local.sh`, now performs the same class of V35 semantic check directly against the exact pinned yaAGC WASM and both pinned rope images under Node. It explicitly enters P00 with `V37E00E`, executes `V35E`, and requires the complete channel-010 all-8 numerical relay pattern.
+`tools/wasm-runtime-smoke.js`, already part of `tools/build-local.sh`, performs the same class of V35 semantic check directly against the exact pinned yaAGC WASM and both pinned rope images under Node. It explicitly enters P00 with `V37E00E`, executes `V35E`, and requires the complete channel-010 all-8 numerical relay pattern.
 
 That test proves real rope/software semantics before Gradle packages the APK, but it is still not an Android/WebView test. The live V35 driver above is the corresponding end-to-end device gate.
+
+`tools/build-local.sh` also runs `bash -n` over every `tools/*.sh` file and `node --check` over every `tools/*.js` file before the functional source smokes or Gradle build. Device-only helpers therefore remain syntax-gated even on a build host with no attached phone.
 
 ## Resume/held-PRO guard
 
@@ -80,7 +101,7 @@ A passing full-device smoke does **not** by itself prove:
 
 - pixel-perfect DSKY relay/sign/annunciator appearance on the physical screen
 - real OS screen-off/screen-on behavior rather than the direct lifecycle bridge check
-- Android Activity/process-death recreation behavior beyond the automated same-WebView page reload
+- Activity recreation caused by Android configuration/lifecycle events beyond page reload and explicit process force-stop/relaunch
 - Pinball semantics beyond the automated V35E light-test sequence
 - PRO standby semantics for a long physical hold
 - DreamService selection/startup and non-interactivity
@@ -90,3 +111,7 @@ A passing full-device smoke does **not** by itself prove:
 - full CM peripheral fidelity; the pinned upstream WASM still lacks an exported `CmOrLm` setter
 
 Those remain explicit acceptance gates. Do not upgrade them to verified status from this smoke alone.
+
+## Verification-status rule
+
+Adding a smoke script is not evidence that the behavior passes. The current scripts become verification evidence only after they are run against a current APK built from the corresponding source revision and their output is recorded. Until then they are automated gates awaiting execution.
