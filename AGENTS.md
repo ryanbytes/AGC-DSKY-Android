@@ -77,11 +77,12 @@ Current policy:
 
 Keep emulator integration separate from UI state:
 
-- `app/src/main/assets/app.js`: DSKY UI/mode/lifecycle coordination and authentic channel decoding.
+- `app/src/main/assets/app.js`: DSKY UI/mode/lifecycle coordination, DREAM SOLAR astronomy, and authentic channel decoding.
 - `app/src/main/assets/agc-core.js`: WASM loading, rope loading, CPU stepping, packet I/O, input masks, key/PRO injection.
-- `app/src/main/assets/runtime-debug.js`: early JavaScript/runtime diagnostics and debug-build frontend readiness marker.
+- `app/src/main/assets/runtime-debug.js`: early JavaScript/runtime/CSP diagnostics and debug-build frontend readiness marker.
 - Android shell code should stay small: `MainActivity`, `AgcDreamService`, `NetClient`, and `DebugReporter` unless a native capability is genuinely required.
 - Do not reintroduce the removed `TrafficStats` / `agcnet://poll` COMP ACTY surrogate or fallback network loading.
+- Preserve the strict offline frontend Content Security Policy unless a concrete runtime incompatibility is demonstrated. Do not solve CSP problems by adding ordinary `'unsafe-eval'` or `'unsafe-inline'`.
 
 ## Important runtime sequencing
 
@@ -109,21 +110,28 @@ The current local toolchain contract is documented in `docs/LOCAL_BUILD.md` and 
 
 - JDK 17+
 - Node.js 18+
-- stable Gradle 9.5+
 - Android SDK platform 37
 - Android SDK Build Tools **36.0.0 exactly**
 - exact clean pinned `vendor/webAGC` checkout
+- stable Gradle 9.5+; a system installation is optional because `tools/gradle-bootstrap.sh` supplies checksum-verified Gradle 9.5.1 locally when `gradle` is absent
+
+The Gradle bootstrap must remain local-only and verify the published Gradle distribution SHA-256 before execution. Do not turn it into hosted build infrastructure, and do not weaken the checksum check merely to make a download succeed.
 
 The canonical build path must continue to run:
 
-- shell syntax checks
+- shell syntax checks for every `tools/*.sh`
+- `node --check` for every `tools/*.js`
+- manifest/network policy smoke
+- strict frontend CSP smoke
 - frontend/source smoke
+- display/crop geometry smoke
+- DREAM SOLAR astronomy/polar-regime smoke
 - AGC wrapper smoke
-- runtime-debug smoke
+- runtime-debug/CSP diagnostic smoke
 - native diagnostic smoke
 - DSKY mapping smoke
 - asset-reference smoke
-- real pinned yaAGC WASM + both-rope runtime smoke
+- real pinned yaAGC WASM + both-rope runtime smoke, including semantic `V37E00E` -> `V35E` light-test proof
 - clean Gradle build
 - post-build APK verification
 
@@ -133,22 +141,31 @@ The canonical build path must continue to run:
 
 `tools/device-smoke.sh` is the immediate ADB install/launch gate for the debug APK. It must preserve app data, clear only the stale private debug report, capture APK/source provenance, launch the Activity, collect evidence, and require the debug-only `FRONTEND READY app` marker. A process that merely stays alive while the WebView is blank or partially initialized is not a pass.
 
-`tools/device-agc-smoke.sh` is the live WebView/AGC runtime gate. It waits for the app process's real `webview_devtools_remote_*` socket, forwards that socket with `adb`, and runs the dependency-free `tools/device-agc-smoke.js` Chrome DevTools Protocol driver against the actual packaged WebView. It must continue using the real `AgcCore`; do not replace it with a mock.
+`tools/device-agc-smoke.sh` is the live WebView/AGC runtime gate. It waits for the app process's real `webview_devtools_remote_*` socket, forwards that socket with `adb`, and runs dependency-free Chrome DevTools Protocol drivers against the actual packaged WebView. They must continue using the real `AgcCore`; do not replace them with mocks.
 
-The live gate currently enters both Luminary099 and Comanche055, requires a running yaAGC core/version and real DSKY output channels, exercises VERB through the actual DSKY pointer path, exercises held PRO pointer-down/release, and verifies same-WebView pause/resume preserves the same core object. See `docs/DEVICE_RUNTIME_SMOKE.md` for the exact proof boundary.
+The same-process live gate currently:
 
-`tools/device-full-smoke.sh <apk>` chains the immediate install/launch gate and the live AGC gate. Use it as the preferred automated device checkpoint for a current debug APK.
+- enters both Luminary099 and Comanche055 and requires a running yaAGC core/version plus real DSKY output channels
+- exercises VERB through the actual DSKY pointer path
+- exercises held PRO pointer-down/release
+- verifies same-WebView pause/resume preserves the same core object
+- drives Luminary `V37E00E` then `V35E` through pointer handlers and requires the rendered all-8 numerical DSKY light-test pattern
+- reloads the packaged page in CM AGC mode and requires persisted mission/run-mode restoration on a newly constructed core object
+
+`tools/device-process-recreation-smoke.sh` separately performs `adb shell am force-stop`, requires an observed no-process interval, relaunches the app, reconnects to the new WebView socket, and requires persisted CM/AGC state to create a fresh running core. It must best-effort restore the user's pre-smoke frontend preferences on both success and failure.
+
+`tools/device-full-smoke.sh <apk>` chains the immediate install/launch gate, live AGC/page-recreation gates, and the Android process-recreation gate. Use it as the preferred automated device checkpoint for a current debug APK.
 
 A successful full device smoke still does not prove every user-visible behavior. Manual/device gates still include:
 
-- visually inspect LM AGC channel-driven display output and annunciators
-- verify a real Pinball semantic response for representative DSKY sequences, not merely queue acceptance/no crash
-- press and hold PRO long enough to verify intended standby behavior
+- visually inspect LM AGC channel-driven display output, signs, and annunciators
+- verify additional representative Pinball semantics beyond the automated V35 light test
+- press and hold PRO physically long enough to verify intended standby behavior
 - real OS screen off/on behavior in addition to the direct lifecycle bridge smoke
-- Activity/page recreation fresh-reset behavior
-- DreamService display-only behavior
-- DREAM DIM / BRIGHT / SOLAR and location permission/state on the target OS
-- portrait/landscape DISPLAY cropping/scaling
+- Android lifecycle/configuration Activity recreation beyond the automated page reload and explicit process force-stop/relaunch
+- DreamService selection/startup/display-only behavior through normal Android UI
+- DREAM DIM / BRIGHT / SOLAR physical brightness and location-permission behavior on the target OS
+- portrait/landscape DISPLAY cropping/scaling on the physical target
 
 ## Verification discipline
 
@@ -161,6 +178,7 @@ Examples:
 - Good: `Built APK passed tools/verify-apk.sh and device-full-smoke.sh on GrapheneOS.`
 - Bad: `Core integrated` when only files were copied.
 - Bad: `Build passes` when only syntax/source checks were run.
+- Bad: `Device recreation verified` when only a new smoke script was committed but not executed on a corresponding APK.
 
 If a blocker appears, document the blocker and the shortest next experiment. Do not hide it by substituting a mock behavior.
 
