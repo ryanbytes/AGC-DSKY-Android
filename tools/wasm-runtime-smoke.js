@@ -131,19 +131,28 @@ function keyAndRun(core, keyCode, steps = 12000) {
     core.step(steps);
 }
 
+function sendKeys(core, keyCodes, steps = 12000) {
+    for (const keyCode of keyCodes) keyAndRun(core, keyCode, steps);
+}
+
 function proveV35LightTest(core, ropeName, errors, channelUpdates) {
-    // Let the freshly reset flight program settle before invoking the P00 DSKY
-    // light test. At the AGC's ~11.72 us instruction cadence this is a little
-    // over one second of simulated execution without wall-clock waiting.
+    // Let the freshly reset flight program settle before forcing P00. At the
+    // AGC's ~11.72 us instruction cadence this is a little over one second of
+    // simulated execution without wall-clock waiting.
     core.step(100000);
 
-    // Authentic Pinball codes: VERB=021, digits 3/5, ENTER=034.
-    keyAndRun(core, 0o21);
-    keyAndRun(core, 0o03);
-    keyAndRun(core, 0o05);
+    // Put the flight program into P00 explicitly before the light test. The
+    // documented sequence is V37E 00E. This avoids silently depending on the
+    // exact post-reset major-mode state of a particular rope revision.
+    sendKeys(core, [0o21, 0o03, 0o07, 0o34, 0o20, 0o20, 0o34]);
+    assert(errors.length === 0, `${ropeName}: error while entering P00 with V37E00E`);
 
-    // Ignore startup and key-entry display traffic. Semantic proof starts with
-    // the ENTER that asks the actual rope software to execute Verb 35.
+    // Authentic Pinball codes for the DSKY light test: V35E.
+    sendKeys(core, [0o21, 0o03, 0o05]);
+
+    // Ignore startup, P00 selection, and key-entry display traffic. Semantic
+    // proof starts with the ENTER that asks the actual rope software to execute
+    // Verb 35.
     channelUpdates.length = 0;
     core.keyPress(0o34);
 
