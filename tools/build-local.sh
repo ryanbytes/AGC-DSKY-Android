@@ -33,8 +33,6 @@ command -v git >/dev/null 2>&1 || fail "git is required"
 command -v java >/dev/null 2>&1 || fail "Java/JDK is required"
 command -v node >/dev/null 2>&1 \
   || fail "Node.js is required for the repository JavaScript/source smoke tests"
-command -v gradle >/dev/null 2>&1 \
-  || fail "Gradle is not installed. This repository does not currently contain a Gradle wrapper; install stable Gradle 9.5.0 or newer before building."
 
 ROOT_HEAD="$(git rev-parse HEAD 2>/dev/null || true)"
 [[ "$ROOT_HEAD" =~ ^[0-9a-fA-F]{40}$ ]] \
@@ -58,7 +56,18 @@ NODE_MAJOR="${NODE_VERSION%%.*}"
 (( NODE_MAJOR >= 18 )) \
   || fail "Node.js 18 or newer is required for source smoke tests; found $NODE_VERSION"
 
-GRADLE_VERSION="$(gradle --version | awk '/^Gradle / { print $2; exit }')"
+# Prefer an already installed Gradle. Otherwise use the repository's local-only
+# bootstrap, which downloads Gradle 9.5.1 from services.gradle.org, verifies the
+# pinned official SHA-256, caches it under GRADLE_USER_HOME, and runs it locally.
+if command -v gradle >/dev/null 2>&1; then
+  GRADLE_CMD=("$(command -v gradle)")
+  GRADLE_SOURCE="system"
+else
+  GRADLE_CMD=(bash "$ROOT/tools/gradle-bootstrap.sh")
+  GRADLE_SOURCE="checksum-verified bootstrap"
+fi
+
+GRADLE_VERSION="$("${GRADLE_CMD[@]}" --version | awk '/^Gradle / { print $2; exit }')"
 [[ -n "$GRADLE_VERSION" ]] || fail "unable to determine Gradle version"
 is_stable_triplet "$GRADLE_VERSION" \
   || fail "use a stable Gradle release, not preview/prerelease $GRADLE_VERSION"
@@ -116,7 +125,7 @@ done
 printf 'Source commit: %s\n' "$ROOT_HEAD"
 printf 'Java: %s\n' "$JAVA_VERSION"
 printf 'Node: %s\n' "$NODE_VERSION"
-printf 'Gradle: %s\n' "$GRADLE_VERSION"
+printf 'Gradle: %s (%s)\n' "$GRADLE_VERSION" "$GRADLE_SOURCE"
 printf 'Android SDK: %s\n' "$SDK"
 printf 'SDK platform: android-37\n'
 printf 'Build Tools: %s\n' "$BUILD_TOOLS_VERSION"
@@ -138,7 +147,7 @@ node tools/wasm-runtime-smoke.js
 # The accepted v0.7 APK is deliberately produced from a clean app build tree.
 # Asset staging is a Sync task and the APK verifier checks bytes again, but a
 # clean assemble removes one more source of misleading stale intermediates.
-gradle --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleDebug
+"${GRADLE_CMD[@]}" --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleDebug
 
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 [[ -f "$APK" ]] || fail "Gradle reported success but debug APK is missing: $APK"
