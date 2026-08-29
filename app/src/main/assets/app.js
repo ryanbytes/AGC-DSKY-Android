@@ -223,8 +223,10 @@ function press(k){
 }
 
 // Solar brightness is computed locally from the saved latitude/longitude.
-// Sunrise/sunset use the standard -0.833 degree solar altitude and a smooth
-// one-hour transition centered on each event.
+// Sunrise/sunset use the standard -0.833 degree apparent-sun altitude and a
+// smooth one-hour transition centered on each event. At latitudes/dates where
+// that altitude is never crossed, distinguish polar day from polar night
+// instead of treating every no-event day as night.
 const DAY_MS=86400000,J1970=2440588,J2000=2451545,J0=.0009,RAD=Math.PI/180;
 function toJulian(date){return date.valueOf()/DAY_MS-.5+J1970}
 function fromJulian(j){return new Date((j+.5-J1970)*DAY_MS)}
@@ -235,19 +237,21 @@ function declination(l){const e=RAD*23.4397;return Math.asin(Math.sin(e)*Math.si
 function julianCycle(d,lw){return Math.round(d-J0-lw/(2*Math.PI))}
 function approxTransit(Ht,lw,n){return J0+(Ht+lw)/(2*Math.PI)+n}
 function solarTransitJ(ds,M,L){return J2000+ds+.0053*Math.sin(M)-.0069*Math.sin(2*L)}
-function hourAngle(h,phi,d){const x=(Math.sin(h)-Math.sin(phi)*Math.sin(d))/(Math.cos(phi)*Math.cos(d));if(x<-1||x>1)return null;return Math.acos(x)}
+function hourAngleCos(h,phi,d){return (Math.sin(h)-Math.sin(phi)*Math.sin(d))/(Math.cos(phi)*Math.cos(d))}
+function hourAngle(h,phi,d){const x=hourAngleCos(h,phi,d);if(x<-1||x>1)return null;return Math.acos(x)}
 function solarTimes(date,lat,lng){
-  const lw=RAD*-lng,phi=RAD*lat,d=toDays(date),n=julianCycle(d,lw),ds=approxTransit(0,lw,n),M=solarMeanAnomaly(ds),L=eclipticLongitude(M),dec=declination(L),Jnoon=solarTransitJ(ds,M,L),w=hourAngle(RAD*-.833,phi,dec);
-  if(w===null)return null;
-  const a=approxTransit(w,lw,n),Jset=solarTransitJ(a,M,L),Jrise=Jnoon-(Jset-Jnoon);
-  return {sunrise:fromJulian(Jrise),sunset:fromJulian(Jset)};
+  const lw=RAD*-lng,phi=RAD*lat,d=toDays(date),n=julianCycle(d,lw),ds=approxTransit(0,lw,n),M=solarMeanAnomaly(ds),L=eclipticLongitude(M),dec=declination(L),Jnoon=solarTransitJ(ds,M,L),x=hourAngleCos(RAD*-.833,phi,dec);
+  if(x<-1)return {sunrise:null,sunset:null,polarDay:true};
+  if(x>1)return {sunrise:null,sunset:null,polarDay:false};
+  const w=Math.acos(x),a=approxTransit(w,lw,n),Jset=solarTransitJ(a,M,L),Jrise=Jnoon-(Jset-Jnoon);
+  return {sunrise:fromJulian(Jrise),sunset:fromJulian(Jset),polarDay:null};
 }
 function smoothstep(a,b,x){const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)}
 function currentSolarFactor(){
   const lat=parseFloat(store.get('solarLat')),lon=parseFloat(store.get('solarLon'));
   if(!Number.isFinite(lat)||!Number.isFinite(lon))return 0;
   const now=new Date(),times=solarTimes(now,lat,lon);
-  if(!times)return 0;
+  if(times.polarDay!==null)return times.polarDay?1:0;
   const half=30*60*1000,t=now.getTime(),rise=times.sunrise.getTime(),set=times.sunset.getTime();
   if(t<rise-half||t>set+half)return 0;
   if(t<=rise+half)return smoothstep(rise-half,rise+half,t);
