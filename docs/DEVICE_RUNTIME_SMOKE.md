@@ -33,11 +33,14 @@ A process that merely stays alive with a blank or partially initialized WebView 
 
 ### Live AGC runtime smoke
 
-`tools/device-agc-smoke.sh` waits for the actual `webview_devtools_remote_*` socket belonging to the app process, forwards it with `adb`, and runs the dependency-free `tools/device-agc-smoke.js` Chrome DevTools Protocol driver.
+`tools/device-agc-smoke.sh` waits for the actual `webview_devtools_remote_*` socket belonging to the app process, forwards it with `adb`, and runs two dependency-free Chrome DevTools Protocol drivers against that same packaged WebView:
 
-The driver uses the app's real packaged WebView. It does not inject a mock `AgcCore`.
+1. `tools/device-agc-smoke.js` checks core startup, both pinned missions, basic pointer input, held PRO behavior, and same-WebView pause/resume identity.
+2. `tools/device-v35-smoke.js` performs a semantic Pinball test: it selects Luminary099, drives `V37E00E` and then `V35E` through the actual on-screen DSKY pointer handlers, decodes the rendered SVG segment state, and requires PROG/VERB/NOUN `88` plus `88888` in R1/R2/R3.
 
-It currently checks:
+Neither driver injects a mock `AgcCore`.
+
+The live gate now checks:
 
 - the interactive packaged frontend is initialized
 - Apollo 11 LM `Luminary099.bin` can enter AGC mode
@@ -48,8 +51,16 @@ It currently checks:
 - an in-memory AGC instance pauses and resumes through `AGCDSKY.setAppVisible(false/true)` without being replaced
 - Apollo 11 CM `Comanche055.bin` can enter AGC mode in a separate mission run
 - the CM run also produces real DSKY output without an AGC error
+- Luminary accepts the authentic `V37E00E` P00 sequence through the pointer path before the semantic test
+- Luminary accepts `V35E` through the pointer path and the real AGC output path renders the complete all-8 numerical DSKY light-test pattern
 
 The smoke snapshots the persistent mission/run-mode settings and attempts to restore them afterward. If the pre-test state was an active AGC run, restoration necessarily starts that mission from a fresh AGC reset; exact CPU/erasable-memory state is not serialized by the app.
+
+## Build-time semantic counterpart
+
+`tools/wasm-runtime-smoke.js`, already part of `tools/build-local.sh`, now performs the same class of V35 semantic check directly against the exact pinned yaAGC WASM and both pinned rope images under Node. It explicitly enters P00 with `V37E00E`, executes `V35E`, and requires the complete channel-010 all-8 numerical relay pattern.
+
+That test proves real rope/software semantics before Gradle packages the APK, but it is still not an Android/WebView test. The live V35 driver above is the corresponding end-to-end device gate.
 
 ## Resume/held-PRO guard
 
@@ -64,7 +75,7 @@ A passing full-device smoke does **not** by itself prove:
 - pixel-perfect DSKY relay/sign/annunciator appearance on the physical screen
 - real OS screen-off/screen-on behavior rather than the direct lifecycle bridge check
 - Activity/process recreation behavior
-- exact Pinball semantic response to every DSKY key sequence
+- Pinball semantics beyond the automated V35E light-test sequence
 - PRO standby semantics for a long physical hold
 - DreamService selection/startup and non-interactivity
 - DREAM DIM / BRIGHT / SOLAR physical brightness behavior
