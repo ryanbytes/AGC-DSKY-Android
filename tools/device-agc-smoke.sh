@@ -84,3 +84,4 @@ printf 'Forwarded DevTools port: %s\n' "$PORT"
 
 node "$ROOT/tools/device-agc-smoke.js" "$PORT"
 node "$ROOT/tools/device-v35-smoke.js" "$PORT"
+node "$ROOT/tools/device-recreation-smoke.js" "$PORT"
