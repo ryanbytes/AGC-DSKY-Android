@@ -127,6 +127,7 @@ node tools/manifest-policy-smoke.js
 node tools/csp-smoke.js
 node tools/frontend-smoke.js
 node tools/display-layout-smoke.js
+node tools/solar-model-smoke.js
 node tools/agc-core-smoke.js
 node tools/runtime-debug-smoke.js
 node tools/native-diagnostic-smoke.js
