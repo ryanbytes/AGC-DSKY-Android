@@ -3,6 +3,17 @@
 // Small post-load refinements that deliberately wrap the existing app.js
 // bindings rather than duplicating the DSKY/AGC implementation.
 //
+// Luminary's V35 FULLDSP word drives 01675 into every numeric relay row. Relay
+// selector 8 only exposes its D field on the visible DSKY, but the unused C
+// five-relay bank is still electrically driven to the digit-8 pattern. Keep the
+// renderer's right-field-only behavior while preserving those physical relay
+// transitions in the synthetic clock test.
+const baseV35RelayWord = v35RelayWord;
+v35RelayWord = function refinedV35RelayWord(relay) {
+  const word = baseV35RelayWord(relay);
+  return relay === 8 ? word | (DIGIT_RELAY['8'] << 5) : word;
+};
+
 // Clock-mode V35 owns the DSKY presentation for its five-second test. On the
 // real Pinball path ordinary keyboard input cannot repaint individual fields
 // out from under the test. RSET remains the explicit way to terminate it.
