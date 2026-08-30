@@ -36,12 +36,12 @@ A process that merely stays alive with a blank or partially initialized WebView 
 `tools/device-agc-smoke.sh` waits for the actual `webview_devtools_remote_*` socket belonging to the app process, forwards it with `adb`, and runs three dependency-free Chrome DevTools Protocol drivers against that same packaged WebView:
 
 1. `tools/device-agc-smoke.js` checks core startup, both pinned missions, basic pointer input, held PRO behavior, and same-WebView pause/resume identity.
-2. `tools/device-v35-smoke.js` performs a semantic Pinball test: it selects Luminary099, drives `V37E00E` and then `V35E` through the actual on-screen DSKY pointer handlers, decodes the rendered SVG segment state, and requires PROG/VERB/NOUN `88` plus `88888` in R1/R2/R3.
+2. `tools/device-v35-smoke.js` performs the source-backed semantic Pinball light-test gate described below.
 3. `tools/device-recreation-smoke.js` selects Comanche055 in AGC mode, tags the live core object, reloads the actual packaged page with DevTools `Page.reload`, and requires the persisted CM mission + requested AGC mode to re-enter on a newly constructed core object.
 
 None of these drivers injects a mock `AgcCore`.
 
-The live gate checks:
+The general live gate checks:
 
 - the interactive packaged frontend is initialized
 - Apollo 11 LM `Luminary099.bin` can enter AGC mode
@@ -52,13 +52,54 @@ The live gate checks:
 - an in-memory AGC instance pauses and resumes through `AGCDSKY.setAppVisible(false/true)` without being replaced
 - Apollo 11 CM `Comanche055.bin` can enter AGC mode in a separate mission run
 - the CM run also produces real DSKY output without an AGC error
-- Luminary accepts the authentic `V37E00E` P00 sequence through the pointer path before the semantic test
-- Luminary accepts `V35E` through the pointer path and the real AGC output path renders the complete all-8 numerical DSKY light-test pattern
 - page recreation restores the persisted `Comanche055` mission selection
 - page recreation restores requested AGC mode and starts the selected mission again
 - the pre-reload core tag does not survive page recreation, proving a new JavaScript/yaAGC core object is constructed rather than presenting the old in-memory core as serialized state
 
 The smoke snapshots the persistent mission/run-mode settings and attempts to restore them afterward. If the pre-test state was an active AGC run, restoration necessarily starts that mission from a fresh AGC reset; exact CPU/erasable-memory state is not serialized by the app.
+
+## Relay-aware V35 semantic gate
+
+`tools/device-v35-smoke.js` selects Luminary099, enters P00 through the real pointer sequence `V37E00E`, then enters `V35E` through the same on-screen pointer handlers.
+
+The frontend now exposes read-only `AGCDSKY.snapshotRelays()` and `AGCDSKY.snapshotDsky()` diagnostics. They copy current state rather than exposing mutable relay tables. The V35 driver uses those diagnostics to distinguish an AGC-output error from a renderer error.
+
+A V35 pass requires all of the following at the same visible/on phase:
+
+- PROG `88`
+- VERB `88`
+- NOUN `88`
+- R1 `+88888`
+- R2 `+88888`
+- R3 `+88888`
+- channel-010 selectors 1 through 11 contain the source-backed `FULLDSP`/`FULLDSP1` low-11 relay words
+- selector 8 is specifically `01675`, including the visually unused C five-relay bank that Luminary still drives during V35
+- relay 12 is `00674` for the six Apollo-11 LM condition lights
+- UPLINK, TEMP, NO ATT, GIMBAL LOCK, STBY, PROG, RESTART, TRACKER, ALT, and VEL are on
+- KEY REL and OPR ERR are on during the visible phase
+- COMP ACTY remains off
+- EL power-off is not asserted
+- the frontend synthetic clock-test flag is false, proving this state came from the real AGC path rather than the phone-clock V35 convenience path
+
+The driver then waits for yaAGC's hardware-model modulation and requires an observed off phase where:
+
+- V/N blanking is asserted
+- KEY REL is off
+- OPR ERR is off
+- the steady V35 lamps remain on
+- the same channel-010 V35 relay latches remain present
+
+That proves the path:
+
+`pointer input -> Pinball/Luminary099 -> yaAGC channel 010/011/0163 -> frontend relay latches -> annunciators/SVG`
+
+It is intentionally stronger than decoding the SVG and seeing a collection of 8s.
+
+### Why relay 8 is `01675`
+
+Luminary 99 `VBTSTLTS` writes `FULLDSP = 05675` into every numeric `DSPTAB` entry. T4 strips the upper dirty/selector portion before channel-010 output, leaving low-11 `01675`: C=`035`, D=`035`.
+
+Relay selector 8 connects only D to visible R1D1, so ordinary display decoding ignores its C field. V35 still energizes that unused five-relay bank. Both the synthetic relay model and the real-WASM/device semantic gates retain this physical distinction.
 
 ### Android process recreation smoke
 
@@ -81,13 +122,17 @@ A numeric PID difference is reported but is not the proof boundary because Linux
 
 This proves Android process-death preference restoration and fresh core construction. It still does **not** claim CPU/erasable-memory continuation across process death; the intended behavior is a fresh AGC reset with the selected mission and requested AGC mode restored.
 
-## Build-time semantic counterpart
+## Build-time semantic counterparts
 
-`tools/wasm-runtime-smoke.js`, already part of `tools/build-local.sh`, performs the same class of V35 semantic check directly against the exact pinned yaAGC WASM and both pinned rope images under Node. It explicitly enters P00 with `V37E00E`, executes `V35E`, and requires the complete channel-010 all-8 numerical relay pattern.
+`tools/v35-model-smoke.js` checks the effective clock-side relay model after `app-refine.js` is loaded. In particular it requires `FULLDSP` low-11 `01675` on every ordinary numeric row and `FULLDSP1` low-11 `03675` on the three plus-sign rows, including the unused C bank on relay 8.
 
-That test proves real rope/software semantics before Gradle packages the APK, but it is still not an Android/WebView test. The live V35 driver above is the corresponding end-to-end device gate.
+`tools/wasm-runtime-smoke.js`, also part of `tools/build-local.sh`, drives the exact pinned yaAGC WASM and both pinned rope images. It explicitly enters P00 with `V37E00E`, executes `V35E`, and requires both physical five-relay banks on selectors 1 through 11 to carry the digit-8 code, plus signs on R1/R2/R3, and the Luminary relay-12 condition-light mask.
 
-`tools/build-local.sh` also runs `bash -n` over every `tools/*.sh` file and `node --check` over every `tools/*.js` file before the functional source smokes or Gradle build. Device-only helpers therefore remain syntax-gated even on a build host with no attached phone.
+These tests prove source/model and real rope/WASM semantics before Gradle packages the APK, but they are still not Android/WebView tests. The live V35 driver is the corresponding end-to-end device gate.
+
+`tools/app-refine-smoke.js` additionally guards clock-V35 key isolation, RSET escape, AGC/mission cleanup ordering, relay-8 FULLDSP behavior, and the immutability of relay diagnostic snapshots.
+
+`tools/build-local.sh` runs `bash -n` over every `tools/*.sh` file and `node --check` over every `tools/*.js` file before functional source smokes or Gradle work. Device-only helpers therefore remain syntax-gated even on a build host with no attached phone.
 
 ## Resume/held-PRO guard
 
@@ -99,7 +144,7 @@ That test proves real rope/software semantics before Gradle packages the APK, bu
 
 A passing full-device smoke does **not** by itself prove:
 
-- pixel-perfect DSKY relay/sign/annunciator appearance on the physical screen
+- pixel-perfect DSKY appearance on the physical display
 - real OS screen-off/screen-on behavior rather than the direct lifecycle bridge check
 - Activity recreation caused by Android configuration/lifecycle events beyond page reload and explicit process force-stop/relaunch
 - Pinball semantics beyond the automated V35E light-test sequence
@@ -114,4 +159,4 @@ Those remain explicit acceptance gates. Do not upgrade them to verified status f
 
 ## Verification-status rule
 
-Adding a smoke script is not evidence that the behavior passes. The current scripts become verification evidence only after they are run against a current APK built from the corresponding source revision and their output is recorded. Until then they are automated gates awaiting execution.
+Adding or strengthening a smoke script is not evidence that the behavior passes. The current scripts become verification evidence only after they are run against a current APK built from the corresponding source revision and their output is recorded. Until then they are automated gates awaiting execution.
