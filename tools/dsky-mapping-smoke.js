@@ -82,6 +82,52 @@ same(literalAfter(app, 'CHANNEL10_LAMPS'), expectedLamps,
 assert(app.includes('Apollo 11-14 LM panels left relay-12 bits 1/2 unplacarded and unused'),
     'relay-12 Apollo 11-14 blank-position rationale must remain documented');
 
+// The synthetic phone-clock relay emulator must consume the same selector
+// topology rather than carrying another hand-maintained grouping table.
+assert(!app.includes('CLOCK_GROUPS'),
+    'do not reintroduce a second phone-clock relay topology');
+same(literalAfter(app, 'CLOCK_RELAYS'), [8, 7, 6, 5, 4, 3, 2, 1],
+    'phone-clock dirty relay order changed');
+assert(app.includes('const targets=CHANNEL10_DIGITS[relay]'),
+    'phone-clock relay words must derive digit placement from CHANNEL10_DIGITS');
+assert(app.includes("const sign=CHANNEL10_SIGNS[relay],b=sign&&sign[1]==='plus'?1:0"),
+    'phone-clock plus-sign bits must derive from CHANNEL10_SIGNS');
+
+const clockStart = app.indexOf('function clockWord(');
+const clockEnd = app.indexOf('function popcount11', clockStart);
+assert(clockStart >= 0 && clockEnd > clockStart,
+    'could not isolate phone-clock relay encoder');
+const clockContext = {
+    DIGIT_RELAY: expectedDigitRelay,
+    CHANNEL10_DIGITS: expectedDigits,
+    CHANNEL10_SIGNS: expectedSigns
+};
+vm.createContext(clockContext);
+vm.runInContext(app.slice(clockStart, clockEnd) + '\nthis.__clockWord=clockWord;',
+    clockContext, { filename: 'app-clock-relays.js' });
+const clockWord = clockContext.__clockWord;
+const clockWant = {
+    r1: ['1', '2', '3', '4', '5'],
+    r2: ['6', '7', '8', '9', '0'],
+    r3: ['2', '4', '6', '8', '0']
+};
+function expectedClockWord(relay) {
+    let c = 0;
+    let d = 0;
+    for (const [name, index, source] of expectedDigits[relay]) {
+        const code = expectedDigitRelay[clockWant[name][index]];
+        if (source === 'c') c = code;
+        else d = code;
+    }
+    const sign = expectedSigns[relay];
+    const b = sign && sign[1] === 'plus' ? 1 : 0;
+    return (b << 10) | (c << 5) | d;
+}
+for (const relay of [8, 7, 6, 5, 4, 3, 2, 1]) {
+    assert(clockWord(relay, clockWant) === expectedClockWord(relay),
+        `phone-clock relay ${relay} does not encode through shared Block II topology`);
+}
+
 // Execute the actual app.js channel-010 decoder in isolation. This avoids a
 // second hand-written decoder that could agree with itself while the app is
 // broken. Rendering and lamps are replaced by small observation hooks only.
@@ -254,6 +300,7 @@ assert(core.includes('this.writeIo(U_BIT | PROCEED_CHANNEL, PROCEED_MASK);'),
     'PRO U-bit mask packet changed');
 
 console.log('DSKY mapping smoke: PASS');
+console.log('  shared phone-clock / AGC relay topology: PASS');
 console.log('  channel 010 selectors 1-12: PASS');
 console.log('  signs / 21 numerical positions / Apollo 11 LM lamps: PASS');
 console.log('  malformed relay-word preservation and diagnostics: PASS');
