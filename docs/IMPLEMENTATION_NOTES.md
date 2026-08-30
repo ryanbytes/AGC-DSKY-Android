@@ -10,7 +10,7 @@ The first Android shell demonstrated the basic idea but had several visual/runti
 - Android title/action chrome remained visible.
 - Faceplate was a modern-looking approximation rather than Apollo hardware.
 - Keyboard initially used the wrong arrangement.
-- Numeric display fields were compressed because percentage-based layout distorted the individual digits.
+- Numeric display fields were compressed because percentage-based layout distorted individual digits.
 
 ### Geometry corrections
 
@@ -28,195 +28,173 @@ v5 fixed the major width bug by sizing the display from those envelopes.
 
 v6 replaced independent HTML/flex digit fields with one SVG display coordinate system (`viewBox="0 0 106 190"`). This prevents the browser from giving PROG/VERB/NOUN/register glyphs different aspect ratios.
 
-The segment geometry uses custom paths rather than generic CSS rectangles. The current paths use:
-
-- slim chamfered horizontal elements;
-- only a slight lean in vertical elements;
-- very low-opacity unlit segment ghosts;
-- restrained blur so the display reads as a flat electroluminescent emitter rather than an LED clock;
-- a three-element sign cell (horizontal + separate upper/lower vertical elements).
-
-COMP ACTY, labels, separator rules, and all numeric fields occupy the same SVG glass coordinate system.
+The segment geometry uses custom paths rather than generic CSS rectangles. The current paths use slim chamfered horizontal elements, only a slight lean in vertical elements, restrained unlit ghosts/blur, and a three-element sign cell. COMP ACTY, labels, separator rules, and all numeric fields occupy the same SVG glass coordinate system.
 
 ## Historical network-driven COMP ACTY
 
-The v6 clock shell temporarily repurposed COMP ACTY as an aggregate phone-network activity indicator using `TrafficStats` and an `agcnet://poll` WebView bridge.
+The v6 clock shell temporarily repurposed COMP ACTY as aggregate phone-network activity using `TrafficStats` and an `agcnet://poll` WebView bridge.
 
-That implementation is now **obsolete and removed from v0.7 source**. It must not be reintroduced as AGC behavior.
-
-In AGC mode, COMP ACTY is driven only by authentic Block II output channel `011` octal, bit 2.
+That implementation is obsolete and removed from v0.7. It must not be reintroduced as AGC behavior. In AGC mode, COMP ACTY is driven only by Block II output channel `011` octal, bit 2.
 
 ## v0.7 onboard AGC architecture
 
 ### Pinned core
 
-`vendor/webAGC` is a Git submodule pinned to Michael Franzl's webAGC repository at commit:
+`vendor/webAGC` is pinned at:
 
-`0575ea7a1231e3948bae7d2c22a6ac146da0c38d`
+```text
+0575ea7a1231e3948bae7d2c22a6ac146da0c38d
+```
 
-The submodule provides:
+Required upstream inputs are:
 
 - `src/yaAGC.wasm`
 - `demo/agc/Luminary099.bin`
 - `demo/agc/Comanche055.bin`
 
-Gradle merges the webAGC `src` directory and its `demo/agc` directory into Android assets. A recursive Git checkout is therefore required.
+A recursive checkout is required. The Android build does **not** package the whole upstream `src` or `demo/agc` trees: Gradle stages only the three required verified binaries into generated assets. The source/build/APK gates reject missing, changed, or stale copies and check the exact pinned Git blobs.
 
 ### Synthetic HTTPS asset origin
 
-Modern WebView binary `fetch()` behavior is more predictable on an HTTP(S) origin than on `file:///android_asset/`.
-
-`NetClient` intercepts:
+MainActivity and DreamService load:
 
 `https://appassets.androidplatform.net/assets/...`
 
-and serves matching paths directly from Android `AssetManager`. MainActivity and DreamService both load the DSKY page through that origin.
-
-This is a local/offline resource mechanism; the app does not need to fetch the AGC core or rope from the Internet. Current `NetClient` resolves the request with URI path segments, rejects traversal/separator tricks, and deliberately avoids substring/index arithmetic on untrusted request paths. This specifically prevents recurrence of the `StringIndexOutOfBoundsException` seen in an old hand-built diagnostic APK.
+`NetClient` serves matching paths directly from Android `AssetManager`. It rejects traversal/separator tricks and uses URI path segments rather than substring arithmetic. This is strictly an offline resource mechanism; WebView network loads are blocked and the merged app must not request INTERNET.
 
 ### Minimal WASI wrapper
 
-The pinned `yaAGC.wasm` import table was inspected. It imports `env.memory` plus only four WASI Preview 1 functions:
+The pinned `yaAGC.wasm` imports exactly `env.memory` plus WASI Preview 1:
 
 - `fd_close`
 - `fd_fdstat_get`
 - `fd_seek`
 - `fd_write`
 
-`app/src/main/assets/agc-core.js` provides those functions directly and then uses yaAGC exports for rope loading, reset, stepping, packet input/output, and version reporting.
+`agc-core.js` supplies these locally and uses yaAGC exports for fixed-memory loading, reset, stepping, packet I/O, and optional version reporting.
 
-This avoids pulling `@wasmer/wasi` and `@wasmer/wasmfs` into the Android WebView merely to satisfy four imports.
-
-The minimal WASI implementation is source-complete but still requires runtime testing on Android. If an exported yaAGC call traps, inspect the actual trap before expanding the WASI layer.
+The canonical host preflight (`tools/wasm-runtime-smoke.js`) is designed to instantiate the **actual pinned binary**, load both actual ropes, run CPU/input paths, and execute a real Pinball semantic sequence before Gradle starts. The current repository changes still require execution in a complete local checkout before this is claimed as passing for the current revision.
 
 ### AGC mission selection
 
-Apollo 11 LM `Luminary099.bin` remains the default rope. The hidden normal-app controls now also allow selecting CM `Comanche055.bin`.
+Apollo 11 LM `Luminary099.bin` is the default rope. Hidden controls also select CM `Comanche055.bin`.
 
-- The mission choice is stored in local storage.
-- Switching mission while AGC mode is running stops the current core, loads a new core with the selected rope, and starts from reset.
-- Switching mission while in phone-clock mode changes only the selected mission; the selected rope is loaded when AGC mode is next entered.
-- DreamService never enters AGC mode and ignores the mission control path.
+- Mission choice persists locally.
+- Changing mission during AGC mode stops the current core and starts the selected rope from reset.
+- Changing mission in phone-clock mode changes only the next selected AGC mission.
+- DreamService never starts yaAGC.
 
-Mission selection changes the fixed-memory rope only. It does not pretend to model the different spacecraft's complete external environment or peripherals beyond the DSKY interface currently implemented.
+The pinned WASM's internal `CmOrLm` global defaults LM and is not exported. Comanche remains a real/selectable CM rope for DSKY execution, but full CM peripheral-mode fidelity is not claimed.
 
 ### AGC clocking and lifecycle
 
-The wrapper follows webAGC's approximate timing model:
+The wrapper follows webAGC's approximate timing model (~11.72 μs per AGC instruction with a JavaScript scheduling/drain loop). A catch-up cap prevents a delayed WebView timer from running an unbounded burst.
 
-- ~11.72 microseconds per AGC instruction.
-- JavaScript timer/drain loop at approximately 60 Hz.
-- A maximum catch-up threshold prevents a delayed WebView timer from trying to execute an unbounded instruction burst.
+Lifecycle distinction:
 
-The normal app now explicitly coordinates Activity/WebView visibility with the frontend:
+- same surviving WebView: AGC timer pauses while hidden and resumes the same in-memory core;
+- page/Activity/process recreation: selected mission/requested mode persist, but a fresh yaAGC reset is constructed;
+- CPU registers and erasable memory are not serialized across process/page destruction.
 
-- MainActivity signals hidden before `WebView.onPause()`.
-- If the same WebView/JavaScript heap survives, the running yaAGC timer is stopped but the in-memory core is retained.
-- On resume, the same core timer is restarted without a CPU reset.
-- MainActivity also calls `WebView.saveState()` / `restoreState()` for Activity recreation and the frontend persists selected mission plus requested AGC/CLOCK mode in local storage.
-- A recreated page/process does **not** preserve the yaAGC JavaScript heap, CPU registers, or erasable memory. It re-enters the selected AGC mission from a fresh reset. Full AGC snapshot serialization has not been implemented.
+### DSKY output relay model
 
-This distinction is intentional: ordinary screen-off/screen-on should not unnecessarily kick a surviving AGC session back to phone-clock mode, while process recreation must not falsely claim exact AGC continuation.
+Channel `010` is interpreted as:
 
-### DSKY output decoding
+`WWWWBCCCCCDDDDD`
 
-`app.js` handles authentic DSKY peripheral state, leaving the core wrapper UI-independent.
+where W selects a relay row, B is the row discrete/sign bit, and C/D are five-relay character states.
 
-Channel `010` is decoded as the Apollo relay word:
+The character relay codes are source-backed, not decimal assumptions. The current code has one selector/sign topology shared by real AGC output decoding and synthetic phone-clock relay generation. Invalid five-bit character patterns are rejected rather than silently treated as blank.
 
-`AAAABCCCCCDDDDD`
+Visible mapping covers PROG, VERB, NOUN, all 15 register digits, R1/R2/R3 signs, and the six Apollo-11-era LM relay-12 condition lights. Channel `011` supplies COMP ACTY and UPLINK ACTY. yaAGC synthetic/modulated channel `0163` supplies TEMP, KEY REL, OPR ERR, RESTART, STBY, V/N blanking, and EL-off state.
 
-where A selects the relay, B is a special/sign relay, and C/D are 5-bit display relay codes.
+The relay/click model counts low-11 latch changes, including physically driven fields that have no visible connection. The important V35 example is selector 8: ordinary display rendering uses only its D field for R1D1, but Luminary `FULLDSP` still drives the unused C five-relay bank.
 
-Implemented relay words cover:
+### Relay timing
 
-- PROG
-- VERB
-- NOUN
-- all 15 register digits
-- plus/minus sign relays for R1/R2/R3
-- VEL
-- NO ATT
-- ALT
-- GIMBAL LOCK
-- TRACKER
-- PROG annunciator
+Luminary 99 T4RUPT provides three distinct timing scales used by the synthetic clock hardware model:
 
-Channel `011` supplies COMP ACTY and UPLINK ACTY.
+- normal display service: 120 ms;
+- relay-drive/settle: 20 ms;
+- quick dirty-bank sequence: 40 ms start-to-start (20 ms drive + 20 ms off).
 
-yaAGC's fictitious/modulated channel `0163` supplies caution/blink state used for TEMP, KEY REL, OPR ERR, RESTART, STBY, VERB/NOUN flashing, and EL-off handling.
+Authentic AGC mode does not add that synthetic scheduler; it consumes yaAGC's emitted channel words.
+
+### V35 light-test model
+
+Luminary 99 `VBTSTLTS` defines the current source-backed light-test behavior:
+
+- `FULLDSP = 05675` -> low-11 `01675`
+- `FULLDSP1 = 07675` -> low-11 `03675` on plus rows 7/5/2
+- `TSTCON2 = 40674` -> relay-12 low-11 `00674`
+- `TSTCON1 = 00175`
+- TEST ALARM drives RESTART/STBY behavior
+- `SHOLTS = 0764`, approximately five seconds
+
+Both physical five-relay character banks carry digit code `035` on every numeric V35 row, including selector 8's visually unused C bank. COMP ACTY is not part of the V35 test mask.
+
+yaAGC's hardware model uses a 1.28-second DSKY flash period with 75% duty cycle; its off quarter blanks V/N and suppresses KEY REL/OPR ERR. Real AGC mode follows channel `0163`. Phone-clock V35 mirrors this modulation locally because no engine is running.
+
+Synthetic V35 now owns its display for the test duration: ordinary keys are ignored except RSET. RSET explicitly calls `cancelLampTest()` before base clock reset, and AGC/mission transitions use the same explicit cancellation barrier so neither the five-second timeout nor 320 ms interval can leak into another mode.
+
+### Refinement/diagnostic layer
+
+`app-refine.js` is a deliberately narrow post-load layer currently used for:
+
+- selector-8 FULLDSP physical-state correction;
+- synthetic V35 key ownership and explicit timer cancellation on RSET/mode/mission transitions;
+- read-only `AGCDSKY.snapshotRelays()` / `snapshotDsky()` diagnostics used by device smokes.
+
+It must not grow into a second implementation of the app. Mature logic should be folded back into `app.js` when a safe full-source edit path is available.
+
+The debug frontend readiness marker now requires these diagnostic functions, so `FRONTEND READY` proves the full script stack—not only base `app.js`—initialized.
 
 ### DSKY input
 
-Normal keys are sent on input channel `015` with the original Pinball 5-bit key codes.
+Normal keys use input channel `015` with original Pinball five-bit codes. PRO is separate: channel `032`, bit 14 (`20000` octal), held for actual pointer duration.
 
-PRO is different from every other key: it is a discrete input on channel `032`, bit 14 (`20000` octal), so the wrapper pulses that bit separately.
+Peripheral U-bit masks are:
 
-The yaAGC U-bit peripheral masks are initialized as:
+- channel `015`: `00037`
+- channel `032`: `20000`
 
-- channel `015`: `00037` octal
-- channel `032`: `20000` octal
-
-This prevents the DSKY peripheral model from claiming unrelated spacecraft input bits.
+The ring-buffer backend initializes lazily, so the wrapper must preserve rope load -> reset -> disposable step -> output discard -> reset -> U-bit mask sequence.
 
 ## DreamService
 
-`AgcDreamService` uses the same local HTTPS asset page with:
+`AgcDreamService` loads the same local page with dream/display query state. It has a separate WebView, remains synthetic clock/display-only, hides interaction controls, supports DIM/BRIGHT/SOLAR, sets window brightness through `DreamBridge`, and applies small periodic position drift.
 
-`?dream=1&clock=1&display=1`
+Dream presentation must not cause MainActivity to inherit display-only/clock state. Same-origin WebStorage is intentionally shared because Activity and DreamService remain in the same app process/origin.
 
-Dream mode:
+## Build and verification policy
 
-- is a separate WebView from MainActivity;
-- is always the synthetic phone-clock presentation rather than running yaAGC continuously;
-- is display-only and non-interactive;
-- hides the keypad, app controls, hint, and lower fasteners;
-- uses independent persistent `DIM`, `BRIGHT`, and `SOLAR` dream-brightness choices;
-- sets Android-window brightness through the `DreamBridge` JavaScript interface;
-- drifts the cropped upper DSKY by a few pixels once per minute.
+Per owner instruction:
 
-Because DreamService has its own page and `dream=1` forces display-only only for that page, Dream presentation is not intended to latch MainActivity into display-only/clock state. MainActivity's own saved `displayOnly` preference remains independent.
+- no GitHub Actions/Codespaces/hosted builds;
+- build and test locally/manual;
+- never claim build/install/runtime success without observing it;
+- never substitute reconstructed/repacked DEX/APK surgery for the real Gradle application.
 
-## Controls
+`tools/build-local.sh` is the canonical source/build entrypoint. It syntax-checks helper scripts, runs policy/frontend/relay/refinement tests, runs the real-WASM host semantic gate, builds cleanly, and runs APK verification.
 
-The normal app's hidden controls currently include:
+`tools/verify-apk.sh` independently verifies exact upstream binary blobs, APK metadata/permissions/signature, and dynamically discovers every local `src=`/`href=` frontend asset in current `index.html` for byte-for-byte source comparison. This prevents a required layer such as `app-refine.js` from being accidentally omitted from package verification.
 
-- DIM
-- DREAM DIM/BRIGHT/SOLAR selector
-- TICK ON/OFF
-- DISPLAY
-- mission selector (`LM L99` / `CM C55`)
-- AGC/CLOCK toggle
+The preferred Android checkpoint is:
 
-The control strip has a separate small responsive stylesheet so the added mission selector can wrap on narrow portrait phones instead of running offscreen.
+```bash
+bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+```
 
-## Signing
-
-A persistent signing key was created for v5/v6 but is not committed. Never put private signing material in the repository.
-
-A build signed with another key cannot update an installed copy signed by that old key.
-
-## Build policy
-
-Per repository-owner instruction:
-
-- do not add or use GitHub Actions for builds;
-- build locally/manual;
-- clone/update Git submodules before building;
-- do not claim build/install/runtime success without observing it.
-
-See `AGENTS.md` and `docs/PROGRESS.md` for current handoff and verification gates.
+Its V35 semantic driver now proves a channel-driven P00 `PROG 00` precondition before V35, exact FULLDSP/FULLDSP1 relay latches, rendered `88` / `+88888`, expected annunciators with COMP excluded, and a real yaAGC-modulated V/N + KEY REL/OPR ERR off phase.
 
 ## Remaining high-value work
 
-1. Perform the first real recursive-checkout v0.7 Gradle build from the current source revision.
-2. Run on Android and verify the synthetic HTTPS asset origin serves WASM plus both rope files.
-3. Verify the minimal WASI shim by actually instantiating and stepping yaAGC.
-4. Capture first real channel packets from Luminary099 and compare displayed state against VirtualAGC/webAGC.
-5. Verify every physical DSKY key, especially PRO and RSET behavior.
-6. Verify channel-010 sign clearing, blank codes, VN flash polarity, and EL-off behavior.
-7. Verify Comanche055 can be selected, loads cleanly, and produces sensible DSKY output.
-8. Verify screen-off/screen-on resumes an in-memory AGC core without switching to synthetic clock mode.
-9. Verify DreamService activation/deactivation leaves the normal app's mode/display state correct.
-10. Add user-adjustable dream brightness (target 2–25%) through a settings Activity if the three current dream modes prove insufficient.
-11. Do screenshot comparison against close-up genuine DSKY imagery on the actual phone.
+1. Run `tools/build-local.sh` in a complete recursive checkout with Android SDK platform 37 / Build Tools 36.0.0 and record the exact results.
+2. Run `tools/device-full-smoke.sh` on the current APK and retain its evidence.
+3. If V35 fails, inspect `snapshotDsky()` to distinguish relay-output, annunciator/modulation, and SVG-rendering failures before weakening any gate.
+4. Exercise representative non-V35 Pinball semantics through real channel `015` input.
+5. Test long physical PRO behavior through channel `032`.
+6. Verify real OS screen-off/on lifecycle behavior in addition to direct bridge tests.
+7. Verify DreamService startup, non-interactivity, brightness modes, SOLAR permission behavior, and normal-app state after Dream exit.
+8. Perform physical portrait/landscape DISPLAY and pixel-level DSKY visual review.
+9. If exact CM peripheral mode becomes necessary, rebuild audited yaAGC with an explicit exported LM/CM setter rather than patching the pinned binary.
