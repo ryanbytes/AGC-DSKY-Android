@@ -58,13 +58,46 @@ function captureClockRestoreTargets() {
 
 let clockV35PriorRelays = null;
 let clockV35ActiveRelays = null;
+let clockV35EntryRows = null;
+let clockV35SoundTimers = [];
+
+function clearClockV35SoundTimers() {
+  for (const timer of clockV35SoundTimers) clearTimeout(timer);
+  clockV35SoundTimers = [];
+}
+
+function scheduleClockV35RowBursts(rows) {
+  if (!tickSound || !rows || !rows.length) return;
+  // Luminary's QUIKDSP services successive dirty display banks at 40 ms
+  // start-to-start. Each playRelayBurst() still scatters changed contacts only
+  // within the existing 20-ms mechanical/drive window; this outer scheduler
+  // represents row servicing, not serial relay operation within a row.
+  rows.forEach((row, index) => {
+    if (!row.changed) return;
+    const timer = setTimeout(() => {
+      clockV35SoundTimers = clockV35SoundTimers.filter((id) => id !== timer);
+      playRelayBurst(row.changed);
+    }, index * CLOCK_DIRTY_BANK_MS);
+    clockV35SoundTimers.push(timer);
+  });
+}
+
+// Synthetic V35 audio timers are part of lamp-test ownership. Base app.js RSET
+// and enterAgc() already call cancelLampTest(); wrapping that one ownership
+// point prevents delayed synthetic row sounds from leaking into a later mode.
+const baseCancelLampTest = cancelLampTest;
+cancelLampTest = function refinedCancelLampTest(...args) {
+  clearClockV35SoundTimers();
+  return baseCancelLampTest.apply(this, args);
+};
 
 // app.js's AGC latch table is intentionally cleared before a fresh AGC face.
 // Synthetic clock V35 also uses that decoder, however, so its first V35 write
 // would otherwise appear to come from an unknown/empty state and produce no
 // mechanical transition clicks. While V35 is starting, compare each first
-// write against the captured phone-clock relay state, then let the ordinary
-// AGC latch implementation own the new word.
+// write against the captured phone-clock relay state. The actual relay latch is
+// still delegated immediately to app.js; only synthetic acoustic row timing is
+// queued here.
 const baseLatchAgcRelay = latchAgcRelay;
 latchAgcRelay = function refinedLatchAgcRelay(relay, low11) {
   if (mode === 'clock' && lampTestActive
@@ -73,8 +106,9 @@ latchAgcRelay = function refinedLatchAgcRelay(relay, low11) {
       && Object.prototype.hasOwnProperty.call(clockV35PriorRelays, relay)) {
     const prior = clockV35PriorRelays[relay] & 0o3777;
     const next = low11 & 0o3777;
-    const changed = popcount11(prior ^ next);
-    if (tickSound && changed) playRelayBurst(changed);
+    if (clockV35EntryRows) {
+      clockV35EntryRows.push({ relay, changed: popcount11(prior ^ next) });
+    }
   }
   return baseLatchAgcRelay(relay, low11);
 };
@@ -84,6 +118,7 @@ lampTest = function refinedLampTest(...args) {
   if (mode !== 'clock') return baseLampTest.apply(this, args);
   clockV35PriorRelays = captureClockRelaysBeforeV35();
   clockV35ActiveRelays = null;
+  clockV35EntryRows = [];
   try {
     const result = baseLampTest.apply(this, args);
     if (lampTestActive) {
@@ -91,6 +126,7 @@ lampTest = function refinedLampTest(...args) {
       // has accepted them. This one-shot snapshot becomes the source state for
       // the eventual return to the phone clock.
       clockV35ActiveRelays = Object.assign({}, agcRelayWords);
+      scheduleClockV35RowBursts(clockV35EntryRows);
 
       // app.js's historical teardown restored the clock registers but left the
       // command fields at V35/N65. A synthetic phone-clock convenience test should
@@ -105,6 +141,7 @@ lampTest = function refinedLampTest(...args) {
     return result;
   } finally {
     clockV35PriorRelays = null;
+    clockV35EntryRows = null;
   }
 };
 
@@ -116,14 +153,15 @@ const baseSyncClockFace = syncClockFace;
 syncClockFace = function refinedSyncClockFace(...args) {
   if (mode === 'clock' && clockV35ActiveRelays) {
     const target = captureClockRestoreTargets();
+    const rows = [];
     for (const relay of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 12]) {
       if (!Object.prototype.hasOwnProperty.call(clockV35ActiveRelays, relay)) continue;
       const prior = clockV35ActiveRelays[relay] & 0o3777;
       const next = target[relay] & 0o3777;
-      const changed = popcount11(prior ^ next);
-      if (tickSound && changed) playRelayBurst(changed);
+      rows.push({ relay, changed: popcount11(prior ^ next) });
     }
     clockV35ActiveRelays = null;
+    scheduleClockV35RowBursts(rows);
   }
   return baseSyncClockFace.apply(this, args);
 };
