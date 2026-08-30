@@ -56,11 +56,14 @@ verify_blob assets/Luminary099.bin 73728 cd2ec9992d5863e1c7234fa760020f68ef94620
 verify_blob assets/Comanche055.bin 73728 9e4ec167dc99ac12b233df07b6b91fef585e5015
 
 # Prove that the APK contains the frontend/metadata from this checkout rather
-# than stale assets from an older build tree.
+# than stale assets from an older build tree. Keep every script referenced by
+# index.html in this byte-for-byte list; app-refine.js is part of the effective
+# relay/V35 implementation and may not be omitted or stale.
 verify_source_asset assets/index.html "$ROOT/app/src/main/assets/index.html"
 verify_source_asset assets/runtime-debug.js "$ROOT/app/src/main/assets/runtime-debug.js"
 verify_source_asset assets/agc-core.js "$ROOT/app/src/main/assets/agc-core.js"
 verify_source_asset assets/app.js "$ROOT/app/src/main/assets/app.js"
+verify_source_asset assets/app-refine.js "$ROOT/app/src/main/assets/app-refine.js"
 verify_source_asset assets/style.css "$ROOT/app/src/main/assets/style.css"
 verify_source_asset assets/controls-layout.css "$ROOT/app/src/main/assets/controls-layout.css"
 verify_source_asset assets/agc-state.css "$ROOT/app/src/main/assets/agc-state.css"
