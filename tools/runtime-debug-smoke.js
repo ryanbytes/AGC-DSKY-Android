@@ -77,17 +77,29 @@ listeners.load();
 assert(readyMarkers.length === 0,
     'partial/uninitialized frontend must not emit a readiness marker');
 
+// Even the base app.js API is not enough now: the final packaged frontend must
+// also have executed app-refine.js and installed its relay diagnostic surface.
 context.AGCDSKY = {};
 elements.prog.innerHTML = '<g class="el-glyph"></g>';
 elements.mission.textContent = 'LM L99';
 listeners.load();
+assert(readyMarkers.length === 0,
+    'base AGCDSKY without relay diagnostics must not emit a readiness marker');
+
+context.AGCDSKY.snapshotRelays = () => ({});
+listeners.load();
+assert(readyMarkers.length === 0,
+    'frontend missing snapshotDsky must not emit a readiness marker');
+
+context.AGCDSKY.snapshotDsky = () => ({});
+listeners.load();
 assert(readyMarkers.length === 1 && readyMarkers[0] === 'app',
-    'initialized normal frontend must emit FRONTEND READY app');
+    'fully initialized normal frontend must emit FRONTEND READY app');
 
 dreamClass = true;
 listeners.load();
 assert(readyMarkers.length === 2 && readyMarkers[1] === 'dream',
-    'initialized DreamService frontend must emit FRONTEND READY dream');
+    'fully initialized DreamService frontend must emit FRONTEND READY dream');
 
 // String-only stderr from yaAGC/WASI remains visible in the real console but
 // must not create a persistent failure report by itself.
@@ -137,3 +149,4 @@ assert(reports.length === 4
     'CSP violation report must identify the directive, blocked operation, and source');
 
 console.log('runtime-debug smoke: PASS');
+console.log('  FRONTEND READY requires app-refine relay diagnostics: PASS');
