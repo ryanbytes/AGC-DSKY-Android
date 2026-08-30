@@ -14,6 +14,70 @@ v35RelayWord = function refinedV35RelayWord(relay) {
   return relay === 8 ? word | (DIGIT_RELAY['8'] << 5) : word;
 };
 
+function clockPairLow11(text) {
+  const value = String(text || '').padEnd(2, ' ').slice(0, 2);
+  const c = DIGIT_RELAY[value[0]] ?? 0;
+  const d = DIGIT_RELAY[value[1]] ?? 0;
+  return (c << 5) | d;
+}
+
+function clockRelay12Low11() {
+  let value = 0;
+  for (const [mask, name] of CHANNEL10_LAMPS) {
+    const lamp = document.querySelector(`[data-lamp="${name}"]`);
+    if (lamp && lamp.classList.contains('on')) value |= mask;
+  }
+  return value;
+}
+
+function captureClockRelaysBeforeV35() {
+  const relays = {};
+  for (const relay of CLOCK_RELAYS) {
+    if (clockRelayWords[relay] !== undefined) relays[relay] = clockRelayWords[relay] & 0o3777;
+  }
+  // Phone-clock mode normally keeps PROG at 00. VERB/NOUN are captured from
+  // their actual entry variables so V35 compares against the 35/65 state that
+  // was visibly present immediately before ENTER executes the test.
+  relays[11] = clockPairLow11('00');
+  relays[10] = clockPairLow11(verb);
+  relays[9] = clockPairLow11(noun);
+  relays[12] = clockRelay12Low11();
+  return relays;
+}
+
+let clockV35PriorRelays = null;
+
+// app.js's AGC latch table is intentionally cleared before a fresh AGC face.
+// Synthetic clock V35 also uses that decoder, however, so its first V35 write
+// would otherwise appear to come from an unknown/empty state and produce no
+// mechanical transition clicks. While V35 is starting, compare each first
+// write against the captured phone-clock relay state, then let the ordinary
+// AGC latch implementation own the new word.
+const baseLatchAgcRelay = latchAgcRelay;
+latchAgcRelay = function refinedLatchAgcRelay(relay, low11) {
+  if (mode === 'clock' && lampTestActive
+      && agcRelayWords[relay] === undefined
+      && clockV35PriorRelays
+      && Object.prototype.hasOwnProperty.call(clockV35PriorRelays, relay)) {
+    const prior = clockV35PriorRelays[relay] & 0o3777;
+    const next = low11 & 0o3777;
+    const changed = popcount11(prior ^ next);
+    if (tickSound && changed) playRelayBurst(changed);
+  }
+  return baseLatchAgcRelay(relay, low11);
+};
+
+const baseLampTest = lampTest;
+lampTest = function refinedLampTest(...args) {
+  if (mode !== 'clock') return baseLampTest.apply(this, args);
+  clockV35PriorRelays = captureClockRelaysBeforeV35();
+  try {
+    return baseLampTest.apply(this, args);
+  } finally {
+    clockV35PriorRelays = null;
+  }
+};
+
 // Clock-mode V35 owns the DSKY presentation for its five-second test. Ordinary
 // keyboard input cannot repaint individual fields out from under it. RSET is
 // the explicit escape and must cancel both the five-second teardown timeout and
@@ -36,18 +100,21 @@ function restoreClockBeforeLeavingV35() {
   baseDskyPress('R');
 }
 
-// A synthetic V35 flash interval must never survive a transition into a real
-// AGC mission or a mission-selection change.
-const baseEnterAgc = enterAgc;
-enterAgc = function refinedEnterAgc(...args) {
-  restoreClockBeforeLeavingV35();
-  return baseEnterAgc.apply(this, args);
-};
-
+// A synthetic V35 flash interval must never survive a mission-selection change.
 const baseCycleMission = cycleMission;
 cycleMission = function refinedCycleMission(...args) {
   restoreClockBeforeLeavingV35();
   return baseCycleMission.apply(this, args);
+};
+
+// Entering a real AGC mission does not need a synthetic clock redisplay first;
+// the AGC path immediately clears/reinitializes the DSKY. Cancel V35 timers and
+// let the authentic AGC reset/output sequence take over without generating a
+// fake intermediate V16 N65 restore.
+const baseEnterAgc = enterAgc;
+enterAgc = function refinedEnterAgc(...args) {
+  if (mode === 'clock' && lampTestActive) cancelLampTest();
+  return baseEnterAgc.apply(this, args);
 };
 
 // Read-only diagnostics for device smoke tests and field debugging. These
