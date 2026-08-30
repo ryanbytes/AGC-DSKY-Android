@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
 PINNED_BUILD_TOOLS=36.0.0
+ASSET_SOURCE="$ROOT/app/src/main/assets"
 
 fail() {
   printf 'VERIFY FAIL: %s\n' "$*" >&2
@@ -14,6 +15,8 @@ fail() {
 command -v unzip >/dev/null 2>&1 || fail "unzip is required"
 command -v git >/dev/null 2>&1 || fail "git is required for Git-blob verification"
 command -v cmp >/dev/null 2>&1 || fail "cmp is required for packaged-source verification"
+command -v grep >/dev/null 2>&1 || fail "grep is required for frontend-reference verification"
+command -v sed >/dev/null 2>&1 || fail "sed is required for frontend-reference verification"
 
 verify_blob() {
   local entry="$1"
@@ -56,18 +59,26 @@ verify_blob assets/Luminary099.bin 73728 cd2ec9992d5863e1c7234fa760020f68ef94620
 verify_blob assets/Comanche055.bin 73728 9e4ec167dc99ac12b233df07b6b91fef585e5015
 
 # Prove that the APK contains the frontend/metadata from this checkout rather
-# than stale assets from an older build tree. Keep every script referenced by
-# index.html in this byte-for-byte list; app-refine.js is part of the effective
-# relay/V35 implementation and may not be omitted or stale.
-verify_source_asset assets/index.html "$ROOT/app/src/main/assets/index.html"
-verify_source_asset assets/runtime-debug.js "$ROOT/app/src/main/assets/runtime-debug.js"
-verify_source_asset assets/agc-core.js "$ROOT/app/src/main/assets/agc-core.js"
-verify_source_asset assets/app.js "$ROOT/app/src/main/assets/app.js"
-verify_source_asset assets/app-refine.js "$ROOT/app/src/main/assets/app-refine.js"
-verify_source_asset assets/style.css "$ROOT/app/src/main/assets/style.css"
-verify_source_asset assets/controls-layout.css "$ROOT/app/src/main/assets/controls-layout.css"
-verify_source_asset assets/agc-state.css "$ROOT/app/src/main/assets/agc-state.css"
-verify_source_asset assets/BUILD_SOURCE.txt "$ROOT/app/src/main/assets/BUILD_SOURCE.txt"
+# than stale assets from an older build tree. Verify index.html first, then
+# discover every src=/href= asset it references and compare that file
+# byte-for-byte. This deliberately avoids a manually maintained script/style
+# list so a future required frontend layer cannot be added to index.html while
+# being accidentally omitted from APK verification.
+verify_source_asset assets/index.html "$ASSET_SOURCE/index.html"
+reference_count=0
+while IFS= read -r ref; do
+  [[ -n "$ref" ]] || continue
+  reference_count=$((reference_count + 1))
+  if [[ "$ref" == /* || "$ref" == *..* || "$ref" =~ ^[A-Za-z][A-Za-z0-9+.-]*: ]]; then
+    fail "index.html contains non-local frontend reference: $ref"
+  fi
+  verify_source_asset "assets/$ref" "$ASSET_SOURCE/$ref"
+done < <(
+  grep -Eo '(src|href)="[^"]+"' "$ASSET_SOURCE/index.html" \
+    | sed -E 's/^[^=]+="//; s/"$//'
+)
+(( reference_count > 0 )) || fail "index.html contains no frontend src/href assets to verify"
+verify_source_asset assets/BUILD_SOURCE.txt "$ASSET_SOURCE/BUILD_SOURCE.txt"
 
 # The Android build stages only the three required vendor binaries. Whole
 # upstream source/demo trees must never leak into the APK again.
@@ -129,7 +140,7 @@ printf '  %s\n' "$APK"
 printf '  package/version/minSdk/targetSdk match v0.7 source\n'
 printf '  APK is debuggable for the ADB smoke/report workflow\n'
 printf '  pinned yaAGC/WASM + both ropes match exact Git blobs\n'
-printf '  packaged frontend/build metadata matches the current checkout byte-for-byte\n'
+printf '  index.html and every referenced frontend asset match the current checkout byte-for-byte\n'
 printf '  unused upstream vendor assets are absent\n'
 printf '  merged manifest has location permissions and no INTERNET permission\n'
 printf '  verifier Build Tools: %s\n' "$PINNED_BUILD_TOOLS"
