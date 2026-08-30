@@ -25,8 +25,10 @@ const ROPES = [
 ];
 
 const CHANNEL_DSKY = 0o10;
+const RELAY_ZERO = 0o25;
 const RELAY_EIGHT = 0o35;
 const RELAY_SIGN_BIT = 0o2000;
+const PROGRAM00_LOW11 = (RELAY_ZERO << 5) | RELAY_ZERO;
 // Apollo 11-14 LM relay 12: VEL, NO ATT, ALT, GIMBAL LOCK, TRACKER, PROG.
 // Bits 1/2 are the two unplacarded positions on this mission-era LM panel.
 const LUMINARY_RELAY12_LAMP_MASK = 0o674;
@@ -112,6 +114,19 @@ function updateRelayState(relays, value) {
     if (relay >= 1 && relay <= 12) relays.set(relay, value);
 }
 
+function relayStateFromUpdates(channelUpdates) {
+    const relays = new Map();
+    for (const [channel, value] of channelUpdates) {
+        if (channel === CHANNEL_DSKY) updateRelayState(relays, value);
+    }
+    return relays;
+}
+
+function program00Present(relays) {
+    const relay11 = relays.get(11);
+    return relay11 !== undefined && (relay11 & 0o3777) === PROGRAM00_LOW11;
+}
+
 function pairIsEight(value) {
     return ((value >> 5) & 0o37) === RELAY_EIGHT
         && (value & 0o37) === RELAY_EIGHT;
@@ -169,11 +184,15 @@ function proveV35LightTest(core, ropeName, errors, channelUpdates) {
     // simulated execution without wall-clock waiting.
     core.step(100000);
 
-    // Put the flight program into P00 explicitly before the light test. The
-    // documented sequence is V37E 00E. This avoids silently depending on the
-    // exact post-reset major-mode state of a particular rope revision.
+    // Put the flight program into P00 explicitly. The documented sequence is
+    // V37E 00E. In addition to sending the keys, require the resulting channel
+    // 010 program row to encode 00 before V35 is attempted; this avoids treating
+    // an arbitrary fixed step count as proof of the major-mode precondition.
     sendKeys(core, [0o21, 0o03, 0o07, 0o34, 0o20, 0o20, 0o34]);
     assert(errors.length === 0, `${ropeName}: error while entering P00 with V37E00E`);
+    const p00Relays = relayStateFromUpdates(channelUpdates);
+    assert(program00Present(p00Relays),
+        `${ropeName}: V37E00E did not leave channel-010 relay 11 at PROG 00 (low-11 0o${PROGRAM00_LOW11.toString(8)})`);
 
     // Authentic Pinball codes for the DSKY light test: V35E.
     sendKeys(core, [0o21, 0o03, 0o05]);
@@ -213,6 +232,7 @@ function proveV35LightTest(core, ropeName, errors, channelUpdates) {
     return {
         responseSteps,
         channelUpdates: channelUpdates.length,
+        p00Relay11: p00Relays.get(11) & 0o3777,
         relay12: relays.has(12) ? (relays.get(12) & 0o3777) : null
     };
 }
@@ -297,6 +317,7 @@ async function main() {
         const result = await smokeMission(context, name);
         runs.push(result);
         console.log(`real yaAGC ${name}: PASS (${result.channelUpdates} generic channel updates; ${result.version})`);
+        console.log(`  P00 precondition relay 11: 0o${result.v35.p00Relay11.toString(8).padStart(4, '0')}`);
         console.log(`  V35E semantic relay test: PASS (${result.v35.channelUpdates} channel updates; response within ${result.v35.responseSteps} steps)`);
         if (result.v35.relay12 !== null) {
             console.log(`  V35E relay 12 low-11 state: 0o${result.v35.relay12.toString(8).padStart(4, '0')}`);
