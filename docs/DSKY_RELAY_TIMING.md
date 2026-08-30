@@ -24,7 +24,9 @@ The relay code used by the numeric contact decoder is:
 
 All values above are octal.
 
-The channel-10 display-selector matrix is shared by both the synthetic phone-clock relay encoder and the authentic AGC decoder. There is intentionally no second `CLOCK_GROUPS` topology. Relay 8 uses only its connected right/D digit field; relay selectors 7/6, 5/4 and 2/1 latch the independent plus/minus sign states for R1, R2 and R3.
+The channel-10 display-selector matrix is shared by both the synthetic phone-clock relay encoder and the authentic AGC decoder. There is intentionally no second `CLOCK_GROUPS` topology. Relay 8 has only its right/D five-relay bank connected to a visible numerical position (R1D1); relay selectors 7/6, 5/4 and 2/1 latch the independent plus/minus sign states for R1, R2 and R3.
+
+A field being visually unconnected does not imply that its physical relays never move. Luminary V35 is the important case: `FULLDSP` commands the digit-8 code into both five-relay banks of every numerical row, including relay 8's visually unused C bank. The frontend decoder still ignores that C field for rendering, while the physical relay-state/click model retains it.
 
 Unsupported five-bit character patterns are not treated as blank. The decoder rejects an invalid relay word, leaves the last good latched/displayed state unchanged, and records one diagnostic per unique bad word/detail. This follows VirtualAGC's treatment of non-table character patterns as I/O errors rather than inventing a display glyph.
 
@@ -55,8 +57,8 @@ Both setting and resetting a bistable relay are mechanical transitions and can p
 
 Apollo 11 Luminary 99 implements Verb 35 at `VBTSTLTS`. The source is explicit rather than inferred from a screenshot:
 
-- `FULLDSP = 05675` writes numerical **8** patterns;
-- `FULLDSP1 = 07675` writes **8** plus the sign B bit, producing **+88888** in R1/R2/R3;
+- `FULLDSP = 05675` writes numerical **8** patterns; after T4's low-11 extraction this is `01675`, so both five-relay character banks are driven to code `035`;
+- `FULLDSP1 = 07675` is the same physical two-bank digit-8 state with the sign B bit asserted, giving low-11 `03675` and producing **+88888** in R1/R2/R3;
 - `TSTCON2 = 40674` supplies the relay-12 LM condition-light word; its visible low-11 state is `00674` octal;
 - `TSTCON1 = 00175` turns on UPLINK ACTY, TEMP, KEY REL, V/N flash and OPR ERR;
 - channel 13 bit 10 TEST ALARM is asserted, which the yaAGC DSKY model exposes as RESTART/STBY;
@@ -66,14 +68,14 @@ The visible Apollo-11 LM relay-12 assignments are VEL, NO ATT, ALT, GIMBAL LOCK,
 
 yaAGC's DSKY hardware model further defines flashing as a **1.28 s period with 75% duty cycle**. During the off quarter, V/N is blanked and KEY REL / OPR ERR are suppressed. AGC mode follows the already-modulated synthetic channel `0163`; it does not start a second frontend flasher. The phone-clock-only V35 convenience mode mirrors that 4 × 320 ms modulation locally because no AGC engine is running there.
 
-Both clock-mode and AGC-mode V35 numerical rendering now use the same channel-10 relay decoder. Clock-mode V35 does not use an `88`/all-lamps DOM shortcut.
+Both clock-mode and AGC-mode V35 numerical rendering use the same channel-10 relay decoder. Clock-mode V35 does not use an `88`/all-lamps DOM shortcut, and ordinary keypad input is ignored while the five-second synthetic test owns the display except for RSET. Entering AGC mode or changing mission first executes the normal RSET cleanup path so its flash timers cannot leak into the next mode.
 
 ## Automated relay gates
 
 `tools/dsky-mapping-smoke.js` executes the committed channel-10 decoder in a Node VM and checks:
 
 - selectors 1 through 12 and all 21 numerical positions;
-- relay-8 right-only behavior;
+- relay-8 visible right/D-field behavior;
 - independent plus/minus latches and plus display priority;
 - all six Apollo-11 LM relay-12 condition lamps;
 - valid blank code 000 versus invalid five-bit codes;
@@ -81,15 +83,21 @@ Both clock-mode and AGC-mode V35 numerical rendering now use the same channel-10
 - shared phone-clock/AGC relay topology;
 - channel 011 and synthetic channel 0163 mappings.
 
-`tools/v35-model-smoke.js` checks the clock-mode V35 relay words, plus-sign rows, 5-second duration, COMP exclusion, relay-12 mask, and 1.28-second/75% flash model.
+`tools/v35-model-smoke.js` loads the effective `app.js` + `app-refine.js` behavior and checks the source-backed `FULLDSP`/`FULLDSP1` low-11 relay words on every numerical selector, including relay 8's unused C bank, plus-sign rows, 5-second duration, COMP exclusion, relay-12 mask, and 1.28-second/75% flash model.
 
-`tools/wasm-runtime-smoke.js` drives real `V37E00E` then `V35E` through the exact pinned yaAGC WASM and ropes. Its semantic relay gate requires all 21 numerical positions to be 8, plus-sign bits on R1/R2/R3, and for Luminary099 all six Apollo-11 LM relay-12 condition-light bits.
+`tools/app-refine-smoke.js` checks the V35 input lock, RSET escape, AGC/mission cleanup ordering, relay-8 FULLDSP refinement, and the read-only relay diagnostic snapshots used by the live device gate.
+
+`tools/wasm-runtime-smoke.js` drives real `V37E00E` then `V35E` through the exact pinned yaAGC WASM and ropes. Its semantic relay gate requires both five-relay character banks on selectors 1 through 11 to carry the digit-8 code, plus-sign bits on R1/R2/R3, and for Luminary099 all six Apollo-11 LM relay-12 condition-light bits.
+
+The live Android `tools/device-v35-smoke.js` then requires the same real Luminary low-11 relay states, rendered `88` / `+88888` output, steady V35 annunciators with COMP ACTY off, and an observed yaAGC-modulated V/N + KEY REL/OPR ERR off phase.
 
 These host-side gates are part of `tools/build-local.sh`. They are not a substitute for the Android/WebView device gate and must not be reported as passing until actually executed in a complete checkout with the pinned WASM/rope assets.
 
 ## AGC mode
 
 When running Luminary through yaAGC, software-originated channel-10 timing is retained. The frontend does not impose a second synthetic 120/40 ms scheduler on authentic AGC output. It applies the physical latch/relay-contact model and sound to the channel words actually emitted by the AGC.
+
+`window.AGCDSKY.snapshotRelays()` and `snapshotDsky()` expose read-only copies of current relay/render/lamp state for the device smoke and debugging. They do not expose mutable references to the production relay tables.
 
 ## Primary references
 
