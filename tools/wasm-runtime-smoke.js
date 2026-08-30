@@ -26,6 +26,10 @@ const ROPES = [
 
 const CHANNEL_DSKY = 0o10;
 const RELAY_EIGHT = 0o35;
+const RELAY_SIGN_BIT = 0o2000;
+// Apollo 11-14 LM relay 12: VEL, NO ATT, ALT, GIMBAL LOCK, TRACKER, PROG.
+// Bits 1/2 are the two unplacarded positions on this mission-era LM panel.
+const LUMINARY_RELAY12_LAMP_MASK = 0o674;
 
 function assert(condition, message) {
     if (!condition) throw new Error(message);
@@ -126,6 +130,30 @@ function lightTestNumericsPresent(relays) {
     return relay8 !== undefined && (relay8 & 0o37) === RELAY_EIGHT;
 }
 
+function lightTestSignsPresent(relays) {
+    // The Apollo DSKY condition-light test specifies a plus sign in R1/R2/R3.
+    // Those are the B/sign bits on relay selectors 7, 5, and 2 respectively.
+    return [7, 5, 2].every((relay) => {
+        const value = relays.get(relay);
+        return value !== undefined && (value & RELAY_SIGN_BIT) !== 0;
+    });
+}
+
+function luminaryConditionLightsPresent(relays) {
+    const relay12 = relays.get(12);
+    return relay12 !== undefined
+        && (relay12 & LUMINARY_RELAY12_LAMP_MASK) === LUMINARY_RELAY12_LAMP_MASK;
+}
+
+function completeV35RelayState(relays, ropeName) {
+    if (!lightTestNumericsPresent(relays) || !lightTestSignsPresent(relays)) return false;
+    // The app intentionally presents an Apollo-11-era LM annunciator panel.
+    // Require its six active relay-12 lights from Luminary. Do not impose the
+    // LM panel interpretation on the selectable Comanche rope.
+    if (ropeName === 'Luminary099.bin' && !luminaryConditionLightsPresent(relays)) return false;
+    return true;
+}
+
 function keyAndRun(core, keyCode, steps = 12000) {
     core.keyPress(keyCode);
     core.step(steps);
@@ -162,7 +190,7 @@ function proveV35LightTest(core, ropeName, errors, channelUpdates) {
     const maxResponseSteps = 350000;
     const chunkSteps = 10000;
 
-    while (responseSteps < maxResponseSteps && !lightTestNumericsPresent(relays)) {
+    while (responseSteps < maxResponseSteps && !completeV35RelayState(relays, ropeName)) {
         core.step(chunkSteps);
         responseSteps += chunkSteps;
         for (; eventIndex < channelUpdates.length; eventIndex++) {
@@ -173,10 +201,20 @@ function proveV35LightTest(core, ropeName, errors, channelUpdates) {
 
     assert(errors.length === 0, `${ropeName}: error while executing real V35E`);
     assert(lightTestNumericsPresent(relays),
-        `${ropeName}: V35E did not produce the complete all-8 DSKY numerical light-test pattern `
+        `${ropeName}: V35E did not produce the complete all-8 DSKY numerical relay pattern `
         + `within ${maxResponseSteps} AGC steps`);
+    assert(lightTestSignsPresent(relays),
+        `${ropeName}: V35E did not assert the R1/R2/R3 plus-sign relay bits`);
+    if (ropeName === 'Luminary099.bin') {
+        assert(luminaryConditionLightsPresent(relays),
+            `${ropeName}: V35E did not assert all six Apollo-11 LM relay-12 condition-light bits`);
+    }
 
-    return { responseSteps, channelUpdates: channelUpdates.length };
+    return {
+        responseSteps,
+        channelUpdates: channelUpdates.length,
+        relay12: relays.has(12) ? (relays.get(12) & 0o3777) : null
+    };
 }
 
 async function smokeMission(context, ropeName) {
@@ -259,7 +297,10 @@ async function main() {
         const result = await smokeMission(context, name);
         runs.push(result);
         console.log(`real yaAGC ${name}: PASS (${result.channelUpdates} generic channel updates; ${result.version})`);
-        console.log(`  V35E semantic light test: PASS (${result.v35.channelUpdates} channel updates; response within ${result.v35.responseSteps} steps)`);
+        console.log(`  V35E semantic relay test: PASS (${result.v35.channelUpdates} channel updates; response within ${result.v35.responseSteps} steps)`);
+        if (result.v35.relay12 !== null) {
+            console.log(`  V35E relay 12 low-11 state: 0o${result.v35.relay12.toString(8).padStart(4, '0')}`);
+        }
     }
 
     assert(runs.length === 2, 'expected exactly two real mission runs');
