@@ -72,7 +72,19 @@ lampTest = function refinedLampTest(...args) {
   if (mode !== 'clock') return baseLampTest.apply(this, args);
   clockV35PriorRelays = captureClockRelaysBeforeV35();
   try {
-    return baseLampTest.apply(this, args);
+    const result = baseLampTest.apply(this, args);
+    // app.js's historical teardown restored the clock registers but left the
+    // command fields at V35/N65. A synthetic phone-clock convenience test should
+    // return to its canonical V16 N65 state, exactly like operator RSET. Replace
+    // only the teardown timeout; all light-test setup remains in base app.js.
+    if (lampTestActive) {
+      if (lampTestTimer) clearTimeout(lampTestTimer);
+      lampTestTimer = setTimeout(() => {
+        if (mode === 'clock' && lampTestActive) baseDskyPress('R');
+        else cancelLampTest();
+      }, V35_TEST_MS);
+    }
+    return result;
   } finally {
     clockV35PriorRelays = null;
   }
