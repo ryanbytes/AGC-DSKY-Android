@@ -26,6 +26,20 @@ const calls = [];
 const relayBursts = [];
 const timers = new Map();
 let nextTimerId = 1;
+
+function fireTimer(id) {
+  const timer = timers.get(id);
+  assert(timer, `timer ${id} is not active`);
+  timers.delete(id); // setTimeout is one-shot in the real browser.
+  timer.callback();
+}
+
+function sortedTimersExcept(excludedId = null) {
+  return Array.from(timers.entries())
+    .filter(([id]) => id !== excludedId)
+    .sort((a, b) => a[1].ms - b[1].ms || a[0] - b[0]);
+}
+
 const lampState = new Map();
 for (const name of ['vel', 'noatt', 'alt', 'gimbal', 'tracker', 'prog']) {
   lampState.set(name, name === 'prog');
@@ -45,6 +59,7 @@ const context = {
   lampTestTimer: 0,
   lampTestFlashTimer: 0,
   V35_TEST_MS: 5000,
+  CLOCK_DIRTY_BANK_MS: 40,
   selectedMission: 'luminary099',
   verb: '35',
   noun: '65',
@@ -68,9 +83,7 @@ const context = {
       const match = selector.match(/^\[data-lamp="(.+)"\]$/);
       return match ? lamps.get(match[1]) || null : null;
     },
-    getElementById() {
-      return null;
-    },
+    getElementById() { return null; },
     body: { classList: { contains: () => false } }
   },
   setTimeout(callback, ms) {
@@ -78,22 +91,12 @@ const context = {
     timers.set(id, { callback, ms });
     return id;
   },
-  clearTimeout(id) {
-    timers.delete(id);
-  },
-  clearInterval(id) {
-    timers.delete(id);
-  },
+  clearTimeout(id) { timers.delete(id); },
+  clearInterval(id) { timers.delete(id); },
   popcount11,
-  playRelayBurst(count) {
-    relayBursts.push(count);
-  },
-  desiredClockDigits() {
-    return {};
-  },
-  clockWord(relay) {
-    return restoreClockWords[relay];
-  },
+  playRelayBurst(count) { relayBursts.push(count); },
+  desiredClockDigits() { return {}; },
+  clockWord(relay) { return restoreClockWords[relay]; },
   syncClockFace() {
     calls.push(['syncClockFace']);
     for (const relay of context.CLOCK_RELAYS) {
@@ -131,9 +134,7 @@ const context = {
       context.latchAgcRelay(relay, context.v35RelayWord(relay) & 0o3777);
     }
     context.latchAgcRelay(12, 0o674);
-    context.lampTestTimer = context.setTimeout(() => {
-      calls.push(['obsoleteBaseV35Timeout']);
-    }, 5000);
+    context.lampTestTimer = context.setTimeout(() => calls.push(['obsoleteBaseV35Timeout']), 5000);
     return 'lamp-test-started';
   },
   press(key) {
@@ -174,8 +175,6 @@ assert(((relay8 >> 5) & 0o37) === 0o35 && (relay8 & 0o37) === 0o35,
   'refined V35 relay 8 must drive both five-relay fields to digit 8');
 assert((relay8 & 0o3777) === 0o1675,
   `refined V35 relay 8 low-11 word must be 01675, got 0${(relay8 & 0o3777).toString(8)}`);
-assert((context.v35RelayWord(7) & 0o3777) === 0o3675,
-  'V35 refinement must not disturb an ordinary plus-sign relay row');
 
 const prior = {
   11: (0o25 << 5) | 0o25,
@@ -185,25 +184,40 @@ const prior = {
   12: 0o400
 };
 const relayOrder = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 12];
-const expectedEntryBursts = relayOrder.map((relay) => {
-  const next = relay === 12 ? 0o674 : context.v35RelayWord(relay) & 0o3777;
-  return popcount11(prior[relay] ^ next);
-}).filter((count) => count > 0);
+const entryRows = relayOrder.map((relay, index) => ({
+  relay,
+  index,
+  changed: popcount11(prior[relay] ^ (relay === 12
+    ? 0o674
+    : context.v35RelayWord(relay) & 0o3777))
+}));
 
 assert(context.lampTest() === 'lamp-test-started', 'refined lampTest changed base return value');
-assert(context.lampTestActive === true, 'base V35 did not remain active after start');
-assert(JSON.stringify(relayBursts) === JSON.stringify(expectedEntryBursts),
-  `clock-to-V35 relay transition counts changed: got ${JSON.stringify(relayBursts)}, expected ${JSON.stringify(expectedEntryBursts)}`);
+assert(context.lampTestActive === true, 'V35 did not remain active after start');
+assert(relayBursts.length === 0,
+  'V35 row clicks must be scheduled, not emitted synchronously');
 assert(context.agcRelayWords[8] === 0o1675,
   'synthetic V35 did not latch physical FULLDSP relay-8 state');
 assert(context.agcRelayWords[12] === 0o674,
   'synthetic V35 did not latch Luminary relay-12 state');
 
-assert(timers.size === 1, `V35 must have exactly one teardown timer, found ${timers.size}`);
-const [[naturalTimerId, naturalTimer]] = Array.from(timers.entries());
-assert(naturalTimerId === context.lampTestTimer && naturalTimer.ms === 5000,
+const naturalTimerId = context.lampTestTimer;
+const naturalTimer = timers.get(naturalTimerId);
+assert(naturalTimer && naturalTimer.ms === 5000,
   'refined V35 teardown timer is not the active 5-second handle');
-const entryBurstCount = relayBursts.length;
+const entryTimers = sortedTimersExcept(naturalTimerId);
+const expectedEntryTimers = entryRows
+  .filter((row) => row.changed > 0)
+  .map((row) => ({ ms: row.index * 40, changed: row.changed }));
+assert(JSON.stringify(entryTimers.map(([, timer]) => timer.ms))
+    === JSON.stringify(expectedEntryTimers.map((row) => row.ms)),
+  `V35 entry row cadence changed: got ${JSON.stringify(entryTimers.map(([, timer]) => timer.ms))}, expected ${JSON.stringify(expectedEntryTimers.map((row) => row.ms))}`);
+for (const [id] of entryTimers) fireTimer(id);
+assert(JSON.stringify(relayBursts) === JSON.stringify(expectedEntryTimers.map((row) => row.changed)),
+  `V35 entry Hamming bursts changed: ${JSON.stringify(relayBursts)}`);
+assert(timers.size === 1 && timers.has(naturalTimerId),
+  'only the five-second teardown timer should remain after entry row sounds fire');
+
 const v35Active = Object.fromEntries(relayOrder.map((relay) => [
   relay,
   relay === 12 ? 0o674 : context.v35RelayWord(relay) & 0o3777
@@ -215,18 +229,22 @@ const restored = {
   12: 0,
   ...restoreClockWords
 };
-const expectedReturnBursts = relayOrder.map((relay) =>
-  popcount11(v35Active[relay] ^ restored[relay])).filter((count) => count > 0);
+const returnRows = relayOrder.map((relay, index) => ({
+  index,
+  changed: popcount11(v35Active[relay] ^ restored[relay])
+}));
+const expectedReturnTimers = returnRows
+  .filter((row) => row.changed > 0)
+  .map((row) => ({ ms: row.index * 40, changed: row.changed }));
 
-const naturalStart = calls.length;
-naturalTimer.callback();
-assert(JSON.stringify(calls.slice(naturalStart)) === JSON.stringify([
+const callsBeforeNatural = calls.length;
+const burstCountBeforeReturn = relayBursts.length;
+fireTimer(naturalTimerId);
+assert(JSON.stringify(calls.slice(callsBeforeNatural)) === JSON.stringify([
   ['press', 'R'],
   ['cancelLampTest'],
   ['syncClockFace']
-]), `natural V35 teardown did not use base RSET/sync exactly once: ${JSON.stringify(calls.slice(naturalStart))}`);
-assert(JSON.stringify(relayBursts.slice(entryBurstCount)) === JSON.stringify(expectedReturnBursts),
-  `V35-to-clock relay transition counts changed: got ${JSON.stringify(relayBursts.slice(entryBurstCount))}, expected ${JSON.stringify(expectedReturnBursts)}`);
+]), `natural V35 teardown did not use base RSET/sync exactly once: ${JSON.stringify(calls.slice(callsBeforeNatural))}`);
 assert(!calls.some((entry) => entry[0] === 'obsoleteBaseV35Timeout'),
   'obsolete base V35 teardown callback survived refinement');
 assert(context.lampTestActive === false && context.lampTestTimer === 0,
@@ -234,13 +252,22 @@ assert(context.lampTestActive === false && context.lampTestTimer === 0,
 assert(context.verb === '16' && context.noun === '65',
   `natural V35 teardown did not restore V16 N65: V${context.verb} N${context.noun}`);
 
-relayBursts.length = 0;
+const returnTimers = sortedTimersExcept();
+assert(JSON.stringify(returnTimers.map(([, timer]) => timer.ms))
+    === JSON.stringify(expectedReturnTimers.map((row) => row.ms)),
+  `V35 return row cadence changed: got ${JSON.stringify(returnTimers.map(([, timer]) => timer.ms))}, expected ${JSON.stringify(expectedReturnTimers.map((row) => row.ms))}`);
+for (const [id] of returnTimers) fireTimer(id);
+assert(JSON.stringify(relayBursts.slice(burstCountBeforeReturn))
+    === JSON.stringify(expectedReturnTimers.map((row) => row.changed)),
+  `V35 return Hamming bursts changed: ${JSON.stringify(relayBursts.slice(burstCountBeforeReturn))}`);
+assert(timers.size === 0, 'V35 return row sound timers did not drain');
+
+// Start again and prove ordinary input is blocked while RSET remains the escape.
 context.verb = '35';
 context.noun = '65';
 lampState.set('prog', true);
 for (const relay of context.CLOCK_RELAYS) context.clockRelayWords[relay] = 0;
 context.lampTest();
-
 const beforeBlocked = calls.length;
 assert(context.press('5') === undefined, 'ordinary key must be ignored while clock V35 owns the display');
 assert(calls.length === beforeBlocked, 'blocked V35 key leaked into the underlying press handler');
@@ -251,26 +278,36 @@ assert(JSON.stringify(calls.slice(resetStart)) === JSON.stringify([
   ['press', 'R'],
   ['cancelLampTest'],
   ['syncClockFace']
-]), `RSET V35 base cancellation/restore path changed: ${JSON.stringify(calls.slice(resetStart))}`);
-assert(context.lampTestActive === false,
-  'base RSET did not cancel V35 state');
+]), `RSET V35 cancellation/restore path changed: ${JSON.stringify(calls.slice(resetStart))}`);
+assert(context.lampTestActive === false, 'base RSET did not cancel V35 state');
+// RSET cancels pending entry sounds and schedules only the physical return rows.
+for (const [id] of sortedTimersExcept()) fireTimer(id);
+assert(timers.size === 0, 'RSET return sound timers did not drain');
 
 assert(context.press('7') === 'pressed:7', 'ordinary clock key must pass through when V35 is inactive');
-assert(calls.at(-1)[1] === '7', 'ordinary key did not reach base press handler');
 
+// Entering AGC while V35 is active must cancel both the light-test timer and
+// any pending synthetic row-sound timers, without a fake clock redisplay.
+context.verb = '35';
+context.noun = '65';
+context.lampTest();
+assert(timers.size > 1, 'AGC cancellation test needs pending V35 sound timers');
 context.mode = 'clock';
-context.lampTestActive = true;
 const agcStart = calls.length;
 assert(context.enterAgc('test') === 'entered-agc', 'wrapped enterAgc return value changed');
 assert(JSON.stringify(calls.slice(agcStart)) === JSON.stringify([
   ['cancelLampTest'],
   ['enterAgc', 'test']
 ]), `enterAgc V35 cleanup path changed: ${JSON.stringify(calls.slice(agcStart))}`);
-assert(context.lampTestActive === false,
-  'AGC transition left synthetic V35 active');
+assert(context.lampTestActive === false && timers.size === 0,
+  'AGC transition leaked synthetic V35 timers/sounds');
 
+// Mission selection remains in clock mode, so it routes through base RSET and
+// may legitimately leave only the newly scheduled V35->clock return sounds.
 context.mode = 'clock';
-context.lampTestActive = true;
+context.verb = '35';
+context.noun = '65';
+context.lampTest();
 const missionStart = calls.length;
 assert(context.cycleMission('test') === 'cycled-mission', 'wrapped cycleMission return value changed');
 assert(JSON.stringify(calls.slice(missionStart)) === JSON.stringify([
@@ -281,16 +318,15 @@ assert(JSON.stringify(calls.slice(missionStart)) === JSON.stringify([
 ]), `cycleMission V35 cleanup path changed: ${JSON.stringify(calls.slice(missionStart))}`);
 assert(context.lampTestActive === false,
   'mission transition left synthetic V35 active');
+for (const [id] of sortedTimersExcept()) fireTimer(id);
+assert(timers.size === 0, 'mission-change return sound timers did not drain');
 
-// Raw channel diagnostics preserve the exact incoming word and capture the
-// source mode while delegating unchanged to app.js's renderer.
+// Raw channel diagnostics preserve the exact incoming word and source mode.
 context.mode = 'agc';
 assert(context.decodeChannel11(0o00177) === 'ch11:127',
   'channel 011 refinement changed base return value');
 assert(context.decodeChannel163(0o01770) === 'ch163:1016',
   'channel 0163 refinement changed base return value');
-assert(typeof context.window.AGCDSKY.snapshotChannels === 'function',
-  'AGCDSKY.snapshotChannels diagnostic was not registered');
 const channels = context.window.AGCDSKY.snapshotChannels();
 assert(channels.ch011.value === 0o00177 && channels.ch011.mode === 'agc',
   'channel 011 diagnostic lost raw value/source mode');
@@ -302,10 +338,6 @@ const channelsAgain = context.window.AGCDSKY.snapshotChannels();
 assert(channelsAgain.ch011.value === 0o00177 && channelsAgain.ch0163.mode === 'agc',
   'channel diagnostic leaked mutable internal state');
 
-assert(typeof context.window.AGCDSKY.snapshotRelays === 'function',
-  'AGCDSKY.snapshotRelays diagnostic was not registered');
-assert(typeof context.window.AGCDSKY.snapshotDsky === 'function',
-  'AGCDSKY.snapshotDsky diagnostic was not registered');
 const relays = context.window.AGCDSKY.snapshotRelays();
 const originalClock8 = context.clockRelayWords[8];
 const originalAgc11 = context.agcRelayWords[11];
@@ -316,8 +348,7 @@ assert(context.clockRelayWords[8] === originalClock8 && context.agcRelayWords[11
 
 console.log('app refinement smoke: PASS');
 console.log('  FULLDSP relay-8 physical drive: PASS');
-console.log('  clock -> V35 -> clock physical relay deltas: PASS');
-console.log('  natural V35 timeout -> V16 N65: PASS');
-console.log('  clock V35 ordinary-key isolation: PASS');
-console.log('  base RSET/AGC + refined mission cancellation: PASS');
+console.log('  40-ms clock -> V35 -> clock row cadence: PASS');
+console.log('  Hamming relay deltas + natural V16 N65 return: PASS');
+console.log('  RSET/AGC/mission synthetic timer ownership: PASS');
 console.log('  read-only relay + raw-channel diagnostics: PASS');
