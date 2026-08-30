@@ -391,6 +391,7 @@ async function keySequence(cdp, keys, basePointerId) {
   }
 }
 
+const PROGRAM00_LOW11 = 0o1265; // two digit-0 relay codes: 025 / 025
 const V35_RELAY_LOW11 = Object.freeze({
   1: 0o1675, 2: 0o3675, 3: 0o1675, 4: 0o1675,
   5: 0o3675, 6: 0o1675, 7: 0o3675, 8: 0o1675,
@@ -400,6 +401,23 @@ const STEADY_V35_LAMPS = Object.freeze([
   'uplink', 'temp', 'noatt', 'gimbal', 'stby', 'prog',
   'restart', 'tracker', 'alt', 'vel'
 ]);
+
+async function waitForP00(cdp) {
+  const deadline = Date.now() + 3500;
+  let last;
+  while (Date.now() < deadline) {
+    last = await cdp.evaluate(dskyExpression());
+    const relay11 = last && last.relays && last.relays.agc && last.relays.agc[11];
+    if (last && last.display && last.display.prog === '00' && relay11 === PROGRAM00_LOW11) {
+      return last;
+    }
+    if (last && last.modeText.includes('AGC ERROR')) {
+      throw new Error(`AGC stopped while entering P00: ${last.modeText}`);
+    }
+    await delay(75);
+  }
+  throw new Error(`V37E00E did not produce channel-driven PROG 00 / relay 11 low-11 01265; last state: ${JSON.stringify(last)}`);
+}
 
 function relayWordsMatch(state) {
   const relays = state && state.relays && state.relays.agc;
@@ -508,15 +526,18 @@ async function main() {
     await enterLuminary(cdp);
 
     // P00 is the documented precondition. Every key goes through the actual
-    // pointer handler, not a direct call to the AGC wrapper.
+    // pointer handler, not a direct call to the AGC wrapper. Do not use a fixed
+    // sleep as proof of the major-mode change: require the real channel-010
+    // program-row relay state for 00 before issuing V35.
     await keySequence(cdp, ['V', '3', '7', 'E', '0', '0', 'E'], 1100);
-    await delay(500);
+    const p00 = await waitForP00(cdp);
     await keySequence(cdp, ['V', '3', '5', 'E'], 1200);
 
     const visible = await waitForVisibleV35(cdp);
     const offPhase = await proveV35FlashOffPhase(cdp);
 
     console.log('Device V35 semantic smoke: PASS');
+    console.log(`  P00 precondition: PROG ${p00.display.prog}; relay 11 low-11 0o${p00.relays.agc[11].toString(8).padStart(4, '0')}`);
     console.log(`  rendered DSKY: PROG ${visible.display.prog} VERB ${visible.display.verb} NOUN ${visible.display.noun}`);
     console.log(`  registers: ${visible.display.r1.sign}${visible.display.r1.digits} ${visible.display.r2.sign}${visible.display.r2.digits} ${visible.display.r3.sign}${visible.display.r3.digits}`);
     console.log(`  channel 010 relay latches 1-12: ${JSON.stringify(visible.relays.agc)}`);
