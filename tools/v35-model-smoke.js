@@ -6,7 +6,10 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
-const app = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/app.js'), 'utf8');
+const ASSETS = path.join(ROOT, 'app/src/main/assets');
+const app = fs.readFileSync(path.join(ASSETS, 'app.js'), 'utf8');
+const refine = fs.readFileSync(path.join(ASSETS, 'app-refine.js'), 'utf8');
+const html = fs.readFileSync(path.join(ASSETS, 'index.html'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -36,35 +39,63 @@ assert(app.includes('decodeChannel163(0o00730);'),
   'clock V35 must assert TEMP/KEY REL/OPR ERR/RESTART/STBY through the DSKY state path');
 assert(!/function lampTest\(\)[\s\S]*?querySelectorAll\('\[data-lamp\]'\)[\s\S]*?classList\.add\('on'\)/.test(app),
   'clock V35 must not bypass the relay/state model by force-lighting every DOM lamp');
+assert(html.indexOf('<script src="app-refine.js"></script>') > html.indexOf('<script src="app.js"></script>'),
+  'app-refine.js must load after app.js so the effective V35 relay model is installed');
 
+// Load the base relay-word constructor, then the actual post-load refinement
+// layer. This tests the effective browser binding rather than a second model in
+// the smoke itself.
 const start = app.indexOf('function v35RelayWord(');
 const end = app.indexOf('function startClockV35Flash', start);
 assert(start >= 0 && end > start, 'could not isolate v35RelayWord');
 const context = {
   DIGIT_RELAY: digitRelay,
   CHANNEL10_DIGITS: channel10Digits,
-  CHANNEL10_SIGNS: channel10Signs
+  CHANNEL10_SIGNS: channel10Signs,
+  mode: 'clock',
+  lampTestActive: false,
+  selectedMission: 'luminary099',
+  clockRelayWords: {},
+  agcRelayWords: {},
+  window: { AGCDSKY: {} },
+  press() {},
+  enterAgc() {},
+  cycleMission() {}
 };
 vm.createContext(context);
-vm.runInContext(app.slice(start, end) + '\nthis.__v35RelayWord=v35RelayWord;', context,
+vm.runInContext(app.slice(start, end) + '\nthis.__baseV35RelayWord=v35RelayWord;', context,
   { filename: 'app-v35-relays.js' });
-const v35RelayWord = context.__v35RelayWord;
+const baseV35RelayWord = context.__baseV35RelayWord;
+vm.runInContext(refine, context, { filename: 'app-refine.js' });
+const v35RelayWord = context.v35RelayWord;
+assert(typeof v35RelayWord === 'function', 'effective V35 relay constructor missing after refinement');
 
+// Luminary 99 VBTSTLTS loads FULLDSP 05675 into every numeric DSPTAB entry.
+// After T4 strips the dirty/selector bits, every ordinary numeric row therefore
+// carries low-11 01675; the three plus rows carry FULLDSP1 low-11 03675.
+// Relay 8's C field is not visibly connected, but those five physical relays are
+// still driven and must be represented by the model.
 for (const relay of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const value = v35RelayWord(relay);
   assert(((value >> 11) & 0o17) === relay,
     `V35 relay word selected ${((value >> 11) & 0o17)} instead of ${relay}`);
   const c = (value >> 5) & 0o37;
   const d = value & 0o37;
-  for (const [,, source] of channel10Digits[relay]) {
-    const code = source === 'c' ? c : d;
-    assert(code === 0o35, `V35 relay ${relay} ${source.toUpperCase()} field is not digit 8`);
-  }
+  assert(c === 0o35 && d === 0o35,
+    `V35 relay ${relay} must drive both physical five-relay fields to digit 8`);
   const sign = channel10Signs[relay];
   const b = (value >> 10) & 1;
   assert(b === (sign && sign[1] === 'plus' ? 1 : 0),
     `V35 relay ${relay} sign bit does not match the shared sign matrix`);
+  const expectedLow11 = [7, 5, 2].includes(relay) ? 0o3675 : 0o1675;
+  assert((value & 0o3777) === expectedLow11,
+    `V35 relay ${relay} low-11 word is 0${(value & 0o3777).toString(8)}, expected 0${expectedLow11.toString(8)}`);
 }
+
+assert(((baseV35RelayWord(8) >> 5) & 0o37) === 0,
+  'base relay-8 behavior changed; remove the refinement only after app.js itself models FULLDSP');
+assert(((v35RelayWord(8) >> 5) & 0o37) === 0o35,
+  'effective relay-8 C bank must be driven by the refinement layer');
 
 for (const relay of [7, 5, 2]) {
   assert((v35RelayWord(relay) & 0o2000) !== 0,
@@ -87,6 +118,7 @@ assert(flashSource.includes("setLamp('keyrel',!off);setLamp('oprerr',!off);"),
   'V35 off phase must suppress KEY REL and OPR ERR with V/N blanking');
 
 console.log('V35 relay model smoke: PASS');
-console.log('  21 numerical positions + three plus signs: PASS');
+console.log('  FULLDSP/FULLDSP1 physical relay rows: PASS');
+console.log('  21 visible numerical positions + three plus signs: PASS');
 console.log('  relay-12 condition lights / COMP exclusion: PASS');
 console.log('  five-second test / 1.28 s 75% flash: PASS');
