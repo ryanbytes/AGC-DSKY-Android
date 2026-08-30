@@ -42,6 +42,20 @@ assert(!/function lampTest\(\)[\s\S]*?querySelectorAll\('\[data-lamp\]'\)[\s\S]*
 assert(html.indexOf('<script src="app-refine.js"></script>') > html.indexOf('<script src="app.js"></script>'),
   'app-refine.js must load after app.js so the effective V35 relay model is installed');
 
+// RSET/mission/mode refinement depends on this base helper actually killing
+// both asynchronous pieces of the synthetic test. Guard the contract directly
+// instead of allowing the wrapper smoke to fake a stronger cancel function.
+const cancelStart = app.indexOf('function cancelLampTest(');
+const cancelEnd = app.indexOf('function v35RelayWord(', cancelStart);
+assert(cancelStart >= 0 && cancelEnd > cancelStart, 'could not isolate cancelLampTest');
+const cancelSource = app.slice(cancelStart, cancelEnd);
+assert(cancelSource.includes('clearTimeout(lampTestTimer)'),
+  'cancelLampTest must clear the five-second V35 teardown timeout');
+assert(cancelSource.includes('clearInterval(lampTestFlashTimer)'),
+  'cancelLampTest must clear the 320-ms V35 flash interval');
+assert(cancelSource.includes('lampTestActive=false'),
+  'cancelLampTest must clear the active-test ownership flag');
+
 // Load the base relay-word constructor, then the actual post-load refinement
 // layer. This tests the effective browser binding rather than a second model in
 // the smoke itself.
@@ -59,6 +73,7 @@ const context = {
   agcRelayWords: {},
   window: { AGCDSKY: {} },
   press() {},
+  cancelLampTest() {},
   enterAgc() {},
   cycleMission() {}
 };
@@ -119,6 +134,7 @@ assert(flashSource.includes("setLamp('keyrel',!off);setLamp('oprerr',!off);"),
 
 console.log('V35 relay model smoke: PASS');
 console.log('  FULLDSP/FULLDSP1 physical relay rows: PASS');
+console.log('  explicit timeout + flash-interval cancellation contract: PASS');
 console.log('  21 visible numerical positions + three plus signs: PASS');
 console.log('  relay-12 condition lights / COMP exclusion: PASS');
 console.log('  five-second test / 1.28 s 75% flash: PASS');
