@@ -15,7 +15,7 @@ The relay code used by the numeric contact decoder is:
 - 1 = `003`
 - 2 = `031`
 - 3 = `033`
-- 4 = `027`
+- 4 = `017`
 - 5 = `036`
 - 6 = `034`
 - 7 = `023`
@@ -23,6 +23,12 @@ The relay code used by the numeric contact decoder is:
 - 9 = `037`
 
 All values above are octal.
+
+The channel-10 display-selector matrix is shared by both the synthetic phone-clock relay encoder and the authentic AGC decoder. There is intentionally no second `CLOCK_GROUPS` topology. Relay 8 uses only its connected right/D digit field; relay selectors 7/6, 5/4 and 2/1 latch the independent plus/minus sign states for R1, R2 and R3.
+
+Unsupported five-bit character patterns are not treated as blank. The decoder rejects an invalid relay word, leaves the last good latched/displayed state unchanged, and records one diagnostic per unique bad word/detail. This follows VirtualAGC's treatment of non-table character patterns as I/O errors rather than inventing a display glyph.
+
+For the Apollo-11-era LM panel, relay-12 bits 1 and 2 are intentionally unplacarded/blank. Later Apollo 15-17 LM panels labeled those positions PRIO DISP and NO DAP; this project keeps the Apollo 11-14 layout.
 
 ## Source-backed timing
 
@@ -47,19 +53,39 @@ Both setting and resetting a bistable relay are mechanical transitions and can p
 
 ## V35 DSKY light test
 
-Apollo documentation describes V35 as a P00-only light test. In Luminary/Colossus-family software the test does not merely repaint a display bitmap:
+Apollo 11 Luminary 99 implements Verb 35 at `VBTSTLTS`. The source is explicit rather than inferred from a screenshot:
 
-- the numeric `DSPTAB` entries are changed so the numerical windows display **8** and R1/R2/R3 display **+88888** through the ordinary channel-10 relay matrix;
-- warning/status outputs are asserted;
-- VERB/NOUN flashing is enabled;
-- output channel 13 bit 10 (`ALTEST`, TEST DSKY LIGHTS / TEST ALARMS) is asserted to exercise otherwise inaccessible alarm/indicator circuitry including RESTART/STBY paths;
-- the test remains active for about **5 seconds**, then the caution/status test outputs are removed.
+- `FULLDSP = 05675` writes numerical **8** patterns;
+- `FULLDSP1 = 07675` writes **8** plus the sign B bit, producing **+88888** in R1/R2/R3;
+- `TSTCON2 = 40674` supplies the relay-12 LM condition-light word; its visible low-11 state is `00674` octal;
+- `TSTCON1 = 00175` turns on UPLINK ACTY, TEMP, KEY REL, V/N flash and OPR ERR;
+- channel 13 bit 10 TEST ALARM is asserted, which the yaAGC DSKY model exposes as RESTART/STBY;
+- `SHOLTS = 0764` schedules the light-test teardown after about **5 seconds**.
 
-For Luminary, `DSPTAB+11D` is the latching condition-light relay word. Its visible LM assignments include Landing Radar Velocity Fail (VEL), NO ATT, Landing Radar Altitude Fail (ALT), GIMBAL LOCK, TRACKER and PROG. The all-visible-condition-light test state for these bits is `00674` octal.
+The visible Apollo-11 LM relay-12 assignments are VEL, NO ATT, ALT, GIMBAL LOCK, TRACKER and PROG. COMP ACTY is **not** forced by V35 because channel 11 bit 2 is not part of the V35 test mask.
 
-COMP ACTY is **not** synthetically forced on by V35. Its DSKY relay is operated by output channel 11 bit 2; the V35 warning/status mask does not assert that bit.
+yaAGC's DSKY hardware model further defines flashing as a **1.28 s period with 75% duty cycle**. During the off quarter, V/N is blanked and KEY REL / OPR ERR are suppressed. AGC mode follows the already-modulated synthetic channel `0163`; it does not start a second frontend flasher. The phone-clock-only V35 convenience mode mirrors that 4 × 320 ms modulation locally because no AGC engine is running there.
 
-The application therefore routes V35 through the same physical relay-state machine as ordinary channel-10 output. There is no direct `88`/all-lamps DOM shortcut.
+Both clock-mode and AGC-mode V35 numerical rendering now use the same channel-10 relay decoder. Clock-mode V35 does not use an `88`/all-lamps DOM shortcut.
+
+## Automated relay gates
+
+`tools/dsky-mapping-smoke.js` executes the committed channel-10 decoder in a Node VM and checks:
+
+- selectors 1 through 12 and all 21 numerical positions;
+- relay-8 right-only behavior;
+- independent plus/minus latches and plus display priority;
+- all six Apollo-11 LM relay-12 condition lamps;
+- valid blank code 000 versus invalid five-bit codes;
+- malformed-word state preservation and rate-limited diagnostics;
+- shared phone-clock/AGC relay topology;
+- channel 011 and synthetic channel 0163 mappings.
+
+`tools/v35-model-smoke.js` checks the clock-mode V35 relay words, plus-sign rows, 5-second duration, COMP exclusion, relay-12 mask, and 1.28-second/75% flash model.
+
+`tools/wasm-runtime-smoke.js` drives real `V37E00E` then `V35E` through the exact pinned yaAGC WASM and ropes. Its semantic relay gate requires all 21 numerical positions to be 8, plus-sign bits on R1/R2/R3, and for Luminary099 all six Apollo-11 LM relay-12 condition-light bits.
+
+These host-side gates are part of `tools/build-local.sh`. They are not a substitute for the Android/WebView device gate and must not be reported as passing until actually executed in a complete checkout with the pinned WASM/rope assets.
 
 ## AGC mode
 
@@ -69,6 +95,7 @@ When running Luminary through yaAGC, software-originated channel-10 timing is re
 
 - MIT Instrumentation Laboratory, **R-700 Apollo Guidance, Navigation and Control** — relay-matrix topology, five relays per digit, 120 latching + 12 non-latching relays.
 - Apollo 11 **Luminary 99 `T4RUPT_PROGRAM.agc`** — `HANG20`, `20MRUPT`, `QUIKDSP`, `QUIKOFF`, `120MRUPT` display timing.
-- Apollo GN&CS **User's Guide, E-2448** — V35 P00 restriction, all display-panel lights for 5 seconds.
-- Programmed Guidance Equations / AGC I/O descriptions — channel 13 bit 10 light/alarm test and V35 display/output behavior.
-- VirtualAGC Luminary telemetry documentation — `DSPTAB+11D` LM condition-light bit assignments.
+- Apollo 11 **Luminary 99 `PINBALL_GAME__BUTTONS_AND_LIGHTS.agc`** — `VBTSTLTS`, `FULLDSP`, `FULLDSP1`, `TSTCON1`, `TSTCON2`, `SHOLTS` V35 behavior.
+- VirtualAGC `yaAGC/agc_engine.c` — DSKY channel-0163 modulation, 1.28-second flash period and 75% duty cycle.
+- VirtualAGC `yaDSKY2.cpp` and `piPeripheral/convertNasspLog.py` — channel-10 selector/sign/digit relay mapping and invalid-code treatment.
+- VirtualAGC LM DSKY/telemetry documentation — Apollo 11-14 blank relay-12 positions and later PRIO DISP / NO DAP labels.
