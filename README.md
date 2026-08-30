@@ -13,7 +13,7 @@ Current source features:
 - Fixed-coordinate SVG electroluminescent display so digit fields cannot be independently stretched by CSS.
 - Custom narrow EL segment vectors rather than a generic seven-segment font.
 - `V16 N65` phone clock mode.
-- `V35E` clock-mode lamp test.
+- Source-backed `V35E` clock-mode light test using the channel-010 relay model rather than direct all-8 DOM painting.
 - Dim mode.
 - Android `DreamService` screen saver intended for charging/idle use.
 - Small periodic position drift in dream mode to reduce completely static OLED content.
@@ -23,14 +23,18 @@ Current source features:
 - Persistent mission selector: Apollo 11 LM **Luminary 099** or CM **Comanche 055**.
 - AGC execution pauses while the normal app is hidden and resumes in place when the same WebView returns.
 - Requested AGC/CLOCK mode and selected mission persist across Activity/page recreation; recreated AGC mode starts from a fresh core reset rather than pretending CPU/erasable-memory state was serialized.
-- Authentic Block II DSKY output-channel decoding for numeric registers and annunciators.
+- Authentic Block II DSKY output-channel decoding for numeric registers, signs, and annunciators.
 - Authentic DSKY key codes back into yaAGC, including separate press-and-hold PRO/Proceed handling.
 - `COMP ACTY` in AGC mode is tied directly to **output channel 011 octal, bit 2**. The old phone-network activity surrogate has been removed.
+- One shared channel-010 selector/sign topology is used by the authentic AGC decoder and the synthetic clock relay encoder; invalid five-relay character patterns are rejected rather than silently turned into blanks.
+- The V35 model preserves Luminary's physical `FULLDSP`/`FULLDSP1` relay states, including the otherwise-unconnected C five-relay bank on selector 8.
 - Local asset interception uses URI path segments rather than substring offsets, avoiding the old diagnostic APK's request-path index crash.
 - yaAGC input writes are checked for queue-full/invalid-packet failures rather than silently dropping DSKY input.
 - Local builds verify the exact pinned webAGC gitlink and exact Git-blob identities of `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin` before packaging.
-- The verified build path instantiates the **real pinned yaAGC WASM under Node** before Gradle runs, validates its complete import/export contract, loads both real ropes, executes CPU cycles and DSKY inputs, and proves each mission gets its own WASM instance/memory.
+- APK verification byte-compares every required current frontend layer, including `app-refine.js`, so the relay/V35 refinements cannot be omitted from a supposedly current package.
+- The verified build path instantiates the **real pinned yaAGC WASM under Node** before Gradle runs, validates its complete import/export contract, loads both real ropes, executes CPU cycles and DSKY inputs, and includes a semantic `V37E00E` → `V35E` relay check.
 - Debug APK device smoke requires a native `FRONTEND READY app` marker after the WebView frontend completes initialization; a surviving Android process with a blank/partially initialized page does not count as a pass.
+- The live V35 device gate is relay-aware: it checks exact Luminary relay latches, rendered `88` / `+88888`, V35 annunciators with COMP ACTY excluded, and an actual yaAGC-modulated V/N + KEY REL/OPR ERR off phase.
 
 ## AGC mode
 
@@ -43,12 +47,12 @@ The emulator path is:
 3. The selected packaged rope (`Luminary099.bin` or `Comanche055.bin`) is copied into yaAGC fixed memory with `set_fixed()`.
 4. yaAGC's lazily initialized I/O ring buffers are primed, the CPU is reset back to the true mission reset state, and DSKY input masks are then queued.
 5. The CPU is stepped at approximately real AGC timing while the normal app is visible.
-6. `packet_read()` output drives the DSKY.
+6. `packet_read()` output drives the DSKY relay/lamp state.
 7. DSKY key presses are sent back through checked `packet_write()` calls.
 
 Implemented DSKY channels include:
 
-- `010` octal — display relay words and six annunciators.
+- `010` octal — display relay words and six Apollo-11-era LM condition annunciators.
 - `011` octal — COMP ACTY and UPLINK ACTY.
 - `0163` octal — yaAGC's modulated DSKY caution/blink states.
 - `015` octal — normal DSKY keyboard input.
@@ -58,7 +62,7 @@ Implemented DSKY channels include:
 
 The pinned upstream WASM engine defaults its internal `CmOrLm` global to LM and does not expose a WASM setter. `Comanche055.bin` is still the exact pinned CM rope and is exercised by the real-WASM preflight, but **full CM peripheral-mode fidelity is not currently claimed**. In the ring-buffer path used by webAGC, the known mode-dependent branch is LM rotational-hand-controller bookkeeping on channel `013`; this app does not provide RHC inputs. See `docs/LOCAL_BUILD.md` for the exact limitation and the safe path if an explicit CM mode API is later required.
 
-See `docs/PROGRESS.md` for the exact verification status and known risks.
+See `docs/PROGRESS.md` and `docs/DSKY_RELAY_TIMING.md` for the exact relay model and verification status.
 
 ## Clock / screen saver
 
@@ -91,7 +95,8 @@ A checkout without the submodule does not contain the AGC binary assets required
 - `app/src/main/assets/index.html` — DSKY structure and fixed EL SVG coordinate system.
 - `app/src/main/assets/style.css` — physical faceplate, annunciators, keys, display treatment.
 - `app/src/main/assets/controls-layout.css` — wrapping behavior for the hidden phone controls.
-- `app/src/main/assets/app.js` — clock mode, mission selection, lifecycle coordination, authentic DSKY channel/relay decoding, key routing.
+- `app/src/main/assets/app.js` — clock mode, mission selection, lifecycle coordination, authentic DSKY channel/relay decoding, key routing, and the base relay model.
+- `app/src/main/assets/app-refine.js` — narrow post-load relay/V35 refinements plus read-only relay/render diagnostics used by device smokes; it is not intended to become a second app implementation.
 - `app/src/main/assets/agc-core.js` — offline yaAGC WASM loader, minimal WASI shim, rope loading, CPU stepping, packet I/O.
 - `app/src/main/java/org/apollo/agcdsky/MainActivity.java` — immersive interactive WebView shell and Activity/WebView lifecycle coordination.
 - `app/src/main/java/org/apollo/agcdsky/AgcDreamService.java` — Android screen saver shell.
@@ -99,9 +104,11 @@ A checkout without the submodule does not contain the AGC binary assets required
 - `vendor/webAGC` — pinned upstream core/rope submodule.
 - `tools/build-local.sh` — deterministic local source build entrypoint.
 - `tools/verify-apk.sh` — post-build APK asset/manifest/signature verification.
-- `tools/wasm-runtime-smoke.js` — real pinned yaAGC/rope Node runtime preflight.
+- `tools/wasm-runtime-smoke.js` — real pinned yaAGC/rope Node runtime preflight and V35 relay semantic gate.
+- `tools/device-v35-smoke.js` — end-to-end relay/render/annunciator V35 Android WebView gate.
 - `tools/device-smoke.sh` — immediate ADB install/launch/frontend-readiness diagnostic smoke.
 - `docs/LOCAL_BUILD.md` — exact local build requirements and verification gates.
+- `docs/DSKY_RELAY_TIMING.md` — source-backed relay topology, timing, and V35 model.
 - `docs/PROGRESS.md` — live implementation/verification status and next checkpoint.
 - `AGENTS.md` — durable instructions for coding agents continuing the work.
 - `docs/IMPLEMENTATION_NOTES.md` — design/build history.
@@ -125,9 +132,15 @@ git submodule update --init --recursive
 bash tools/build-local.sh
 ```
 
-That path requires and runs all JavaScript/source smoke tests, executes the real pinned yaAGC WASM with both actual ropes under Node, verifies the exact pinned webAGC checkout and binary blobs, builds from a clean app build tree, then verifies packaged frontend/binaries, merged APK metadata/permissions, debug status, and APK signature. See `docs/LOCAL_BUILD.md` for details.
+That path syntax-checks all helper scripts, runs the source/relay/refinement tests, executes the real pinned yaAGC WASM with both actual ropes under Node, verifies the exact pinned webAGC checkout and binary blobs, builds from a clean app build tree, then verifies packaged frontend/binaries, merged APK metadata/permissions, debug status, and APK signature. See `docs/LOCAL_BUILD.md` for details.
 
-A passing build is still not proof that the current AGC runtime works on Android. Do not report v0.7 as runtime-verified until the resulting APK has actually been installed and exercised on an Android device/emulator.
+A passing build is still not proof that the current AGC runtime works on Android. The preferred device checkpoint is:
+
+```bash
+bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+```
+
+Do not report v0.7 as runtime-verified until the corresponding current APK has actually passed the relevant Android checks.
 
 ## Historical APK
 
