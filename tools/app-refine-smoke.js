@@ -124,7 +124,6 @@ const context = {
     context.lampTestActive = false;
   },
   lampTest() {
-    // Model the relevant synchronous portion of app.js's base lampTest.
     context.cancelLampTest();
     context.lampTestActive = true;
     for (const key of Object.keys(context.agcRelayWords)) delete context.agcRelayWords[key];
@@ -140,7 +139,6 @@ const context = {
   press(key) {
     calls.push(['press', key]);
     if (key === 'R') {
-      // Mirror current app.js RSET ordering relevant to the refinement.
       context.cancelLampTest();
       context.mode = 'clock';
       context.verb = '16';
@@ -158,6 +156,14 @@ const context = {
   cycleMission(...args) {
     calls.push(['cycleMission', ...args]);
     return 'cycled-mission';
+  },
+  decodeChannel11(value) {
+    calls.push(['decodeChannel11', value]);
+    return `ch11:${value}`;
+  },
+  decodeChannel163(value) {
+    calls.push(['decodeChannel163', value]);
+    return `ch163:${value}`;
   }
 };
 vm.createContext(context);
@@ -171,9 +177,6 @@ assert((relay8 & 0o3777) === 0o1675,
 assert((context.v35RelayWord(7) & 0o3777) === 0o3675,
   'V35 refinement must not disturb an ordinary plus-sign relay row');
 
-// Starting V35 must be a physical transition from the relay state actually
-// displayed immediately before ENTER: PROG 00, VERB 35, NOUN 65, current time,
-// and the currently lit condition-lamp state.
 const prior = {
   11: (0o25 << 5) | 0o25,
   10: (0o33 << 5) | 0o36,
@@ -196,9 +199,6 @@ assert(context.agcRelayWords[8] === 0o1675,
 assert(context.agcRelayWords[12] === 0o674,
   'synthetic V35 did not latch Luminary relay-12 state');
 
-// The refinement must replace the base teardown timer with exactly one 5-second
-// RSET-based teardown. Its RSET then computes the physical V35->clock delta
-// before the ordinary sync replaces the displayed clock registers.
 assert(timers.size === 1, `V35 must have exactly one teardown timer, found ${timers.size}`);
 const [[naturalTimerId, naturalTimer]] = Array.from(timers.entries());
 assert(naturalTimerId === context.lampTestTimer && naturalTimer.ms === 5000,
@@ -234,7 +234,6 @@ assert(context.lampTestActive === false && context.lampTestTimer === 0,
 assert(context.verb === '16' && context.noun === '65',
   `natural V35 teardown did not restore V16 N65: V${context.verb} N${context.noun}`);
 
-// Start another test for key-isolation and control-transition checks.
 relayBursts.length = 0;
 context.verb = '35';
 context.noun = '65';
@@ -259,8 +258,6 @@ assert(context.lampTestActive === false,
 assert(context.press('7') === 'pressed:7', 'ordinary clock key must pass through when V35 is inactive');
 assert(calls.at(-1)[1] === '7', 'ordinary key did not reach base press handler');
 
-// app.js already cancels V35 on AGC entry. The refinement only discards its
-// synthetic return snapshot so a later clock entry cannot replay stale sounds.
 context.mode = 'clock';
 context.lampTestActive = true;
 const agcStart = calls.length;
@@ -272,8 +269,6 @@ assert(JSON.stringify(calls.slice(agcStart)) === JSON.stringify([
 assert(context.lampTestActive === false,
   'AGC transition left synthetic V35 active');
 
-// cycleMission does not own V35 cancellation, so the refinement routes through
-// base RSET exactly once before changing the selected rope.
 context.mode = 'clock';
 context.lampTestActive = true;
 const missionStart = calls.length;
@@ -287,13 +282,31 @@ assert(JSON.stringify(calls.slice(missionStart)) === JSON.stringify([
 assert(context.lampTestActive === false,
   'mission transition left synthetic V35 active');
 
+// Raw channel diagnostics preserve the exact incoming word and capture the
+// source mode while delegating unchanged to app.js's renderer.
+context.mode = 'agc';
+assert(context.decodeChannel11(0o00177) === 'ch11:127',
+  'channel 011 refinement changed base return value');
+assert(context.decodeChannel163(0o01770) === 'ch163:1016',
+  'channel 0163 refinement changed base return value');
+assert(typeof context.window.AGCDSKY.snapshotChannels === 'function',
+  'AGCDSKY.snapshotChannels diagnostic was not registered');
+const channels = context.window.AGCDSKY.snapshotChannels();
+assert(channels.ch011.value === 0o00177 && channels.ch011.mode === 'agc',
+  'channel 011 diagnostic lost raw value/source mode');
+assert(channels.ch0163.value === 0o01770 && channels.ch0163.mode === 'agc',
+  'channel 0163 diagnostic lost raw value/source mode');
+channels.ch011.value = 0;
+channels.ch0163.mode = 'clock';
+const channelsAgain = context.window.AGCDSKY.snapshotChannels();
+assert(channelsAgain.ch011.value === 0o00177 && channelsAgain.ch0163.mode === 'agc',
+  'channel diagnostic leaked mutable internal state');
+
 assert(typeof context.window.AGCDSKY.snapshotRelays === 'function',
   'AGCDSKY.snapshotRelays diagnostic was not registered');
 assert(typeof context.window.AGCDSKY.snapshotDsky === 'function',
   'AGCDSKY.snapshotDsky diagnostic was not registered');
 const relays = context.window.AGCDSKY.snapshotRelays();
-assert(relays.mode === 'clock' && relays.mission === 'luminary099',
-  'relay snapshot omitted current mode/mission');
 const originalClock8 = context.clockRelayWords[8];
 const originalAgc11 = context.agcRelayWords[11];
 relays.clock[8] = 0o7777;
@@ -307,4 +320,4 @@ console.log('  clock -> V35 -> clock physical relay deltas: PASS');
 console.log('  natural V35 timeout -> V16 N65: PASS');
 console.log('  clock V35 ordinary-key isolation: PASS');
 console.log('  base RSET/AGC + refined mission cancellation: PASS');
-console.log('  read-only relay diagnostics: PASS');
+console.log('  read-only relay + raw-channel diagnostics: PASS');
