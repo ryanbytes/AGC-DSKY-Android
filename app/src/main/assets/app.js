@@ -13,11 +13,13 @@ let entryMode='',entry='',verb='16',noun='65',mode='clock',
     dim=store.get('dim')==='1',
     tickSound=store.get('audioTickV4')!=='0',
     displayOnly=dream||store.get('displayOnly')==='1',
-    lampTestActive=false,controlsTimer=0,audioCtx=null,tickLevel=1,solarFactor=0;
+    lampTestActive=false,lampTestTimer=0,lampTestFlashTimer=0,
+    controlsTimer=0,audioCtx=null,tickLevel=1,solarFactor=0;
 // Luminary 99 T4RUPT: normal display service is 120 ms; once dirty display
 // work enters QUIKDSP, successive bank writes are 40 ms start-to-start with
 // relay drive removed after the intervening 20 ms phase.
 const CLOCK_SCAN_MS=120,CLOCK_DIRTY_BANK_MS=40,CLOCK_SETTLE_MS=20,RELAY_CLICK_SPREAD_MS=2.5;
+const V35_TEST_MS=5000,V35_FLASH_PHASE_MS=320;
 let clockDigits={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']},
     clockRelayWords={},relayQueue=[],relayBusy=false;
 const agcRelayWords={};
@@ -97,9 +99,41 @@ function tick(){
 }
 function setLamp(name,on){const x=document.querySelector(`[data-lamp="${name}"]`);if(x)x.classList.toggle('on',!!on)}
 function clearLamps(){document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.remove('on'));document.body.classList.remove('vn-flash-off','el-off')}
+function cancelLampTest(){
+  if(lampTestTimer){clearTimeout(lampTestTimer);lampTestTimer=0}
+  if(lampTestFlashTimer){clearInterval(lampTestFlashTimer);lampTestFlashTimer=0}
+  lampTestActive=false;document.body.classList.remove('vn-flash-off');
+}
+function v35RelayWord(relay){
+  const targets=CHANNEL10_DIGITS[relay],eight=DIGIT_RELAY['8'];let c=0,d=0;
+  for(const [,,source] of targets){if(source==='c')c=eight;else d=eight}
+  const sign=CHANNEL10_SIGNS[relay],b=sign&&sign[1]==='plus'?1:0;
+  return (relay<<11)|(b<<10)|(c<<5)|d;
+}
+function startClockV35Flash(){
+  let phase=1;
+  lampTestFlashTimer=setInterval(()=>{
+    phase=(phase+1)%4;
+    const off=phase===0;
+    document.body.classList.toggle('vn-flash-off',off);
+    setLamp('keyrel',!off);setLamp('oprerr',!off);
+  },V35_FLASH_PHASE_MS);
+}
 function lampTest(){
-  lampTestActive=true;document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.add('on'));set2('prog','88');set2('verb','88');set2('noun','88');['r1','r2','r3'].forEach(x=>setReg(x,'+','88888'));
-  setTimeout(()=>{lampTestActive=false;if(mode!=='clock')return;clearLamps();set2('prog','00');show(verb,noun);stopClockQueue();syncClockFace()},1800);
+  cancelLampTest();lampTestActive=true;stopClockQueue();resetAgcFace();
+  for(const relay of [11,10,9,8,7,6,5,4,3,2,1])decodeChannel10(v35RelayWord(relay));
+  // Luminary 99 TSTCON2: all six Apollo-11-era LM condition lights.
+  decodeChannel10((12<<11)|0o674);
+  // TSTCON1 turns on UPLINK ACTY but not COMP ACTY. The modulated DSKY
+  // channel carries TEMP, KEY REL, OPR ERR and TEST-ALARM RESTART/STBY.
+  decodeChannel11(0o00004);
+  decodeChannel163(0o00730);
+  startClockV35Flash();
+  lampTestTimer=setTimeout(()=>{
+    cancelLampTest();
+    if(mode!=='clock')return;
+    clearLamps();set2('prog','00');show(verb,noun);stopClockQueue();syncClockFace();
+  },V35_TEST_MS);
 }
 function executeClock(){if(verb==='35'){lampTest();return}if(verb==='16'&&noun==='65'){mode='clock';$('mode').textContent='V16 N65 · PHONE CLOCK';stopClockQueue();syncClockFace();return}$('mode').textContent=`V${verb} N${noun} · DSKY INPUT`}
 
@@ -114,7 +148,7 @@ function releaseAgcProceed(){
   try{agcCore.proceedKey(false)}catch(error){agcFailure(error)}
 }
 function enterClock(status='V16 N65 · PHONE CLOCK'){
-  releaseAgcProceed();
+  cancelLampTest();releaseAgcProceed();
   if(agcCore)agcCore.stop();
   agcPausedForVisibility=false;mode='clock';rememberRunMode('clock');
   $('agc').textContent='AGC';$('mode').textContent=status;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
@@ -222,6 +256,7 @@ async function enterAgc(){
   if(dream||mode==='agc-loading')return;
   if(mode==='agc'){enterClock();return}
 
+  cancelLampTest();
   const selected=missionSpec();
   mode='agc-loading';stopClockQueue();$('agc').textContent='...';$('mode').textContent=`LOADING ${selected.label} · AGC`;resetAgcFace();
   try{
@@ -263,7 +298,7 @@ function press(k){
   if(k==='V'){entryMode='V';entry='';set2('verb','  ');return}
   if(k==='N'){entryMode='N';entry='';set2('noun','  ');return}
   if(k==='C'){entry='';if(entryMode==='V')set2('verb','  ');else if(entryMode==='N')set2('noun','  ');return}
-  if(k==='R'){mode='clock';verb='16';noun='65';set2('prog','00');show(verb,noun);clearLamps();stopClockQueue();syncClockFace();return}
+  if(k==='R'){cancelLampTest();mode='clock';verb='16';noun='65';set2('prog','00');show(verb,noun);clearLamps();stopClockQueue();syncClockFace();return}
   if(k==='K'){setLamp('keyrel',false);return}
   if(k==='P'){setLamp('prog',!document.querySelector('[data-lamp="prog"]').classList.contains('on'));return}
   if(k==='E'){if(entryMode==='V'&&entry.length)verb=entry.padStart(2,'0').slice(-2);if(entryMode==='N'&&entry.length)noun=entry.padStart(2,'0').slice(-2);entryMode='';entry='';show(verb,noun);executeClock();return}
