@@ -158,6 +158,23 @@ enterAgc = function refinedEnterAgc(...args) {
   return baseEnterAgc.apply(this, args);
 };
 
+// Keep the raw channel words that produced the visible discrete state. Device
+// smokes can then verify that a lamp follows its real AGC bit rather than
+// asserting a potentially false semantic shortcut (for example, COMP ACTY may
+// legitimately be on while the Executive is running the V35 job).
+let lastChannel011 = null;
+let lastChannel163 = null;
+const baseDecodeChannel11 = decodeChannel11;
+decodeChannel11 = function refinedDecodeChannel11(value) {
+  lastChannel011 = { value: value & 0o77777, mode };
+  return baseDecodeChannel11(value);
+};
+const baseDecodeChannel163 = decodeChannel163;
+decodeChannel163 = function refinedDecodeChannel163(value) {
+  lastChannel163 = { value: value & 0o77777, mode };
+  return baseDecodeChannel163(value);
+};
+
 // Read-only diagnostics for device smoke tests and field debugging. These
 // snapshots intentionally return copies: callers can inspect the physical
 // relay model without being able to mutate app state through AGCDSKY.
@@ -167,6 +184,13 @@ function snapshotRelays() {
     mission: selectedMission,
     clock: Object.assign({}, clockRelayWords),
     agc: Object.assign({}, agcRelayWords)
+  };
+}
+
+function snapshotChannels() {
+  return {
+    ch011: lastChannel011 ? Object.assign({}, lastChannel011) : null,
+    ch0163: lastChannel163 ? Object.assign({}, lastChannel163) : null
   };
 }
 
@@ -211,6 +235,7 @@ function snapshotDsky() {
   }
   return {
     relays: snapshotRelays(),
+    channels: snapshotChannels(),
     lampTestActive,
     display: {
       prog: readRenderedDigits('prog'),
@@ -228,5 +253,6 @@ function snapshotDsky() {
 
 if (window.AGCDSKY) {
   window.AGCDSKY.snapshotRelays = snapshotRelays;
+  window.AGCDSKY.snapshotChannels = snapshotChannels;
   window.AGCDSKY.snapshotDsky = snapshotDsky;
 }
