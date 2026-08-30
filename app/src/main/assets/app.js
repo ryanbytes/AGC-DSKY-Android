@@ -53,26 +53,20 @@ function show(v,n){verb=v;noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.pa
 // and derive the inverse used by incoming AGC relay words from it.
 const DIGIT_RELAY=Object.freeze({' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31});
 const RELAY_DIGIT=Object.freeze(Object.fromEntries(Object.entries(DIGIT_RELAY).map(([digit,code])=>[code,digit])));
-const CLOCK_GROUPS=[
-  {relay:8,cells:[['r1',0]],singleRight:true},
-  {relay:7,cells:[['r1',1],['r1',2]],b:1},{relay:6,cells:[['r1',3],['r1',4]],b:0},
-  {relay:5,cells:[['r2',0],['r2',1]],b:1},{relay:4,cells:[['r2',2],['r2',3]],b:0},
-  {relay:3,cells:[['r2',4],['r3',0]],b:0},
-  {relay:2,cells:[['r3',1],['r3',2]],b:1},{relay:1,cells:[['r3',3],['r3',4]],b:0}
-];
+const CLOCK_RELAYS=Object.freeze([8,7,6,5,4,3,2,1]);
 function desiredClockDigits(){const d=new Date();return {r1:pad(d.getHours(),5).split(''),r2:pad(d.getMinutes(),5).split(''),r3:pad(d.getSeconds(),5).split('')}}
 function renderClockReg(name){setReg(name,'+',clockDigits[name].join(''))}
-function clockWord(group,want){
-  let c=0,d=0;
-  if(group.singleRight)d=DIGIT_RELAY[want[group.cells[0][0]][group.cells[0][1]]]??0;
-  else{c=DIGIT_RELAY[want[group.cells[0][0]][group.cells[0][1]]]??0;d=DIGIT_RELAY[want[group.cells[1][0]][group.cells[1][1]]]??0}
-  return ((group.b||0)<<10)|(c<<5)|d;
+function clockWord(relay,want){
+  const targets=CHANNEL10_DIGITS[relay];let c=0,d=0;
+  for(const [name,index,source] of targets){const code=DIGIT_RELAY[want[name][index]]??0;if(source==='c')c=code;else d=code}
+  const sign=CHANNEL10_SIGNS[relay],b=sign&&sign[1]==='plus'?1:0;
+  return (b<<10)|(c<<5)|d;
 }
 function popcount11(v){v&=0x7ff;let n=0;while(v){v&=v-1;n++}return n}
 function syncClockFace(){
   const want=desiredClockDigits();
   for(const name of ['r1','r2','r3'])clockDigits[name]=want[name].slice();
-  for(const group of CLOCK_GROUPS)clockRelayWords[group.relay]=clockWord(group,want);
+  for(const relay of CLOCK_RELAYS)clockRelayWords[relay]=clockWord(relay,want);
   ['r1','r2','r3'].forEach(renderClockReg);
 }
 function stopClockQueue(){relayQueue=[];relayBusy=false}
@@ -80,13 +74,13 @@ function runRelayQueue(){
   const job=relayQueue.shift();
   if(!job){relayBusy=false;return}
   if(mode!=='clock'){relayBusy=false;relayQueue=[];return}
-  const old=clockRelayWords[job.group.relay]??job.newWord,diff=popcount11(old^job.newWord);
-  clockRelayWords[job.group.relay]=job.newWord;
+  const old=clockRelayWords[job.relay]??job.newWord,diff=popcount11(old^job.newWord);
+  clockRelayWords[job.relay]=job.newWord;
   if(tickSound&&diff)playRelayBurst(diff);
   setTimeout(()=>{
     if(mode!=='clock')return;
     const touched=new Set();
-    for(const [name,i] of job.group.cells){clockDigits[name][i]=job.want[name][i];touched.add(name)}
+    for(const [name,index] of CHANNEL10_DIGITS[job.relay]){clockDigits[name][index]=job.want[name][index];touched.add(name)}
     touched.forEach(renderClockReg);
   },CLOCK_SETTLE_MS);
   setTimeout(runRelayQueue,CLOCK_RELAY_MS);
@@ -94,7 +88,7 @@ function runRelayQueue(){
 function tick(){
   if(mode!=='clock'||lampTestActive||relayBusy)return;
   const want=desiredClockDigits(),jobs=[];
-  for(const group of CLOCK_GROUPS){const w=clockWord(group,want);if(clockRelayWords[group.relay]!==w)jobs.push({group,want,newWord:w})}
+  for(const relay of CLOCK_RELAYS){const w=clockWord(relay,want);if(clockRelayWords[relay]!==w)jobs.push({relay,want,newWord:w})}
   if(!jobs.length)return;
   relayQueue=jobs;relayBusy=true;runRelayQueue();
 }
@@ -131,7 +125,8 @@ const AGC_KEY={
 // Output channel 010 is WWWWBCCCCCDDDDD: W selects one of the DSKY's
 // latching relay rows, B is a sign bit on six rows, and C/D are the two
 // five-relay character fields. This table is the Block II relay matrix used by
-// VirtualAGC's yaDSKY2/convertNasspLog tools.
+// VirtualAGC's yaDSKY2/convertNasspLog tools. The phone-clock relay emulator and
+// real AGC decoder both consume this same topology.
 const CHANNEL10_DIGITS=Object.freeze({
   11:[['prog',0,'c'],['prog',1,'d']],
   10:[['verb',0,'c'],['verb',1,'d']],
