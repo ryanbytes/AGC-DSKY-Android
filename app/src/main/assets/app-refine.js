@@ -79,42 +79,23 @@ lampTest = function refinedLampTest(...args) {
 };
 
 // Clock-mode V35 owns the DSKY presentation for its five-second test. Ordinary
-// keyboard input cannot repaint individual fields out from under it. RSET is
-// the explicit escape and must cancel both the five-second teardown timeout and
-// the 320-ms flash interval before restoring the normal clock face.
+// keyboard input cannot repaint individual fields out from under it. app.js's
+// base RSET already calls cancelLampTest(), so allow R through unchanged rather
+// than layering a duplicate cancellation path here.
 const baseDskyPress = press;
 press = function refinedDskyPress(key) {
-  if (mode === 'clock' && lampTestActive) {
-    if (key !== 'R') return;
-    cancelLampTest();
-  }
+  if (mode === 'clock' && lampTestActive && key !== 'R') return;
   return baseDskyPress(key);
 };
 
-function restoreClockBeforeLeavingV35() {
-  if (mode !== 'clock' || !lampTestActive) return;
-  // Do not rely on app.js's base RSET to stop V35 timers; base RSET only resets
-  // visible clock fields. Cancel the test explicitly first, then reuse the base
-  // RSET path to clear annunciators and restore ordinary V16 N65 clock state.
-  cancelLampTest();
-  baseDskyPress('R');
-}
-
-// A synthetic V35 flash interval must never survive a mission-selection change.
+// cycleMission() itself does not reset clock V35. If the user changes the
+// selected rope while the synthetic light test owns the clock display, route
+// through the existing base RSET first; that base path cancels both V35 timers,
+// clears annunciators and restores the ordinary V16 N65 clock presentation.
 const baseCycleMission = cycleMission;
 cycleMission = function refinedCycleMission(...args) {
-  restoreClockBeforeLeavingV35();
+  if (mode === 'clock' && lampTestActive) baseDskyPress('R');
   return baseCycleMission.apply(this, args);
-};
-
-// Entering a real AGC mission does not need a synthetic clock redisplay first;
-// the AGC path immediately clears/reinitializes the DSKY. Cancel V35 timers and
-// let the authentic AGC reset/output sequence take over without generating a
-// fake intermediate V16 N65 restore.
-const baseEnterAgc = enterAgc;
-enterAgc = function refinedEnterAgc(...args) {
-  if (mode === 'clock' && lampTestActive) cancelLampTest();
-  return baseEnterAgc.apply(this, args);
 };
 
 // Read-only diagnostics for device smoke tests and field debugging. These
