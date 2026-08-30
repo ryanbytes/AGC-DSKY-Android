@@ -27,9 +27,14 @@ const context = {
     const b = [7, 5, 2].includes(relay) ? 1 : 0;
     return (relay << 11) | (b << 10) | (c << 5) | eight;
   },
+  cancelLampTest() {
+    calls.push(['cancelLampTest']);
+    context.lampTestActive = false;
+  },
   press(key) {
     calls.push(['press', key]);
-    if (key === 'R') context.lampTestActive = false;
+    // Deliberately do NOT change lampTestActive here. app.js base RSET does not
+    // cancel the V35 timers; the refinement must call cancelLampTest itself.
     return `pressed:${key}`;
   },
   enterAgc(...args) {
@@ -59,49 +64,59 @@ const beforeBlocked = calls.length;
 assert(context.press('5') === undefined, 'ordinary key must be ignored while clock V35 owns the display');
 assert(calls.length === beforeBlocked, 'blocked V35 key leaked into the underlying press handler');
 
-// RSET remains the explicit operator escape from the five-second test.
+// RSET is the explicit escape. The refinement must cancel the real V35 timers
+// before invoking app.js's base RSET, because base RSET only repaints state.
+const resetStart = calls.length;
 assert(context.press('R') === 'pressed:R', 'RSET must pass through during clock V35');
-assert(calls.at(-1)[0] === 'press' && calls.at(-1)[1] === 'R', 'RSET did not reach base press handler');
-assert(context.lampTestActive === false, 'base RSET did not terminate test state in smoke harness');
+assert(JSON.stringify(calls.slice(resetStart)) === JSON.stringify([
+  ['cancelLampTest'],
+  ['press', 'R']
+]), `RSET V35 cancellation order changed: ${JSON.stringify(calls.slice(resetStart))}`);
+assert(context.lampTestActive === false,
+  'RSET refinement did not cancel V35 state before base RSET');
 
 // Ordinary input behavior must be unchanged outside the test.
 assert(context.press('7') === 'pressed:7', 'ordinary clock key must pass through when V35 is inactive');
 assert(calls.at(-1)[1] === '7', 'ordinary key did not reach base press handler');
 
-// Entering real AGC mode while V35 is active must first execute the real clock
-// RSET path, which cancels timers, clears test annunciators, and restores the
-// ordinary display before the mode transition begins.
+// Entering real AGC mode while V35 is active must explicitly cancel V35,
+// execute base RSET to restore the ordinary clock presentation, then enter AGC.
 context.mode = 'clock';
 context.lampTestActive = true;
 const agcStart = calls.length;
 assert(context.enterAgc('test') === 'entered-agc', 'wrapped enterAgc return value changed');
 const agcCalls = calls.slice(agcStart);
 assert(JSON.stringify(agcCalls) === JSON.stringify([
+  ['cancelLampTest'],
   ['press', 'R'],
   ['enterAgc', 'test']
 ]), `enterAgc V35 cleanup order changed: ${JSON.stringify(agcCalls)}`);
+assert(context.lampTestActive === false,
+  'AGC transition left synthetic V35 active');
 
-// Mission selection gets the same cleanup barrier so the synthetic flashing
-// interval cannot survive a mission-control action in phone-clock mode.
+// Mission selection gets the same hard cancellation barrier.
 context.mode = 'clock';
 context.lampTestActive = true;
 const missionStart = calls.length;
 assert(context.cycleMission('test') === 'cycled-mission', 'wrapped cycleMission return value changed');
 const missionCalls = calls.slice(missionStart);
 assert(JSON.stringify(missionCalls) === JSON.stringify([
+  ['cancelLampTest'],
   ['press', 'R'],
   ['cycleMission', 'test']
 ]), `cycleMission V35 cleanup order changed: ${JSON.stringify(missionCalls)}`);
+assert(context.lampTestActive === false,
+  'mission transition left synthetic V35 active');
 
-// The wrapper is intentionally clock-test-specific; AGC mode must not invent
-// a synthetic RSET before a real mode action.
+// The wrapper is deliberately clock-test-specific; AGC mode must not inject a
+// synthetic cancellation/RSET before a real AGC mode action.
 context.mode = 'agc';
 context.lampTestActive = true;
 const realAgcStart = calls.length;
 context.enterAgc('toggle');
 assert(JSON.stringify(calls.slice(realAgcStart)) === JSON.stringify([
   ['enterAgc', 'toggle']
-]), 'AGC-mode transition unexpectedly injected synthetic RSET');
+]), 'AGC-mode transition unexpectedly injected synthetic V35 cleanup');
 
 // Device diagnostics expose copies of the latched relay state. Mutating the
 // returned object must not alter either production relay table.
@@ -122,5 +137,5 @@ assert(context.clockRelayWords[8] === 0o35 && context.agcRelayWords[11] === 0o12
 console.log('app refinement smoke: PASS');
 console.log('  FULLDSP relay-8 physical drive: PASS');
 console.log('  clock V35 ordinary-key isolation: PASS');
-console.log('  RSET escape and AGC/mission cleanup ordering: PASS');
+console.log('  RSET/AGC/mission explicit V35 cancellation ordering: PASS');
 console.log('  read-only relay diagnostics: PASS');
