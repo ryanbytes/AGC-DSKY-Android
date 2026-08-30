@@ -2,14 +2,14 @@
 'use strict';
 
 /*
- * Semantic device/runtime smoke for AGC-DSKY Android.
+ * End-to-end semantic V35 gate for the Android WebView.
  *
- * Connects to the already-forwarded debuggable WebView DevTools socket, enters
- * Luminary099 AGC mode, drives V37E00E and V35E through the actual DSKY pointer
- * handlers, and requires the rendered SVG to show the real Pinball V35 all-8
- * numerical light-test pattern.
+ * Path proven by this smoke:
+ *   pointer events -> Pinball -> real yaAGC/Luminary099 -> channel 010/011/0163
+ *   -> frontend relay latches -> rendered DSKY/annunciators.
  *
- * No npm packages are used. Node 18+ is sufficient.
+ * Requires the DevTools socket to have already been adb-forwarded by
+ * tools/device-agc-smoke.sh. No npm packages are used; Node 18+ is enough.
  */
 
 const crypto = require('crypto');
@@ -71,8 +71,7 @@ class CdpSocket {
     const host = this.url.hostname === 'localhost' ? '127.0.0.1' : this.url.hostname;
     const wsPort = Number(this.url.port || port);
     const key = crypto.randomBytes(16).toString('base64');
-    const expectedAccept = crypto
-      .createHash('sha1')
+    const expectedAccept = crypto.createHash('sha1')
       .update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
       .digest('base64');
 
@@ -81,7 +80,6 @@ class CdpSocket {
       this.socket = socket;
       let handshake = Buffer.alloc(0);
       let settled = false;
-
       const fail = (error) => {
         if (settled) return;
         settled = true;
@@ -91,9 +89,8 @@ class CdpSocket {
       socket.setTimeout(10000, () => fail(new Error('DevTools WebSocket handshake timed out')));
       socket.once('error', fail);
       socket.on('connect', () => {
-        const path = `${this.url.pathname}${this.url.search}`;
         const request = [
-          `GET ${path} HTTP/1.1`,
+          `GET ${this.url.pathname}${this.url.search} HTTP/1.1`,
           `Host: ${this.url.host}`,
           'Upgrade: websocket',
           'Connection: Upgrade',
@@ -109,9 +106,7 @@ class CdpSocket {
         handshake = Buffer.concat([handshake, chunk]);
         const end = handshake.indexOf('\r\n\r\n');
         if (end < 0) return;
-
-        const headerText = handshake.subarray(0, end).toString('utf8');
-        const lines = headerText.split('\r\n');
+        const lines = handshake.subarray(0, end).toString('utf8').split('\r\n');
         if (!/^HTTP\/1\.[01] 101\b/.test(lines[0])) {
           fail(new Error(`DevTools WebSocket upgrade failed: ${lines[0]}`));
           return;
@@ -119,7 +114,9 @@ class CdpSocket {
         const headers = new Map();
         for (const line of lines.slice(1)) {
           const colon = line.indexOf(':');
-          if (colon > 0) headers.set(line.slice(0, colon).trim().toLowerCase(), line.slice(colon + 1).trim());
+          if (colon > 0) headers.set(
+            line.slice(0, colon).trim().toLowerCase(),
+            line.slice(colon + 1).trim());
         }
         if (headers.get('sec-websocket-accept') !== expectedAccept) {
           fail(new Error('DevTools WebSocket returned an invalid Sec-WebSocket-Accept value'));
@@ -133,7 +130,6 @@ class CdpSocket {
         socket.on('error', (error) => this.abort(error));
         socket.on('close', () => this.abort(new Error('DevTools WebSocket closed')));
         socket.on('data', (data) => this.onData(data));
-
         const remainder = handshake.subarray(end + 4);
         if (remainder.length) this.onData(remainder);
         resolve();
@@ -209,7 +205,6 @@ class CdpSocket {
         offset += 4;
       }
       if (this.buffer.length < offset + length) return;
-
       let payload = Buffer.from(this.buffer.subarray(offset, offset + length));
       this.buffer = this.buffer.subarray(offset + length);
       if (masked) {
@@ -225,7 +220,6 @@ class CdpSocket {
         continue;
       }
       if (opcode === 0xA) continue;
-
       if (opcode === 0x1) {
         if (fin) this.onText(payload.toString('utf8'));
         else {
@@ -237,10 +231,9 @@ class CdpSocket {
       if (opcode === 0x0 && this.fragmentOpcode === 0x1) {
         this.fragments.push(payload);
         if (fin) {
-          const text = Buffer.concat(this.fragments).toString('utf8');
+          this.onText(Buffer.concat(this.fragments).toString('utf8'));
           this.fragmentOpcode = 0;
           this.fragments = [];
-          this.onText(text);
         }
       }
     }
@@ -317,7 +310,7 @@ function statusExpression() {
   return `(() => {
     const c = window.AGCDSKY && AGCDSKY.getCore ? AGCDSKY.getCore() : null;
     return {
-      ready: !!window.AGCDSKY,
+      ready: !!(window.AGCDSKY && AGCDSKY.snapshotDsky),
       mission: window.AGCDSKY && AGCDSKY.getMission ? AGCDSKY.getMission() : null,
       core: !!c,
       running: !!(c && c.running),
@@ -327,31 +320,12 @@ function statusExpression() {
   })()`;
 }
 
-function displayExpression() {
+function dskyExpression() {
   return `(() => {
-    const map = {
-      abcdef:'0', bc:'1', abdeg:'2', abcdg:'3', bcfg:'4', acdfg:'5',
-      acdefg:'6', abc:'7', abcdefg:'8', abcdfg:'9'
-    };
-    const readGlyph = (g) => {
-      const key = Array.from(g.querySelectorAll('.el-seg.on[data-seg]'))
-        .map((s) => s.dataset.seg).sort().join('');
-      return map[key] || ' ';
-    };
-    const readDigits = (id) => {
-      const el = document.getElementById(id);
-      if (!el) return null;
-      return Array.from(el.querySelectorAll('.el-glyph')).map(readGlyph).join('');
-    };
-    return {
-      prog: readDigits('prog'),
-      verb: readDigits('verb'),
-      noun: readDigits('noun'),
-      r1: readDigits('r1'),
-      r2: readDigits('r2'),
-      r3: readDigits('r3'),
-      modeText: document.getElementById('mode') ? document.getElementById('mode').textContent : ''
-    };
+    if (!window.AGCDSKY || typeof AGCDSKY.snapshotDsky !== 'function') return null;
+    const state = AGCDSKY.snapshotDsky();
+    state.modeText = document.getElementById('mode') ? document.getElementById('mode').textContent : '';
+    return state;
   })()`;
 }
 
@@ -388,7 +362,8 @@ async function enterLuminary(cdp) {
   await ensureLuminary(cdp);
   await cdp.evaluate("document.getElementById('agc').click(); true");
   return pollStatus(cdp, 'start Luminary099', (s) =>
-    s.mission === 'luminary099'
+    s.ready
+    && s.mission === 'luminary099'
     && s.core
     && s.running
     && !s.modeText.includes('AGC ERROR'), 20000);
@@ -416,25 +391,74 @@ async function keySequence(cdp, keys, basePointerId) {
   }
 }
 
-async function waitForV35Display(cdp) {
-  const deadline = Date.now() + 4000;
+const V35_RELAY_LOW11 = Object.freeze({
+  1: 0o1675, 2: 0o3675, 3: 0o1675, 4: 0o1675,
+  5: 0o3675, 6: 0o1675, 7: 0o3675, 8: 0o0035,
+  9: 0o1675, 10: 0o1675, 11: 0o1675, 12: 0o0674
+});
+const STEADY_V35_LAMPS = Object.freeze([
+  'uplink', 'temp', 'noatt', 'gimbal', 'stby', 'prog',
+  'restart', 'tracker', 'alt', 'vel'
+]);
+
+function relayWordsMatch(state) {
+  const relays = state && state.relays && state.relays.agc;
+  if (!relays) return false;
+  return Object.entries(V35_RELAY_LOW11).every(([relay, expected]) => relays[relay] === expected);
+}
+
+function visibleV35State(state) {
+  if (!state || !state.display || !state.lamps) return false;
+  const d = state.display;
+  const numerics = d.prog === '88'
+    && d.verb === '88'
+    && d.noun === '88'
+    && d.r1.sign === '+' && d.r1.digits === '88888'
+    && d.r2.sign === '+' && d.r2.digits === '88888'
+    && d.r3.sign === '+' && d.r3.digits === '88888';
+  const steadyLamps = STEADY_V35_LAMPS.every((name) => state.lamps[name] === true);
+  return numerics
+    && steadyLamps
+    && state.lamps.keyrel === true
+    && state.lamps.oprerr === true
+    && state.lamps.comp === false
+    && state.vnBlanked === false
+    && state.elOff === false
+    && state.lampTestActive === false
+    && relayWordsMatch(state);
+}
+
+async function waitForVisibleV35(cdp) {
+  const deadline = Date.now() + 3500;
   let last;
   while (Date.now() < deadline) {
-    last = await cdp.evaluate(displayExpression());
-    const allEight = last
-      && last.prog === '88'
-      && last.verb === '88'
-      && last.noun === '88'
-      && last.r1 === '88888'
-      && last.r2 === '88888'
-      && last.r3 === '88888';
-    if (allEight) return last;
+    last = await cdp.evaluate(dskyExpression());
+    if (visibleV35State(last)) return last;
     if (last && last.modeText.includes('AGC ERROR')) {
       throw new Error(`AGC stopped during V35E: ${last.modeText}`);
     }
-    await delay(100);
+    await delay(75);
   }
-  throw new Error(`V35E did not render the complete all-8 DSKY pattern; last display: ${JSON.stringify(last)}`);
+  throw new Error(`V35E did not reach the complete relay/render/lamp state; last state: ${JSON.stringify(last)}`);
+}
+
+async function proveV35FlashOffPhase(cdp) {
+  const deadline = Date.now() + 1200;
+  let last;
+  while (Date.now() < deadline) {
+    last = await cdp.evaluate(dskyExpression());
+    if (last
+      && last.vnBlanked === true
+      && last.lamps
+      && last.lamps.keyrel === false
+      && last.lamps.oprerr === false
+      && STEADY_V35_LAMPS.every((name) => last.lamps[name] === true)
+      && relayWordsMatch(last)) {
+      return last;
+    }
+    await delay(50);
+  }
+  throw new Error(`V35E never exposed yaAGC's modulated V/N + KEY REL/OPR ERR off phase; last state: ${JSON.stringify(last)}`);
 }
 
 async function snapshotState(cdp) {
@@ -476,24 +500,28 @@ async function main() {
   let snapshot;
   try {
     await cdp.call('Runtime.enable');
-    const ready = await cdp.evaluate("!!(window.AGCDSKY && document.getElementById('agc'))");
-    assert(ready === true, 'AGC DSKY frontend is not initialized in the interactive WebView');
+    const ready = await cdp.evaluate(
+      "!!(window.AGCDSKY && AGCDSKY.snapshotDsky && document.getElementById('agc'))");
+    assert(ready === true, 'AGC DSKY frontend/relay diagnostic surface is not initialized');
     snapshot = await snapshotState(cdp);
 
     await enterLuminary(cdp);
 
-    // V37E00E puts the flight program in P00, the documented prerequisite for
-    // the full DSKY light test. Then V35E must be interpreted by the actual
-    // Luminary rope and drive the rendered DSKY through output channel 010.
+    // P00 is the documented precondition. Every key goes through the actual
+    // pointer handler, not a direct call to the AGC wrapper.
     await keySequence(cdp, ['V', '3', '7', 'E', '0', '0', 'E'], 1100);
     await delay(500);
     await keySequence(cdp, ['V', '3', '5', 'E'], 1200);
-    const display = await waitForV35Display(cdp);
+
+    const visible = await waitForVisibleV35(cdp);
+    const offPhase = await proveV35FlashOffPhase(cdp);
 
     console.log('Device V35 semantic smoke: PASS');
-    console.log(`  rendered DSKY: PROG ${display.prog} VERB ${display.verb} NOUN ${display.noun}`);
-    console.log(`  registers: ${display.r1} ${display.r2} ${display.r3}`);
-    console.log('  path: pointer input -> yaAGC/Luminary099 -> channel 010 -> SVG display');
+    console.log(`  rendered DSKY: PROG ${visible.display.prog} VERB ${visible.display.verb} NOUN ${visible.display.noun}`);
+    console.log(`  registers: ${visible.display.r1.sign}${visible.display.r1.digits} ${visible.display.r2.sign}${visible.display.r2.digits} ${visible.display.r3.sign}${visible.display.r3.digits}`);
+    console.log(`  channel 010 relay latches 1-12: ${JSON.stringify(visible.relays.agc)}`);
+    console.log(`  modulated off phase: VN=${offPhase.vnBlanked} KEY_REL=${offPhase.lamps.keyrel} OPR_ERR=${offPhase.lamps.oprerr}`);
+    console.log('  path: pointer input -> yaAGC/Luminary099 -> relays -> annunciators/SVG');
   } finally {
     if (snapshot) await restoreState(cdp, snapshot);
     cdp.close();
