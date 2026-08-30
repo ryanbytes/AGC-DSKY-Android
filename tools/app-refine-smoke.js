@@ -26,10 +26,18 @@ const calls = [];
 const relayBursts = [];
 const timers = new Map();
 let nextTimerId = 1;
-const lamps = new Map();
+const lampState = new Map();
 for (const name of ['vel', 'noatt', 'alt', 'gimbal', 'tracker', 'prog']) {
-  lamps.set(name, { classList: { contains: () => name === 'prog' } });
+  lampState.set(name, name === 'prog');
 }
+const lamps = new Map(Array.from(lampState.keys()).map((name) => [name, {
+  classList: { contains: () => !!lampState.get(name) }
+}]));
+
+const restoreClockWords = {
+  1: 0o0001, 2: 0o0002, 3: 0o0003, 4: 0o0004,
+  5: 0o0005, 6: 0o0006, 7: 0o0007, 8: 0o0010
+};
 
 const context = {
   mode: 'clock',
@@ -80,6 +88,19 @@ const context = {
   playRelayBurst(count) {
     relayBursts.push(count);
   },
+  desiredClockDigits() {
+    return {};
+  },
+  clockWord(relay) {
+    return restoreClockWords[relay];
+  },
+  syncClockFace() {
+    calls.push(['syncClockFace']);
+    for (const relay of context.CLOCK_RELAYS) {
+      context.clockRelayWords[relay] = restoreClockWords[relay];
+    }
+    return 'clock-synced';
+  },
   v35RelayWord(relay) {
     const eight = 0o35;
     const c = relay === 8 ? 0 : eight;
@@ -111,8 +132,6 @@ const context = {
       context.latchAgcRelay(relay, context.v35RelayWord(relay) & 0o3777);
     }
     context.latchAgcRelay(12, 0o674);
-    // The base implementation historically installed its own five-second
-    // teardown; the refinement must replace this handle, not stack another one.
     context.lampTestTimer = context.setTimeout(() => {
       calls.push(['obsoleteBaseV35Timeout']);
     }, 5000);
@@ -121,15 +140,17 @@ const context = {
   press(key) {
     calls.push(['press', key]);
     if (key === 'R') {
+      // Mirror current app.js RSET ordering relevant to the refinement.
       context.cancelLampTest();
       context.mode = 'clock';
       context.verb = '16';
       context.noun = '65';
+      for (const name of lampState.keys()) lampState.set(name, false);
+      context.syncClockFace();
     }
     return `pressed:${key}`;
   },
   enterAgc(...args) {
-    // Mirror current app.js: entering AGC already cancels any clock V35 test.
     if (context.mode === 'clock') context.cancelLampTest();
     calls.push(['enterAgc', ...args]);
     return 'entered-agc';
@@ -142,7 +163,6 @@ const context = {
 vm.createContext(context);
 vm.runInContext(source, context, { filename: 'app-refine.js' });
 
-// Luminary FULLDSP drives the otherwise-unconnected C bank on relay row 8.
 const relay8 = context.v35RelayWord(8);
 assert(((relay8 >> 5) & 0o37) === 0o35 && (relay8 & 0o37) === 0o35,
   'refined V35 relay 8 must drive both five-relay fields to digit 8');
@@ -151,9 +171,9 @@ assert((relay8 & 0o3777) === 0o1675,
 assert((context.v35RelayWord(7) & 0o3777) === 0o3675,
   'V35 refinement must not disturb an ordinary plus-sign relay row');
 
-// Starting V35 must be a physical transition from the clock latches that were
-// actually displayed immediately before ENTER. Selectors 10/9 begin at VERB
-// 35 / NOUN 65 and selector 12 begins with the currently lit condition lamps.
+// Starting V35 must be a physical transition from the relay state actually
+// displayed immediately before ENTER: PROG 00, VERB 35, NOUN 65, current time,
+// and the currently lit condition-lamp state.
 const prior = {
   11: (0o25 << 5) | 0o25,
   10: (0o33 << 5) | 0o36,
@@ -161,34 +181,52 @@ const prior = {
   8: 0, 7: 0, 6: 0, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0,
   12: 0o400
 };
-const expectedOrder = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 12];
-const expectedBursts = expectedOrder.map((relay) => {
+const relayOrder = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 12];
+const expectedEntryBursts = relayOrder.map((relay) => {
   const next = relay === 12 ? 0o674 : context.v35RelayWord(relay) & 0o3777;
   return popcount11(prior[relay] ^ next);
 }).filter((count) => count > 0);
 
 assert(context.lampTest() === 'lamp-test-started', 'refined lampTest changed base return value');
 assert(context.lampTestActive === true, 'base V35 did not remain active after start');
-assert(JSON.stringify(relayBursts) === JSON.stringify(expectedBursts),
-  `clock-to-V35 relay transition counts changed: got ${JSON.stringify(relayBursts)}, expected ${JSON.stringify(expectedBursts)}`);
+assert(JSON.stringify(relayBursts) === JSON.stringify(expectedEntryBursts),
+  `clock-to-V35 relay transition counts changed: got ${JSON.stringify(relayBursts)}, expected ${JSON.stringify(expectedEntryBursts)}`);
 assert(context.agcRelayWords[8] === 0o1675,
   'synthetic V35 did not latch physical FULLDSP relay-8 state');
 assert(context.agcRelayWords[12] === 0o674,
   'synthetic V35 did not latch Luminary relay-12 state');
 
 // The refinement must replace the base teardown timer with exactly one 5-second
-// RSET-based teardown. Firing it must restore canonical V16 N65 and must never
-// execute the obsolete base callback.
+// RSET-based teardown. Its RSET then computes the physical V35->clock delta
+// before the ordinary sync replaces the displayed clock registers.
 assert(timers.size === 1, `V35 must have exactly one teardown timer, found ${timers.size}`);
 const [[naturalTimerId, naturalTimer]] = Array.from(timers.entries());
 assert(naturalTimerId === context.lampTestTimer && naturalTimer.ms === 5000,
   'refined V35 teardown timer is not the active 5-second handle');
+const entryBurstCount = relayBursts.length;
+const v35Active = Object.fromEntries(relayOrder.map((relay) => [
+  relay,
+  relay === 12 ? 0o674 : context.v35RelayWord(relay) & 0o3777
+]));
+const restored = {
+  11: (0o25 << 5) | 0o25,
+  10: (0o03 << 5) | 0o34,
+  9: (0o34 << 5) | 0o36,
+  12: 0,
+  ...restoreClockWords
+};
+const expectedReturnBursts = relayOrder.map((relay) =>
+  popcount11(v35Active[relay] ^ restored[relay])).filter((count) => count > 0);
+
 const naturalStart = calls.length;
 naturalTimer.callback();
 assert(JSON.stringify(calls.slice(naturalStart)) === JSON.stringify([
   ['press', 'R'],
-  ['cancelLampTest']
-]), `natural V35 teardown did not use base RSET exactly once: ${JSON.stringify(calls.slice(naturalStart))}`);
+  ['cancelLampTest'],
+  ['syncClockFace']
+]), `natural V35 teardown did not use base RSET/sync exactly once: ${JSON.stringify(calls.slice(naturalStart))}`);
+assert(JSON.stringify(relayBursts.slice(entryBurstCount)) === JSON.stringify(expectedReturnBursts),
+  `V35-to-clock relay transition counts changed: got ${JSON.stringify(relayBursts.slice(entryBurstCount))}, expected ${JSON.stringify(expectedReturnBursts)}`);
 assert(!calls.some((entry) => entry[0] === 'obsoleteBaseV35Timeout'),
   'obsolete base V35 teardown callback survived refinement');
 assert(context.lampTestActive === false && context.lampTestTimer === 0,
@@ -200,37 +238,37 @@ assert(context.verb === '16' && context.noun === '65',
 relayBursts.length = 0;
 context.verb = '35';
 context.noun = '65';
+lampState.set('prog', true);
+for (const relay of context.CLOCK_RELAYS) context.clockRelayWords[relay] = 0;
 context.lampTest();
 
-// During synthetic clock V35, ordinary DSKY keys must not repaint the test.
 const beforeBlocked = calls.length;
 assert(context.press('5') === undefined, 'ordinary key must be ignored while clock V35 owns the display');
 assert(calls.length === beforeBlocked, 'blocked V35 key leaked into the underlying press handler');
 
-// RSET passes through exactly once; current app.js itself performs cancellation.
 const resetStart = calls.length;
 assert(context.press('R') === 'pressed:R', 'RSET must pass through during clock V35');
 assert(JSON.stringify(calls.slice(resetStart)) === JSON.stringify([
   ['press', 'R'],
-  ['cancelLampTest']
-]), `RSET V35 base cancellation path changed: ${JSON.stringify(calls.slice(resetStart))}`);
+  ['cancelLampTest'],
+  ['syncClockFace']
+]), `RSET V35 base cancellation/restore path changed: ${JSON.stringify(calls.slice(resetStart))}`);
 assert(context.lampTestActive === false,
   'base RSET did not cancel V35 state');
 
-// Ordinary input behavior must be unchanged outside the test.
 assert(context.press('7') === 'pressed:7', 'ordinary clock key must pass through when V35 is inactive');
 assert(calls.at(-1)[1] === '7', 'ordinary key did not reach base press handler');
 
-// enterAgc is intentionally not wrapped because current app.js already owns
-// V35 cancellation; no synthetic RSET/clock redisplay should be injected.
+// app.js already cancels V35 on AGC entry. The refinement only discards its
+// synthetic return snapshot so a later clock entry cannot replay stale sounds.
 context.mode = 'clock';
 context.lampTestActive = true;
 const agcStart = calls.length;
-assert(context.enterAgc('test') === 'entered-agc', 'base enterAgc return value changed');
+assert(context.enterAgc('test') === 'entered-agc', 'wrapped enterAgc return value changed');
 assert(JSON.stringify(calls.slice(agcStart)) === JSON.stringify([
   ['cancelLampTest'],
   ['enterAgc', 'test']
-]), `enterAgc V35 base cleanup path changed: ${JSON.stringify(calls.slice(agcStart))}`);
+]), `enterAgc V35 cleanup path changed: ${JSON.stringify(calls.slice(agcStart))}`);
 assert(context.lampTestActive === false,
   'AGC transition left synthetic V35 active');
 
@@ -243,13 +281,12 @@ assert(context.cycleMission('test') === 'cycled-mission', 'wrapped cycleMission 
 assert(JSON.stringify(calls.slice(missionStart)) === JSON.stringify([
   ['press', 'R'],
   ['cancelLampTest'],
+  ['syncClockFace'],
   ['cycleMission', 'test']
 ]), `cycleMission V35 cleanup path changed: ${JSON.stringify(calls.slice(missionStart))}`);
 assert(context.lampTestActive === false,
   'mission transition left synthetic V35 active');
 
-// Device diagnostics expose copies of the latched relay state. Mutating the
-// returned object must not alter either production relay table.
 assert(typeof context.window.AGCDSKY.snapshotRelays === 'function',
   'AGCDSKY.snapshotRelays diagnostic was not registered');
 assert(typeof context.window.AGCDSKY.snapshotDsky === 'function',
@@ -257,16 +294,16 @@ assert(typeof context.window.AGCDSKY.snapshotDsky === 'function',
 const relays = context.window.AGCDSKY.snapshotRelays();
 assert(relays.mode === 'clock' && relays.mission === 'luminary099',
   'relay snapshot omitted current mode/mission');
-assert(relays.clock[8] === 0 && relays.agc[11] !== undefined,
-  'relay snapshot did not copy clock/AGC latch words');
+const originalClock8 = context.clockRelayWords[8];
+const originalAgc11 = context.agcRelayWords[11];
 relays.clock[8] = 0o7777;
 relays.agc[11] = 0;
-assert(context.clockRelayWords[8] === 0 && context.agcRelayWords[11] !== 0,
+assert(context.clockRelayWords[8] === originalClock8 && context.agcRelayWords[11] === originalAgc11,
   'relay diagnostic leaked mutable production relay state');
 
 console.log('app refinement smoke: PASS');
 console.log('  FULLDSP relay-8 physical drive: PASS');
-console.log('  clock-to-V35 physical relay deltas: PASS');
+console.log('  clock -> V35 -> clock physical relay deltas: PASS');
 console.log('  natural V35 timeout -> V16 N65: PASS');
 console.log('  clock V35 ordinary-key isolation: PASS');
 console.log('  base RSET/AGC + refined mission cancellation: PASS');
