@@ -38,9 +38,15 @@ assert(!/<script\b(?![^>]*\bsrc=)[^>]*>/i.test(html),
 assert(!/\son[a-z]+\s*=/i.test(html),
   'frontend must not contain inline event-handler attributes under the strict CSP');
 
-for (const script of ['runtime-debug.js', 'agc-core.js', 'app.js']) {
-  assert(html.includes(`<script src="${script}"></script>`),
-    `expected external script missing: ${script}`);
+const scripts = ['runtime-debug.js', 'agc-core.js', 'app.js', 'app-refine.js'];
+let previous = -1;
+for (const script of scripts) {
+  const tag = `<script src="${script}"></script>`;
+  const index = html.indexOf(tag);
+  assert(index >= 0, `expected external script missing: ${script}`);
+  assert(index > previous, `frontend script order changed around ${script}`);
+  previous = index;
 }
 
 console.log('frontend CSP smoke: PASS');
+console.log('  required script order: runtime-debug -> agc-core -> app -> app-refine');
