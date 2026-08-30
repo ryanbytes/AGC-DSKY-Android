@@ -49,8 +49,10 @@ function pad(n,len){return String(n).padStart(len,'0').slice(-len)}
 function show(v,n){verb=v;noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
 
 // Block II uses five latching relays per character; the contact matrix decodes
-// the 5-bit relay state into the seven EL strokes.
-const DIGIT_RELAY={' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31};
+// the 5-bit relay state into the seven EL strokes. Keep one canonical mapping
+// and derive the inverse used by incoming AGC relay words from it.
+const DIGIT_RELAY=Object.freeze({' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31});
+const RELAY_DIGIT=Object.freeze(Object.fromEntries(Object.entries(DIGIT_RELAY).map(([digit,code])=>[code,digit])));
 const CLOCK_GROUPS=[
   {relay:8,cells:[['r1',0]],singleRight:true},
   {relay:7,cells:[['r1',1],['r1',2]],b:1},{relay:6,cells:[['r1',3],['r1',4]],b:0},
@@ -62,8 +64,8 @@ function desiredClockDigits(){const d=new Date();return {r1:pad(d.getHours(),5).
 function renderClockReg(name){setReg(name,'+',clockDigits[name].join(''))}
 function clockWord(group,want){
   let c=0,d=0;
-  if(group.singleRight)d=DIGIT_RELAY[want[group.cells[0][0]][group.cells[0][1]]]||0;
-  else{c=DIGIT_RELAY[want[group.cells[0][0]][group.cells[0][1]]]||0;d=DIGIT_RELAY[want[group.cells[1][0]][group.cells[1][1]]]||0}
+  if(group.singleRight)d=DIGIT_RELAY[want[group.cells[0][0]][group.cells[0][1]]]??0;
+  else{c=DIGIT_RELAY[want[group.cells[0][0]][group.cells[0][1]]]??0;d=DIGIT_RELAY[want[group.cells[1][0]][group.cells[1][1]]]??0}
   return ((group.b||0)<<10)|(c<<5)|d;
 }
 function popcount11(v){v&=0x7ff;let n=0;while(v){v&=v-1;n++}return n}
@@ -125,39 +127,87 @@ const AGC_KEY={
   '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
   V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
 };
-const RELAY_DIGIT={0:' ',21:'0',3:'1',25:'2',27:'3',15:'4',30:'5',28:'6',19:'7',29:'8',31:'9'};
+
+// Output channel 010 is WWWWBCCCCCDDDDD: W selects one of the DSKY's
+// latching relay rows, B is a sign bit on six rows, and C/D are the two
+// five-relay character fields. This table is the Block II relay matrix used by
+// VirtualAGC's yaDSKY2/convertNasspLog tools.
+const CHANNEL10_DIGITS=Object.freeze({
+  11:[['prog',0,'c'],['prog',1,'d']],
+  10:[['verb',0,'c'],['verb',1,'d']],
+  9:[['noun',0,'c'],['noun',1,'d']],
+  8:[['r1',0,'d']],
+  7:[['r1',1,'c'],['r1',2,'d']],
+  6:[['r1',3,'c'],['r1',4,'d']],
+  5:[['r2',0,'c'],['r2',1,'d']],
+  4:[['r2',2,'c'],['r2',3,'d']],
+  3:[['r2',4,'c'],['r3',0,'d']],
+  2:[['r3',1,'c'],['r3',2,'d']],
+  1:[['r3',3,'c'],['r3',4,'d']]
+});
+const CHANNEL10_SIGNS=Object.freeze({
+  7:['r1','plus'],6:['r1','minus'],
+  5:['r2','plus'],4:['r2','minus'],
+  2:['r3','plus'],1:['r3','minus']
+});
+// Apollo 11-14 LM panels left relay-12 bits 1/2 unplacarded and unused. Later
+// LM panels labeled those two positions PRIO DISP and NO DAP. Keep this app's
+// Apollo-11-era two blank positions while decoding the six active L99 lamps.
+const CHANNEL10_LAMPS=Object.freeze([
+  [0o00004,'vel'],[0o00010,'noatt'],[0o00020,'alt'],
+  [0o00040,'gimbal'],[0o00200,'tracker'],[0o00400,'prog']
+]);
 const agcDisplay={
   prog:[' ',' '],verb:[' ',' '],noun:[' ',' '],
   r1:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false},
   r2:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false},
   r3:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false}
 };
-function relayDigit(code){return RELAY_DIGIT[code]??' '}
+const invalidAgcRelayWords=new Set();
+function relayDigit(code){return Object.prototype.hasOwnProperty.call(RELAY_DIGIT,code)?RELAY_DIGIT[code]:null}
 function regSign(reg){return reg.plus?'+':reg.minus?'-':' '}
 function renderAgcReg(name){const r=agcDisplay[name];setReg(name,regSign(r),r.digits.join(''))}
+function agcDigits(name){return name[0]==='r'?agcDisplay[name].digits:agcDisplay[name]}
+function renderAgcField(name){if(name[0]==='r')renderAgcReg(name);else set2(name,agcDisplay[name].join(''))}
+function latchAgcRelay(relay,low11){
+  const prior=agcRelayWords[relay];
+  if(prior!==undefined&&tickSound){const n=popcount11(prior^low11);if(n)playRelayBurst(n)}
+  agcRelayWords[relay]=low11;
+}
+function reportInvalidRelayWord(value,detail){
+  const word=value&0o77777,key=`${word}:${detail}`;
+  if(invalidAgcRelayWords.has(key))return;
+  invalidAgcRelayWords.add(key);
+  console.error('AGC DSKY relay decode rejected',new Error(`channel 010 word 0o${word.toString(8).padStart(5,'0')}: ${detail}`));
+}
 function resetAgcFace(){
   agcDisplay.prog.fill(' ');agcDisplay.verb.fill(' ');agcDisplay.noun.fill(' ');
   ['r1','r2','r3'].forEach(name=>{agcDisplay[name].digits.fill(' ');agcDisplay[name].plus=false;agcDisplay[name].minus=false});
-  Object.keys(agcRelayWords).forEach(key=>delete agcRelayWords[key]);
+  Object.keys(agcRelayWords).forEach(key=>delete agcRelayWords[key]);invalidAgcRelayWords.clear();
   set2('prog','  ');set2('verb','  ');set2('noun','  ');['r1','r2','r3'].forEach(renderAgcReg);clearLamps();
 }
 function decodeChannel10(value){
   const relay=(value>>11)&0o17,b=(value>>10)&1,c=(value>>5)&0o37,d=value&0o37,low11=value&0o3777;
-  if(relay>=1&&relay<=12){const prior=agcRelayWords[relay];if(prior!==undefined&&tickSound){const n=popcount11(prior^low11);if(n)playRelayBurst(n)}agcRelayWords[relay]=low11}
-  switch(relay){
-    case 12:setLamp('vel',value&0o00004);setLamp('noatt',value&0o00010);setLamp('alt',value&0o00020);setLamp('gimbal',value&0o00040);setLamp('tracker',value&0o00200);setLamp('prog',value&0o00400);break;
-    case 11:agcDisplay.prog[0]=relayDigit(c);agcDisplay.prog[1]=relayDigit(d);set2('prog',agcDisplay.prog.join(''));break;
-    case 10:agcDisplay.verb[0]=relayDigit(c);agcDisplay.verb[1]=relayDigit(d);set2('verb',agcDisplay.verb.join(''));break;
-    case 9:agcDisplay.noun[0]=relayDigit(c);agcDisplay.noun[1]=relayDigit(d);set2('noun',agcDisplay.noun.join(''));break;
-    case 8:agcDisplay.r1.digits[0]=relayDigit(d);renderAgcReg('r1');break;
-    case 7:agcDisplay.r1.plus=!!b;agcDisplay.r1.digits[1]=relayDigit(c);agcDisplay.r1.digits[2]=relayDigit(d);renderAgcReg('r1');break;
-    case 6:agcDisplay.r1.minus=!!b;agcDisplay.r1.digits[3]=relayDigit(c);agcDisplay.r1.digits[4]=relayDigit(d);renderAgcReg('r1');break;
-    case 5:agcDisplay.r2.plus=!!b;agcDisplay.r2.digits[0]=relayDigit(c);agcDisplay.r2.digits[1]=relayDigit(d);renderAgcReg('r2');break;
-    case 4:agcDisplay.r2.minus=!!b;agcDisplay.r2.digits[2]=relayDigit(c);agcDisplay.r2.digits[3]=relayDigit(d);renderAgcReg('r2');break;
-    case 3:agcDisplay.r2.digits[4]=relayDigit(c);agcDisplay.r3.digits[0]=relayDigit(d);renderAgcReg('r2');renderAgcReg('r3');break;
-    case 2:agcDisplay.r3.plus=!!b;agcDisplay.r3.digits[1]=relayDigit(c);agcDisplay.r3.digits[2]=relayDigit(d);renderAgcReg('r3');break;
-    case 1:agcDisplay.r3.minus=!!b;agcDisplay.r3.digits[3]=relayDigit(c);agcDisplay.r3.digits[4]=relayDigit(d);renderAgcReg('r3');break;
+  if(relay===12){
+    latchAgcRelay(relay,low11);
+    for(const [mask,name] of CHANNEL10_LAMPS)setLamp(name,(low11&mask)!==0);
+    return true;
   }
+
+  const targets=CHANNEL10_DIGITS[relay];
+  if(!targets){reportInvalidRelayWord(value,`invalid relay selector ${relay}`);return false}
+  const decoded={c:relayDigit(c),d:relayDigit(d)};
+  for(const [,,source] of targets){
+    if(decoded[source]===null){reportInvalidRelayWord(value,`invalid ${source.toUpperCase()} digit code ${source==='c'?c:d}`);return false}
+  }
+
+  latchAgcRelay(relay,low11);
+  const sign=CHANNEL10_SIGNS[relay];
+  if(sign)agcDisplay[sign[0]][sign[1]]=!!b;
+  const touched=new Set();
+  for(const [name,index,source] of targets){agcDigits(name)[index]=decoded[source];touched.add(name)}
+  touched.forEach(renderAgcField);
+  return true;
 }
 function decodeChannel11(value){setLamp('comp',value&0o00002);setLamp('uplink',value&0o00004)}
 function decodeChannel163(value){
