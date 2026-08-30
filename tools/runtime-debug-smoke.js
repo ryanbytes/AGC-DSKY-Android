@@ -71,27 +71,28 @@ assert(typeof listeners.securitypolicyviolation === 'function',
 assert(typeof listeners.load === 'function',
     'frontend readiness load listener did not register');
 
-// A page load is not sufficient by itself. Before app.js has exposed AGCDSKY
-// and rendered EL glyph markup, no native readiness marker may be emitted.
 listeners.load();
 assert(readyMarkers.length === 0,
     'partial/uninitialized frontend must not emit a readiness marker');
 
-// Even the base app.js API is not enough now: the final packaged frontend must
-// also have executed app-refine.js and installed its relay diagnostic surface.
 context.AGCDSKY = {};
 elements.prog.innerHTML = '<g class="el-glyph"></g>';
 elements.mission.textContent = 'LM L99';
 listeners.load();
 assert(readyMarkers.length === 0,
-    'base AGCDSKY without relay diagnostics must not emit a readiness marker');
+    'base AGCDSKY without diagnostic surface must not emit a readiness marker');
 
 context.AGCDSKY.snapshotRelays = () => ({});
 listeners.load();
 assert(readyMarkers.length === 0,
-    'frontend missing snapshotDsky must not emit a readiness marker');
+    'frontend missing raw channel/Dsky diagnostics must not emit readiness');
 
 context.AGCDSKY.snapshotDsky = () => ({});
+listeners.load();
+assert(readyMarkers.length === 0,
+    'frontend missing snapshotChannels must not emit a readiness marker');
+
+context.AGCDSKY.snapshotChannels = () => ({});
 listeners.load();
 assert(readyMarkers.length === 1 && readyMarkers[0] === 'app',
     'fully initialized normal frontend must emit FRONTEND READY app');
@@ -101,8 +102,6 @@ listeners.load();
 assert(readyMarkers.length === 2 && readyMarkers[1] === 'dream',
     'fully initialized DreamService frontend must emit FRONTEND READY dream');
 
-// String-only stderr from yaAGC/WASI remains visible in the real console but
-// must not create a persistent failure report by itself.
 context.console.error('[yaAGC] informational stderr text');
 assert(originalConsoleCalls.length === 1,
     'wrapped console.error must preserve string-only console output');
@@ -149,4 +148,4 @@ assert(reports.length === 4
     'CSP violation report must identify the directive, blocked operation, and source');
 
 console.log('runtime-debug smoke: PASS');
-console.log('  FRONTEND READY requires app-refine relay diagnostics: PASS');
+console.log('  FRONTEND READY requires relay + raw-channel diagnostics: PASS');
