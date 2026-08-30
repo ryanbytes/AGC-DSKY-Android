@@ -19,7 +19,14 @@ const context = {
   selectedMission: 'luminary099',
   clockRelayWords: { 8: 0o35, 7: 0o2000 },
   agcRelayWords: { 11: 0o1234 },
+  DIGIT_RELAY: { '8': 0o35 },
   window: { AGCDSKY: {} },
+  v35RelayWord(relay) {
+    const eight = 0o35;
+    const c = relay === 8 ? 0 : eight;
+    const b = [7, 5, 2].includes(relay) ? 1 : 0;
+    return (relay << 11) | (b << 10) | (c << 5) | eight;
+  },
   press(key) {
     calls.push(['press', key]);
     if (key === 'R') context.lampTestActive = false;
@@ -36,6 +43,16 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(source, context, { filename: 'app-refine.js' });
+
+// Luminary FULLDSP drives the otherwise-unconnected C bank on relay row 8.
+// The visible decoder still ignores it; the physical relay model must not.
+const relay8 = context.v35RelayWord(8);
+assert(((relay8 >> 5) & 0o37) === 0o35 && (relay8 & 0o37) === 0o35,
+  'refined V35 relay 8 must drive both five-relay fields to digit 8');
+assert((relay8 & 0o3777) === 0o1675,
+  `refined V35 relay 8 low-11 word must be 01675, got 0${(relay8 & 0o3777).toString(8)}`);
+assert((context.v35RelayWord(7) & 0o3777) === 0o3675,
+  'V35 refinement must not disturb an ordinary plus-sign relay row');
 
 // During synthetic clock V35, ordinary DSKY keys must not repaint the test.
 const beforeBlocked = calls.length;
@@ -103,6 +120,7 @@ assert(context.clockRelayWords[8] === 0o35 && context.agcRelayWords[11] === 0o12
   'relay diagnostic leaked mutable production relay state');
 
 console.log('app refinement smoke: PASS');
+console.log('  FULLDSP relay-8 physical drive: PASS');
 console.log('  clock V35 ordinary-key isolation: PASS');
 console.log('  RSET escape and AGC/mission cleanup ordering: PASS');
 console.log('  read-only relay diagnostics: PASS');
