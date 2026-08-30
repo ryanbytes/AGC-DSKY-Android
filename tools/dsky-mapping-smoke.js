@@ -13,25 +13,32 @@ function assert(condition, message) {
     if (!condition) throw new Error(message);
 }
 
-function objectLiteralAfter(source, name) {
-    const pattern = new RegExp('const\\s+' + name + '\\s*=\\s*(\\{[\\s\\S]*?\\});');
+function literalAfter(source, name) {
+    const pattern = new RegExp(
+        'const\\s+' + name + '\\s*=\\s*(?:Object\\.freeze\\()?'
+        + '(\\{[\\s\\S]*?\\}|\\[[\\s\\S]*?\\])\\)?;');
     const match = source.match(pattern);
     assert(match, `could not locate ${name}`);
     return vm.runInNewContext('(' + match[1] + ')');
 }
 
-// VirtualAGC piPeripheral/convertNasspLog.py numberPatterns.
-const expectedDigits = {
-    0: ' ', 21: '0', 3: '1', 25: '2', 27: '3',
-    15: '4', 30: '5', 28: '6', 19: '7', 29: '8', 31: '9'
-};
-const relayDigits = objectLiteralAfter(app, 'RELAY_DIGIT');
-for (const [code, digit] of Object.entries(expectedDigits)) {
-    assert(relayDigits[code] === digit,
-        `relay code ${code} must decode as ${JSON.stringify(digit)}`);
+function same(actual, expected, message) {
+    assert(JSON.stringify(actual) === JSON.stringify(expected),
+        `${message}\n  actual: ${JSON.stringify(actual)}\n  expected: ${JSON.stringify(expected)}`);
 }
-assert(Object.keys(relayDigits).length === Object.keys(expectedDigits).length,
-    'relay digit table contains an unexpected code');
+
+// VirtualAGC piPeripheral/convertNasspLog.py and yaDSKY2 use this exact Block II
+// five-relay character matrix. app.js keeps only this direction as source data
+// and derives the incoming-code inverse so the two tables cannot drift apart.
+const expectedDigitRelay = {
+    ' ': 0, '0': 21, '1': 3, '2': 25, '3': 27, '4': 15,
+    '5': 30, '6': 28, '7': 19, '8': 29, '9': 31
+};
+const digitRelay = literalAfter(app, 'DIGIT_RELAY');
+same(digitRelay, expectedDigitRelay, 'DSKY digit relay-code table changed');
+assert(app.includes(
+    'Object.fromEntries(Object.entries(DIGIT_RELAY).map(([digit,code])=>[code,digit]))'),
+    'incoming relay decoder must derive its inverse from DIGIT_RELAY');
 
 // Apollo/VirtualAGC Pinball key codes used on input channel 015.
 const expectedKeys = {
@@ -40,36 +47,185 @@ const expectedKeys = {
     V: 0o21, R: 0o22, K: 0o31, '+': 0o32, '-': 0o33,
     E: 0o34, C: 0o36, N: 0o37
 };
-const keys = objectLiteralAfter(app, 'AGC_KEY');
-for (const [key, code] of Object.entries(expectedKeys)) {
-    assert(keys[key] === code,
-        `DSKY key ${key} must use Pinball code 0o${code.toString(8)}`);
-}
-assert(Object.keys(keys).length === Object.keys(expectedKeys).length,
-    'AGC key table contains an unexpected key');
+const keys = literalAfter(app, 'AGC_KEY');
+same(keys, expectedKeys, 'Pinball key-code table changed');
 
-// Channel 010 relay selector/sign placement. Relay 7/5/2 carry plus and
-// relay 6/4/1 carry minus; plus has priority if both sign relays are set.
-for (const snippet of [
-    'case 7:agcDisplay.r1.plus=!!b',
-    'case 6:agcDisplay.r1.minus=!!b',
-    'case 5:agcDisplay.r2.plus=!!b',
-    'case 4:agcDisplay.r2.minus=!!b',
-    'case 2:agcDisplay.r3.plus=!!b',
-    'case 1:agcDisplay.r3.minus=!!b'
-]) {
-    assert(app.includes(snippet), `missing authentic sign relay mapping: ${snippet}`);
+// Channel 010 relay selector layout from the Block II DSKY relay matrix.
+const expectedDigits = {
+    11: [['prog', 0, 'c'], ['prog', 1, 'd']],
+    10: [['verb', 0, 'c'], ['verb', 1, 'd']],
+    9: [['noun', 0, 'c'], ['noun', 1, 'd']],
+    8: [['r1', 0, 'd']],
+    7: [['r1', 1, 'c'], ['r1', 2, 'd']],
+    6: [['r1', 3, 'c'], ['r1', 4, 'd']],
+    5: [['r2', 0, 'c'], ['r2', 1, 'd']],
+    4: [['r2', 2, 'c'], ['r2', 3, 'd']],
+    3: [['r2', 4, 'c'], ['r3', 0, 'd']],
+    2: [['r3', 1, 'c'], ['r3', 2, 'd']],
+    1: [['r3', 3, 'c'], ['r3', 4, 'd']]
+};
+const expectedSigns = {
+    7: ['r1', 'plus'], 6: ['r1', 'minus'],
+    5: ['r2', 'plus'], 4: ['r2', 'minus'],
+    2: ['r3', 'plus'], 1: ['r3', 'minus']
+};
+const expectedLamps = [
+    [0o00004, 'vel'], [0o00010, 'noatt'], [0o00020, 'alt'],
+    [0o00040, 'gimbal'], [0o00200, 'tracker'], [0o00400, 'prog']
+];
+same(literalAfter(app, 'CHANNEL10_DIGITS'), expectedDigits,
+    'channel 010 digit-selector matrix changed');
+same(literalAfter(app, 'CHANNEL10_SIGNS'), expectedSigns,
+    'channel 010 sign-selector matrix changed');
+same(literalAfter(app, 'CHANNEL10_LAMPS'), expectedLamps,
+    'Apollo 11-14 LM relay-12 lamp matrix changed');
+assert(app.includes('Apollo 11-14 LM panels left relay-12 bits 1/2 unplacarded and unused'),
+    'relay-12 Apollo 11-14 blank-position rationale must remain documented');
+
+// Execute the actual app.js channel-010 decoder in isolation. This avoids a
+// second hand-written decoder that could agree with itself while the app is
+// broken. Rendering and lamps are replaced by small observation hooks only.
+const start = app.indexOf('const CHANNEL10_DIGITS=');
+const end = app.indexOf('function decodeChannel11');
+assert(start >= 0 && end > start, 'could not isolate channel 010 decoder source');
+
+const rendered = {};
+const lamps = {};
+const errors = [];
+const relayDigit = Object.fromEntries(
+    Object.entries(expectedDigitRelay).map(([digit, code]) => [code, digit]));
+const relayWords = {};
+const context = {
+    RELAY_DIGIT: Object.freeze(relayDigit),
+    agcRelayWords: relayWords,
+    tickSound: false,
+    set2(name, text) {
+        rendered[name] = String(text);
+    },
+    setReg(name, sign, digits) {
+        rendered[name] = String(sign) + String(digits);
+    },
+    setLamp(name, on) {
+        lamps[name] = !!on;
+    },
+    popcount11(value) {
+        value &= 0x7ff;
+        let count = 0;
+        while (value) {
+            value &= value - 1;
+            count++;
+        }
+        return count;
+    },
+    playRelayBurst() {},
+    clearLamps() {},
+    console: {
+        error(...args) {
+            errors.push(args.map((arg) => String(arg)).join(' '));
+        }
+    },
+    Object,
+    Set,
+    Error
+};
+vm.createContext(context);
+vm.runInContext(
+    app.slice(start, end)
+    + '\nthis.__decodeChannel10=decodeChannel10;this.__agcDisplay=agcDisplay;',
+    context,
+    { filename: 'app-channel10.js' });
+
+const decode = context.__decodeChannel10;
+const display = context.__agcDisplay;
+assert(typeof decode === 'function', 'channel 010 decoder did not load');
+
+function word(relay, b = 0, c = 0, d = 0) {
+    return (relay << 11) | (b << 10) | (c << 5) | d;
 }
-assert(app.includes("function regSign(reg){return reg.plus?'+':reg.minus?'-':' '}"),
-    'plus must have priority when both DSKY sign relays are asserted');
-assert(app.includes('case 8:agcDisplay.r1.digits[0]=relayDigit(d)'),
-    'relay 8 must take R1 digit 1 from the right-hand D field');
+
+// PROG/VERB/NOUN and all 15 register digits.
+assert(decode(word(11, 0, 3, 25)) === true && rendered.prog === '12',
+    'relay 11 must drive PROG digits 1/2');
+assert(decode(word(10, 0, 27, 15)) === true && rendered.verb === '34',
+    'relay 10 must drive VERB digits 1/2');
+assert(decode(word(9, 0, 30, 28)) === true && rendered.noun === '56',
+    'relay 9 must drive NOUN digits 1/2');
+
+// Relay 8 has no left/C digit. An invalid C pattern therefore must not reject
+// a valid R1D1 update; only the right/D field is connected on the real matrix.
+assert(decode(word(8, 0, 1, 19)) === true,
+    'relay 8 must ignore its unconnected C field');
+assert(decode(word(7, 1, 29, 31)) === true,
+    'relay 7 must drive R1 plus, D2 and D3');
+assert(decode(word(6, 0, 21, 3)) === true && rendered.r1 === '+78901',
+    'relays 8/7/6 must assemble R1 as +78901');
+
+assert(decode(word(5, 1, 25, 27)) === true,
+    'relay 5 must drive R2 plus, D1 and D2');
+assert(decode(word(4, 0, 15, 30)) === true,
+    'relay 4 must drive R2 minus, D3 and D4');
+assert(decode(word(3, 0, 28, 19)) === true && rendered.r2 === '+23456',
+    'relays 5/4/3 must assemble R2 as +23456');
+assert(decode(word(2, 1, 29, 31)) === true,
+    'relay 2 must drive R3 plus, D2 and D3');
+assert(decode(word(1, 0, 21, 3)) === true && rendered.r3 === '+78901',
+    'relays 3/2/1 must assemble R3 as +78901');
+
+// Sign relays latch independently. VirtualAGC gives plus priority when both
+// relay bits are set, exactly as the app should.
+decode(word(6, 1, 21, 3));
+assert(display.r1.plus && display.r1.minus && rendered.r1 === '+78901',
+    'plus must have display priority when both R1 sign relays are asserted');
+decode(word(7, 0, 29, 31));
+assert(!display.r1.plus && display.r1.minus && rendered.r1 === '-78901',
+    'R1 minus relay must render minus when plus is clear');
+decode(word(6, 0, 21, 3));
+assert(!display.r1.plus && !display.r1.minus && rendered.r1 === ' 78901',
+    'R1 sign must blank when both sign relays are clear');
+
+// Relay 12 condition lamps. 0674 is bits 3,4,5,6,8,9 all asserted.
+assert(decode((12 << 11) | 0o674) === true,
+    'relay 12 all-lamps word must decode');
+for (const [, name] of expectedLamps) {
+    assert(lamps[name] === true, `relay 12 must light ${name}`);
+}
+// Bits 1/2 are real relay positions but unused/unplacarded on Apollo 11-14 LM.
+assert(decode((12 << 11) | 0o003) === true,
+    'Apollo 11 relay-12 unused bits 1/2 must not be treated as malformed');
+for (const [, name] of expectedLamps) {
+    assert(lamps[name] === false, `relay 12 must clear ${name}`);
+}
+assert(Object.keys(lamps).length === 6,
+    'Apollo 11-14 LM decoder must expose exactly six relay-12 condition lamps');
+
+// 00000 is the only valid blank code. Other unused five-bit patterns are not
+// blanks and must not erase previously latched digits.
+assert(decode(word(11, 0, 0, 0)) === true && rendered.prog === '  ',
+    'relay digit code 0 must remain a valid blank');
+decode(word(11, 0, 3, 25));
+const goodProg = rendered.prog;
+const goodRelay11 = relayWords[11];
+const errorCount = errors.length;
+assert(decode(word(11, 0, 1, 25)) === false,
+    'unused C digit pattern must be rejected');
+assert(rendered.prog === goodProg && relayWords[11] === goodRelay11,
+    'malformed relay word must not alter displayed or latched relay state');
+assert(errors.length === errorCount + 1,
+    'first malformed relay word must produce one diagnostic');
+assert(decode(word(11, 0, 1, 25)) === false && errors.length === errorCount + 1,
+    'identical malformed relay word diagnostics must be rate-limited');
+assert(decode(word(13, 0, 3, 25)) === false,
+    'unused relay selector 13 must be rejected');
+assert(errors.length === errorCount + 2,
+    'invalid selector must produce its own diagnostic');
 
 // Output channel 011: COMP ACTY bit 2 and UPLINK ACTY bit 3.
 assert(app.includes("function decodeChannel11(value){setLamp('comp',value&0o00002);setLamp('uplink',value&0o00004)}"),
     'channel 011 COMP/UPLINK mapping changed');
 
-// yaAGC synthetic/modulated channel 0163 constants from agc_engine.h.
+// yaAGC synthetic/modulated channel 0163 constants from agc_engine.h. The
+// engine already performs V/N modulation; the frontend must follow the fake
+// channel state rather than starting a second flashing timer.
 for (const snippet of [
     "setLamp('temp',value&0o00010)",
     "setLamp('keyrel',value&0o00020)",
@@ -98,3 +254,6 @@ assert(core.includes('this.writeIo(U_BIT | PROCEED_CHANNEL, PROCEED_MASK);'),
     'PRO U-bit mask packet changed');
 
 console.log('DSKY mapping smoke: PASS');
+console.log('  channel 010 selectors 1-12: PASS');
+console.log('  signs / 21 numerical positions / Apollo 11 LM lamps: PASS');
+console.log('  malformed relay-word preservation and diagnostics: PASS');
