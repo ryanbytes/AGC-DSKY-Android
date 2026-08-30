@@ -29,9 +29,10 @@ const RELAY_ZERO = 0o25;
 const RELAY_EIGHT = 0o35;
 const RELAY_SIGN_BIT = 0o2000;
 const PROGRAM00_LOW11 = (RELAY_ZERO << 5) | RELAY_ZERO;
-// Apollo 11-14 LM relay 12: VEL, NO ATT, ALT, GIMBAL LOCK, TRACKER, PROG.
-// Bits 1/2 are the two unplacarded positions on this mission-era LM panel.
-const LUMINARY_RELAY12_LAMP_MASK = 0o674;
+const V35_RELAY12_LOW11 = Object.freeze({
+    'Luminary099.bin': 0o674,
+    'Comanche055.bin': 0o650
+});
 
 function assert(condition, message) {
     if (!condition) throw new Error(message);
@@ -133,11 +134,9 @@ function pairIsEight(value) {
 }
 
 function lightTestNumericsPresent(relays) {
-    // Luminary/Comanche V35 loads FULLDSP into every numeric DSPTAB row. That
-    // drives both five-relay character banks to code 035 even on selector 8,
-    // whose C bank has no visible digit connection. Requiring both fields on
-    // selectors 1..11 proves the physical relay stream rather than only the 21
-    // visible numerical positions.
+    // Both Apollo-11 ropes use FULLDSP=05675 / FULLDSP1=07675. Thus V35
+    // drives both five-relay character banks to code 035 on selectors 1..11,
+    // including selector 8's visually unused C bank.
     for (const relay of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
         const value = relays.get(relay);
         if (value === undefined || !pairIsEight(value)) return false;
@@ -146,27 +145,24 @@ function lightTestNumericsPresent(relays) {
 }
 
 function lightTestSignsPresent(relays) {
-    // The Apollo DSKY condition-light test specifies a plus sign in R1/R2/R3.
-    // Those are the B/sign bits on relay selectors 7, 5, and 2 respectively.
     return [7, 5, 2].every((relay) => {
         const value = relays.get(relay);
         return value !== undefined && (value & RELAY_SIGN_BIT) !== 0;
     });
 }
 
-function luminaryConditionLightsPresent(relays) {
+function missionRelay12Present(relays, ropeName) {
+    const expected = V35_RELAY12_LOW11[ropeName];
     const relay12 = relays.get(12);
-    return relay12 !== undefined
-        && (relay12 & LUMINARY_RELAY12_LAMP_MASK) === LUMINARY_RELAY12_LAMP_MASK;
+    return expected !== undefined
+        && relay12 !== undefined
+        && (relay12 & 0o3777) === expected;
 }
 
 function completeV35RelayState(relays, ropeName) {
-    if (!lightTestNumericsPresent(relays) || !lightTestSignsPresent(relays)) return false;
-    // The app intentionally presents an Apollo-11-era LM annunciator panel.
-    // Require its six active relay-12 lights from Luminary. Do not impose the
-    // LM panel interpretation on the selectable Comanche rope.
-    if (ropeName === 'Luminary099.bin' && !luminaryConditionLightsPresent(relays)) return false;
-    return true;
+    return lightTestNumericsPresent(relays)
+        && lightTestSignsPresent(relays)
+        && missionRelay12Present(relays, ropeName);
 }
 
 function keyAndRun(core, keyCode, steps = 12000) {
@@ -179,27 +175,18 @@ function sendKeys(core, keyCodes, steps = 12000) {
 }
 
 function proveV35LightTest(core, ropeName, errors, channelUpdates) {
-    // Let the freshly reset flight program settle before forcing P00. At the
-    // AGC's ~11.72 us instruction cadence this is a little over one second of
-    // simulated execution without wall-clock waiting.
     core.step(100000);
 
-    // Put the flight program into P00 explicitly. The documented sequence is
-    // V37E 00E. In addition to sending the keys, require the resulting channel
-    // 010 program row to encode 00 before V35 is attempted; this avoids treating
-    // an arbitrary fixed step count as proof of the major-mode precondition.
+    // Explicitly enter P00 and prove the channel-driven program row rather than
+    // treating a fixed delay/step count as evidence of the precondition.
     sendKeys(core, [0o21, 0o03, 0o07, 0o34, 0o20, 0o20, 0o34]);
     assert(errors.length === 0, `${ropeName}: error while entering P00 with V37E00E`);
     const p00Relays = relayStateFromUpdates(channelUpdates);
     assert(program00Present(p00Relays),
         `${ropeName}: V37E00E did not leave channel-010 relay 11 at PROG 00 (low-11 0o${PROGRAM00_LOW11.toString(8)})`);
 
-    // Authentic Pinball codes for the DSKY light test: V35E.
+    // Authentic Pinball codes for V35 before final ENTER.
     sendKeys(core, [0o21, 0o03, 0o05]);
-
-    // Ignore startup, P00 selection, and key-entry display traffic. Semantic
-    // proof starts with the ENTER that asks the actual rope software to execute
-    // Verb 35.
     channelUpdates.length = 0;
     core.keyPress(0o34);
 
@@ -220,20 +207,17 @@ function proveV35LightTest(core, ropeName, errors, channelUpdates) {
 
     assert(errors.length === 0, `${ropeName}: error while executing real V35E`);
     assert(lightTestNumericsPresent(relays),
-        `${ropeName}: V35E did not produce FULLDSP digit-8 codes on every numeric relay row `
-        + `within ${maxResponseSteps} AGC steps`);
+        `${ropeName}: V35E did not produce FULLDSP digit-8 codes on every numeric relay row within ${maxResponseSteps} AGC steps`);
     assert(lightTestSignsPresent(relays),
         `${ropeName}: V35E did not assert the R1/R2/R3 plus-sign relay bits`);
-    if (ropeName === 'Luminary099.bin') {
-        assert(luminaryConditionLightsPresent(relays),
-            `${ropeName}: V35E did not assert all six Apollo-11 LM relay-12 condition-light bits`);
-    }
+    assert(missionRelay12Present(relays, ropeName),
+        `${ropeName}: V35E relay 12 low-11 state was not exact expected 0o${V35_RELAY12_LOW11[ropeName].toString(8)}`);
 
     return {
         responseSteps,
         channelUpdates: channelUpdates.length,
         p00Relay11: p00Relays.get(11) & 0o3777,
-        relay12: relays.has(12) ? (relays.get(12) & 0o3777) : null
+        relay12: relays.get(12) & 0o3777
     };
 }
 
@@ -258,24 +242,17 @@ async function smokeMission(context, ropeName) {
     assert(typeof version === 'string' && version.length > 0,
         `${ropeName}: yaAGC version export returned no usable string`);
 
-    // Execute enough real AGC cycles to process the queued U-bit masks and
-    // exercise ordinary output production/draining without starting a timer.
     core.step(2000);
     assert(errors.length === 0, `${ropeName}: error during initial CPU execution`);
 
     const v35 = proveV35LightTest(core, ropeName, errors, channelUpdates);
 
-    // Reset after the semantic test so the generic I/O smoke below still starts
-    // from a clean mission state and retains its exact step-count assertion.
     core.reset();
     core.configureInputMasks();
     channelUpdates.length = 0;
     errors.length = 0;
 
     core.step(2000);
-
-    // Exercise the two DSKY input paths against the actual packet/ring-buffer
-    // implementation. Pinball key 021 is VERB; PRO is channel 032 bit 020000.
     core.keyPress(0o21);
     core.step(1000);
     core.proceedKey(true);
@@ -287,8 +264,6 @@ async function smokeMission(context, ropeName) {
     assert(core.totalSteps === 3500,
         `${ropeName}: unexpected real execution step count ${core.totalSteps}`);
 
-    // A second reset repeats the real lazy-I/O-safe reset path and must return
-    // the wrapper's mission step accounting to zero without throwing.
     core.reset();
     core.configureInputMasks();
     assert(core.totalSteps === 0, `${ropeName}: reset did not clear mission step count`);
@@ -319,9 +294,7 @@ async function main() {
         console.log(`real yaAGC ${name}: PASS (${result.channelUpdates} generic channel updates; ${result.version})`);
         console.log(`  P00 precondition relay 11: 0o${result.v35.p00Relay11.toString(8).padStart(4, '0')}`);
         console.log(`  V35E semantic relay test: PASS (${result.v35.channelUpdates} channel updates; response within ${result.v35.responseSteps} steps)`);
-        if (result.v35.relay12 !== null) {
-            console.log(`  V35E relay 12 low-11 state: 0o${result.v35.relay12.toString(8).padStart(4, '0')}`);
-        }
+        console.log(`  V35E relay 12 low-11 state: 0o${result.v35.relay12.toString(8).padStart(4, '0')}`);
     }
 
     assert(runs.length === 2, 'expected exactly two real mission runs');
