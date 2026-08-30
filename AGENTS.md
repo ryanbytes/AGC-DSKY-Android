@@ -59,6 +59,8 @@ The pinned WASM import table has been inspected directly. It imports exactly:
 - Normal DSKY keys use channel `015` octal with authentic Pinball key codes.
 - PRO/Proceed uses channel `032` octal, bit `020000`, and must remain press-and-hold capable rather than being reduced to a fixed synthetic pulse.
 - webAGC/yaAGC channel `0163` is emulator-provided modulation for DSKY hardware/blink states; preserve the distinction between this and ordinary AGC output channels.
+- Channel `010` relay decoding must preserve the Block II selector/sign/5-bit character matrix. Unsupported five-bit character codes are invalid, not alternate blank codes.
+- Luminary V35 `FULLDSP`/`FULLDSP1` physically drives both five-relay character banks on every numeric relay row. Relay selector 8 renders only its D bank, but V35 still drives its visually unused C bank to code `035`; do not optimize that physical state away.
 
 ## CM/LM limitation
 
@@ -77,7 +79,8 @@ Current policy:
 
 Keep emulator integration separate from UI state:
 
-- `app/src/main/assets/app.js`: DSKY UI/mode/lifecycle coordination, DREAM SOLAR astronomy, and authentic channel decoding.
+- `app/src/main/assets/app.js`: DSKY UI/mode/lifecycle coordination, DREAM SOLAR astronomy, authentic channel decoding, and the base relay model.
+- `app/src/main/assets/app-refine.js`: small post-load source-backed refinements that must remain narrow: current clock-V35 isolation, relay-8 FULLDSP physical-state correction, and read-only relay/render diagnostics used by device smokes. Do not turn this into a second application implementation; move mature logic into `app.js` when a safe full-source edit is available.
 - `app/src/main/assets/agc-core.js`: WASM loading, rope loading, CPU stepping, packet I/O, input masks, key/PRO injection.
 - `app/src/main/assets/runtime-debug.js`: early JavaScript/runtime/CSP diagnostics and debug-build frontend readiness marker.
 - Android shell code should stay small: `MainActivity`, `AgcDreamService`, `NetClient`, and `DebugReporter` unless a native capability is genuinely required.
@@ -124,14 +127,16 @@ The canonical build path must continue to run:
 - manifest/network policy smoke
 - strict frontend CSP smoke
 - frontend/source smoke
+- app-refinement smoke, including V35 transition isolation, relay-8 FULLDSP behavior, and read-only relay diagnostics
 - display/crop geometry smoke
 - DREAM SOLAR astronomy/polar-regime smoke
 - AGC wrapper smoke
 - runtime-debug/CSP diagnostic smoke
 - native diagnostic smoke
 - DSKY mapping smoke
+- effective V35 relay-model smoke (`app.js` + `app-refine.js`)
 - asset-reference smoke
-- real pinned yaAGC WASM + both-rope runtime smoke, including semantic `V37E00E` -> `V35E` light-test proof
+- real pinned yaAGC WASM + both-rope runtime smoke, including semantic `V37E00E` -> `V35E` proof of FULLDSP/FULLDSP1 relay states
 - clean Gradle build
 - post-build APK verification
 
@@ -149,8 +154,13 @@ The same-process live gate currently:
 - exercises VERB through the actual DSKY pointer path
 - exercises held PRO pointer-down/release
 - verifies same-WebView pause/resume preserves the same core object
-- drives Luminary `V37E00E` then `V35E` through pointer handlers and requires the rendered all-8 numerical DSKY light-test pattern
+- drives Luminary `V37E00E` then `V35E` through pointer handlers
+- requires exact Luminary V35 channel-010 low-11 relay latches: `01675` on ordinary numeric rows, `03675` on the R1/R2/R3 plus rows, relay 8 also `01675` including its unused C bank, and relay 12 `00674`
+- requires rendered PROG/VERB/NOUN `88` and R1/R2/R3 `+88888`
+- requires the steady V35 annunciators, COMP ACTY off, and an observed yaAGC-modulated V/N + KEY REL/OPR ERR off phase
 - reloads the packaged page in CM AGC mode and requires persisted mission/run-mode restoration on a newly constructed core object
+
+`window.AGCDSKY.snapshotRelays()` and `snapshotDsky()` exist specifically to make those device checks diagnostic: they return copies of relay/render/lamp state and must not expose mutable production relay objects.
 
 `tools/device-process-recreation-smoke.sh` separately performs `adb shell am force-stop`, requires an observed no-process interval, relaunches the app, reconnects to the new WebView socket, and requires persisted CM/AGC state to create a fresh running core. It must best-effort restore the user's pre-smoke frontend preferences on both success and failure.
 
@@ -158,9 +168,9 @@ The same-process live gate currently:
 
 A successful full device smoke still does not prove every user-visible behavior. Manual/device gates still include:
 
-- visually inspect LM AGC channel-driven display output, signs, and annunciators
-- verify additional representative Pinball semantics beyond the automated V35 light test
-- press and hold PRO physically long enough to verify intended standby behavior
+- pixel-perfect DSKY appearance on the physical screen
+- representative Pinball semantics beyond the automated V35 light test
+- a long physical PRO hold for standby behavior
 - real OS screen off/on behavior in addition to the direct lifecycle bridge smoke
 - Android lifecycle/configuration Activity recreation beyond the automated page reload and explicit process force-stop/relaunch
 - DreamService selection/startup/display-only behavior through normal Android UI
