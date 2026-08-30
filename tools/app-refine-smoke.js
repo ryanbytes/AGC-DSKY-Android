@@ -16,6 +16,10 @@ const calls = [];
 const context = {
   mode: 'clock',
   lampTestActive: true,
+  selectedMission: 'luminary099',
+  clockRelayWords: { 8: 0o35, 7: 0o2000 },
+  agcRelayWords: { 11: 0o1234 },
+  window: { AGCDSKY: {} },
   press(key) {
     calls.push(['press', key]);
     if (key === 'R') context.lampTestActive = false;
@@ -82,6 +86,23 @@ assert(JSON.stringify(calls.slice(realAgcStart)) === JSON.stringify([
   ['enterAgc', 'toggle']
 ]), 'AGC-mode transition unexpectedly injected synthetic RSET');
 
+// Device diagnostics expose copies of the latched relay state. Mutating the
+// returned object must not alter either production relay table.
+assert(typeof context.window.AGCDSKY.snapshotRelays === 'function',
+  'AGCDSKY.snapshotRelays diagnostic was not registered');
+assert(typeof context.window.AGCDSKY.snapshotDsky === 'function',
+  'AGCDSKY.snapshotDsky diagnostic was not registered');
+const relays = context.window.AGCDSKY.snapshotRelays();
+assert(relays.mode === 'agc' && relays.mission === 'luminary099',
+  'relay snapshot omitted current mode/mission');
+assert(relays.clock[8] === 0o35 && relays.agc[11] === 0o1234,
+  'relay snapshot did not copy clock/AGC latch words');
+relays.clock[8] = 0;
+relays.agc[11] = 0;
+assert(context.clockRelayWords[8] === 0o35 && context.agcRelayWords[11] === 0o1234,
+  'relay diagnostic leaked mutable production relay state');
+
 console.log('app refinement smoke: PASS');
 console.log('  clock V35 ordinary-key isolation: PASS');
 console.log('  RSET escape and AGC/mission cleanup ordering: PASS');
+console.log('  read-only relay diagnostics: PASS');
