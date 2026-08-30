@@ -393,7 +393,7 @@ async function keySequence(cdp, keys, basePointerId) {
 
 const V35_RELAY_LOW11 = Object.freeze({
   1: 0o1675, 2: 0o3675, 3: 0o1675, 4: 0o1675,
-  5: 0o3675, 6: 0o1675, 7: 0o3675, 8: 0o0035,
+  5: 0o3675, 6: 0o1675, 7: 0o3675, 8: 0o1675,
   9: 0o1675, 10: 0o1675, 11: 0o1675, 12: 0o0674
 });
 const STEADY_V35_LAMPS = Object.freeze([
