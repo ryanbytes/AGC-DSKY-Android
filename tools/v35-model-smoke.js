@@ -24,9 +24,20 @@ function literalAfter(name) {
   return vm.runInNewContext('(' + match[1] + ')');
 }
 
+function popcount11(value) {
+  value &= 0o3777;
+  let count = 0;
+  while (value) {
+    value &= value - 1;
+    count++;
+  }
+  return count;
+}
+
 const digitRelay = literalAfter('DIGIT_RELAY');
 const channel10Digits = literalAfter('CHANNEL10_DIGITS');
 const channel10Signs = literalAfter('CHANNEL10_SIGNS');
+const channel10Lamps = literalAfter('CHANNEL10_LAMPS');
 assert(digitRelay['8'] === 0o35, 'V35 numerical light test must use relay code 035 for digit 8');
 
 assert(app.includes('const V35_TEST_MS=5000,V35_FLASH_PHASE_MS=320;'),
@@ -34,7 +45,7 @@ assert(app.includes('const V35_TEST_MS=5000,V35_FLASH_PHASE_MS=320;'),
 assert(app.includes("decodeChannel10((12<<11)|0o674);"),
   'clock V35 must drive the six Apollo-11 LM relay-12 condition lights');
 assert(app.includes('decodeChannel11(0o00004);'),
-  'clock V35 must light UPLINK ACTY without asserting COMP ACTY');
+  'synthetic clock V35 must light UPLINK without inventing COMP ACTY');
 assert(app.includes('decodeChannel163(0o00730);'),
   'clock V35 must assert TEMP/KEY REL/OPR ERR/RESTART/STBY through the DSKY state path');
 assert(!/function lampTest\(\)[\s\S]*?querySelectorAll\('\[data-lamp\]'\)[\s\S]*?classList\.add\('on'\)/.test(app),
@@ -42,9 +53,7 @@ assert(!/function lampTest\(\)[\s\S]*?querySelectorAll\('\[data-lamp\]'\)[\s\S]*
 assert(html.indexOf('<script src="app-refine.js"></script>') > html.indexOf('<script src="app.js"></script>'),
   'app-refine.js must load after app.js so the effective V35 relay model is installed');
 
-// RSET/mission/mode refinement depends on this base helper actually killing
-// both asynchronous pieces of the synthetic test. Guard the contract directly
-// instead of allowing the wrapper smoke to fake a stronger cancel function.
+// Base cancellation remains the owner of timer shutdown for RSET/AGC entry.
 const cancelStart = app.indexOf('function cancelLampTest(');
 const cancelEnd = app.indexOf('function v35RelayWord(', cancelStart);
 assert(cancelStart >= 0 && cancelEnd > cancelStart, 'could not isolate cancelLampTest');
@@ -56,26 +65,71 @@ assert(cancelSource.includes('clearInterval(lampTestFlashTimer)'),
 assert(cancelSource.includes('lampTestActive=false'),
   'cancelLampTest must clear the active-test ownership flag');
 
-// Load the base relay-word constructor, then the actual post-load refinement
-// layer. This tests the effective browser binding rather than a second model in
-// the smoke itself.
+const pressStart = app.indexOf('function press(k)');
+const solarStart = app.indexOf('// Solar brightness', pressStart);
+assert(pressStart >= 0 && solarStart > pressStart, 'could not isolate base DSKY press handler');
+const pressSource = app.slice(pressStart, solarStart);
+assert(pressSource.includes("if(k==='R'){cancelLampTest();"),
+  'base clock RSET must own V35 cancellation');
+
+const enterAgcStart = app.indexOf('async function enterAgc()');
+const cycleMissionStart = app.indexOf('function cycleMission()', enterAgcStart);
+assert(enterAgcStart >= 0 && cycleMissionStart > enterAgcStart, 'could not isolate enterAgc');
+assert(app.slice(enterAgcStart, cycleMissionStart).includes('cancelLampTest();'),
+  'base enterAgc must cancel synthetic V35 before AGC startup');
+
+// Load the base relay-word constructor, then execute the complete current
+// app-refine.js in a deliberately small but sufficient browser-like context.
+// This catches cross-script binding additions that a string-only smoke misses.
 const start = app.indexOf('function v35RelayWord(');
 const end = app.indexOf('function startClockV35Flash', start);
 assert(start >= 0 && end > start, 'could not isolate v35RelayWord');
+
+const timers = new Map();
+let nextTimer = 1;
 const context = {
   DIGIT_RELAY: digitRelay,
   CHANNEL10_DIGITS: channel10Digits,
   CHANNEL10_SIGNS: channel10Signs,
+  CHANNEL10_LAMPS: channel10Lamps,
+  CLOCK_RELAYS: [8, 7, 6, 5, 4, 3, 2, 1],
+  V35_TEST_MS: 5000,
   mode: 'clock',
   lampTestActive: false,
+  lampTestTimer: 0,
+  lampTestFlashTimer: 0,
   selectedMission: 'luminary099',
+  verb: '35',
+  noun: '65',
+  tickSound: false,
   clockRelayWords: {},
   agcRelayWords: {},
   window: { AGCDSKY: {} },
+  document: {
+    querySelector() { return null; },
+    getElementById() { return null; },
+    body: { classList: { contains() { return false; } } }
+  },
+  setTimeout(callback, ms) {
+    const id = nextTimer++;
+    timers.set(id, { callback, ms });
+    return id;
+  },
+  clearTimeout(id) { timers.delete(id); },
+  clearInterval(id) { timers.delete(id); },
+  desiredClockDigits() { return {}; },
+  clockWord() { return 0; },
+  popcount11,
+  playRelayBurst() {},
+  latchAgcRelay(relay, low11) { context.agcRelayWords[relay] = low11; },
+  lampTest() { return 'base-lamp-test'; },
+  syncClockFace() { return 'base-clock-sync'; },
   press() {},
-  cancelLampTest() {},
+  cancelLampTest() { context.lampTestActive = false; },
   enterAgc() {},
-  cycleMission() {}
+  cycleMission() {},
+  decodeChannel11(value) { return value; },
+  decodeChannel163(value) { return value; }
 };
 vm.createContext(context);
 vm.runInContext(app.slice(start, end) + '\nthis.__baseV35RelayWord=v35RelayWord;', context,
@@ -84,12 +138,18 @@ const baseV35RelayWord = context.__baseV35RelayWord;
 vm.runInContext(refine, context, { filename: 'app-refine.js' });
 const v35RelayWord = context.v35RelayWord;
 assert(typeof v35RelayWord === 'function', 'effective V35 relay constructor missing after refinement');
+assert(typeof context.window.AGCDSKY.snapshotRelays === 'function',
+  'complete refinement VM did not install snapshotRelays');
+assert(typeof context.window.AGCDSKY.snapshotChannels === 'function',
+  'complete refinement VM did not install snapshotChannels');
+assert(typeof context.window.AGCDSKY.snapshotDsky === 'function',
+  'complete refinement VM did not install snapshotDsky');
 
-// Luminary 99 VBTSTLTS loads FULLDSP 05675 into every numeric DSPTAB entry.
-// After T4 strips the dirty/selector bits, every ordinary numeric row therefore
-// carries low-11 01675; the three plus rows carry FULLDSP1 low-11 03675.
-// Relay 8's C field is not visibly connected, but those five physical relays are
-// still driven and must be represented by the model.
+// Luminary VBTSTLTS loads FULLDSP 05675 into every numeric DSPTAB entry.
+// After T4 strips dirty/selector bits, every ordinary numeric row carries
+// low-11 01675; plus rows carry FULLDSP1 low-11 03675. Relay 8's C field is
+// visually unused but is physically driven and therefore remains part of the
+// relay/click model.
 for (const relay of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const value = v35RelayWord(relay);
   assert(((value >> 11) & 0o17) === relay,
@@ -108,7 +168,7 @@ for (const relay of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
 }
 
 assert(((baseV35RelayWord(8) >> 5) & 0o37) === 0,
-  'base relay-8 behavior changed; remove the refinement only after app.js itself models FULLDSP');
+  'base relay-8 behavior changed; fold/remove refinement only after updating this gate');
 assert(((v35RelayWord(8) >> 5) & 0o37) === 0o35,
   'effective relay-8 C bank must be driven by the refinement layer');
 
@@ -132,9 +192,19 @@ assert(flashSource.includes('const off=phase===0'),
 assert(flashSource.includes("setLamp('keyrel',!off);setLamp('oprerr',!off);"),
   'V35 off phase must suppress KEY REL and OPR ERR with V/N blanking');
 
+// Refinement-level source invariants that are intentionally separate from the
+// detailed behavioral app-refine smoke.
+assert(refine.includes("baseDskyPress('R')"),
+  'natural/mission V35 restore must reuse the base RSET path');
+assert(refine.includes('clockV35ActiveRelays = Object.assign({}, agcRelayWords)'),
+  'V35 refinement must preserve active relay latches for return-delta accounting');
+assert(refine.includes('window.AGCDSKY.snapshotChannels = snapshotChannels'),
+  'raw channel diagnostics must remain installed');
+
 console.log('V35 relay model smoke: PASS');
+console.log('  complete app-refine VM load: PASS');
 console.log('  FULLDSP/FULLDSP1 physical relay rows: PASS');
-console.log('  explicit timeout + flash-interval cancellation contract: PASS');
+console.log('  base timeout + flash cancellation ownership: PASS');
 console.log('  21 visible numerical positions + three plus signs: PASS');
-console.log('  relay-12 condition lights / COMP exclusion: PASS');
+console.log('  synthetic relay-12 / no invented COMP: PASS');
 console.log('  five-second test / 1.28 s 75% flash: PASS');
