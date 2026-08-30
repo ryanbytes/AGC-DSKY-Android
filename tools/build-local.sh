@@ -141,6 +141,7 @@ node tools/agc-core-smoke.js
 node tools/runtime-debug-smoke.js
 node tools/native-diagnostic-smoke.js
 node tools/dsky-mapping-smoke.js
+node tools/v35-model-smoke.js
 node tools/asset-reference-smoke.js
 node tools/wasm-runtime-smoke.js
 
