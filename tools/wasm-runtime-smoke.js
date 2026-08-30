@@ -118,16 +118,16 @@ function pairIsEight(value) {
 }
 
 function lightTestNumericsPresent(relays) {
-    // V35 lights every numerical DSKY position. Relay 8 only carries R1D1 in
-    // its right-hand digit field; the remaining numerical relay words carry
-    // two digits each. Requiring every selector 1..11 prevents a partial or
-    // synthetic-looking output burst from counting as the Pinball response.
-    for (const relay of [11, 10, 9, 7, 6, 5, 4, 3, 2, 1]) {
+    // Luminary/Comanche V35 loads FULLDSP into every numeric DSPTAB row. That
+    // drives both five-relay character banks to code 035 even on selector 8,
+    // whose C bank has no visible digit connection. Requiring both fields on
+    // selectors 1..11 proves the physical relay stream rather than only the 21
+    // visible numerical positions.
+    for (const relay of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
         const value = relays.get(relay);
         if (value === undefined || !pairIsEight(value)) return false;
     }
-    const relay8 = relays.get(8);
-    return relay8 !== undefined && (relay8 & 0o37) === RELAY_EIGHT;
+    return true;
 }
 
 function lightTestSignsPresent(relays) {
@@ -201,7 +201,7 @@ function proveV35LightTest(core, ropeName, errors, channelUpdates) {
 
     assert(errors.length === 0, `${ropeName}: error while executing real V35E`);
     assert(lightTestNumericsPresent(relays),
-        `${ropeName}: V35E did not produce the complete all-8 DSKY numerical relay pattern `
+        `${ropeName}: V35E did not produce FULLDSP digit-8 codes on every numeric relay row `
         + `within ${maxResponseSteps} AGC steps`);
     assert(lightTestSignsPresent(relays),
         `${ropeName}: V35E did not assert the R1/R2/R3 plus-sign relay bits`);
