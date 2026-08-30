@@ -14,22 +14,30 @@ v35RelayWord = function refinedV35RelayWord(relay) {
   return relay === 8 ? word | (DIGIT_RELAY['8'] << 5) : word;
 };
 
-// Clock-mode V35 owns the DSKY presentation for its five-second test. On the
-// real Pinball path ordinary keyboard input cannot repaint individual fields
-// out from under the test. RSET remains the explicit way to terminate it.
+// Clock-mode V35 owns the DSKY presentation for its five-second test. Ordinary
+// keyboard input cannot repaint individual fields out from under it. RSET is
+// the explicit escape and must cancel both the five-second teardown timeout and
+// the 320-ms flash interval before restoring the normal clock face.
 const baseDskyPress = press;
 press = function refinedDskyPress(key) {
-  if (mode === 'clock' && lampTestActive && key !== 'R') return;
+  if (mode === 'clock' && lampTestActive) {
+    if (key !== 'R') return;
+    cancelLampTest();
+  }
   return baseDskyPress(key);
 };
 
 function restoreClockBeforeLeavingV35() {
-  if (mode === 'clock' && lampTestActive) baseDskyPress('R');
+  if (mode !== 'clock' || !lampTestActive) return;
+  // Do not rely on app.js's base RSET to stop V35 timers; base RSET only resets
+  // visible clock fields. Cancel the test explicitly first, then reuse the base
+  // RSET path to clear annunciators and restore ordinary V16 N65 clock state.
+  cancelLampTest();
+  baseDskyPress('R');
 }
 
 // A synthetic V35 flash interval must never survive a transition into a real
-// AGC mission or a mission-selection change. Restore the ordinary clock face
-// first so no V35 annunciator/timer state can leak into the next mode.
+// AGC mission or a mission-selection change.
 const baseEnterAgc = enterAgc;
 enterAgc = function refinedEnterAgc(...args) {
   restoreClockBeforeLeavingV35();
