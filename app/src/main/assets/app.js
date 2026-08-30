@@ -14,7 +14,10 @@ let entryMode='',entry='',verb='16',noun='65',mode='clock',
     tickSound=store.get('audioTickV4')!=='0',
     displayOnly=dream||store.get('displayOnly')==='1',
     lampTestActive=false,controlsTimer=0,audioCtx=null,tickLevel=1,solarFactor=0;
-const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20,RELAY_CLICK_SPREAD_MS=2.5;
+// Luminary 99 T4RUPT: normal display service is 120 ms; once dirty display
+// work enters QUIKDSP, successive bank writes are 40 ms start-to-start with
+// relay drive removed after the intervening 20 ms phase.
+const CLOCK_SCAN_MS=120,CLOCK_DIRTY_BANK_MS=40,CLOCK_SETTLE_MS=20,RELAY_CLICK_SPREAD_MS=2.5;
 let clockDigits={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']},
     clockRelayWords={},relayQueue=[],relayBusy=false;
 const agcRelayWords={};
@@ -83,7 +86,7 @@ function runRelayQueue(){
     for(const [name,index] of CHANNEL10_DIGITS[job.relay]){clockDigits[name][index]=job.want[name][index];touched.add(name)}
     touched.forEach(renderClockReg);
   },CLOCK_SETTLE_MS);
-  setTimeout(runRelayQueue,CLOCK_RELAY_MS);
+  setTimeout(runRelayQueue,CLOCK_DIRTY_BANK_MS);
 }
 function tick(){
   if(mode!=='clock'||lampTestActive||relayBusy)return;
@@ -381,7 +384,7 @@ document.addEventListener('pointerdown',()=>{if(tickSound)ensureAudio()},{passiv
 window.AGCDSKY={agcChannel:onAgcChannel,getCore:()=>agcCore,setAppVisible,getMission:()=>selectedMission};
 document.body.classList.toggle('dream',dream);
 if(!dream&&!displayOnly&&store.get('hinted')!=='1'){document.body.classList.add('first-run');setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200)}
-applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(verb,noun);syncClockFace();setInterval(tick,80);
+applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(verb,noun);syncClockFace();setInterval(tick,CLOCK_SCAN_MS);
 if(!dream&&!restoreAgcOnLoad)rememberRunMode('clock');
 if(restoreAgcOnLoad)setTimeout(()=>enterAgc(),0);
 if(dream){
