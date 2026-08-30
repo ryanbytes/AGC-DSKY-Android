@@ -29,7 +29,7 @@ This runs the immediate install/launch/frontend smoke, live AGC/WebView checks, 
 - requires the debug-only `FRONTEND READY app` marker
 - rejects obvious fatal Android/WebView events
 
-A process that merely stays alive with a blank or partially initialized WebView is not a pass.
+A process that merely stays alive with a blank or partially initialized WebView is not a pass. The readiness marker now also requires the final refinement layer to expose `snapshotRelays()`, `snapshotChannels()`, and `snapshotDsky()`; a page that loaded only the base frontend cannot pass readiness.
 
 ### Live AGC runtime smoke
 
@@ -58,11 +58,17 @@ The general live gate checks:
 
 The smoke snapshots the persistent mission/run-mode settings and attempts to restore them afterward. If the pre-test state was an active AGC run, restoration necessarily starts that mission from a fresh AGC reset; exact CPU/erasable-memory state is not serialized by the app.
 
-## Relay-aware V35 semantic gate
+## Relay- and channel-aware V35 semantic gate
 
-`tools/device-v35-smoke.js` selects Luminary099, enters P00 through the real pointer sequence `V37E00E`, then enters `V35E` through the same on-screen pointer handlers.
+`tools/device-v35-smoke.js` selects Luminary099, enters P00 through the real pointer sequence `V37E00E`, waits until channel-010 selector 11 actually carries PROG `00` low-11 `01265`, then enters `V35E` through the same on-screen pointer handlers.
 
-The frontend now exposes read-only `AGCDSKY.snapshotRelays()` and `AGCDSKY.snapshotDsky()` diagnostics. They copy current state rather than exposing mutable relay tables. The V35 driver uses those diagnostics to distinguish an AGC-output error from a renderer error.
+The frontend exposes read-only diagnostics:
+
+- `AGCDSKY.snapshotRelays()` — clock and AGC channel-010 latch copies
+- `AGCDSKY.snapshotChannels()` — most recent raw channel `011` and `0163` words plus their source mode
+- `AGCDSKY.snapshotDsky()` — combined relay/channel/render/lamp snapshot
+
+The copies are diagnostic only and do not expose mutable production state. This lets the driver distinguish an AGC-output error, a channel-to-lamp decoder error, and an SVG rendering error.
 
 A V35 pass requires all of the following at the same visible/on phase:
 
@@ -77,21 +83,38 @@ A V35 pass requires all of the following at the same visible/on phase:
 - relay 12 is `00674` for the six Apollo-11 LM condition lights
 - UPLINK, TEMP, NO ATT, GIMBAL LOCK, STBY, PROG, RESTART, TRACKER, ALT, and VEL are on
 - KEY REL and OPR ERR are on during the visible phase
-- COMP ACTY remains off
 - EL power-off is not asserted
 - the frontend synthetic clock-test flag is false, proving this state came from the real AGC path rather than the phone-clock V35 convenience path
+- the rendered channel-011 and channel-0163 discretes exactly match the raw words captured from yaAGC
 
-The driver then waits for yaAGC's hardware-model modulation and requires an observed off phase where:
+### COMP ACTY is channel-derived, not hard-coded
 
-- V/N blanking is asserted
-- KEY REL is off
-- OPR ERR is off
-- the steady V35 lamps remain on
-- the same channel-010 V35 relay latches remain present
+The real V35 gate deliberately does **not** require COMP ACTY to be off. V35's own `TSTCON1` mask does not force channel 011 bit 2, but Luminary's Executive normally controls COMP ACTY while jobs run or idle, and the V35 test executes as a job. Therefore either COMP state can be legitimate at the instant sampled.
+
+The invariant is stricter and simpler:
+
+- rendered COMP ACTY == raw channel `011` bit `00002`
+- rendered UPLINK ACTY == raw channel `011` bit `00004`
+
+`tools/device-v35-policy-smoke.js` is part of the host build and explicitly rejects reintroducing a fixed `state.lamps.comp === false` assertion.
+
+### Raw channel 0163 fidelity
+
+For each sampled real-AGC V35 state, the live gate requires:
+
+- TEMP == channel `0163` bit `00010`
+- KEY REL == `00020`
+- V/N blanking == `00040`
+- OPR ERR == `00100`
+- RESTART == `00200`
+- STBY == `00400`
+- EL-off == `01000`
+
+The driver then waits for yaAGC's hardware-model modulation and requires an observed off phase where V/N blanking is asserted and KEY REL / OPR ERR are off while the steady V35 annunciators and channel-010 relay latches remain present. That off-phase snapshot must also match the contemporaneous raw channel-0163 word.
 
 That proves the path:
 
-`pointer input -> Pinball/Luminary099 -> yaAGC channel 010/011/0163 -> frontend relay latches -> annunciators/SVG`
+`pointer input -> Pinball/Luminary099 -> yaAGC raw channels/relay words -> frontend decoders -> annunciators/SVG`
 
 It is intentionally stronger than decoding the SVG and seeing a collection of 8s.
 
@@ -124,13 +147,15 @@ This proves Android process-death preference restoration and fresh core construc
 
 ## Build-time semantic counterparts
 
-`tools/v35-model-smoke.js` checks the effective clock-side relay model after `app-refine.js` is loaded. In particular it requires `FULLDSP` low-11 `01675` on every ordinary numeric row and `FULLDSP1` low-11 `03675` on the three plus-sign rows, including the unused C bank on relay 8.
+`tools/v35-model-smoke.js` checks the effective clock-side relay model after `app-refine.js` is loaded. In particular it requires `FULLDSP` low-11 `01675` on every ordinary numeric row and `FULLDSP1` low-11 `03675` on the three plus-sign rows, including the unused C bank on relay 8. Its COMP exclusion applies only to the synthetic phone-clock convenience test.
 
-`tools/wasm-runtime-smoke.js`, also part of `tools/build-local.sh`, drives the exact pinned yaAGC WASM and both pinned rope images. It explicitly enters P00 with `V37E00E`, executes `V35E`, and requires both physical five-relay banks on selectors 1 through 11 to carry the digit-8 code, plus signs on R1/R2/R3, and the Luminary relay-12 condition-light mask.
+`tools/app-refine-smoke.js` additionally guards clock-to-V35-to-clock physical relay deltas, natural five-second return to canonical V16 N65, V35 key isolation, RSET/mission/AGC transition behavior, and immutable relay/raw-channel diagnostics.
+
+`tools/device-v35-policy-smoke.js` statically guards the live-device proof contract: raw channel `011` and `0163` must drive the discrete assertions, and a fixed COMP-off assertion is forbidden.
+
+`tools/wasm-runtime-smoke.js`, also part of `tools/build-local.sh`, drives the exact pinned yaAGC WASM and both pinned rope images. It explicitly enters P00 with `V37E00E`, proves the channel-010 PROG `00` relay state, executes `V35E`, and requires both physical five-relay banks on selectors 1 through 11 to carry the digit-8 code, plus signs on R1/R2/R3, and exact mission-specific relay-12 low-11 state (`00674` for Luminary099, `00650` for Comanche055).
 
 These tests prove source/model and real rope/WASM semantics before Gradle packages the APK, but they are still not Android/WebView tests. The live V35 driver is the corresponding end-to-end device gate.
-
-`tools/app-refine-smoke.js` additionally guards clock-V35 key isolation, RSET escape, AGC/mission cleanup ordering, relay-8 FULLDSP behavior, and the immutability of relay diagnostic snapshots.
 
 `tools/build-local.sh` runs `bash -n` over every `tools/*.sh` file and `node --check` over every `tools/*.js` file before functional source smokes or Gradle work. Device-only helpers therefore remain syntax-gated even on a build host with no attached phone.
 
