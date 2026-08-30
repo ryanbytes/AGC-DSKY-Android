@@ -45,7 +45,19 @@ function captureClockRelaysBeforeV35() {
   return relays;
 }
 
+function captureClockRestoreTargets() {
+  const relays = {};
+  const want = desiredClockDigits();
+  for (const relay of CLOCK_RELAYS) relays[relay] = clockWord(relay, want) & 0o3777;
+  relays[11] = clockPairLow11('00');
+  relays[10] = clockPairLow11(verb);
+  relays[9] = clockPairLow11(noun);
+  relays[12] = clockRelay12Low11();
+  return relays;
+}
+
 let clockV35PriorRelays = null;
+let clockV35ActiveRelays = null;
 
 // app.js's AGC latch table is intentionally cleared before a fresh AGC face.
 // Synthetic clock V35 also uses that decoder, however, so its first V35 write
@@ -71,13 +83,19 @@ const baseLampTest = lampTest;
 lampTest = function refinedLampTest(...args) {
   if (mode !== 'clock') return baseLampTest.apply(this, args);
   clockV35PriorRelays = captureClockRelaysBeforeV35();
+  clockV35ActiveRelays = null;
   try {
     const result = baseLampTest.apply(this, args);
-    // app.js's historical teardown restored the clock registers but left the
-    // command fields at V35/N65. A synthetic phone-clock convenience test should
-    // return to its canonical V16 N65 state, exactly like operator RSET. Replace
-    // only the teardown timeout; all light-test setup remains in base app.js.
     if (lampTestActive) {
+      // Capture the physical V35 latches after the shared channel-010 decoder
+      // has accepted them. This one-shot snapshot becomes the source state for
+      // the eventual return to the phone clock.
+      clockV35ActiveRelays = Object.assign({}, agcRelayWords);
+
+      // app.js's historical teardown restored the clock registers but left the
+      // command fields at V35/N65. A synthetic phone-clock convenience test should
+      // return to its canonical V16 N65 state, exactly like operator RSET. Replace
+      // only the teardown timeout; all light-test setup remains in base app.js.
       if (lampTestTimer) clearTimeout(lampTestTimer);
       lampTestTimer = setTimeout(() => {
         if (mode === 'clock' && lampTestActive) baseDskyPress('R');
@@ -88,6 +106,26 @@ lampTest = function refinedLampTest(...args) {
   } finally {
     clockV35PriorRelays = null;
   }
+};
+
+// When base RSET restores the clock it clears lamps, sets V16 N65 and then
+// calls syncClockFace(). At that point compute one final physical relay delta
+// from the captured V35 latches to the restored command/time/condition state.
+// The ordinary sync remains responsible for the actual phone-clock rendering.
+const baseSyncClockFace = syncClockFace;
+syncClockFace = function refinedSyncClockFace(...args) {
+  if (mode === 'clock' && clockV35ActiveRelays) {
+    const target = captureClockRestoreTargets();
+    for (const relay of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 12]) {
+      if (!Object.prototype.hasOwnProperty.call(clockV35ActiveRelays, relay)) continue;
+      const prior = clockV35ActiveRelays[relay] & 0o3777;
+      const next = target[relay] & 0o3777;
+      const changed = popcount11(prior ^ next);
+      if (tickSound && changed) playRelayBurst(changed);
+    }
+    clockV35ActiveRelays = null;
+  }
+  return baseSyncClockFace.apply(this, args);
 };
 
 // Clock-mode V35 owns the DSKY presentation for its five-second test. Ordinary
@@ -108,6 +146,16 @@ const baseCycleMission = cycleMission;
 cycleMission = function refinedCycleMission(...args) {
   if (mode === 'clock' && lampTestActive) baseDskyPress('R');
   return baseCycleMission.apply(this, args);
+};
+
+// enterAgc() already cancels clock V35 in app.js. The AGC reset/output path
+// immediately takes ownership of the display, so discard the synthetic return
+// snapshot before calling it; otherwise a later clock entry could replay stale
+// V35-to-clock relay sounds.
+const baseEnterAgc = enterAgc;
+enterAgc = function refinedEnterAgc(...args) {
+  if (mode === 'clock' && lampTestActive) clockV35ActiveRelays = null;
+  return baseEnterAgc.apply(this, args);
 };
 
 // Read-only diagnostics for device smoke tests and field debugging. These
