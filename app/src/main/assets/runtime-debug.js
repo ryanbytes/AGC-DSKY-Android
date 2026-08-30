@@ -69,15 +69,18 @@
   });
 
   // Device smoke tests need more than a live Android process: prove the local
-  // frontend initialized far enough to create the public AGCDSKY API and render
-  // actual EL glyph markup. This callback runs after all ordinary page scripts.
-  // The native ready() bridge emits only in debuggable builds.
+  // frontend initialized far enough to render EL glyphs and load the complete
+  // public relay-diagnostic layer. The callback runs after all ordinary page
+  // scripts, including app-refine.js. The native ready() bridge emits only in
+  // debuggable builds.
   global.addEventListener('load', function(){
     try {
       const doc = global.document;
       const prog = doc && doc.getElementById ? doc.getElementById('prog') : null;
       const mission = doc && doc.getElementById ? doc.getElementById('mission') : null;
       const initialized = !!(global.AGCDSKY
+          && typeof global.AGCDSKY.snapshotRelays === 'function'
+          && typeof global.AGCDSKY.snapshotDsky === 'function'
           && prog && typeof prog.innerHTML === 'string' && prog.innerHTML.indexOf('el-glyph') >= 0
           && mission && String(mission.textContent || '').length > 0);
       if (initialized
