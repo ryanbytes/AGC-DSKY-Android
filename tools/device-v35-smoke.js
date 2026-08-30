@@ -6,7 +6,7 @@
  *
  * Path proven by this smoke:
  *   pointer events -> Pinball -> real yaAGC/Luminary099 -> channel 010/011/0163
- *   -> frontend relay latches -> rendered DSKY/annunciators.
+ *   -> frontend relay/channel latches -> rendered DSKY/annunciators.
  *
  * Requires the DevTools socket to have already been adb-forwarded by
  * tools/device-agc-smoke.sh. No npm packages are used; Node 18+ is enough.
@@ -114,9 +114,11 @@ class CdpSocket {
         const headers = new Map();
         for (const line of lines.slice(1)) {
           const colon = line.indexOf(':');
-          if (colon > 0) headers.set(
-            line.slice(0, colon).trim().toLowerCase(),
-            line.slice(colon + 1).trim());
+          if (colon > 0) {
+            headers.set(
+              line.slice(0, colon).trim().toLowerCase(),
+              line.slice(colon + 1).trim());
+          }
         }
         if (headers.get('sec-websocket-accept') !== expectedAccept) {
           fail(new Error('DevTools WebSocket returned an invalid Sec-WebSocket-Accept value'));
@@ -205,7 +207,7 @@ class CdpSocket {
         offset += 4;
       }
       if (this.buffer.length < offset + length) return;
-      let payload = Buffer.from(this.buffer.subarray(offset, offset + length));
+      const payload = Buffer.from(this.buffer.subarray(offset, offset + length));
       this.buffer = this.buffer.subarray(offset + length);
       if (masked) {
         for (let i = 0; i < payload.length; i++) payload[i] ^= mask[i & 3];
@@ -310,7 +312,7 @@ function statusExpression() {
   return `(() => {
     const c = window.AGCDSKY && AGCDSKY.getCore ? AGCDSKY.getCore() : null;
     return {
-      ready: !!(window.AGCDSKY && AGCDSKY.snapshotDsky),
+      ready: !!(window.AGCDSKY && AGCDSKY.snapshotRelays && AGCDSKY.snapshotChannels && AGCDSKY.snapshotDsky),
       mission: window.AGCDSKY && AGCDSKY.getMission ? AGCDSKY.getMission() : null,
       core: !!c,
       running: !!(c && c.running),
@@ -425,6 +427,24 @@ function relayWordsMatch(state) {
   return Object.entries(V35_RELAY_LOW11).every(([relay, expected]) => relays[relay] === expected);
 }
 
+function discreteChannelsMatchRenderedState(state) {
+  if (!state || !state.channels || !state.lamps) return false;
+  const ch11 = state.channels.ch011;
+  const ch163 = state.channels.ch0163;
+  if (!ch11 || ch11.mode !== 'agc' || !ch163 || ch163.mode !== 'agc') return false;
+  const v11 = ch11.value;
+  const v163 = ch163.value;
+  return state.lamps.comp === !!(v11 & 0o00002)
+    && state.lamps.uplink === !!(v11 & 0o00004)
+    && state.lamps.temp === !!(v163 & 0o00010)
+    && state.lamps.keyrel === !!(v163 & 0o00020)
+    && state.vnBlanked === !!(v163 & 0o00040)
+    && state.lamps.oprerr === !!(v163 & 0o00100)
+    && state.lamps.restart === !!(v163 & 0o00200)
+    && state.lamps.stby === !!(v163 & 0o00400)
+    && state.elOff === !!(v163 & 0o01000);
+}
+
 function visibleV35State(state) {
   if (!state || !state.display || !state.lamps) return false;
   const d = state.display;
@@ -439,11 +459,11 @@ function visibleV35State(state) {
     && steadyLamps
     && state.lamps.keyrel === true
     && state.lamps.oprerr === true
-    && state.lamps.comp === false
     && state.vnBlanked === false
     && state.elOff === false
     && state.lampTestActive === false
-    && relayWordsMatch(state);
+    && relayWordsMatch(state)
+    && discreteChannelsMatchRenderedState(state);
 }
 
 async function waitForVisibleV35(cdp) {
@@ -457,7 +477,7 @@ async function waitForVisibleV35(cdp) {
     }
     await delay(75);
   }
-  throw new Error(`V35E did not reach the complete relay/render/lamp state; last state: ${JSON.stringify(last)}`);
+  throw new Error(`V35E did not reach the complete relay/render/raw-channel state; last state: ${JSON.stringify(last)}`);
 }
 
 async function proveV35FlashOffPhase(cdp) {
@@ -471,12 +491,13 @@ async function proveV35FlashOffPhase(cdp) {
       && last.lamps.keyrel === false
       && last.lamps.oprerr === false
       && STEADY_V35_LAMPS.every((name) => last.lamps[name] === true)
-      && relayWordsMatch(last)) {
+      && relayWordsMatch(last)
+      && discreteChannelsMatchRenderedState(last)) {
       return last;
     }
     await delay(50);
   }
-  throw new Error(`V35E never exposed yaAGC's modulated V/N + KEY REL/OPR ERR off phase; last state: ${JSON.stringify(last)}`);
+  throw new Error(`V35E never exposed yaAGC's channel-consistent V/N + KEY REL/OPR ERR off phase; last state: ${JSON.stringify(last)}`);
 }
 
 async function snapshotState(cdp) {
@@ -519,8 +540,8 @@ async function main() {
   try {
     await cdp.call('Runtime.enable');
     const ready = await cdp.evaluate(
-      "!!(window.AGCDSKY && AGCDSKY.snapshotDsky && document.getElementById('agc'))");
-    assert(ready === true, 'AGC DSKY frontend/relay diagnostic surface is not initialized');
+      "!!(window.AGCDSKY && AGCDSKY.snapshotRelays && AGCDSKY.snapshotChannels && AGCDSKY.snapshotDsky && document.getElementById('agc'))");
+    assert(ready === true, 'AGC DSKY frontend/relay/channel diagnostic surface is not initialized');
     snapshot = await snapshotState(cdp);
 
     await enterLuminary(cdp);
@@ -541,8 +562,10 @@ async function main() {
     console.log(`  rendered DSKY: PROG ${visible.display.prog} VERB ${visible.display.verb} NOUN ${visible.display.noun}`);
     console.log(`  registers: ${visible.display.r1.sign}${visible.display.r1.digits} ${visible.display.r2.sign}${visible.display.r2.digits} ${visible.display.r3.sign}${visible.display.r3.digits}`);
     console.log(`  channel 010 relay latches 1-12: ${JSON.stringify(visible.relays.agc)}`);
-    console.log(`  modulated off phase: VN=${offPhase.vnBlanked} KEY_REL=${offPhase.lamps.keyrel} OPR_ERR=${offPhase.lamps.oprerr}`);
-    console.log('  path: pointer input -> yaAGC/Luminary099 -> relays -> annunciators/SVG');
+    console.log(`  channel 011: 0o${visible.channels.ch011.value.toString(8).padStart(5, '0')} COMP=${visible.lamps.comp} UPLINK=${visible.lamps.uplink}`);
+    console.log(`  visible channel 0163: 0o${visible.channels.ch0163.value.toString(8).padStart(5, '0')}`);
+    console.log(`  off-phase channel 0163: 0o${offPhase.channels.ch0163.value.toString(8).padStart(5, '0')} VN=${offPhase.vnBlanked} KEY_REL=${offPhase.lamps.keyrel} OPR_ERR=${offPhase.lamps.oprerr}`);
+    console.log('  path: pointer input -> yaAGC/Luminary099 -> raw channels/relays -> annunciators/SVG');
   } finally {
     if (snapshot) await restoreState(cdp, snapshot);
     cdp.close();
