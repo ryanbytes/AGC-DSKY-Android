@@ -1,6 +1,6 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-08-30
+Last updated: 2026-09-05
 
 ## Goal
 
@@ -178,6 +178,7 @@ The raw channel snapshot records the most recent channel `011` and `0163` values
 - `tools/v35-model-smoke.js` — effective synthetic V35 model, including `01675`/`03675`, relay 8's unused C bank, Luminary relay-12, synthetic COMP exclusion, duration and flash model.
 - `tools/device-v35-policy-smoke.js` — source guard forbidding a fixed real-V35 COMP-off assertion and requiring raw channel `011`/`0163` comparisons.
 - `tools/wasm-runtime-smoke.js` — real pinned yaAGC + both ropes; proves `V37E00E` reaches PROG `00` / relay-11 low-11 `01265`, then proves V35 FULLDSP/FULLDSP1 and exact mission relay-12 (`00674` LM / `00650` CM).
+- `tools/agc-core-smoke.js` — wrapper reset/input/rope/load invariants plus 60 Hz scheduler cadence, idempotent start, over-100000-step backlog rebase, stop/restart behavior, and clock-divisor application.
 - `tools/runtime-debug-smoke.js` — readiness cannot fire until relay/raw-channel/Dsky diagnostics all exist.
 - `tools/build-local.sh` invokes these functional source gates before Gradle, in addition to syntax checks over all helpers.
 
@@ -206,6 +207,8 @@ This prevents a required frontend layer such as `app-refine.js` from being missi
 ## Verification boundary
 
 The current complete revision has **not** been built or run against the pinned WASM/ropes or an Android device in this restricted execution environment. The shell here does not have the complete private recursive checkout/Android SDK toolchain needed for the canonical build.
+
+The new scheduler/lifecycle assertions were separately exercised against the exact live `app/src/main/assets/agc-core.js` Git blob `057124c3e5c7858813a54323d59daeef91bd08ae` and passed. This is a narrow host-wrapper result only; it is not evidence that the full committed source gate, pinned-WASM semantic gate, Gradle build, APK verifier, or Android device gates pass for this revision.
 
 Do not report the strengthened gates as passing until they are actually executed against the corresponding source revision.
 
