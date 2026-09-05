@@ -142,6 +142,108 @@ async function testWrapperInvariants() {
         'rope allocation must be freed');
 }
 
+function testSchedulerLifecycle() {
+    let now = 5000;
+    let intervalCallback = null;
+    let intervalMs = null;
+    let intervalCreates = 0;
+    const clearedIntervals = [];
+    const steps = [];
+    const errors = [];
+
+    const context = createEnvironment({
+        performance: { now: () => now },
+        setInterval(callback, ms) {
+            intervalCreates++;
+            intervalCallback = callback;
+            intervalMs = ms;
+            return 77;
+        },
+        clearInterval(id) {
+            clearedIntervals.push(id);
+        }
+    });
+    const core = new context.AgcCore({ onError: (error) => errors.push(error) });
+    core.exports = {
+        cpu_step(count) {
+            steps.push(count);
+        },
+        packet_read() {
+            return 0;
+        }
+    };
+
+    core.start(1);
+    assert(core.running === true, 'scheduler did not enter running state');
+    assert(core.timer === 77, 'scheduler did not retain its interval handle');
+    assert(intervalCreates === 1 && typeof intervalCallback === 'function',
+        'scheduler must create exactly one interval');
+    assert(Math.abs(intervalMs - (1000 / 60)) < 0.000001,
+        `scheduler cadence changed from 60 Hz: ${intervalMs}`);
+
+    // start() is deliberately idempotent while the same core is already live.
+    core.start(2);
+    assert(intervalCreates === 1,
+        'starting an already-running core must not create another interval');
+    assert(core.clockDivisor === 1,
+        'starting an already-running core must not silently change its divisor');
+
+    const firstStart = core.startTime;
+    now += 11.72;
+    const expectedFirstSteps = Math.floor((now - firstStart) / 0.01172);
+    intervalCallback();
+    assert(steps.length === 1 && steps[0] === expectedFirstSteps,
+        `scheduler stepped ${JSON.stringify(steps)}; expected ${expectedFirstSteps}`);
+    assert(core.totalSteps === expectedFirstSteps,
+        'scheduler mission-step accounting did not follow the executed batch');
+    assert(errors.length === 0, 'normal scheduler tick reported an error');
+
+    // Match the upstream webAGC safety policy: after a long timer stall, do not
+    // execute an unbounded catch-up batch. Rebase the wall-clock epoch and wait
+    // for the next normal tick instead.
+    const stepsBeforeBacklog = steps.length;
+    now += 2000;
+    intervalCallback();
+    assert(steps.length === stepsBeforeBacklog,
+        'scheduler must not execute an over-100000-step catch-up burst');
+    assert(core.totalSteps === 0,
+        'scheduler backlog rebase must clear only relative step accounting');
+    assert(core.startTime === now,
+        'scheduler backlog rebase must move the wall-clock epoch to now');
+
+    const rebasedStart = core.startTime;
+    now += 11.72;
+    const expectedAfterRebase = Math.floor((now - rebasedStart) / 0.01172);
+    intervalCallback();
+    assert(steps.length === stepsBeforeBacklog + 1
+        && steps[steps.length - 1] === expectedAfterRebase,
+        'scheduler did not resume normal stepping after backlog rebase');
+
+    core.stop();
+    assert(core.running === false && core.timer === 0,
+        'stop() did not clear scheduler running/timer state');
+    assert(JSON.stringify(clearedIntervals) === JSON.stringify([77]),
+        `stop() cleared unexpected interval handles: ${JSON.stringify(clearedIntervals)}`);
+
+    // Restarting a stopped core resumes the same CPU object but starts a fresh
+    // relative wall-clock accounting epoch. It must not reset mission state.
+    now += 250;
+    const stepsBeforeResume = steps.length;
+    core.start(2);
+    assert(intervalCreates === 2 && core.clockDivisor === 2,
+        'stopped core did not restart with the requested clock divisor');
+    assert(core.totalSteps === 0 && core.startTime === now,
+        'restart did not establish a fresh relative timing epoch');
+    now += 23.44;
+    const expectedDividedSteps = Math.floor(23.44 / 0.01172 / 2);
+    intervalCallback();
+    assert(steps.length === stepsBeforeResume + 1
+        && steps[steps.length - 1] === expectedDividedSteps,
+        'clock divisor was not applied after scheduler restart');
+    assert(errors.length === 0, 'scheduler lifecycle smoke reported an error');
+    core.stop();
+}
+
 async function testLoadPipeline() {
     const calls = [];
     let memory;
@@ -244,6 +346,7 @@ async function testLoadPipeline() {
 
 async function main() {
     await testWrapperInvariants();
+    testSchedulerLifecycle();
     await testLoadPipeline();
     console.log('agc-core source smoke: PASS');
 }
