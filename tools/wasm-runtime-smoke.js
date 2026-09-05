@@ -7,8 +7,9 @@
  *
  * This is still not an Android/WebView test, but unlike agc-core-smoke.js it
  * proves the checked-out WASM import contract, real instantiation, rope copy,
- * reset/I-O initialization, packet I/O, short CPU execution paths, and a real
- * Pinball semantic response (V35E DSKY light test) from each pinned rope.
+ * reset/I-O initialization, packet I/O, a representative non-V35 Pinball
+ * monitor command (V16N65E), and the real V35E DSKY light test for each pinned
+ * rope.
  */
 
 const fs = require('fs');
@@ -29,6 +30,8 @@ const RELAY_ZERO = 0o25;
 const RELAY_EIGHT = 0o35;
 const RELAY_SIGN_BIT = 0o2000;
 const PROGRAM00_LOW11 = (RELAY_ZERO << 5) | RELAY_ZERO;
+const VERB16_LOW11 = (0o03 << 5) | 0o34;
+const NOUN65_LOW11 = (0o34 << 5) | 0o36;
 const V35_RELAY12_LOW11 = Object.freeze({
     'Luminary099.bin': 0o674,
     'Comanche055.bin': 0o650
@@ -174,16 +177,89 @@ function sendKeys(core, keyCodes, steps = 12000) {
     for (const keyCode of keyCodes) keyAndRun(core, keyCode, steps);
 }
 
+function enterProgram00(core, ropeName, errors, channelUpdates) {
+    sendKeys(core, [0o21, 0o03, 0o07, 0o34, 0o20, 0o20, 0o34]);
+    assert(errors.length === 0, `${ropeName}: error while entering P00 with V37E00E`);
+    const relays = relayStateFromUpdates(channelUpdates);
+    assert(program00Present(relays),
+        `${ropeName}: V37E00E did not leave channel-010 relay 11 at PROG 00 (low-11 0o${PROGRAM00_LOW11.toString(8)})`);
+    return relays;
+}
+
+function proveV16N65Monitor(core, ropeName, errors, channelUpdates) {
+    core.reset();
+    core.configureInputMasks();
+    channelUpdates.length = 0;
+    errors.length = 0;
+    core.step(100000);
+
+    enterProgram00(core, ropeName, errors, channelUpdates);
+    channelUpdates.length = 0;
+
+    // VirtualAGC's own DSKY automation uses V16N65E as a representative
+    // non-V35 monitor command. Enter every key except final ENTER first so the
+    // typed VERB/NOUN relay state can be proved separately from command output.
+    sendKeys(core, [0o21, 0o01, 0o06, 0o37, 0o06, 0o05]);
+    assert(errors.length === 0, `${ropeName}: error while typing V16N65`);
+
+    const enteredRelays = relayStateFromUpdates(channelUpdates);
+    const verbRelay = enteredRelays.get(10);
+    const nounRelay = enteredRelays.get(9);
+    assert(verbRelay !== undefined && (verbRelay & 0o3777) === VERB16_LOW11,
+        `${ropeName}: V16 did not produce relay-10 low-11 0o${VERB16_LOW11.toString(8)}`);
+    assert(nounRelay !== undefined && (nounRelay & 0o3777) === NOUN65_LOW11,
+        `${ropeName}: N65 did not produce relay-9 low-11 0o${NOUN65_LOW11.toString(8)}`);
+
+    // Discard the entry echo. A pass now requires the final ENTER to make the
+    // AGC produce an actual numeric-register channel-010 response, rather than
+    // merely proving that Pinball echoed the typed verb/noun digits.
+    channelUpdates.length = 0;
+    core.keyPress(0o34);
+
+    let responseSteps = 0;
+    let eventIndex = 0;
+    let numericResponse = false;
+    const responseRelays = new Set();
+    const maxResponseSteps = 350000;
+    const chunkSteps = 10000;
+
+    while (responseSteps < maxResponseSteps && !numericResponse) {
+        core.step(chunkSteps);
+        responseSteps += chunkSteps;
+        for (; eventIndex < channelUpdates.length; eventIndex++) {
+            const [channel, value] = channelUpdates[eventIndex];
+            if (channel !== CHANNEL_DSKY) continue;
+            const relay = (value >> 11) & 0o17;
+            if (relay >= 1 && relay <= 8) {
+                responseRelays.add(relay);
+                numericResponse = true;
+            }
+        }
+    }
+
+    assert(errors.length === 0, `${ropeName}: error while executing V16N65E`);
+    assert(numericResponse,
+        `${ropeName}: V16N65E produced no numeric-register channel-010 response within ${maxResponseSteps} AGC steps`);
+
+    return {
+        responseSteps,
+        channelUpdates: channelUpdates.length,
+        verbRelay: verbRelay & 0o3777,
+        nounRelay: nounRelay & 0o3777,
+        responseRelays: Array.from(responseRelays).sort((a, b) => a - b)
+    };
+}
+
 function proveV35LightTest(core, ropeName, errors, channelUpdates) {
+    core.reset();
+    core.configureInputMasks();
+    channelUpdates.length = 0;
+    errors.length = 0;
     core.step(100000);
 
     // Explicitly enter P00 and prove the channel-driven program row rather than
     // treating a fixed delay/step count as evidence of the precondition.
-    sendKeys(core, [0o21, 0o03, 0o07, 0o34, 0o20, 0o20, 0o34]);
-    assert(errors.length === 0, `${ropeName}: error while entering P00 with V37E00E`);
-    const p00Relays = relayStateFromUpdates(channelUpdates);
-    assert(program00Present(p00Relays),
-        `${ropeName}: V37E00E did not leave channel-010 relay 11 at PROG 00 (low-11 0o${PROGRAM00_LOW11.toString(8)})`);
+    const p00Relays = enterProgram00(core, ropeName, errors, channelUpdates);
 
     // Authentic Pinball codes for V35 before final ENTER.
     sendKeys(core, [0o21, 0o03, 0o05]);
@@ -245,6 +321,7 @@ async function smokeMission(context, ropeName) {
     core.step(2000);
     assert(errors.length === 0, `${ropeName}: error during initial CPU execution`);
 
+    const v16n65 = proveV16N65Monitor(core, ropeName, errors, channelUpdates);
     const v35 = proveV35LightTest(core, ropeName, errors, channelUpdates);
 
     core.reset();
@@ -273,6 +350,7 @@ async function smokeMission(context, ropeName) {
         memory: core.memory,
         version,
         channelUpdates: channelUpdates.length,
+        v16n65,
         v35
     };
 }
@@ -292,6 +370,7 @@ async function main() {
         const result = await smokeMission(context, name);
         runs.push(result);
         console.log(`real yaAGC ${name}: PASS (${result.channelUpdates} generic channel updates; ${result.version})`);
+        console.log(`  V16N65E monitor: PASS (V=0o${result.v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${result.v16n65.nounRelay.toString(8).padStart(4, '0')}; numeric response selectors ${result.v16n65.responseRelays.join(',')}; within ${result.v16n65.responseSteps} steps)`);
         console.log(`  P00 precondition relay 11: 0o${result.v35.p00Relay11.toString(8).padStart(4, '0')}`);
         console.log(`  V35E semantic relay test: PASS (${result.v35.channelUpdates} channel updates; response within ${result.v35.responseSteps} steps)`);
         console.log(`  V35E relay 12 low-11 state: 0o${result.v35.relay12.toString(8).padStart(4, '0')}`);
