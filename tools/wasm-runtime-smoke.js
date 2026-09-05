@@ -26,6 +26,8 @@ const ROPES = [
 ];
 
 const CHANNEL_DSKY = 0o10;
+const CHANNEL_DSKY_DISCRETES = 0o163;
+const OPR_ERR_BIT = 0o100;
 const RELAY_ZERO = 0o25;
 const RELAY_EIGHT = 0o35;
 const RELAY_SIGN_BIT = 0o2000;
@@ -219,15 +221,19 @@ function proveV16N65Monitor(core, ropeName, errors, channelUpdates) {
     let responseSteps = 0;
     let eventIndex = 0;
     let numericResponse = false;
+    let operatorErrorObserved = false;
     const responseRelays = new Set();
     const maxResponseSteps = 350000;
     const chunkSteps = 10000;
 
-    while (responseSteps < maxResponseSteps && !numericResponse) {
+    while (responseSteps < maxResponseSteps && !numericResponse && !operatorErrorObserved) {
         core.step(chunkSteps);
         responseSteps += chunkSteps;
         for (; eventIndex < channelUpdates.length; eventIndex++) {
             const [channel, value] = channelUpdates[eventIndex];
+            if (channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0) {
+                operatorErrorObserved = true;
+            }
             if (channel !== CHANNEL_DSKY) continue;
             const relay = (value >> 11) & 0o17;
             if (relay >= 1 && relay <= 8) {
@@ -238,6 +244,8 @@ function proveV16N65Monitor(core, ropeName, errors, channelUpdates) {
     }
 
     assert(errors.length === 0, `${ropeName}: error while executing V16N65E`);
+    assert(!operatorErrorObserved,
+        `${ropeName}: V16N65E asserted OPR ERR instead of accepting the monitor command`);
     assert(numericResponse,
         `${ropeName}: V16N65E produced no numeric-register channel-010 response within ${maxResponseSteps} AGC steps`);
 
