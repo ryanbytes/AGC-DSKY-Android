@@ -234,8 +234,10 @@ function testSchedulerLifecycle() {
         'stopped core did not restart with the requested clock divisor');
     assert(core.totalSteps === 0 && core.startTime === now,
         'restart did not establish a fresh relative timing epoch');
+    const resumedStart = core.startTime;
     now += 23.44;
-    const expectedDividedSteps = Math.floor(23.44 / 0.01172 / 2);
+    const expectedDividedSteps = Math.floor(
+        (now - resumedStart) / 0.01172 / core.clockDivisor);
     intervalCallback();
     assert(steps.length === stepsBeforeResume + 1
         && steps[steps.length - 1] === expectedDividedSteps,
