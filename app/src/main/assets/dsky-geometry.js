@@ -64,24 +64,25 @@
     return `<g class="el-glyph" transform="translate(${Number(x).toFixed(3)} 0) scale(${SCALE}) translate(${-SRC_X} ${-SRC_Y})"><g transform="matrix(-1 0 0 1 ${MIRROR_X.toFixed(6)} 0)">${paths}</g></g>`;
   };
 
-  // The three register signs are considerably smaller than a numeral.  Use
-  // the same skew direction and apparent stroke weight as the exact numeric
-  // artwork instead of v0.13's oversized square sign.
-  const SIGN_X = 0.95;
-  const SIGN_Y = DIGIT_H * 0.50;
-  const SIGN_W = 7.4;
-  const SIGN_T = 1.55;
-  const SIGN_SKEW = -0.75;
+  // The sign cells are separate electroluminescent sections, not a generic
+  // skewed font glyph. Apollo DSKY hardware imagery shows a compact, heavy
+  // sign cell, and DSKY V2.svg gives the actual EL-section proportions:
+  // center bar 6.731 x 1.524, two vertical arms 1.524 x 3.175, with 0.381 gaps.
+  const SIGN_W = 6.731 * SCALE;
+  const SIGN_T = 1.524 * SCALE;
+  const SIGN_ARM = 3.175 * SCALE;
+  const SIGN_GAP = 0.381 * SCALE;
+  const SIGN_H = 2 * SIGN_ARM + SIGN_T + 2 * SIGN_GAP;
+  const SIGN_TOP = (DIGIT_H - SIGN_H) * 0.5;
+  const SIGN_X = 0.40;
+  const SIGN_VX = SIGN_X + (SIGN_W - SIGN_T) * 0.5;
+  const SIGN_HY = SIGN_TOP + SIGN_ARM + SIGN_GAP;
   function signH(on) {
-    const y = SIGN_Y - SIGN_T / 2;
-    return `<path class="el-seg ${on ? 'on' : 'off'}" d="M ${SIGN_X},${y.toFixed(3)} h ${SIGN_W} l ${SIGN_SKEW},${SIGN_T} h ${-SIGN_W} z"/>`;
+    return `<path class="el-seg ${on ? 'on' : 'off'}" d="M ${SIGN_X.toFixed(3)},${SIGN_HY.toFixed(3)} h ${SIGN_W.toFixed(3)} v ${SIGN_T.toFixed(3)} h ${(-SIGN_W).toFixed(3)} z"/>`;
   }
   function signV(part, on) {
-    const x = SIGN_X + SIGN_W * 0.50;
-    const cy = SIGN_Y;
-    const len = 4.8;
-    const y0 = part === 'upper' ? cy - SIGN_T / 2 - len : cy + SIGN_T / 2;
-    return `<path class="el-seg ${on ? 'on' : 'off'}" d="M ${x.toFixed(3)},${y0.toFixed(3)} h ${SIGN_T} l ${SIGN_SKEW},${len.toFixed(3)} h ${-SIGN_T} z"/>`;
+    const y0 = part === 'upper' ? SIGN_TOP : SIGN_HY + SIGN_T + SIGN_GAP;
+    return `<path class="el-seg ${on ? 'on' : 'off'}" d="M ${SIGN_VX.toFixed(3)},${y0.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_ARM.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
   }
   signGlyph = function apolloSignGlyph(sign) {
     const plus = sign === '+';
@@ -97,7 +98,7 @@
 
   // Sign + five digits fit inside the 106-wide EL viewbox with the same tight
   // spacing visible in the restored CuriousMarc/physical DSKY and replica art.
-  const FIRST_DIGIT_X = 9.7;
+  const FIRST_DIGIT_X = 12.0;
   renderReg = function apolloRenderReg(el, text) {
     text = String(text);
     let out = signGlyph(text[0]);
