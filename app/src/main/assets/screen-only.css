@@ -1,41 +1,40 @@
-/* Borderless EL-display view. This intentionally removes the physical DSKY
-   faceplate and leaves only the electroluminescent readout on black. */
-body.screen-only #app{padding:0!important;overflow:hidden;background:#000}
+/* Borderless EL readout mode. The physical DSKY faceplate remains untouched
+   in normal mode; this presentation isolates only the electroluminescent
+   display artwork on a black field. */
+body.screen-only #app{padding:0!important;overflow:hidden!important;background:#000!important}
 body.screen-only .app-controls,
 body.screen-only .hint,
 body.screen-only .ann-well,
-body.screen-only .ann-grid,
 body.screen-only .display-well,
+body.screen-only .ann-grid,
 body.screen-only .key,
 body.screen-only .fastener{display:none!important}
 body.screen-only .dsky{
   position:fixed!important;
-  inset:0!important;
+  left:calc(50% + var(--drift-x,0px))!important;
+  top:calc(50% + var(--drift-y,0px))!important;
   width:100vw!important;
   height:100vh!important;
   max-width:none!important;
   aspect-ratio:auto!important;
-  overflow:hidden!important;
-  background:#000!important;
+  overflow:visible!important;
+  background:none!important;
   border:0!important;
   border-radius:0!important;
   box-shadow:none!important;
   clip-path:none!important;
-  transform:none!important;
-}
-body.screen-only .dsky:before,
-body.screen-only .dsky:after{display:none!important}
-body.screen-only .elpanel{
-  position:absolute!important;
-  left:calc(50% + var(--drift-x,0px))!important;
-  top:calc(50% + var(--drift-y,0px))!important;
-  width:min(100vw,calc(100vh * 106 / 190))!important;
-  height:min(100vh,calc(100vw * 190 / 106))!important;
   transform:translate(-50%,-50%)!important;
-  background:#0b0f0c!important;
-  border:0!important;
-  outline:0!important;
-  box-shadow:none!important;
+}
+body.screen-only .dsky::before,
+body.screen-only .dsky::after{display:none!important}
+body.screen-only .elpanel{
+  display:block!important;
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  width:min(90vw,calc(90vh * 106 / 190))!important;
+  height:min(90vh,calc(90vw * 190 / 106))!important;
+  transform:translate(-50%,-50%)!important;
   overflow:visible!important;
 }
-body.dream.screen-only .elpanel{transition:left 1.6s ease,top 1.6s ease}
+body.dream.screen-only .dsky{transition:left 1.6s ease,top 1.6s ease!important}
