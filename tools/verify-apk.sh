@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
 PINNED_BUILD_TOOLS=36.0.0
 ASSET_SOURCE="$ROOT/app/src/main/assets"
+BUILD_GRADLE="$ROOT/app/build.gradle"
 
 fail() {
   printf 'VERIFY FAIL: %s\n' "$*" >&2
@@ -12,11 +13,19 @@ fail() {
 }
 
 [[ -f "$APK" ]] || fail "APK not found: $APK"
+[[ -f "$BUILD_GRADLE" ]] || fail "app/build.gradle is missing"
 command -v unzip >/dev/null 2>&1 || fail "unzip is required"
 command -v git >/dev/null 2>&1 || fail "git is required for Git-blob verification"
 command -v cmp >/dev/null 2>&1 || fail "cmp is required for packaged-source verification"
 command -v grep >/dev/null 2>&1 || fail "grep is required for frontend-reference verification"
 command -v sed >/dev/null 2>&1 || fail "sed is required for frontend-reference verification"
+
+EXPECTED_VERSION_CODE="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]+([0-9]+).*/\1/p' "$BUILD_GRADLE" | head -n1)"
+EXPECTED_VERSION_NAME="$(sed -nE "s/^[[:space:]]*versionName[[:space:]]+'([^']+)'.*/\\1/p" "$BUILD_GRADLE" | head -n1)"
+[[ "$EXPECTED_VERSION_CODE" =~ ^[0-9]+$ ]] \
+  || fail "unable to parse versionCode from app/build.gradle"
+[[ -n "$EXPECTED_VERSION_NAME" ]] \
+  || fail "unable to parse versionName from app/build.gradle"
 
 verify_blob() {
   local entry="$1"
@@ -110,8 +119,8 @@ AAPT2="$(find_verifier_tool aapt2 || true)"
   || fail "aapt2 not found at pinned Build Tools $PINNED_BUILD_TOOLS under $SDK/build-tools"
 
 badging="$($AAPT2 dump badging "$APK")"
-grep -Eq "^package: name='org\.apollo\.agcdsky' versionCode='17' versionName='0\.17'" <<<"$badging" \
-  || fail "APK package/version is not org.apollo.agcdsky versionCode 17 versionName 0.17"
+grep -Eq "^package: name='org\\.apollo\\.agcdsky' versionCode='${EXPECTED_VERSION_CODE}' versionName='${EXPECTED_VERSION_NAME//./\\.}'" <<<"$badging" \
+  || fail "APK package/version does not match org.apollo.agcdsky ${EXPECTED_VERSION_CODE}/${EXPECTED_VERSION_NAME} from app/build.gradle"
 grep -Fq "sdkVersion:'26'" <<<"$badging" \
   || fail "APK minSdk is not 26"
 grep -Fq "targetSdkVersion:'37'" <<<"$badging" \
@@ -153,8 +162,8 @@ grep -Eq 'resource 0x[0-9a-f]+ xml/el_widget_info' <<<"$resources" \
 DEXDUMP="$(find_verifier_tool dexdump || true)"
 [[ -n "$DEXDUMP" ]] \
   || fail "dexdump not found at pinned Build Tools $PINNED_BUILD_TOOLS under $SDK/build-tools"
-"$DEXDUMP" -f "$APK" 2>/dev/null \
-  | grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/ElWidgetProvider;'" \
+dexdump_output="$("$DEXDUMP" -f "$APK" 2>/dev/null)"
+grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/ElWidgetProvider;'" <<<"$dexdump_output" \
   || fail "APK dex is missing ElWidgetProvider class"
 
 APKSIGNER="$(find_verifier_tool apksigner || true)"
@@ -165,7 +174,7 @@ APKSIGNER="$(find_verifier_tool apksigner || true)"
 
 printf 'APK verification: PASS\n'
 printf '  %s\n' "$APK"
-printf '  package/version/minSdk/targetSdk match v0.17 source\n'
+printf '  package/version/minSdk/targetSdk match source (%s / %s)\n' "$EXPECTED_VERSION_CODE" "$EXPECTED_VERSION_NAME"
 printf '  APK is debuggable for the ADB smoke/report workflow\n'
 printf '  pinned yaAGC/WASM + both ropes match exact Git blobs\n'
 printf '  index.html and every referenced frontend asset match the current checkout byte-for-byte\n'
