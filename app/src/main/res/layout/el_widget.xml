@@ -21,6 +21,30 @@
             android:contentDescription="Apollo DSKY electroluminescent display" />
 
         <AdapterViewFlipper
+            android:id="@+id/el_hour_flipper"
+            android:layout_width="100dp"
+            android:layout_height="21dp"
+            android:layout_gravity="start|top"
+            android:layout_marginStart="3dp"
+            android:layout_marginTop="97dp"
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="3600000" />
+
+        <AdapterViewFlipper
+            android:id="@+id/el_minute_flipper"
+            android:layout_width="100dp"
+            android:layout_height="21dp"
+            android:layout_gravity="start|top"
+            android:layout_marginStart="3dp"
+            android:layout_marginTop="131dp"
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="60000" />
+
+        <AdapterViewFlipper
             android:id="@+id/el_seconds_flipper"
             android:layout_width="100dp"
             android:layout_height="21dp"
