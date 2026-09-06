@@ -14,8 +14,8 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 25
-        versionName '0.25'
+        versionCode 27
+        versionName '0.27'
     }
 
     // Only the required pinned AGC inputs plus generated EL second-frame
