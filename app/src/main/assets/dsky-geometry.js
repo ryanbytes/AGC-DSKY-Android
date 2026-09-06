@@ -1,140 +1,127 @@
 'use strict';
 
-// Drawing-based Block II DSKY numeric geometry.
-//
-// MIT/Raytheon specification-control drawing 1006315 defines the physical
-// electroluminescent digital indicator used by the Block II DSKY.  The front
-// layout gives a 0.760-in register pitch; Detail C gives the illuminated digit
-// proportions, including the 0.315-0.325-in width envelope, 0.060-in segment
-// stock, 0.010-in minimum segment clearance and the 0.395-in character pitch.
-// The register-height callout is 0.655-0.665 in.  Use the nominal values rather
-// than a generic seven-segment font so the rendered geometry scales with the
-// original hardware drawing.
+/*
+ * Apollo Block II DSKY EL segment geometry.
+ *
+ * Segment outlines are normalized directly from the EL_Segments vector artwork
+ * in Ben Krasnow's DSKY_EL_replica project (graphics/DSKY V2.svg), rather than
+ * being generated as a generic seven-segment font.  That artwork was created
+ * for a physical DSKY EL replica and captures the characteristic skewed,
+ * asymmetric Apollo segment shapes visible on original hardware.
+ *
+ * Copyright (c) 2019 Ben Krasnow
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the condition that this copyright notice and
+ * permission notice are included in all copies or substantial portions.
+ */
 (() => {
-  const SCALE = 34 / 0.760;       // Existing SVG register pitch -> drawing inch.
-  const DIGIT_W = 0.320 * SCALE;  // Nominal of .315/.325 drawing limits.
-  const DIGIT_H = 0.660 * SCALE;  // Nominal of .655/.665 drawing limits.
-  const SEG_T = 0.060 * SCALE;
-  const GAP = 0.010 * SCALE;
-  const ADVANCE = 0.395 * SCALE;
-  const BEVEL_ANGLE = 60.5 * Math.PI / 180;
-  const BEVEL = (SEG_T / 2) / Math.tan(BEVEL_ANGLE);
-
-  const MID_Y = (DIGIT_H - SEG_T) / 2;
-  const UPPER_Y0 = SEG_T + GAP;
-  const UPPER_Y1 = MID_Y - GAP;
-  const LOWER_Y0 = MID_Y + SEG_T + GAP;
-  const LOWER_Y1 = DIGIT_H - SEG_T - GAP;
-
-  function points(values) {
-    return values.map(([x, y]) => `${x.toFixed(3)},${y.toFixed(3)}`).join(' ');
-  }
-
-  function horizontal(y) {
-    return points([
-      [BEVEL, y],
-      [DIGIT_W - BEVEL, y],
-      [DIGIT_W, y + SEG_T / 2],
-      [DIGIT_W - BEVEL, y + SEG_T],
-      [BEVEL, y + SEG_T],
-      [0, y + SEG_T / 2]
-    ]);
-  }
-
-  function vertical(x, y0, y1) {
-    return points([
-      [x + SEG_T / 2, y0],
-      [x + SEG_T, y0 + BEVEL],
-      [x + SEG_T, y1 - BEVEL],
-      [x + SEG_T / 2, y1],
-      [x, y1 - BEVEL],
-      [x, y0 + BEVEL]
-    ]);
-  }
-
-  const DRAWING_PATH = Object.freeze({
-    a: horizontal(0),
-    g: horizontal(MID_Y),
-    d: horizontal(DIGIT_H - SEG_T),
-    f: vertical(0, UPPER_Y0, UPPER_Y1),
-    b: vertical(DIGIT_W - SEG_T, UPPER_Y0, UPPER_Y1),
-    e: vertical(0, LOWER_Y0, LOWER_Y1),
-    c: vertical(DIGIT_W - SEG_T, LOWER_Y0, LOWER_Y1)
+  // Exact source paths for one numeric cell from DSKY V2.svg.  Keep them in
+  // their native coordinate system so there is no geometry reconstruction.
+  const SOURCE = Object.freeze({
+    a: 'M 95.137274,86.827056 l 1.10725,-1.523997 h -6.1558 l 0.40836,1.523997 z',
+    f: 'M 91.361734,91.526056 l -1.66745,-6.222997 h -1.57776 l 1.66745,6.222997 z',
+    e: 'M 89.886064,91.907059 h 1.57776 l 1.15699,4.317939 -1.1639,1.544551 z',
+    d: 'M 93.002124,96.352056 l -1.24411,1.651003 h 7.812 l -2.15162,-1.651003 z',
+    b: 'M 95.390774,87.126332 l 1.15266,-1.5865 1.60401,5.986224 h -1.57776 z',
+    c: 'M 96.671774,91.907059 h 1.57776 l 1.55242,5.793732 -1.98611,-1.524 z',
+    g: 'M 96.005094,90.891059 l 0.44238,1.651 h -4.41906 l -0.44239,-1.651 z'
   });
 
-  function segmentPolygon(name, on) {
-    return `<polygon class="el-seg ${on ? 'on' : 'off'}" data-seg="${name}" points="${DRAWING_PATH[name]}"/>`;
+  const SRC_X = 88.116524;
+  const SRC_Y = 85.303059;
+  const SRC_W = 11.685430;
+  const SRC_H = 12.700000;
+  const SRC_PITCH = 10.668000;
+
+  // Scale the physical artwork to the DSKY panel viewBox.  v0.13 incorrectly
+  // treated an overall drawing dimension as the illuminated cell height,
+  // making the digits too tall and too symmetrical.  This target size keeps
+  // the original artwork's aspect/skew and fits the real five-digit aperture.
+  const SCALE = 1.58;
+  // The replica artwork is viewed from the opposite face from the installed
+  // DSKY readout. Mirror its handedness, then swap left/right logical segment
+  // assignments so the numerals remain readable while the physical slant
+  // matches the crew-facing EL panel.
+  const MIRROR_X = 2 * SRC_X + SRC_W;
+  const SOURCE_FOR_LOGICAL = Object.freeze({a:'a', b:'f', c:'e', d:'d', e:'c', f:'b', g:'g'});
+  const ADVANCE = SRC_PITCH * SCALE;
+  const DIGIT_W = SRC_W * SCALE;
+  const DIGIT_H = SRC_H * SCALE;
+
+  function segment(name, on) {
+    const sourceName = SOURCE_FOR_LOGICAL[name];
+    return `<path class="el-seg ${on ? 'on' : 'off'}" data-seg="${name}" d="${SOURCE[sourceName]}"/>`;
   }
 
-  // Replace app.js's hand-shaped generic glyph with the 1006315 proportions.
-  glyph = function drawingGlyph(ch, x) {
+  glyph = function apolloGlyph(ch, x) {
     const lit = SEG[ch] || '';
-    const body = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
-      .map((name) => segmentPolygon(name, lit.includes(name)))
-      .join('');
-    return `<g class="el-glyph" transform="translate(${x.toFixed(3)} 0)">${body}</g>`;
+    const paths = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+      .map(name => segment(name, lit.includes(name))).join('');
+    return `<g class="el-glyph" transform="translate(${Number(x).toFixed(3)} 0) scale(${SCALE}) translate(${-SRC_X} ${-SRC_Y})"><g transform="matrix(-1 0 0 1 ${MIRROR_X.toFixed(6)} 0)">${paths}</g></g>`;
   };
 
-  // The sign lives in the same illuminated register aperture.  Keep three
-  // independently identifiable strokes for '+' so diagnostics continue to
-  // distinguish plus/minus exactly as before, but scale the face to the real
-  // register proportions rather than the undersized legacy mark.
-  const SIGN_W = 0.225 * SCALE;
-  const SIGN_T = SEG_T;
-  const SIGN_X = 0;
-  const SIGN_CY = DIGIT_H / 2;
-  const SIGN_H0 = SIGN_CY - SIGN_T / 2;
-  const SIGN_VH = 0.225 * SCALE;
-  const SIGN_V0 = SIGN_CY - SIGN_VH / 2;
-  const SIGN_CX = SIGN_W / 2;
-
-  function rectSegment(x, y, w, h, on) {
-    return `<rect class="el-seg ${on ? 'on' : 'off'}" x="${x.toFixed(3)}" y="${y.toFixed(3)}" width="${w.toFixed(3)}" height="${h.toFixed(3)}"/>`;
+  // The three register signs are considerably smaller than a numeral.  Use
+  // the same skew direction and apparent stroke weight as the exact numeric
+  // artwork instead of v0.13's oversized square sign.
+  const SIGN_X = 0.95;
+  const SIGN_Y = DIGIT_H * 0.50;
+  const SIGN_W = 7.4;
+  const SIGN_T = 1.55;
+  const SIGN_SKEW = -0.75;
+  function signH(on) {
+    const y = SIGN_Y - SIGN_T / 2;
+    return `<path class="el-seg ${on ? 'on' : 'off'}" d="M ${SIGN_X},${y.toFixed(3)} h ${SIGN_W} l ${SIGN_SKEW},${SIGN_T} h ${-SIGN_W} z"/>`;
   }
-
-  signGlyph = function drawingSignGlyph(sign) {
+  function signV(part, on) {
+    const x = SIGN_X + SIGN_W * 0.50;
+    const cy = SIGN_Y;
+    const len = 4.8;
+    const y0 = part === 'upper' ? cy - SIGN_T / 2 - len : cy + SIGN_T / 2;
+    return `<path class="el-seg ${on ? 'on' : 'off'}" d="M ${x.toFixed(3)},${y0.toFixed(3)} h ${SIGN_T} l ${SIGN_SKEW},${len.toFixed(3)} h ${-SIGN_T} z"/>`;
+  }
+  signGlyph = function apolloSignGlyph(sign) {
     const plus = sign === '+';
     const bar = plus || sign === '-';
-    const upperH = Math.max(0, SIGN_CY - SIGN_T / 2 - SIGN_V0);
-    const lowerY = SIGN_CY + SIGN_T / 2;
-    const lowerH = Math.max(0, SIGN_V0 + SIGN_VH - lowerY);
-    return `<g class="el-sign">`
-      + rectSegment(SIGN_X, SIGN_H0, SIGN_W, SIGN_T, bar)
-      + rectSegment(SIGN_CX - SIGN_T / 2, SIGN_V0, SIGN_T, upperH, plus)
-      + rectSegment(SIGN_CX - SIGN_T / 2, lowerY, SIGN_T, lowerH, plus)
-      + `</g>`;
+    return `<g class="el-sign">${signH(bar)}${signV('upper', plus)}${signV('lower', plus)}</g>`;
   };
 
-  // Real character pitch from drawing 1006315.  The register x-origin in the
-  // existing SVG was already sized for the physical five-character aperture.
-  renderDigits = function drawingRenderDigits(el, text) {
+  renderDigits = function apolloRenderDigits(el, text) {
     let out = '';
-    String(text).split('').forEach((ch, i) => {
-      out += glyph(ch, i * ADVANCE);
-    });
+    String(text).split('').forEach((ch, i) => { out += glyph(ch, i * ADVANCE); });
     el.innerHTML = out;
   };
 
-  const FIRST_DIGIT_X = 0.270 * SCALE;
-  renderReg = function drawingRenderReg(el, text) {
+  // Sign + five digits fit inside the 106-wide EL viewbox with the same tight
+  // spacing visible in the restored CuriousMarc/physical DSKY and replica art.
+  const FIRST_DIGIT_X = 9.7;
+  renderReg = function apolloRenderReg(el, text) {
     text = String(text);
     let out = signGlyph(text[0]);
-    text.slice(1).split('').forEach((ch, i) => {
-      out += glyph(ch, FIRST_DIGIT_X + i * ADVANCE);
-    });
+    text.slice(1).split('').forEach((ch, i) => { out += glyph(ch, FIRST_DIGIT_X + i * ADVANCE); });
     el.innerHTML = out;
   };
 
-  // Center the taller drawing-correct register glyphs in the three existing
-  // register bands while preserving their exact 34-unit / 0.760-in pitch.
-  const registerY = {r1: 92.5, r2: 126.5, r3: 160.5};
-  for (const [id, y] of Object.entries(registerY)) {
+  // Correct the field origins for the source-art proportions.  Two-character
+  // fields are centered under their physical labels; registers are vertically
+  // centered in their three ruled apertures.
+  const transforms = Object.freeze({
+    prog: 'translate(68 14)',
+    verb: 'translate(3 59)',
+    noun: 'translate(68 59)',
+    r1: 'translate(3 97)',
+    r2: 'translate(3 131)',
+    r3: 'translate(3 165)'
+  });
+  for (const [id, transform] of Object.entries(transforms)) {
     const node = document.getElementById(id);
-    if (node) node.setAttribute('transform', `translate(3 ${y})`);
+    if (node) node.setAttribute('transform', transform);
   }
 
-  // app.js paints the initial face before this refinement file loads. Repaint
-  // immediately so the first visible frame already uses the drawing geometry.
+  // Repaint the face because app.js rendered once before this refinement.
   if (typeof mode !== 'undefined' && mode === 'agc' && typeof renderAgcField === 'function') {
     ['prog', 'verb', 'noun', 'r1', 'r2', 'r3'].forEach(renderAgcField);
   } else {
@@ -144,12 +131,13 @@
   }
 
   window.DSKY_DRAWING_GEOMETRY = Object.freeze({
-    source: 'MIT/Raytheon 1006315',
+    source: 'Ben Krasnow DSKY_EL_replica / DSKY V2.svg EL_Segments, crew-facing handedness',
+    sourceWidth: SRC_W,
+    sourceHeight: SRC_H,
+    sourcePitch: SRC_PITCH,
     scale: SCALE,
     digitWidth: DIGIT_W,
     digitHeight: DIGIT_H,
-    digitAdvance: ADVANCE,
-    segmentThickness: SEG_T,
-    minimumGap: GAP
+    digitAdvance: ADVANCE
   });
 })();
