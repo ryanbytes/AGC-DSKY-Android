@@ -1,6 +1,6 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-05
+Last updated: 2026-09-06
 
 ## Goal
 
@@ -48,6 +48,24 @@ Normal keys use channel `015`. PRO uses channel `032` bit `020000` and remains p
 - DreamService remains a synthetic display-only clock path and must not run yaAGC.
 - DREAM DIM / BRIGHT / SOLAR and polar day/night handling remain implemented.
 - `FRONTEND READY` now requires `snapshotRelays()`, `snapshotChannels()`, and `snapshotDsky()` in addition to rendered EL/mission UI, so a partial post-load refinement cannot pass immediate device smoke.
+
+## EL-only home-screen widget
+
+The v0.17 source adds a resizable Android home-screen widget whose render surface is **only the electroluminescent display section**. The widget does not draw or lay out the DSKY faceplate, bezel, screws/fasteners, annunciator bank, keyboard, app controls, captions, or Dreaming-mode chrome.
+
+The widget uses a single zero-padding `ImageView` and a native bitmap renderer with the same `106 x 190` EL coordinate system as `svg#elpanel`. It renders only:
+
+- dim/unlit `COMP ACTY`;
+- `PROG 00`;
+- `VERB 16` / `NOUN 65`;
+- the three register separator rules;
+- `R1`, `R2`, and `R3` clock values with signs.
+
+The numeric strokes are not a generic seven-segment font. `ElWidgetProvider.ElRenderer` ports the same crew-facing Ben Krasnow `DSKY V2.svg` EL-segment polygons and logical handedness used by `dsky-geometry.js`. `THIRD_PARTY.md` records that geometry source and MIT attribution.
+
+The widget is horizontally/vertically resizable, re-renders when launcher size options change, opens `MainActivity` when tapped, and requests minute-level refreshes with a non-wakeup `AlarmManager.RTC` repeating alarm. Android may batch inexact alarms, so the widget must not be described as a guaranteed second-accurate clock. System `TIME_SET` and `TIMEZONE_CHANGED` broadcasts also cause a redraw/reschedule.
+
+The widget adds no network permission and no exact-alarm permission. `tools/el-widget-smoke.js` is a source gate that requires the one-`ImageView` layout, 106:190 renderer, EL labels/register path, offline manifest, resizable metadata, non-wakeup scheduling, and forbids rectangle/rounded-rectangle/circle/oval drawing primitives that would normally reintroduce a bezel or fastener into the widget renderer.
 
 ## Channel-010 relay checkpoint
 
@@ -181,6 +199,7 @@ The raw channel snapshot records the most recent channel `011` and `0163` values
 - `tools/agc-core-smoke.js` — wrapper reset/input/rope/load invariants plus 60 Hz scheduler cadence, idempotent start, over-100000-step backlog rebase, stop/restart behavior, and clock-divisor application.
 - `tools/device-agc-smoke.js` — real packaged WebView/yaAGC device gate for both ropes; now requires a two-second level-sensitive PRO pointer hold to remain asserted, verifies ordinary release, and separately pauses visibility while PRO is still held so the pressed state must clear before the same in-memory core resumes.
 - `tools/runtime-debug-smoke.js` — readiness cannot fire until relay/raw-channel/Dsky diagnostics all exist.
+- `tools/el-widget-smoke.js` — EL-only widget resource/native-source policy: single ImageView, 106:190 EL renderer, required labels/registers, resize metadata, offline manifest, non-wakeup minute scheduler, and no bezel/fastener drawing primitives.
 - `tools/build-local.sh` invokes the host functional source gates before Gradle, in addition to syntax checks over all helpers. Device gates remain explicit post-build commands.
 
 ## Live Android V35 gate
@@ -207,7 +226,9 @@ This prevents a required frontend layer such as `app-refine.js` from being missi
 
 ## Verification boundary
 
-The current complete revision has **not** been built or run against the pinned WASM/ropes or an Android device in this restricted execution environment. The shell here does not have the complete private recursive checkout/Android SDK toolchain needed for the canonical build.
+The current complete revision has **not** been built or run against the pinned WASM/ropes or an Android device in this restricted execution environment. The shell here does not have the complete private recursive checkout needed for the canonical build.
+
+For the new widget resources specifically, Android SDK Platform 37 plus Build Tools 36 `aapt2` were exercised locally against the new `el_widget.xml`, `el_widget_info.xml`, and equivalent manifest registration; resource compilation and linking passed. That proves the widget XML/attributes are accepted by the requested Android toolchain. It does **not** prove the complete application Java source, canonical Gradle build, APK package verification, launcher behavior, alarm delivery, or device rendering.
 
 The new scheduler/lifecycle assertions were separately exercised against the exact live `app/src/main/assets/agc-core.js` Git blob `057124c3e5c7858813a54323d59daeef91bd08ae` and passed. This is a narrow host-wrapper result only; it is not evidence that the full committed source gate, pinned-WASM semantic gate, Gradle build, APK verifier, or Android device gates pass for this revision.
 
@@ -229,6 +250,9 @@ bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 - [ ] Exact recursive checkout and pinned binary verification pass.
 - [ ] Canonical local build and APK verifier pass.
 - [ ] APK installs/launches on target Android/GrapheneOS.
+- [ ] EL home-screen widget appears as EL section only, with no bezel/case/keyboard/annunciator bank/chrome.
+- [ ] Widget resize preserves the 106:190 EL aspect without clipping and tap opens the app.
+- [ ] Widget refresh/timezone behavior is verified on the target launcher, including Android alarm batching behavior.
 - [ ] Real relay/raw-channel-aware Luminary V35 device gate passes.
 - [ ] Host Comanche V35 produces exact raw relay-12 `00650` as source specifies.
 - [ ] Real pinned-WASM `V16N65E` host gate passes for both ropes (representative non-V35 Pinball semantics through channel `015`).
@@ -243,9 +267,10 @@ bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 
 1. Full CM peripheral fidelity is not claimed because the pinned WASM exposes no `CmOrLm` setter.
 2. Exact CPU/erasable-memory continuation across process death is not implemented.
-3. Android/WebView/compositor/permission/DreamService behavior remains the hard runtime verification boundary.
+3. Android/WebView/compositor/permission/DreamService/widget behavior remains the hard runtime verification boundary.
 4. The original private signing key is not committed; a differently signed local APK cannot update the old signed app in place.
 5. Old reconstructed/repacked APKs are not evidence for this source revision.
+6. Inexact minute widget alarms can be delayed/batched by Android; the EL widget is not a guaranteed real-time seconds display.
 
 ## Build policy
 
