@@ -33,6 +33,8 @@ The original Apollo AGC flight software is treated as public-domain material by 
 
 Development used Apollo-derived DSKY artwork and VirtualAGC configuration data to correct the keyboard, annunciator, and display geometry. One useful open-source reference is `Apollo_DSKY_interface.svg` in the PyDevices examples, which in turn identifies the Wikimedia/NASA-derived DSKY interface artwork as its source.
 
+The exact electroluminescent digit-segment outlines used by `dsky-geometry.js` and the native EL-only home-screen widget are normalized from Ben Krasnow's `DSKY_EL_replica` project, `graphics/DSKY V2.svg` (`EL_Segments`). That artwork/code is distributed under the MIT license; the copyright and permission notice are retained in `app/src/main/assets/dsky-geometry.js` and this application distribution.
+
 VirtualAGC `LM.ini` and Apollo Pinball source were used to verify the Apollo LM annunciator map, relay-word display format, and DSKY key codes.
 
 ## CuriousMarc restoration material
