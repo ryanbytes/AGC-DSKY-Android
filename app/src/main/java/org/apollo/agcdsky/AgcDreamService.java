@@ -10,15 +10,20 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-/** Charging/idle Android screen saver with display-only DSKY clock modes. */
+/** Charging/idle Android screen saver with borderless DSKY clock modes. */
 public final class AgcDreamService extends DreamService {
     private WebView webView;
 
     @Override
     public void onAttachedToWindow() {
-        DebugReporter.install(this);
+        // Complete the DreamService/window attach before installing diagnostics
+        // or touching the Window/WebView. This keeps startup lifecycle-safe.
         super.onAttachedToWindow();
-        setInteractive(false);
+        DebugReporter.install(this);
+
+        // Interactive mode lets the borderless EL view handle a short tap as an
+        // EL on/off toggle. A long hold calls DreamBridge.finishDream().
+        setInteractive(true);
         setFullscreen(true);
         setScreenBright(true);
 
@@ -35,35 +40,42 @@ public final class AgcDreamService extends DreamService {
             WebView.setWebContentsDebuggingEnabled(true);
         }
 
-        webView = new WebView(this);
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setBlockNetworkLoads(true);
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
-        webView.addJavascriptInterface(new DreamBridge(), "DreamBridge");
-        webView.addJavascriptInterface(new DebugReporter.JsBridge(this), "DebugBridge");
-        webView.setWebViewClient(new NetClient(this));
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onConsoleMessage(ConsoleMessage message) {
-                if (message != null
-                        && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
-                    String text = message.message();
-                    if (text == null || !text.startsWith("[yaAGC]")) {
-                        DebugReporter.appendWebError(AgcDreamService.this,
-                                message.sourceId() + ":" + message.lineNumber()
-                                        + "\n" + String.valueOf(text));
+        try {
+            webView = new WebView(this);
+            webView.setBackgroundColor(0xFF000000);
+            WebSettings settings = webView.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
+            settings.setMediaPlaybackRequiresUserGesture(false);
+            settings.setBlockNetworkLoads(true);
+            settings.setAllowFileAccess(false);
+            settings.setAllowContentAccess(false);
+            webView.addJavascriptInterface(new DreamBridge(), "DreamBridge");
+            webView.addJavascriptInterface(new DebugReporter.JsBridge(this), "DebugBridge");
+            webView.setWebViewClient(new NetClient(this));
+            webView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public boolean onConsoleMessage(ConsoleMessage message) {
+                    if (message != null
+                            && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                        String text = message.message();
+                        if (text == null || !text.startsWith("[yaAGC]")) {
+                            DebugReporter.appendWebError(AgcDreamService.this,
+                                    message.sourceId() + ":" + message.lineNumber()
+                                            + "\n" + String.valueOf(text));
+                        }
                     }
+                    return super.onConsoleMessage(message);
                 }
-                return super.onConsoleMessage(message);
-            }
-        });
-        setContentView(webView);
-        webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX
-                + "index.html?dream=1&clock=1&display=1");
+            });
+            setContentView(webView);
+            webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX
+                    + "index.html?dream=1&clock=1&display=1");
+        } catch (Throwable error) {
+            DebugReporter.appendWebError(this,
+                    "DreamService startup failure\n" + error.toString());
+            finish();
+        }
     }
 
     private void setWindowBrightness(float value) {
@@ -80,6 +92,15 @@ public final class AgcDreamService extends DreamService {
             // thread. Post through the WebView before touching Window state.
             if (webView != null) {
                 webView.post(() -> setWindowBrightness((float) value));
+            }
+        }
+
+        @JavascriptInterface
+        public void finishDream() {
+            if (webView != null) {
+                webView.post(AgcDreamService.this::finish);
+            } else {
+                finish();
             }
         }
     }
