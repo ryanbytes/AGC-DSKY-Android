@@ -1,10 +1,10 @@
 # AGC DSKY Android
 
-Android Apollo Block II DSKY clock/screensaver plus onboard AGC emulator project. Source development is currently at **v0.7**.
+Android Apollo Block II DSKY clock/screensaver plus onboard AGC emulator project. Source development is currently at **v0.17**.
 
 ## Current source state
 
-The v0.7 source integrates a pinned real VirtualAGC `yaAGC` WebAssembly core and Apollo 11 flight-software rope images. The complete Android runtime path has been implemented but has **not yet been device/emulator verified from the current source revision**, so see `docs/PROGRESS.md` before treating AGC mode as proven working.
+The v0.17 source integrates a pinned real VirtualAGC `yaAGC` WebAssembly core and Apollo 11 flight-software rope images. The complete Android runtime path has been implemented but has **not yet been device/emulator verified from the current source revision**, so see `docs/PROGRESS.md` before treating AGC mode or the home-screen widget as proven working on a target device.
 
 Current source features:
 
@@ -12,6 +12,8 @@ Current source features:
 - Apollo 11-era LM 2×7 annunciator layout, including the two blank positions.
 - Fixed-coordinate SVG electroluminescent display so digit fields cannot be independently stretched by CSS.
 - Custom narrow EL segment vectors rather than a generic seven-segment font.
+- Resizable Android home-screen widget that renders **only the 106×190 EL display section**: no faceplate/bezel, screws, keyboard, annunciator bank, app controls, or Dreaming-mode chrome.
+- The native widget reuses the same crew-facing Ben Krasnow DSKY EL segment geometry as the WebView display and remains offline.
 - `V16 N65` phone clock mode.
 - Source-backed `V35E` clock-mode light test using the channel-010 relay model rather than direct all-8 DOM painting.
 - Dim mode.
@@ -34,7 +36,7 @@ Current source features:
 - APK verification byte-compares every required current frontend layer, including `app-refine.js`, so the relay/V35 refinements cannot be omitted from a supposedly current package.
 - The verified build path instantiates the **real pinned yaAGC WASM under Node** before Gradle runs, validates its complete import/export contract, loads both real ropes, executes CPU cycles and DSKY inputs, and includes a semantic `V37E00E` → `V35E` relay check.
 - Debug APK device smoke requires a native `FRONTEND READY app` marker after the WebView frontend completes initialization; a surviving Android process with a blank/partially initialized page does not count as a pass.
-- The live V35 device gate is relay-aware: it checks exact Luminary relay latches, rendered `88` / `+88888`, V35 annunciators with COMP ACTY excluded, and an actual yaAGC-modulated V/N + KEY REL/OPR ERR off phase.
+- The live V35 device gate is relay-aware: it checks exact Luminary relay latches, rendered `88` / `+88888`, V35 annunciators, and an actual yaAGC-modulated V/N + KEY REL/OPR ERR off phase against raw channel state.
 
 ## AGC mode
 
@@ -74,6 +76,12 @@ Android uses a `DreamService` for system screen savers. After installing a verif
 
 Dream mode remains a separate display-only phone clock rather than running the AGC core continuously. It uses independent DIM/BRIGHT/SOLAR dream brightness behavior and periodic pixel drift. Returning to the normal app does not intentionally switch the normal app into Dream/clock presentation.
 
+## Home-screen EL widget
+
+The home-screen widget is intentionally narrower than either the normal app or DreamService: it is the EL section itself. Its only layout child is an `ImageView` containing the native EL bitmap. The bitmap preserves the WebView display's 106×190 coordinate system and contains only `COMP ACTY`, `PROG`, `VERB`, `NOUN`, the three register separators, and the three signed register fields.
+
+The widget is resizable in both axes. Resizing re-renders the bitmap while preserving the EL aspect ratio; tapping it opens the app. It asks Android for minute-level updates using an inexact non-wakeup alarm and also redraws after system time/time-zone changes. Android can batch inexact alarms, so this is not a guaranteed second-accurate clock.
+
 ## Repository checkout
 
 The emulator core and rope binaries are supplied by a pinned Git submodule, so clone recursively:
@@ -88,7 +96,7 @@ For an existing clone:
 git submodule update --init --recursive
 ```
 
-A checkout without the submodule does not contain the AGC binary assets required by v0.7.
+A checkout without the submodule does not contain the AGC binary assets required by the current source.
 
 ## Source layout
 
@@ -100,9 +108,13 @@ A checkout without the submodule does not contain the AGC binary assets required
 - `app/src/main/assets/agc-core.js` — offline yaAGC WASM loader, minimal WASI shim, rope loading, CPU stepping, packet I/O.
 - `app/src/main/java/org/apollo/agcdsky/MainActivity.java` — immersive interactive WebView shell and Activity/WebView lifecycle coordination.
 - `app/src/main/java/org/apollo/agcdsky/AgcDreamService.java` — Android screen saver shell.
+- `app/src/main/java/org/apollo/agcdsky/ElWidgetProvider.java` — resizable native EL-only home-screen widget renderer/scheduler.
+- `app/src/main/res/layout/el_widget.xml` — single-ImageView widget layout.
+- `app/src/main/res/xml/el_widget_info.xml` — AppWidget resize/update metadata.
 - `app/src/main/java/org/apollo/agcdsky/NetClient.java` — local HTTPS-to-AssetManager resource server.
 - `vendor/webAGC` — pinned upstream core/rope submodule.
 - `tools/build-local.sh` — deterministic local source build entrypoint.
+- `tools/el-widget-smoke.js` — EL-only widget source/resource policy gate.
 - `tools/verify-apk.sh` — post-build APK asset/manifest/signature verification.
 - `tools/wasm-runtime-smoke.js` — real pinned yaAGC/rope Node runtime preflight and V35 relay semantic gate.
 - `tools/device-v35-smoke.js` — end-to-end relay/render/annunciator V35 Android WebView gate.
@@ -132,19 +144,19 @@ git submodule update --init --recursive
 bash tools/build-local.sh
 ```
 
-That path syntax-checks all helper scripts, runs the source/relay/refinement tests, executes the real pinned yaAGC WASM with both actual ropes under Node, verifies the exact pinned webAGC checkout and binary blobs, builds from a clean app build tree, then verifies packaged frontend/binaries, merged APK metadata/permissions, debug status, and APK signature. See `docs/LOCAL_BUILD.md` for details.
+That path syntax-checks all helper scripts, runs the source/relay/refinement/widget tests, executes the real pinned yaAGC WASM with both actual ropes under Node, verifies the exact pinned webAGC checkout and binary blobs, builds from a clean app build tree, then verifies packaged frontend/binaries, merged APK metadata/permissions, debug status, and APK signature. See `docs/LOCAL_BUILD.md` for details.
 
-A passing build is still not proof that the current AGC runtime works on Android. The preferred device checkpoint is:
+A passing build is still not proof that the current AGC runtime or widget works on Android. The preferred device checkpoint is:
 
 ```bash
 bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Do not report v0.7 as runtime-verified until the corresponding current APK has actually passed the relevant Android checks.
+Do not report v0.17 as runtime-verified until the corresponding current APK has actually passed the relevant Android checks.
 
 ## Historical APK
 
-`releases/AGC-DSKY-Android-v6.apk` predates the onboard-core work. It does **not** represent the current v0.7 source and should not be used to evaluate AGC mode.
+`releases/AGC-DSKY-Android-v6.apk` predates the onboard-core work. It does **not** represent the current v0.17 source and should not be used to evaluate AGC mode or the widget.
 
 ## Signing
 
@@ -156,4 +168,4 @@ No GitHub Actions workflow is enabled. Per project-owner instruction, builds are
 
 ## License
 
-Android/frontend code in this repository is GPL-2.0. See `THIRD_PARTY.md` for upstream/core attribution and licensing notes.
+Android/frontend code in this repository is GPL-2.0. See `THIRD_PARTY.md` for upstream/core and DSKY EL-geometry attribution and licensing notes.
