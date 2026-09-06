@@ -37,7 +37,4 @@ body.screen-only .elpanel{
   transform:translate(-50%,-50%)!important;
   overflow:visible!important;
 }
-/* A short tap in SCREEN mode can blank only the EL emission. The body remains
-   full-screen and black so a second tap can restore it. */
-body.screen-only.screen-el-off .elpanel{opacity:0!important}
 body.dream.screen-only .dsky{transition:left 1.6s ease,top 1.6s ease!important}
