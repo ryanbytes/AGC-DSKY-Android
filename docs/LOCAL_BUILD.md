@@ -71,19 +71,35 @@ The script performs these gates in order:
 3. Verifies Android platform 37 and exact Build Tools 36.0.0, including `aapt2` and `apksigner`.
 4. Verifies `vendor/webAGC` is the exact pinned clean checkout and all three binary inputs are present.
 5. Syntax-checks every `tools/*.sh` with Bash and every `tools/*.js` with `node --check`.
-6. Runs policy/CSP/frontend/display/SOLAR/AGC-wrapper/runtime-debug/native-diagnostic source smokes.
+6. Runs policy/CSP/frontend/display/**EL-widget**/SOLAR/AGC-wrapper/runtime-debug/native-diagnostic source smokes.
 7. Runs `tools/app-refine-smoke.js`, guarding V35 input isolation, RSET/transition cleanup, relay-8 FULLDSP physical state, and immutable relay diagnostics.
 8. Runs `tools/dsky-mapping-smoke.js` and `tools/v35-model-smoke.js`, including the effective `app.js` + `app-refine.js` relay model.
 9. Runs asset-reference checks.
 10. Runs `tools/wasm-runtime-smoke.js` against the **real pinned yaAGC WASM and both real ropes**. It requires the `V37E00E` P00 precondition to reach channel-010 PROG `00` / relay-11 low-11 `01265`, then requires a real `V35E` FULLDSP/FULLDSP1 relay response.
 11. Runs clean `:app:clean`, `:app:verifyPinnedAgcAssets`, and `:app:assembleDebug` with stacktraces enabled.
-12. Runs `tools/verify-apk.sh` against the produced APK.
+12. Runs `tools/verify-apk.sh` against the produced APK, including merged EL AppWidget receiver/class/resource checks.
 
 The expected debug APK is:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
+
+## EL home-screen widget source invariant
+
+`tools/el-widget-smoke.js` treats the owner's widget requirement as a build policy, not a visual suggestion. The home-screen widget must be the EL readout itself.
+
+The source gate requires:
+
+- one zero-padding `ImageView` as the entire widget layout;
+- the native renderer's `106 x 190` EL coordinate system;
+- `PROG`, `VERB`, `NOUN`, signed registers, and EL separator rules;
+- horizontally and vertically resizable AppWidget metadata;
+- no INTERNET permission;
+- a non-wakeup `AlarmManager.RTC` minute scheduler rather than an exact/wakeup alarm;
+- no `drawRect`, `drawRoundRect`, `drawCircle`, or `drawOval` primitives in the widget renderer, preventing a bezel/faceplate/fastener layer from being quietly reintroduced.
+
+The actual segment polygons come from the same crew-facing Ben Krasnow `DSKY V2.svg` EL geometry used by the WebView DSKY. This is a native AppWidget because Android home-screen widgets require a native `RemoteViews` surface; it does not create a second AGC implementation.
 
 ## Relay/V35 source invariants
 
@@ -104,7 +120,7 @@ The V35 model also keeps:
 - five-second light-test duration
 - UPLINK/TEMP/KEY REL/VN FLASH/OPR ERR test behavior
 - RESTART/STBY via TEST ALARM handling
-- COMP ACTY excluded unless independently driven by channel `011` bit 2
+- COMP ACTY governed by actual channel `011` bit 2 in real AGC mode rather than a fixed V35 assumption
 - yaAGC-compatible 1.28-second / 75% V/N + KEY REL/OPR ERR modulation
 
 ## Other source/runtime invariants
@@ -151,11 +167,11 @@ Do not binary-patch the pinned WASM to change the flag. If exact CM peripheral b
 
 ## APK verification
 
-`tools/verify-apk.sh` independently checks the built archive. It requires `unzip`, `git`, `cmp`, ordinary POSIX/BSD `grep`/`sed`, and exact Build Tools 36.0.0 `aapt2`/`apksigner`.
+`tools/verify-apk.sh` independently checks the built archive. It requires `unzip`, `git`, `cmp`, ordinary POSIX/BSD `grep`/`sed`, and exact Build Tools 36.0.0 `aapt2`/`dexdump`/`apksigner`.
 
 It verifies:
 
-- package `org.apollo.agcdsky`, versionCode `7`, versionName `0.7`, minSdk `26`, targetSdk `37`
+- package `org.apollo.agcdsky`, with versionCode/versionName parsed from the current `app/build.gradle`, minSdk `26`, targetSdk `37`
 - debuggable status required by the ADB `run-as`/WebView inspection path
 - required coarse/fine location permissions for SOLAR
 - no INTERNET permission
@@ -164,6 +180,9 @@ It verifies:
 - **every local `src=`/`href=` asset referenced by current `index.html` is discovered dynamically and byte-compared against the checkout**; this prevents a new required script such as `app-refine.js` from being silently omitted from the verifier's file list
 - `BUILD_SOURCE.txt` matches source
 - known unused upstream vendor trees/files are absent
+- merged manifest contains `ElWidgetProvider`, `APPWIDGET_UPDATE`, and appwidget-provider metadata
+- resource table contains `id/el_widget_image`, `layout/el_widget`, and `xml/el_widget_info`
+- merged DEX contains `org.apollo.agcdsky.ElWidgetProvider`
 - APK signature verifies with `apksigner`
 
 ## Immediate and full device smoke
@@ -191,7 +210,7 @@ The subsequent WebView/AGC layers use the real app process and real `AgcCore`; n
 - Luminary `V37E00E` through actual pointer handlers, with a required channel-driven PROG `00` / relay-11 low-11 `01265` precondition
 - real `V35E` exact relay-latch state: `01675` ordinary numeric rows, `03675` plus rows, relay 8 `01675`, relay 12 `00674`
 - rendered PROG/VERB/NOUN `88` and R1/R2/R3 `+88888`
-- V35 steady annunciators with COMP ACTY off
+- V35 steady annunciators checked against the actual decoded relay/channel state, including COMP ACTY == contemporaneous channel `011` bit `00002`
 - observed yaAGC-modulated V/N + KEY REL/OPR ERR off phase while V35 relay latches/steady lamps persist
 - packaged-page reload restoring CM mission/requested AGC mode on a newly constructed core
 - actual process destruction with `adb shell am force-stop`, observed no-process interval, relaunch, and persisted CM/AGC preferences on a fresh process/core
@@ -210,6 +229,7 @@ While the current debug APK runs on an ADB-connected device, desktop Chrome/Chro
 Even a passing full-device smoke does not prove every user-visible behavior. Remaining acceptance work includes:
 
 - pixel-perfect physical-screen inspection of digits, signs, lamps, and annunciators
+- EL home-screen widget picker appearance, EL-only rendering, resize behavior, tap-to-open, and minute/timezone refresh on the target launcher
 - real OS screen-off/screen-on behavior beyond the direct lifecycle bridge
 - long physical PRO hold for intended standby semantics
 - DreamService selection/startup/non-interactivity through Android UI
