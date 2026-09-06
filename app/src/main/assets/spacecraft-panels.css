@@ -1,57 +1,112 @@
-/* DSKY-centred CM/LM installation artwork. */
-body:not(.dream):not(.screen-only):not(.display-only) #app{background:#151815!important;isolation:isolate}
+/* DSKY-centred CM/LM installation artwork — photoreal hardware pass. */
+body:not(.dream):not(.screen-only):not(.display-only) #app{background:#0c0f0c!important;isolation:isolate}
 #spacecraft-panel{position:fixed;z-index:0;pointer-events:none;overflow:visible;transform-origin:0 0;contain:layout paint style}
 #spacecraft-panel svg{display:block;width:100%;height:100%;overflow:visible}
 #spacecraft-panel .cm-scene,#spacecraft-panel .lm-scene{display:none}
 body.spacecraft-cm #spacecraft-panel .cm-scene{display:block}
 body.spacecraft-lm #spacecraft-panel .lm-scene{display:block}
-body:not(.dream):not(.screen-only):not(.display-only) .dsky{z-index:3}
+body:not(.dream):not(.screen-only):not(.display-only) .dsky{z-index:3;filter:drop-shadow(0 4px 5px rgba(0,0,0,.55))}
 body.dream #spacecraft-panel,body.screen-only #spacecraft-panel,body.display-only #spacecraft-panel{display:none!important}
-#spacecraft-panel .cm-panel{fill:#656b65;stroke:#242824;stroke-width:4}
-#spacecraft-panel .cm-subpanel{fill:#6f756e;stroke:#272b27;stroke-width:2.3}
-#spacecraft-panel .lm-panel{fill:#555b57;stroke:#202420;stroke-width:4}
-#spacecraft-panel .lm-subpanel{fill:#626863;stroke:#242824;stroke-width:2.3}
-#spacecraft-panel .dsky-pocket{fill:#111411;stroke:#050705;stroke-width:8}
-#spacecraft-panel .p-seam{stroke:#252925;stroke-width:1.6}
-#spacecraft-panel .engrave{stroke:#cfd3c9;stroke-width:1}
-#spacecraft-panel .p-text{fill:#edf0e7;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;letter-spacing:.22px}
-#spacecraft-panel .p-micro{font-size:7px}
-#spacecraft-panel .p-tiny{font-size:8px}
-#spacecraft-panel .p-small{font-size:10px;letter-spacing:.45px}
-#spacecraft-panel .p-digits{fill:#e6e9de;font-family:monospace;font-size:22px;letter-spacing:2px}
-#spacecraft-panel .p-screw{fill:#292c29;stroke:#a9ada4;stroke-width:1}
-#spacecraft-panel .p-screw-slot{stroke:#bec1b8;stroke-width:1}
-#spacecraft-panel .p-toggle-ring{fill:#8f948c;stroke:#d3d6cd;stroke-width:1}
-#spacecraft-panel .p-toggle-base{fill:#20231f;stroke:#10120f;stroke-width:1.2}
-#spacecraft-panel .p-toggle-stick{stroke:#d7dad0;stroke-width:3.5;stroke-linecap:round}
-#spacecraft-panel .p-wireguard{fill:none;stroke:#d1d4cb;stroke-width:2.2;stroke-linejoin:round}
-#spacecraft-panel .p-redguard{fill:#87332d;stroke:#3a1411;stroke-width:2}
-#spacecraft-panel .p-talk{fill:#242724;stroke:#0a0c0a;stroke-width:1.5}
-#spacecraft-panel .p-bp{fill:none;stroke:#c7c9c1;stroke-width:2}
-#spacecraft-panel .p-knob-ring{fill:#8e938b;stroke:#c9cdc3;stroke-width:1}
-#spacecraft-panel .p-knob{fill:#252824;stroke:#111310;stroke-width:1.4}
-#spacecraft-panel .p-knob-mark{stroke:#e1e4da;stroke-width:2.2}
-#spacecraft-panel .p-push{stroke:#171a17;stroke-width:1.5}
-#spacecraft-panel .p-dark{fill:#252925}
-#spacecraft-panel .p-red{fill:#87342c}
-#spacecraft-panel .p-amber{fill:#91772f}
-#spacecraft-panel .p-digital{fill:#141714;stroke:#070807;stroke-width:2}
-#spacecraft-panel .p-meter-case{fill:#252825;stroke:#0b0d0b;stroke-width:2}
-#spacecraft-panel .p-meter-face{fill:#dcded4;stroke:#a9ada4;stroke-width:2}
-#spacecraft-panel .p-meter-tick{stroke:#30342f;stroke-width:1.2}
-#spacecraft-panel .p-meter-pointer{stroke:#252925;stroke-width:3.4;stroke-linecap:round}
-#spacecraft-panel .p-meter-hub{fill:#252925}
-#spacecraft-panel .fdai-case{fill:#242724;stroke:#111311;stroke-width:3}
-#spacecraft-panel .fdai-bezel{fill:#a4a79e;stroke:#d6d8d1;stroke-width:2}
-#spacecraft-panel .fdai-sky{fill:#647e8b}
-#spacecraft-panel .fdai-ground{fill:#8a735e}
-#spacecraft-panel .fdai-grid{stroke:#e7e9df;stroke-width:1;opacity:.72}
-#spacecraft-panel .fdai-horizon{stroke:#f2f2ea;stroke-width:3}
-#spacecraft-panel .fdai-glass{fill:none;stroke:#111310;stroke-width:2}
-#spacecraft-panel .fdai-wing{fill:none;stroke:#f0f2e8;stroke-width:4;stroke-linecap:round}
-#spacecraft-panel .fdai-needle{fill:none;stroke:#111310;stroke-width:4;stroke-linecap:round}
-#spacecraft-panel .fdai-red{stroke:#b33b31}
-#spacecraft-panel .lm-hatch{fill:#343a36;stroke:#151815;stroke-width:10}
-#spacecraft-panel .lm-hatch-inner{fill:#242925;stroke:#8e938c;stroke-width:3}
-#spacecraft-panel .lm-hatch-handle{fill:#b3b7ae;stroke:#1e221e;stroke-width:2}
-body.dim #spacecraft-panel{filter:brightness(.28) saturate(.72)}
+
+/* Panel faces: darker Apollo gray, fine grain, recessed seams and edge wear. */
+#spacecraft-panel .cm-panel{fill:url(#cmPaint);stroke:#171b17;stroke-width:5;filter:url(#cmTexture)}
+#spacecraft-panel .cm-subpanel{fill:url(#cmSubMetal);stroke:#1b201b;stroke-width:2.4;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
+#spacecraft-panel .lm-panel{fill:url(#lmPaint);stroke:#151915;stroke-width:5;filter:url(#lmTexture)}
+#spacecraft-panel .lm-subpanel{fill:url(#lmSubMetal);stroke:#1a1f1a;stroke-width:2.4;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
+#spacecraft-panel .dsky-pocket{fill:#0b0d0b;stroke:#020302;stroke-width:8;filter:drop-shadow(0 2px 2px rgba(0,0,0,.75))}
+#spacecraft-panel .p-seam{stroke:#171b17;stroke-width:2.2;filter:drop-shadow(0 1px 0 rgba(210,216,205,.16))}
+#spacecraft-panel .engrave{stroke:#c8ccc2;stroke-width:.7}
+
+/* Legends: small engraved paint, not UI typography. */
+#spacecraft-panel .p-text{fill:#e7e9df;stroke:#262b27;stroke-width:.32px;paint-order:stroke fill;font-family:"Arial Narrow","Roboto Condensed","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;letter-spacing:.08px;filter:drop-shadow(0 .45px .15px rgba(0,0,0,.7))}
+#spacecraft-panel .p-micro{font-size:6.25px}
+#spacecraft-panel .p-tiny{font-size:7.1px}
+#spacecraft-panel .p-small{font-size:8.6px;letter-spacing:.22px}
+#spacecraft-panel .p-digits{fill:#d7e4d4;font-family:"Roboto Mono",monospace;font-size:20px;letter-spacing:1.5px;filter:drop-shadow(0 0 1.2px rgba(177,255,178,.45))}
+
+/* Fasteners. */
+#spacecraft-panel .p-screw-shadow{fill:#090b09;opacity:.65}
+#spacecraft-panel .p-screw-rim{fill:#6c716a;stroke:#202420;stroke-width:.6}
+#spacecraft-panel .p-screw{fill:#3f443f;stroke:#979c94;stroke-width:.8}
+#spacecraft-panel .p-screw-glint{fill:none;stroke:#d2d5ce;stroke-width:.75;opacity:.6}
+#spacecraft-panel .p-screw-slot-shadow{stroke:#0a0c0a;stroke-width:1.5}
+#spacecraft-panel .p-screw-slot{stroke:#b9bdb4;stroke-width:.8}
+
+/* Toggle hardware: recessed mounting washer, dark socket, cylindrical metal lever. */
+#spacecraft-panel .p-toggle-shadow{fill:#090b09;opacity:.62}
+#spacecraft-panel .p-toggle-ring-outer{fill:#323632;stroke:#121512;stroke-width:1.2}
+#spacecraft-panel .p-toggle-ring{fill:#8f948d;stroke:#c6cac1;stroke-width:.65}
+#spacecraft-panel .p-toggle-base{fill:#161916;stroke:#060806;stroke-width:1.25}
+#spacecraft-panel .p-toggle-stick-shadow{stroke:#090a09;stroke-width:5;stroke-linecap:round;opacity:.72}
+#spacecraft-panel .p-toggle-stick{stroke:#c2c6bd;stroke-width:3.1;stroke-linecap:round}
+#spacecraft-panel .p-toggle-tip-shadow{fill:#090b09;opacity:.7}
+#spacecraft-panel .p-toggle-tip{fill:#d1d5cc;stroke:#6b7069;stroke-width:.55}
+#spacecraft-panel .p-wireguard-shadow{fill:none;stroke:#090b09;stroke-width:4.4;stroke-linejoin:round;opacity:.7}
+#spacecraft-panel .p-wireguard{fill:none;stroke:#b9beb5;stroke-width:2.3;stroke-linejoin:round}
+#spacecraft-panel .p-redguard-shadow{fill:#130705;opacity:.7}
+#spacecraft-panel .p-redguard{fill:#76261f;stroke:#2a0b08;stroke-width:1.8;filter:drop-shadow(0 1px 1px rgba(0,0,0,.55))}
+
+/* Talkbacks and annunciator windows. */
+#spacecraft-panel .p-talk-shadow{fill:#070907;opacity:.72}
+#spacecraft-panel .p-talk-frame{fill:#686d66;stroke:#161916;stroke-width:1}
+#spacecraft-panel .p-talk{fill:#171a17;stroke:#060806;stroke-width:1}
+#spacecraft-panel .p-bp{fill:none;stroke:#c8cbc2;stroke-width:1.6;opacity:.8}
+#spacecraft-panel .p-talk-glass{stroke:#f4f6ef;stroke-width:.55;opacity:.24}
+
+/* Knobs. */
+#spacecraft-panel .p-knob-shadow{fill:#080a08;opacity:.62}
+#spacecraft-panel .p-knob-ring{fill:#646a63;stroke:#aeb2aa;stroke-width:.8}
+#spacecraft-panel .p-knob{fill:#171a17;stroke:#080a08;stroke-width:1.3}
+#spacecraft-panel .p-knob-highlight{fill:none;stroke:#747a73;stroke-width:1.4;opacity:.7}
+#spacecraft-panel .p-knob-mark-shadow{stroke:#060806;stroke-width:3.6}
+#spacecraft-panel .p-knob-mark{stroke:#d8dbd2;stroke-width:1.8;stroke-linecap:round}
+
+/* Pushbuttons / guarded lights. */
+#spacecraft-panel .p-push-shadow{fill:#060806;opacity:.72}
+#spacecraft-panel .p-push-bezel{fill:#242824;stroke:#070907;stroke-width:1}
+#spacecraft-panel .p-push{stroke:#0b0e0b;stroke-width:1}
+#spacecraft-panel .p-dark{fill:#202420}#spacecraft-panel .p-red{fill:#6e241e}#spacecraft-panel .p-amber{fill:#766126}
+#spacecraft-panel .p-push-glint{stroke:#d7dbd1;stroke-width:.55;opacity:.22}
+
+/* Numeric windows. */
+#spacecraft-panel .p-digital-shadow{fill:#050705;opacity:.8}
+#spacecraft-panel .p-digital-frame{fill:#303430;stroke:#0a0c0a;stroke-width:1.2}
+#spacecraft-panel .p-digital{fill:#080b08;stroke:#020302;stroke-width:1.4}
+#spacecraft-panel .p-digital-glass{stroke:#e6ebe2;stroke-width:.6;opacity:.16}
+
+/* Analog meter cases, face glass and pointers. */
+#spacecraft-panel .p-meter-shadow{fill:#070907;opacity:.72}
+#spacecraft-panel .p-meter-case{fill:#171a17;stroke:#050705;stroke-width:2}
+#spacecraft-panel .p-meter-ring{fill:#858a83;stroke:#b8bcb4;stroke-width:.9}
+#spacecraft-panel .p-meter-face{fill:#d8d9cf;stroke:#868b84;stroke-width:1.3}
+#spacecraft-panel .p-meter-tick{stroke:#242824;stroke-width:.85}
+#spacecraft-panel .p-meter-scale{fill:none;stroke:#404440;stroke-width:.65;opacity:.75}
+#spacecraft-panel .p-meter-pointer-shadow{stroke:#969a92;stroke-width:3.9;stroke-linecap:round;opacity:.5}
+#spacecraft-panel .p-meter-pointer{stroke:#181b18;stroke-width:2.6;stroke-linecap:round}
+#spacecraft-panel .p-meter-hub-ring{fill:#777c75;stroke:#242824;stroke-width:.8}
+#spacecraft-panel .p-meter-hub{fill:#171a17}
+#spacecraft-panel .p-meter-reflect{fill:none;stroke:#fff;stroke-width:2;opacity:.16}
+
+/* FDAI: spherical shaded ball, recessed bezel and glass. */
+#spacecraft-panel .fdai-shadow{fill:#070907;opacity:.75}
+#spacecraft-panel .fdai-case{fill:#171a17;stroke:#050705;stroke-width:3}
+#spacecraft-panel .fdai-bezel-outer{fill:#666b65;stroke:#1d211d;stroke-width:2}
+#spacecraft-panel .fdai-bezel{fill:#9aa098;stroke:#c9cdc5;stroke-width:1.2}
+#spacecraft-panel .fdai-sky{fill:url(#fdaiSky)}
+#spacecraft-panel .fdai-ground{fill:url(#fdaiGround)}
+#spacecraft-panel .fdai-grid{stroke:#e7e8df;stroke-width:.75;opacity:.72}
+#spacecraft-panel .fdai-horizon{stroke:#f0f1e9;stroke-width:2.3}
+#spacecraft-panel .fdai-shade{fill:#060806;opacity:.16}
+#spacecraft-panel .fdai-glass{fill:none;stroke:#0b0d0b;stroke-width:1.8}
+#spacecraft-panel .fdai-glass-glint{fill:none;stroke:#fff;stroke-width:3;opacity:.18}
+#spacecraft-panel .fdai-wing-shadow{fill:none;stroke:#080a08;stroke-width:5.5;stroke-linecap:round;opacity:.65}
+#spacecraft-panel .fdai-wing{fill:none;stroke:#e8eae2;stroke-width:3.2;stroke-linecap:round}
+#spacecraft-panel .fdai-needle{fill:none;stroke:#161916;stroke-width:3.2;stroke-linecap:round}
+#spacecraft-panel .fdai-red{stroke:#9f3129}
+
+/* LM forward hatch metal. */
+#spacecraft-panel .lm-hatch{fill:#292e2a;stroke:#101310;stroke-width:10;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+#spacecraft-panel .lm-hatch-inner{fill:#1d211e;stroke:#71776f;stroke-width:2.5}
+#spacecraft-panel .lm-hatch-handle{fill:#9ca198;stroke:#151815;stroke-width:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.55))}
+
+body.dim #spacecraft-panel{filter:brightness(.24) saturate(.65)}
