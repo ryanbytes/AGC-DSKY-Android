@@ -138,6 +138,7 @@ node tools/frontend-smoke.js
 node tools/app-refine-smoke.js
 node tools/device-v35-policy-smoke.js
 node tools/display-layout-smoke.js
+node tools/el-widget-smoke.js
 node tools/solar-model-smoke.js
 node tools/agc-core-smoke.js
 node tools/runtime-debug-smoke.js
