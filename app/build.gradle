@@ -13,8 +13,8 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 15
-        versionName '0.15'
+        versionCode 17
+        versionName '0.17'
     }
 
     // Only the three required pinned webAGC binary inputs are staged into this
