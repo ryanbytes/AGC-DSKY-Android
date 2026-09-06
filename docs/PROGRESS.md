@@ -177,7 +177,7 @@ The raw channel snapshot records the most recent channel `011` and `0163` values
 - `tools/app-refine-smoke.js` — relay-8 FULLDSP, clock→V35→clock Hamming deltas, five-second natural V16 N65 return, V35 input ownership, RSET/AGC/mission transitions, immutable relay/raw-channel diagnostics.
 - `tools/v35-model-smoke.js` — effective synthetic V35 model, including `01675`/`03675`, relay 8's unused C bank, Luminary relay-12, synthetic COMP exclusion, duration and flash model.
 - `tools/device-v35-policy-smoke.js` — source guard forbidding a fixed real-V35 COMP-off assertion and requiring raw channel `011`/`0163` comparisons.
-- `tools/wasm-runtime-smoke.js` — real pinned yaAGC + both ropes; proves `V37E00E` reaches PROG `00` / relay-11 low-11 `01265`, then proves V35 FULLDSP/FULLDSP1 and exact mission relay-12 (`00674` LM / `00650` CM).
+- `tools/wasm-runtime-smoke.js` — real pinned yaAGC + both ropes; first proves non-V35 `V16N65E` through channel `015` by checking exact VERB 16 relay-10 low-11 `00174`, NOUN 65 relay-9 low-11 `01636`, no channel-`0163` OPR ERR, and post-ENTER numeric-register output; then proves `V37E00E` reaches PROG `00` / relay-11 low-11 `01265` and V35 FULLDSP/FULLDSP1 with exact mission relay-12 (`00674` LM / `00650` CM).
 - `tools/agc-core-smoke.js` — wrapper reset/input/rope/load invariants plus 60 Hz scheduler cadence, idempotent start, over-100000-step backlog rebase, stop/restart behavior, and clock-divisor application.
 - `tools/runtime-debug-smoke.js` — readiness cannot fire until relay/raw-channel/Dsky diagnostics all exist.
 - `tools/build-local.sh` invokes these functional source gates before Gradle, in addition to syntax checks over all helpers.
@@ -210,6 +210,8 @@ The current complete revision has **not** been built or run against the pinned W
 
 The new scheduler/lifecycle assertions were separately exercised against the exact live `app/src/main/assets/agc-core.js` Git blob `057124c3e5c7858813a54323d59daeef91bd08ae` and passed. This is a narrow host-wrapper result only; it is not evidence that the full committed source gate, pinned-WASM semantic gate, Gradle build, APK verifier, or Android device gates pass for this revision.
 
+The new `V16N65E` real-WASM gate is present in source but has **not** been executed here. The saved Library source ZIP does not contain the pinned WASM/rope binaries, and connector access does not expose those binary bytes to the local runtime. Do not infer a pass from source review alone.
+
 Do not report the strengthened gates as passing until they are actually executed against the corresponding source revision.
 
 Hard checkpoint:
@@ -226,7 +228,7 @@ bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 - [ ] APK installs/launches on target Android/GrapheneOS.
 - [ ] Real relay/raw-channel-aware Luminary V35 device gate passes.
 - [ ] Host Comanche V35 produces exact raw relay-12 `00650` as source specifies.
-- [ ] Representative non-V35 Pinball semantics work through channel `015`.
+- [ ] Real pinned-WASM `V16N65E` host gate passes for both ropes (representative non-V35 Pinball semantics through channel `015`).
 - [ ] Long physical PRO hold produces intended behavior through channel `032`.
 - [ ] Real OS screen-off/on preserves a surviving in-memory core.
 - [ ] Page/process recreation restores mission/requested mode from a fresh reset.
