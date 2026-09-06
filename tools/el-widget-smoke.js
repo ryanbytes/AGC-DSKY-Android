@@ -29,11 +29,13 @@ requireText(manifest, 'android:resource="@xml/el_widget_info"', 'manifest');
 requireText(manifest, 'android.appwidget.action.APPWIDGET_UPDATE', 'manifest');
 forbid(manifest, 'android.permission.INTERNET', 'manifest');
 
-requireText(layout, '<FrameLayout', 'widget layout');
 requireText(layout, 'android:id="@+id/el_widget_root"', 'widget layout');
-requireText(layout, 'android:id="@+id/el_widget_image"', 'widget layout');
-requireText(layout, 'android:padding="0dp"', 'widget layout');
-requireText(layout, 'android:scaleType="fitCenter"', 'widget layout');
+requireText(layout, 'android:id="@+id/el_widget_panel"', 'widget layout');
+requireText(layout, 'android:layout_width="106dp"', 'EL panel');
+requireText(layout, 'android:layout_height="190dp"', 'EL panel');
+requireText(layout, 'android:layout_gravity="center"', 'EL panel');
+requireText(layout, 'android:background="@android:color/transparent"', 'widget host');
+requireText(layout, 'android:scaleType="fitXY"', 'EL panel image');
 if ((layout.match(/<ImageView\b/g) || []).length !== 1) {
   fail('widget layout must contain exactly one static ImageView');
 }
@@ -58,18 +60,16 @@ requireText(info, 'android:widgetCategory="home_screen"', 'widget metadata');
 
 requireText(provider, 'private static final float PANEL_W = 106f;', 'EL renderer');
 requireText(provider, 'private static final float PANEL_H = 190f;', 'EL renderer');
+requireText(provider, 'R.id.el_widget_panel', 'widget fitted panel');
 requireText(provider, 'R.id.el_clock_r3', 'widget live clock');
-requireText(provider, 'TextClock runs inside the launcher host', 'widget live clock');
+requireText(provider, 'TextClock runs in the launcher host', 'widget live clock');
+requireText(provider, 'views.setViewLayoutWidth(R.id.el_widget_panel', 'widget fitted panel');
+requireText(provider, 'views.setViewLayoutHeight(R.id.el_widget_panel', 'widget fitted panel');
+requireText(provider, 'drawRule(canvas, 12f, 89f, 82f, 1.524f)', 'Apollo separator geometry');
 forbid(provider, 'AlarmManager', 'widget live clock');
 forbid(provider, 'RTC_WAKEUP', 'widget live clock');
+forbid(provider, 'drawRegisterOff(canvas', 'live register underlay');
 
-for (const needle of [
-  'SIGN_W = 6.731f * DIGIT_SCALE',
-  'SIGN_T = 1.524f * DIGIT_SCALE',
-  'SIGN_ARM = 3.175f * DIGIT_SCALE',
-  'SIGN_GAP = 0.381f * DIGIT_SCALE',
-  'FIRST_DIGIT_X = 12.0f'
-]) requireText(provider, needle, 'Apollo sign geometry');
 for (const needle of [
   'SIGN_W = 6.731 * SCALE',
   'SIGN_T = 1.524 * SCALE',
@@ -79,8 +79,8 @@ for (const needle of [
 ]) requireText(geometry, needle, 'WebView Apollo sign geometry');
 forbid(geometry, 'SIGN_SKEW', 'WebView Apollo sign geometry');
 
-requireText(gradle, 'versionCode 18', 'Gradle');
-requireText(gradle, "versionName '0.18'", 'Gradle');
+requireText(gradle, 'versionCode 19', 'Gradle');
+requireText(gradle, "versionName '0.19'", 'Gradle');
 requireText(gradle, 'stageElWidgetFont', 'Gradle');
 requireText(gradle, 'font/dsky_el.ttf', 'Gradle');
 let fontBytes;
@@ -88,9 +88,6 @@ try { fontBytes = Buffer.from(font64, 'base64'); } catch (e) { fail(`font base64
 if (fontBytes.length < 1024) fail(`decoded EL font is unexpectedly small: ${fontBytes.length}`);
 if (fontBytes.slice(0, 4).toString('hex') !== '00010000') fail('decoded EL font is not a TrueType sfnt');
 
-// The widget must remain the EL section rather than recreating physical DSKY
-// hardware around it. Paths are required for digit/sign sections; these shape
-// primitives are forbidden because they would normally add bezel/fasteners.
 for (const primitive of ['drawRoundRect(', 'drawCircle(', 'drawOval(']) {
   forbid(provider, primitive, 'EL-only renderer');
 }
