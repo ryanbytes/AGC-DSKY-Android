@@ -238,13 +238,25 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         private ElRenderer() {}
 
         static Bitmap render(int width, int height) {
-            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            // The bitmap itself is the EL panel, not a widget-sized canvas with
+            // black letterbox bars. The ImageView/launcher owns any unused host
+            // area. This keeps RemoteViews bitmap memory low and makes the
+            // widget payload exactly the 106:190 EL section at every size.
+            int fitWidth = Math.max(1, width);
+            int fitHeight = Math.max(1, Math.round(fitWidth * PANEL_H / PANEL_W));
+            if (fitHeight > height) {
+                fitHeight = Math.max(1, height);
+                fitWidth = Math.max(1, Math.round(fitHeight * PANEL_W / PANEL_H));
+            }
+
+            Bitmap bitmap = Bitmap.createBitmap(
+                    fitWidth, fitHeight, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             canvas.drawColor(Color.BLACK);
 
-            float scale = Math.min(width / PANEL_W, height / PANEL_H);
-            float left = (width - PANEL_W * scale) * 0.5f;
-            float top = (height - PANEL_H * scale) * 0.5f;
+            float scale = Math.min(fitWidth / PANEL_W, fitHeight / PANEL_H);
+            float left = (fitWidth - PANEL_W * scale) * 0.5f;
+            float top = (fitHeight - PANEL_H * scale) * 0.5f;
             canvas.save();
             canvas.translate(left, top);
             canvas.scale(scale, scale);
