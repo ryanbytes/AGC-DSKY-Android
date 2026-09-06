@@ -5,12 +5,31 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <ImageView
-        android:id="@+id/el_widget_image"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+    <FrameLayout
+        android:id="@+id/el_widget_panel"
+        android:layout_width="106dp"
+        android:layout_height="190dp"
         android:layout_gravity="center"
-        android:padding="0dp"
-        android:scaleType="fitCenter"
-        android:contentDescription="Apollo DSKY electroluminescent display" />
+        android:background="#000000">
+
+        <ImageView
+            android:id="@+id/el_widget_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="0dp"
+            android:scaleType="fitXY"
+            android:contentDescription="Apollo DSKY electroluminescent display" />
+
+        <AdapterViewFlipper
+            android:id="@+id/el_seconds_flipper"
+            android:layout_width="100dp"
+            android:layout_height="21dp"
+            android:layout_gravity="start|top"
+            android:layout_marginStart="3dp"
+            android:layout_marginTop="165dp"
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="1000" />
+    </FrameLayout>
 </FrameLayout>
