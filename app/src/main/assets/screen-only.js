@@ -14,28 +14,39 @@
     if(displayButton)displayButton.textContent=enabled?'FULL DSKY':'SCREEN';
     remember();
   }
-  function enter(){if(isDream)return;enabled=true;elEnabled=true;apply()}
-  function exit(){if(isDream)return;enabled=false;elEnabled=true;apply();if(typeof showControls==='function')showControls()}
+  function enter(){enabled=true;elEnabled=true;apply()}
+  function exit(){
+    if(isDream){
+      try{if(window.DreamBridge&&DreamBridge.finishDream)DreamBridge.finishDream()}catch(_){}
+      return;
+    }
+    enabled=false;elEnabled=true;apply();
+    if(typeof showControls==='function')showControls();
+  }
   function toggleEl(){if(!enabled)return;elEnabled=!elEnabled;apply()}
 
-  // The existing DISPLAY control becomes the explicit SCREEN/FULL DSKY toggle.
-  if(displayButton)displayButton.addEventListener('click',()=>{
-    setTimeout(()=>{enabled=!enabled;elEnabled=true;apply();if(!enabled&&typeof showControls==='function')showControls()},0);
-  });
+  // Capture the control before app.js's older DISPLAY handler so one tap has
+  // one meaning: SCREEN enters the borderless EL readout and FULL DSKY exits.
+  if(displayButton)displayButton.addEventListener('click',(event)=>{
+    event.preventDefault();event.stopImmediatePropagation();
+    if(enabled){
+      if(isDream)exit();
+      else{enabled=false;elEnabled=true;apply();if(typeof showControls==='function')showControls()}
+    }else enter();
+  },true);
 
-  // Direct main-screen shortcut: tap the EL display itself to isolate it.
+  // Direct shortcut from the full DSKY: tap the EL glass to isolate it.
   if(el)el.addEventListener('click',(event)=>{
     if(!enabled){event.preventDefault();event.stopPropagation();enter()}
   },{passive:false});
 
-  // In SCREEN mode a short tap toggles EL emission on/off. A 1.8 s hold exits
-  // SCREEN mode in the normal app. DreamService remains non-interactive so a
-  // touch there retains Android's normal screen-saver wake/exit behavior.
+  // In SCREEN mode a short tap toggles EL emission. A 1.8 s hold returns to the
+  // full DSKY, or exits DreamService when the screen saver owns the view.
   let downAt=0,hold=0,held=false;
   document.addEventListener('pointerdown',()=>{
     if(!enabled)return;
     downAt=performance.now();held=false;clearTimeout(hold);
-    if(!isDream)hold=setTimeout(()=>{held=true;exit()},1800);
+    hold=setTimeout(()=>{held=true;exit()},1800);
   },{passive:true});
   document.addEventListener('pointerup',()=>{
     if(!enabled){clearTimeout(hold);return}
