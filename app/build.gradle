@@ -3,6 +3,8 @@ plugins {
 }
 
 def generatedAgcAssetsDir = layout.buildDirectory.dir('generated/agcAssets').get().asFile
+def generatedElWidgetResDir = layout.buildDirectory.dir('generated/elWidgetRes').get().asFile
+def elWidgetFontSource = file('../tools/dsky-el-font.b64')
 
 android {
     namespace 'org.apollo.agcdsky'
@@ -13,19 +15,23 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 17
-        versionName '0.17'
+        versionCode 18
+        versionName '0.18'
     }
 
-    // Only the three required pinned webAGC binary inputs are staged into this
-    // generated asset directory. Do not add the whole vendor source/demo trees
-    // as Android asset roots; doing so packages unused upstream JS/Validation
-    // files and weakens the exact-input boundary.
+    // Keep generated binary inputs explicit. The AGC core/ropes are verified
+    // and staged as assets; the small custom EL font is decoded from a tracked
+    // base64 text file into generated resources so the repository remains
+    // editable through text-only tooling while the APK receives exact TTF bytes.
     sourceSets {
         main {
             assets.srcDirs = [
                 'src/main/assets',
                 generatedAgcAssetsDir
+            ]
+            res.srcDirs = [
+                'src/main/res',
+                generatedElWidgetResDir
             ]
         }
     }
@@ -106,12 +112,36 @@ def stagePinnedAgcAssets = tasks.register('stagePinnedAgcAssets', Sync) {
     into generatedAgcAssetsDir
 }
 
+def stageElWidgetFont = tasks.register('stageElWidgetFont') {
+    group = 'build setup'
+    description = 'Decode the tracked Apollo-style EL widget font into generated Android resources.'
+    inputs.file(elWidgetFontSource)
+    File outputFont = new File(generatedElWidgetResDir, 'font/dsky_el.ttf')
+    outputs.file(outputFont)
+
+    doLast {
+        if (!elWidgetFontSource.isFile()) {
+            throw new GradleException("Missing EL widget font source: ${elWidgetFontSource}")
+        }
+        outputFont.parentFile.mkdirs()
+        String encoded = elWidgetFontSource.getText('UTF-8').replaceAll('\\s+', '')
+        outputFont.bytes = java.util.Base64.getDecoder().decode(encoded)
+        if (outputFont.length() < 1024L) {
+            throw new GradleException("Decoded EL widget font is unexpectedly small: ${outputFont.length()} bytes")
+        }
+    }
+}
+
 // Make staging part of the ordinary Android pre-build path. The merge-task
 // dependency is retained as a direct guard for callers that invoke merge tasks
 // without going through assemble/preBuild.
 tasks.matching { it.name == 'preBuild' }.configureEach {
     dependsOn stagePinnedAgcAssets
+    dependsOn stageElWidgetFont
 }
 tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
     dependsOn stagePinnedAgcAssets
+}
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Resources') }.configureEach {
+    dependsOn stageElWidgetFont
 }
