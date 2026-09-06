@@ -1,61 +1,54 @@
 'use strict';
 
-// Dry mechanical contact sound for the DSKY latching relays.
-// One energized relay word is one mechanical event: its contacts move together.
-// Do not synthesize one audible click per changed contact bit, because a 1-2 ms
-// click train creates a strong low-frequency amplitude envelope that sounds like
-// a bass beat on phone speakers. Changed-bit count only changes click intensity.
+// Ultra-dry relay contact click for the DSKY.
+// Phone speakers and DSP can turn even a high-passed noise burst into a small
+// thump because the burst envelope itself contains low-frequency energy. Avoid
+// that completely: synthesize only two short ultrasonic-adjacent audio-band
+// partials with a zero-start attack and no noise, no body tone, and no bounce.
 (() => {
   if (typeof emitTick !== 'function' || typeof ensureAudio !== 'function') return;
 
+  function highClick(ctx, when, strength) {
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, when);
+    master.gain.linearRampToValueAtTime(0.30 * tickLevel * strength, when + 0.00008);
+    master.gain.exponentialRampToValueAtTime(0.0001, when + 0.00155);
+    master.connect(ctx.destination);
+
+    const o1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    o1.type = 'sine';
+    o1.frequency.setValueAtTime(5200, when);
+    g1.gain.setValueAtTime(1.0, when);
+    o1.connect(g1);
+    g1.connect(master);
+
+    const o2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    o2.type = 'sine';
+    o2.frequency.setValueAtTime(7600, when);
+    g2.gain.setValueAtTime(0.42, when);
+    o2.connect(g2);
+    g2.connect(master);
+
+    o1.start(when);
+    o2.start(when);
+    o1.stop(when + 0.0018);
+    o2.stop(when + 0.0018);
+  }
+
   emitTick = function dskyRelayClick(ctx, when = ctx.currentTime, strength = 1) {
-    const sr = ctx.sampleRate;
-    const duration = 0.0032;
-    const n = Math.max(1, Math.floor(sr * duration));
-    const buf = ctx.createBuffer(1, n, sr);
-    const data = buf.getChannelData(0);
-
-    // Very short contact strike with one small internal bounce. Keeping the
-    // event inside a single transient avoids a perceptible rhythmic envelope.
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      let env = Math.exp(-t / 0.00034);
-      if (t >= 0.00092) env += 0.18 * Math.exp(-(t - 0.00092) / 0.00022);
-      data[i] = (Math.random() * 2 - 1) * env;
-    }
-
-    const src = ctx.createBufferSource();
-    const high = ctx.createBiquadFilter();
-    const low = ctx.createBiquadFilter();
-    const snap = ctx.createGain();
-    src.buffer = buf;
-
-    // Keep essentially all relay energy out of the bass/lower-mid band.
-    // The audible character is a dry 2.4-8.5 kHz contact snap.
-    high.type = 'highpass';
-    high.frequency.setValueAtTime(2400, when);
-    high.Q.setValueAtTime(0.72, when);
-    low.type = 'lowpass';
-    low.frequency.setValueAtTime(8500, when);
-    low.Q.setValueAtTime(0.50, when);
-    snap.gain.setValueAtTime(0.42 * tickLevel * strength, when);
-    snap.gain.exponentialRampToValueAtTime(0.0001, when + 0.0038);
-
-    src.connect(high);
-    high.connect(low);
-    low.connect(snap);
-    snap.connect(ctx.destination);
-    src.start(when);
+    highClick(ctx, when, strength);
   };
 
+  // One energized relay word is one audible event. Contact count affects only
+  // level very slightly, never timing or the number of clicks.
   if (typeof playRelayBurst === 'function') {
-    playRelayBurst = function singleRelayClack(count) {
+    playRelayBurst = function singleHighRelayClick(count) {
       const ctx = ensureAudio();
       if (!ctx || count < 1) return;
       const go = () => {
-        // Contacts within one relay word actuate together. More changed contacts
-        // make the clack slightly stronger, not a rapid series of separate hits.
-        const strength = Math.min(1.08, 0.84 + Math.min(count, 6) * 0.04);
+        const strength = Math.min(1.0, 0.86 + Math.min(count, 6) * 0.02);
         emitTick(ctx, ctx.currentTime + 0.002, strength);
       };
       if (ctx.state === 'running') go();
