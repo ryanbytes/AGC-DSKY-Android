@@ -4,7 +4,7 @@
     android:minHeight="190dp"
     android:minResizeWidth="80dp"
     android:minResizeHeight="100dp"
-    android:updatePeriodMillis="1800000"
+    android:updatePeriodMillis="0"
     android:initialLayout="@layout/el_widget"
     android:previewLayout="@layout/el_widget"
     android:resizeMode="horizontal|vertical"
