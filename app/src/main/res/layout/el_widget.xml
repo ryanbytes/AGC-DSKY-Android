@@ -5,82 +5,12 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <FrameLayout
-        android:id="@+id/el_widget_panel"
-        android:layout_width="106dp"
-        android:layout_height="190dp"
+    <ImageView
+        android:id="@+id/el_widget_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_gravity="center"
-        android:background="#000000">
-
-        <ImageView
-            android:id="@+id/el_widget_image"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="0dp"
-            android:scaleType="fitXY"
-            android:contentDescription="Apollo DSKY electroluminescent display" />
-
-        <TextClock
-            android:id="@+id/el_clock_r1"
-            android:layout_width="100dp"
-            android:layout_height="21dp"
-            android:layout_gravity="start|top"
-            android:layout_marginStart="3dp"
-            android:layout_marginTop="97dp"
-            android:includeFontPadding="false"
-            android:gravity="start|top"
-            android:singleLine="true"
-            android:textDirection="ltr"
-            android:fontFamily="@font/dsky_el"
-            android:textColor="#C9F5BD"
-            android:textSize="20.07sp"
-            android:shadowColor="#C9F5BD"
-            android:shadowDx="0"
-            android:shadowDy="0"
-            android:shadowRadius="0.7"
-            android:format12Hour="+000HH"
-            android:format24Hour="+000HH" />
-
-        <TextClock
-            android:id="@+id/el_clock_r2"
-            android:layout_width="100dp"
-            android:layout_height="21dp"
-            android:layout_gravity="start|top"
-            android:layout_marginStart="3dp"
-            android:layout_marginTop="131dp"
-            android:includeFontPadding="false"
-            android:gravity="start|top"
-            android:singleLine="true"
-            android:textDirection="ltr"
-            android:fontFamily="@font/dsky_el"
-            android:textColor="#C9F5BD"
-            android:textSize="20.07sp"
-            android:shadowColor="#C9F5BD"
-            android:shadowDx="0"
-            android:shadowDy="0"
-            android:shadowRadius="0.7"
-            android:format12Hour="+000mm"
-            android:format24Hour="+000mm" />
-
-        <TextClock
-            android:id="@+id/el_clock_r3"
-            android:layout_width="100dp"
-            android:layout_height="21dp"
-            android:layout_gravity="start|top"
-            android:layout_marginStart="3dp"
-            android:layout_marginTop="165dp"
-            android:includeFontPadding="false"
-            android:gravity="start|top"
-            android:singleLine="true"
-            android:textDirection="ltr"
-            android:fontFamily="@font/dsky_el"
-            android:textColor="#C9F5BD"
-            android:textSize="20.07sp"
-            android:shadowColor="#C9F5BD"
-            android:shadowDx="0"
-            android:shadowDy="0"
-            android:shadowRadius="0.7"
-            android:format12Hour="+000ss"
-            android:format24Hour="+000ss" />
-    </FrameLayout>
+        android:padding="0dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="Apollo DSKY electroluminescent display" />
 </FrameLayout>
