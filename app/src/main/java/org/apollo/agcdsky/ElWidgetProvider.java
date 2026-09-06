@@ -90,31 +90,36 @@ public final class ElWidgetProvider extends AppWidgetProvider {
 
         Calendar now = Calendar.getInstance();
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.el_widget);
-        views.setImageViewBitmap(R.id.el_widget_image, ElRenderer.render(panelWidthPx, panelHeightPx, now));
+        boolean staticFallbackRegisters = Build.VERSION.SDK_INT < 31;
+        views.setImageViewBitmap(R.id.el_widget_image,
+                ElRenderer.render(panelWidthPx, panelHeightPx, now, staticFallbackRegisters));
 
-        // R3 runs in the launcher process. AdapterViewFlipper advances through
-        // 60 pre-rendered exact Apollo-vector frames every second. Android 12+
-        // can receive the complete in-memory RemoteCollectionItems adapter, so
-        // no RemoteViewsService, app process, TextClock, or custom font is used.
+        // Android 12+ lets the provider supply in-memory collection items to
+        // AdapterViewFlipper. Each register is therefore an exact vector image
+        // advanced by the launcher host rather than text rendered with a system
+        // font. The minute refresh below re-synchronizes the flippers to wall time.
         if (Build.VERSION.SDK_INT >= 31) {
-            RemoteViews.RemoteCollectionItems.Builder seconds =
-                    new RemoteViews.RemoteCollectionItems.Builder();
-            for (int i = 0; i < SECOND_DRAWABLES.length; i++) {
-                RemoteViews frame = new RemoteViews(context.getPackageName(), R.layout.el_second_frame);
-                frame.setImageViewResource(R.id.el_second_image, SECOND_DRAWABLES[i]);
-                seconds.addItem(i, frame);
-            }
-            views.setRemoteAdapter(R.id.el_seconds_flipper, seconds.build());
+            RemoteViews.RemoteCollectionItems pairFrames = buildFrames(context, 60);
+            RemoteViews.RemoteCollectionItems hourFrames = buildFrames(context, 24);
+            views.setRemoteAdapter(R.id.el_hour_flipper, hourFrames);
+            views.setRemoteAdapter(R.id.el_minute_flipper, pairFrames);
+            views.setRemoteAdapter(R.id.el_seconds_flipper, pairFrames);
+            views.setDisplayedChild(R.id.el_hour_flipper, now.get(Calendar.HOUR_OF_DAY));
+            views.setDisplayedChild(R.id.el_minute_flipper, now.get(Calendar.MINUTE));
             views.setDisplayedChild(R.id.el_seconds_flipper, now.get(Calendar.SECOND));
 
             views.setViewLayoutWidth(R.id.el_widget_panel, panelWidthDp, TypedValue.COMPLEX_UNIT_DIP);
             views.setViewLayoutHeight(R.id.el_widget_panel, panelHeightDp, TypedValue.COMPLEX_UNIT_DIP);
-            views.setViewLayoutMargin(R.id.el_seconds_flipper, RemoteViews.MARGIN_START,
-                    3f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
-            views.setViewLayoutMargin(R.id.el_seconds_flipper, RemoteViews.MARGIN_TOP,
-                    165f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
-            views.setViewLayoutWidth(R.id.el_seconds_flipper, 100f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
-            views.setViewLayoutHeight(R.id.el_seconds_flipper, 21f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+            int[] flippers = {R.id.el_hour_flipper, R.id.el_minute_flipper, R.id.el_seconds_flipper};
+            float[] y = {97f, 131f, 165f};
+            for (int i = 0; i < flippers.length; i++) {
+                views.setViewLayoutMargin(flippers[i], RemoteViews.MARGIN_START,
+                        3f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+                views.setViewLayoutMargin(flippers[i], RemoteViews.MARGIN_TOP,
+                        y[i] * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+                views.setViewLayoutWidth(flippers[i], 100f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+                views.setViewLayoutHeight(flippers[i], 21f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+            }
         }
 
         Intent launch = new Intent(context, MainActivity.class)
@@ -123,6 +128,17 @@ public final class ElWidgetProvider extends AppWidgetProvider {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.el_widget_root, openApp);
         manager.updateAppWidget(appWidgetId, views);
+    }
+
+    private static RemoteViews.RemoteCollectionItems buildFrames(Context context, int count) {
+        RemoteViews.RemoteCollectionItems.Builder builder =
+                new RemoteViews.RemoteCollectionItems.Builder();
+        for (int i = 0; i < count; i++) {
+            RemoteViews frame = new RemoteViews(context.getPackageName(), R.layout.el_second_frame);
+            frame.setImageViewResource(R.id.el_second_image, SECOND_DRAWABLES[i]);
+            builder.addItem(i, frame);
+        }
+        return builder.build();
     }
 
     private static PendingIntent tickIntent(Context context) {
@@ -184,17 +200,20 @@ public final class ElWidgetProvider extends AppWidgetProvider {
             RULE_P.setStyle(Paint.Style.FILL); RULE_P.setColor(RULE); RULE_P.setAlpha(212);
             COMP_P.setTypeface(tf); COMP_P.setTextAlign(Paint.Align.CENTER); COMP_P.setTextSize(4.9f); COMP_P.setColor(OFF); COMP_P.setAlpha(150);
         }
-        static Bitmap render(int width,int height,Calendar now){
+        static Bitmap render(int width,int height,Calendar now,boolean drawRegisters){
             Bitmap b=Bitmap.createBitmap(Math.max(1,width),Math.max(1,height),Bitmap.Config.ARGB_8888);
-            Canvas c=new Canvas(b); c.drawColor(Color.BLACK); c.scale(width/PANEL_W,height/PANEL_H); drawPanel(c,now); return b;
+            Canvas c=new Canvas(b); c.drawColor(Color.BLACK); c.scale(width/PANEL_W,height/PANEL_H); drawPanel(c,now,drawRegisters); return b;
         }
-        private static void drawPanel(Canvas c,Calendar now){
+        private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){
             c.drawText("PROG",87,9,LABEL_P); c.drawText("VERB",20,54,LABEL_P); c.drawText("NOUN",87,54,LABEL_P);
             rule(c,12,89,82,1.524f); rule(c,12,125,82,1.524f); rule(c,12,159,82,1.524f);
             c.drawText("COMP",19,14,COMP_P); c.drawText("ACTY",19,22,COMP_P);
             digits(c,"00",68,14); digits(c,"16",3,59); digits(c,"65",68,59);
-            register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),3,97);
-            register(c,'+',five(now.get(Calendar.MINUTE)),3,131);
+            if (drawRegisters) {
+                register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),3,97);
+                register(c,'+',five(now.get(Calendar.MINUTE)),3,131);
+                register(c,'+',five(now.get(Calendar.SECOND)),3,165);
+            }
         }
         private static String five(int v){ return String.format(Locale.US,"%05d",v); }
         private static void rule(Canvas c,float x,float y,float w,float h){ Path p=box(x,y,w,h); c.drawPath(p,RULE_P); }
