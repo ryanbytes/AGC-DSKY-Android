@@ -70,7 +70,8 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         if (!ACTION_TICK.equals(action)
                 && !Intent.ACTION_TIME_CHANGED.equals(action)
                 && !Intent.ACTION_TIMEZONE_CHANGED.equals(action)
-                && !Intent.ACTION_DATE_CHANGED.equals(action)) return;
+                && !Intent.ACTION_DATE_CHANGED.equals(action)
+                && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) return;
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, ElWidgetProvider.class));
         for (int id : ids) updateOne(context, manager, id);
