@@ -43,40 +43,46 @@ public final class ElWidgetProvider extends AppWidgetProvider {
                 options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110));
         int heightDp = Math.max(100,
                 options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 190));
-        float density = context.getResources().getDisplayMetrics().density;
-        int widthPx = clamp(Math.round(widthDp * density), 160, 1200);
-        int heightPx = clamp(Math.round(heightDp * density), 200, 1600);
 
+        // Fit one 106:190 EL panel inside whatever cell rectangle the launcher
+        // gives us. The live clocks are children of this same fitted panel, so
+        // host padding and non-Apollo aspect ratios cannot shift them relative
+        // to the static artwork.
         float scaleDp = Math.min(widthDp / PANEL_W, heightDp / PANEL_H);
         float panelWidthDp = PANEL_W * scaleDp;
         float panelHeightDp = PANEL_H * scaleDp;
-        float leftDp = (widthDp - panelWidthDp) * 0.5f;
-        float topDp = (heightDp - panelHeightDp) * 0.5f;
+        float density = context.getResources().getDisplayMetrics().density;
+        int panelWidthPx = clamp(Math.round(panelWidthDp * density), 1, 1200);
+        int panelHeightPx = clamp(Math.round(panelHeightDp * density), 1, 1800);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.el_widget);
         views.setImageViewBitmap(R.id.el_widget_image,
-                ElRenderer.renderStatic(widthPx, heightPx));
+                ElRenderer.renderStatic(panelWidthPx, panelHeightPx));
 
-        // TextClock runs inside the launcher host. R3 contains "ss", causing
-        // Android's TextClock ticker to repaint every second while attached.
-        // This avoids background-alarm batching and keeps the widget live even
-        // when our application process is not running.
+        // TextClock runs in the launcher host. R3 contains seconds, so Android
+        // repaints it continuously without relying on a batched background
+        // alarm. The custom font contains the exact Apollo-style digit and sign
+        // outlines; only their time data comes from TextClock.
         int[] clocks = {R.id.el_clock_r1, R.id.el_clock_r2, R.id.el_clock_r3};
-        float digitHeightPx = ElRenderer.DIGIT_H * scaleDp * density;
+        if (Build.VERSION.SDK_INT >= 31) {
+            views.setViewLayoutWidth(R.id.el_widget_panel,
+                    panelWidthDp, TypedValue.COMPLEX_UNIT_DIP);
+            views.setViewLayoutHeight(R.id.el_widget_panel,
+                    panelHeightDp, TypedValue.COMPLEX_UNIT_DIP);
+        }
         for (int i = 0; i < clocks.length; i++) {
             int id = clocks[i];
-            views.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_PX, digitHeightPx);
+            views.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_DIP,
+                    ElRenderer.DIGIT_H * scaleDp);
             if (Build.VERSION.SDK_INT >= 31) {
-                float startPx = (leftDp + REGISTER_X * scaleDp) * density;
-                float topPx = (topDp + REGISTER_Y[i] * scaleDp) * density;
-                float widthClockPx = 100f * scaleDp * density;
-                float heightClockPx = 22f * scaleDp * density;
                 views.setViewLayoutMargin(id, RemoteViews.MARGIN_START,
-                        startPx, TypedValue.COMPLEX_UNIT_PX);
+                        REGISTER_X * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
                 views.setViewLayoutMargin(id, RemoteViews.MARGIN_TOP,
-                        topPx, TypedValue.COMPLEX_UNIT_PX);
-                views.setViewLayoutWidth(id, widthClockPx, TypedValue.COMPLEX_UNIT_PX);
-                views.setViewLayoutHeight(id, heightClockPx, TypedValue.COMPLEX_UNIT_PX);
+                        REGISTER_Y[i] * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+                views.setViewLayoutWidth(id,
+                        100f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+                views.setViewLayoutHeight(id,
+                        21f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
             }
         }
 
@@ -110,7 +116,6 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         private static final float MIRROR_X = 2f * SRC_X + SRC_W;
         private static final float ADVANCE = SRC_PITCH * DIGIT_SCALE;
         static final float DIGIT_H = SRC_H * DIGIT_SCALE;
-        private static final float FIRST_DIGIT_X = 12.0f;
 
         // Exact numeric segment polygons from Ben Krasnow's DSKY V2.svg.
         private static final float[][][] SOURCE = new float[][][] {
@@ -127,21 +132,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
             "abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc","abcdefg","abcdfg"
         };
 
-        // The Apollo sign cell is not a generic skewed '+' glyph. DSKY V2.svg
-        // has three separate rectangular EL sections: a 6.731 x 1.524 center
-        // bar and two 1.524 x 3.175 vertical arms, separated by 0.381 gaps.
-        private static final float SIGN_W = 6.731f * DIGIT_SCALE;
-        private static final float SIGN_T = 1.524f * DIGIT_SCALE;
-        private static final float SIGN_ARM = 3.175f * DIGIT_SCALE;
-        private static final float SIGN_GAP = 0.381f * DIGIT_SCALE;
-        private static final float SIGN_H = 2f * SIGN_ARM + SIGN_T + 2f * SIGN_GAP;
-        private static final float SIGN_TOP = (DIGIT_H - SIGN_H) * 0.5f;
-        private static final float SIGN_X = 0.40f;
-        private static final float SIGN_VX = SIGN_X + (SIGN_W - SIGN_T) * 0.5f;
-        private static final float SIGN_HY = SIGN_TOP + SIGN_ARM + SIGN_GAP;
-
         private static final Paint SEG_ON = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private static final Paint SEG_OFF = new Paint(Paint.ANTI_ALIAS_FLAG);
         private static final Paint LABEL_PAINT = new Paint(Paint.ANTI_ALIAS_FLAG);
         private static final Paint RULE_PAINT = new Paint(Paint.ANTI_ALIAS_FLAG);
         private static final Paint COMP_PAINT = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -150,18 +141,13 @@ public final class ElWidgetProvider extends AppWidgetProvider {
             SEG_ON.setStyle(Paint.Style.FILL);
             SEG_ON.setColor(CORE);
             SEG_ON.setShadowLayer(0.85f, 0f, 0f, CORE);
-            SEG_OFF.setStyle(Paint.Style.FILL);
-            SEG_OFF.setColor(OFF);
-            SEG_OFF.setAlpha(145);
             Typeface condensedBold = Typeface.create("sans-serif-condensed", Typeface.BOLD);
             LABEL_PAINT.setTypeface(condensedBold);
             LABEL_PAINT.setTextAlign(Paint.Align.CENTER);
             LABEL_PAINT.setTextSize(5.1f);
             LABEL_PAINT.setColor(LABEL);
             LABEL_PAINT.setAlpha(220);
-            RULE_PAINT.setStyle(Paint.Style.STROKE);
-            RULE_PAINT.setStrokeWidth(2.05f);
-            RULE_PAINT.setStrokeCap(Paint.Cap.ROUND);
+            RULE_PAINT.setStyle(Paint.Style.FILL);
             RULE_PAINT.setColor(RULE);
             RULE_PAINT.setAlpha(212);
             COMP_PAINT.setTypeface(condensedBold);
@@ -172,17 +158,12 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         }
 
         static Bitmap renderStatic(int width, int height) {
-            int fitWidth = Math.max(1, width);
-            int fitHeight = Math.max(1, Math.round(fitWidth * PANEL_H / PANEL_W));
-            if (fitHeight > height) {
-                fitHeight = Math.max(1, height);
-                fitWidth = Math.max(1, Math.round(fitHeight * PANEL_W / PANEL_H));
-            }
-            Bitmap bitmap = Bitmap.createBitmap(fitWidth, fitHeight, Bitmap.Config.ARGB_8888);
+            int panelWidth = Math.max(1, width);
+            int panelHeight = Math.max(1, height);
+            Bitmap bitmap = Bitmap.createBitmap(panelWidth, panelHeight, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             canvas.drawColor(Color.BLACK);
-            float scale = Math.min(fitWidth / PANEL_W, fitHeight / PANEL_H);
-            canvas.scale(scale, scale);
+            canvas.scale(panelWidth / PANEL_W, panelHeight / PANEL_H);
             drawElPanelStatic(canvas);
             return bitmap;
         }
@@ -191,35 +172,29 @@ public final class ElWidgetProvider extends AppWidgetProvider {
             canvas.drawText("PROG", 87f, 9f, LABEL_PAINT);
             canvas.drawText("VERB", 20f, 54f, LABEL_PAINT);
             canvas.drawText("NOUN", 87f, 54f, LABEL_PAINT);
-            canvas.drawLine(12f, 89f, 94f, 89f, RULE_PAINT);
-            canvas.drawLine(12f, 125f, 94f, 125f, RULE_PAINT);
-            canvas.drawLine(12f, 159f, 94f, 159f, RULE_PAINT);
+            drawRule(canvas, 12f, 89f, 82f, 1.524f);
+            drawRule(canvas, 12f, 125f, 82f, 1.524f);
+            drawRule(canvas, 12f, 159f, 82f, 1.524f);
             canvas.drawText("COMP", 19f, 14f, COMP_PAINT);
             canvas.drawText("ACTY", 19f, 22f, COMP_PAINT);
             drawDigits(canvas, "00", 68f, 14f);
             drawDigits(canvas, "16", 3f, 59f);
             drawDigits(canvas, "65", 68f, 59f);
-            drawRegisterOff(canvas, REGISTER_X, REGISTER_Y[0]);
-            drawRegisterOff(canvas, REGISTER_X, REGISTER_Y[1]);
-            drawRegisterOff(canvas, REGISTER_X, REGISTER_Y[2]);
         }
 
-        private static void drawRegisterOff(Canvas canvas, float x, float y) {
-            drawSignParts(canvas, false, false, x, y);
-            for (int i = 0; i < 5; i++) {
-                drawDigitOff(canvas, x + FIRST_DIGIT_X + i * ADVANCE, y);
-            }
+        private static void drawRule(Canvas canvas, float x, float y, float width, float height) {
+            Path p = new Path();
+            p.moveTo(x, y);
+            p.lineTo(x + width, y);
+            p.lineTo(x + width, y + height);
+            p.lineTo(x, y + height);
+            p.close();
+            canvas.drawPath(p, RULE_PAINT);
         }
 
         private static void drawDigits(Canvas canvas, String text, float x, float y) {
             for (int i = 0; i < text.length(); i++) {
                 drawDigit(canvas, text.charAt(i), x + i * ADVANCE, y);
-            }
-        }
-
-        private static void drawDigitOff(Canvas canvas, float originX, float originY) {
-            for (int logical = 0; logical < 7; logical++) {
-                drawSegment(canvas, logical, false, originX, originY);
             }
         }
 
@@ -241,29 +216,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
                 if (i == 0) path.moveTo(px, py); else path.lineTo(px, py);
             }
             path.close();
-            canvas.drawPath(path, on ? SEG_ON : SEG_OFF);
-        }
-
-        private static void drawSignParts(Canvas canvas, boolean horizontalOn,
-                boolean verticalOn, float originX, float originY) {
-            drawBox(canvas, originX + SIGN_X, originY + SIGN_HY,
-                    SIGN_W, SIGN_T, horizontalOn);
-            drawBox(canvas, originX + SIGN_VX, originY + SIGN_TOP,
-                    SIGN_T, SIGN_ARM, verticalOn);
-            drawBox(canvas, originX + SIGN_VX,
-                    originY + SIGN_HY + SIGN_T + SIGN_GAP,
-                    SIGN_T, SIGN_ARM, verticalOn);
-        }
-
-        private static void drawBox(Canvas canvas, float x, float y,
-                float w, float h, boolean on) {
-            Path p = new Path();
-            p.moveTo(x, y);
-            p.lineTo(x + w, y);
-            p.lineTo(x + w, y + h);
-            p.lineTo(x, y + h);
-            p.close();
-            canvas.drawPath(p, on ? SEG_ON : SEG_OFF);
+            canvas.drawPath(path, SEG_ON);
         }
     }
 }
