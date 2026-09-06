@@ -15,8 +15,8 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 18
-        versionName '0.18'
+        versionCode 19
+        versionName '0.19'
     }
 
     // Keep generated binary inputs explicit. The AGC core/ropes are verified
