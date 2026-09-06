@@ -1,0 +1,64 @@
+/* Main interactive DSKY surround.
+   The 320 x 372 DSKY faceplate remains geometrically untouched. Phones are
+   substantially taller (portrait) or wider (landscape), so the unused viewport
+   is rendered as a continuation of the same machined faceplate material rather
+   than black letterbox bars. No fictional controls are added outside the real
+   DSKY outline: its existing dark perimeter is the mounting seam.
+
+   Portrait exposes this continuation above/below the DSKY. Landscape exposes
+   it at the left/right sides. Dream, SCREEN and legacy display-only modes keep
+   their intentionally black presentation. */
+
+body:not(.dream):not(.screen-only):not(.display-only) #app{
+  background:
+    radial-gradient(circle at 18% 12%,rgba(255,255,255,.10) 0 1px,transparent 1.4px),
+    radial-gradient(circle at 74% 38%,rgba(0,0,0,.055) 0 1px,transparent 1.5px),
+    repeating-linear-gradient(94deg,rgba(255,255,255,.017) 0 1px,rgba(0,0,0,.012) 1px 3px),
+    linear-gradient(145deg,#c7c6bd 0%,#bab9b0 34%,#aeafa8 72%,#c2c1b8 100%);
+}
+
+/* A restrained edge falloff reproduces the shallow illumination change across
+   a larger metal panel without inventing panel hardware. */
+body:not(.dream):not(.screen-only):not(.display-only) #app::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.11),transparent 5.5%,transparent 94.5%,rgba(0,0,0,.11)),
+    linear-gradient(180deg,rgba(255,255,255,.055),transparent 7%,transparent 93%,rgba(0,0,0,.10));
+  box-shadow:inset 0 0 1.6vmin rgba(0,0,0,.20);
+}
+
+body:not(.dream):not(.screen-only):not(.display-only) .dsky{
+  z-index:2;
+}
+
+/* The panel continuation must be visually subordinate to the actual DSKY
+   assembly. Portrait devices show only the top/bottom continuation because the
+   DSKY already occupies essentially the full viewport width. */
+@media (orientation:portrait){
+  body:not(.dream):not(.screen-only):not(.display-only) #app{
+    background-position:center center;
+  }
+  body:not(.dream):not(.screen-only):not(.display-only) #app::before{
+    background:
+      linear-gradient(90deg,rgba(0,0,0,.095),transparent 1.2%,transparent 98.8%,rgba(0,0,0,.095)),
+      linear-gradient(180deg,rgba(255,255,255,.060),transparent 8%,transparent 92%,rgba(0,0,0,.105));
+  }
+}
+
+/* Landscape devices expose the same material to the sides. Keep the grain
+   vertical/near-vertical like the faceplate instead of rotating or stretching
+   the physical DSKY artwork. */
+@media (orientation:landscape){
+  body:not(.dream):not(.screen-only):not(.display-only) #app{
+    background-position:center center;
+  }
+  body:not(.dream):not(.screen-only):not(.display-only) #app::before{
+    background:
+      linear-gradient(90deg,rgba(0,0,0,.12),transparent 7%,transparent 93%,rgba(0,0,0,.12)),
+      linear-gradient(180deg,rgba(255,255,255,.045),transparent 1.4%,transparent 98.6%,rgba(0,0,0,.09));
+  }
+}
