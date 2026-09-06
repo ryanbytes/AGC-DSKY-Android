@@ -394,7 +394,16 @@ async function testKeyAndProceed(cdp) {
     return b.classList.contains('pressed');
   })()`);
   assert(proDown === true, 'PRO pointer-down did not enter held/pressed state');
-  await delay(180);
+
+  // A real PRO is level-sensitive, not a 90/180 ms synthetic tap. Keep the
+  // pointer down long enough to catch accidental auto-release/timer behavior.
+  await delay(2000);
+  const proStillHeld = await cdp.evaluate(`(() => {
+    const b = document.querySelector('[data-key="P"]');
+    const c = AGCDSKY.getCore();
+    return !!b && b.classList.contains('pressed') && !!c && c.running;
+  })()`);
+  assert(proStillHeld === true, 'PRO did not remain held for a two-second pointer press');
 
   const proUp = await cdp.evaluate(`(() => {
     document.dispatchEvent(new PointerEvent('pointerup', {
@@ -412,12 +421,29 @@ async function testKeyAndProceed(cdp) {
 
 async function testPauseResume(cdp) {
   await cdp.evaluate('window.__agcDeviceSmokeCore = AGCDSKY.getCore(); true');
+
+  // Hold PRO across the visibility transition. The app must send channel-032
+  // release before stopping the scheduler so resume cannot inherit a stale PRO.
+  const proDown = await cdp.evaluate(`(() => {
+    const b = document.querySelector('[data-key="P"]');
+    if (!b || typeof PointerEvent !== 'function') return false;
+    b.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true, pointerId: 903, pointerType: 'touch', isPrimary: true
+    }));
+    return b.classList.contains('pressed');
+  })()`);
+  assert(proDown === true, 'could not hold PRO before visibility pause');
+  await delay(250);
+
   const paused = await cdp.evaluate(`(() => {
     AGCDSKY.setAppVisible(false);
     const c = AGCDSKY.getCore();
-    return !!c && !c.running && c === window.__agcDeviceSmokeCore;
+    const b = document.querySelector('[data-key="P"]');
+    return !!c && !c.running && c === window.__agcDeviceSmokeCore
+      && !!b && !b.classList.contains('pressed');
   })()`);
-  assert(paused === true, 'setAppVisible(false) did not pause the same AGC core');
+  assert(paused === true,
+    'setAppVisible(false) did not release held PRO and pause the same AGC core');
 
   const resumed = await cdp.evaluate(`(() => {
     AGCDSKY.setAppVisible(true);
@@ -425,7 +451,14 @@ async function testPauseResume(cdp) {
     return !!c && c.running && c === window.__agcDeviceSmokeCore;
   })()`);
   assert(resumed === true, 'setAppVisible(true) did not resume the same AGC core');
-  await cdp.evaluate('delete window.__agcDeviceSmokeCore; true');
+
+  await cdp.evaluate(`(() => {
+    document.dispatchEvent(new PointerEvent('pointercancel', {
+      bubbles: true, pointerId: 903, pointerType: 'touch', isPrimary: true
+    }));
+    delete window.__agcDeviceSmokeCore;
+    return true;
+  })()`);
 }
 
 async function snapshotState(cdp) {
@@ -480,8 +513,8 @@ async function main() {
     console.log(`  LM: ${lm.version}; DSKY channels observed: ${lm.channels.map((n) => '0o' + n.toString(8)).join(', ')}`);
     console.log(`  CM: ${cm.version}; DSKY channels observed: ${cm.channels.map((n) => '0o' + n.toString(8)).join(', ')}`);
     console.log('  VERB pointer input: PASS');
-    console.log('  held PRO pointer input/release: PASS');
-    console.log('  same-WebView pause/resume identity: PASS');
+    console.log('  two-second held PRO pointer input/release: PASS');
+    console.log('  visibility pause releases held PRO before same-WebView resume: PASS');
   } finally {
     if (snapshot) await restoreState(cdp, snapshot);
     cdp.close();
