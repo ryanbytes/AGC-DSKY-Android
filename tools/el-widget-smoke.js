@@ -47,7 +47,7 @@ requireText(provider, 'views.setDisplayedChild(R.id.el_seconds_flipper', 'live s
 requireText(provider, 'SECOND_DRAWABLES.length', 'live seconds adapter');
 requireText(provider, 'alarm.setExactAndAllowWhileIdle', 'minute refresh');
 requireText(provider, 'alarm.setAndAllowWhileIdle', 'minute refresh fallback');
-forbid(provider, 'TextClock', 'widget renderer');
+forbid(provider, 'R.id.el_clock_', 'widget renderer');
 
 for (const needle of [
   'SIGN_W=6.731f*DIGIT_SCALE',
