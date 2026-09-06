@@ -1,57 +1,38 @@
 'use strict';
-
 (() => {
-  const params = new URLSearchParams(location.search);
-  const isDream = params.get('dream') === '1';
-  const key = 'screenOnly';
-  let enabled = isDream;
-  if (!isDream) {
-    try { enabled = localStorage.getItem(key) === '1'; } catch (_) {}
-  }
+  const params=new URLSearchParams(location.search),isDream=params.get('dream')==='1',key='screenOnly';
+  let enabled=isDream;
+  if(!isDream){try{enabled=localStorage.getItem(key)==='1'}catch(_){}}
+  const displayButton=document.getElementById('display');
+  const el=document.getElementById('elpanel');
 
-  const controls = document.getElementById('controls');
-  const modeText = document.getElementById('mode');
-  const button = document.createElement('button');
-  button.id = 'screen';
-  button.type = 'button';
-  if (controls) controls.insertBefore(button, modeText || null);
-
-  function remember() {
-    if (isDream) return;
-    try { localStorage.setItem(key, enabled ? '1' : '0'); } catch (_) {}
-  }
-
-  function apply() {
-    document.body.classList.toggle('screen-only', enabled);
-    // SCREEN and the older cropped DISPLAY mode are mutually exclusive.
-    if (enabled) document.body.classList.remove('display-only');
-    button.textContent = enabled ? 'FULL DSKY' : 'SCREEN';
+  function remember(){if(isDream)return;try{localStorage.setItem(key,enabled?'1':'0')}catch(_){}}
+  function apply(){
+    document.body.classList.toggle('screen-only',enabled);
+    if(enabled)document.body.classList.remove('display-only');
+    if(displayButton)displayButton.textContent=enabled?'FULL DSKY':'SCREEN';
     remember();
   }
+  function enter(){if(isDream)return;enabled=true;apply()}
+  function exit(){if(isDream)return;enabled=false;apply();if(typeof showControls==='function')showControls()}
 
-  button.addEventListener('click', () => {
-    enabled = !enabled;
-    apply();
-    if (!enabled && typeof showControls === 'function') showControls();
+  // The existing DISPLAY control becomes the explicit SCREEN/FULL DSKY toggle.
+  if(displayButton)displayButton.addEventListener('click',()=>{
+    setTimeout(()=>{enabled=!enabled;apply();if(!enabled&&typeof showControls==='function')showControls()},0);
   });
 
-  // SCREEN hides its controls. Match the existing display-only escape gesture:
-  // hold anywhere for 1.8 s to return to the full DSKY in the normal app.
-  let hold = 0;
-  document.addEventListener('pointerdown', () => {
-    if (isDream || !enabled) return;
-    clearTimeout(hold);
-    hold = setTimeout(() => {
-      enabled = false;
-      apply();
-      if (typeof showControls === 'function') showControls();
-    }, 1800);
-  }, { passive: true });
-  document.addEventListener('pointerup', () => clearTimeout(hold), { passive: true });
-  document.addEventListener('pointercancel', () => clearTimeout(hold), { passive: true });
+  // Direct main-screen shortcut: tap the EL display itself to isolate it.
+  if(el)el.addEventListener('click',(event)=>{if(!enabled){event.preventDefault();event.stopPropagation();enter()}},{passive:false});
 
-  // DreamService always gets the borderless readout regardless of the normal
-  // app's saved view choice.
-  if (isDream) enabled = true;
+  // In SCREEN mode, hold anywhere for 1.8 s to return to the complete DSKY.
+  let hold=0;
+  document.addEventListener('pointerdown',()=>{
+    if(isDream||!enabled)return;
+    clearTimeout(hold);hold=setTimeout(exit,1800);
+  },{passive:true});
+  document.addEventListener('pointerup',()=>clearTimeout(hold),{passive:true});
+  document.addEventListener('pointercancel',()=>clearTimeout(hold),{passive:true});
+
+  if(isDream)enabled=true;
   apply();
 })();
