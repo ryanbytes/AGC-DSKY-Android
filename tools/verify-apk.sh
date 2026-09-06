@@ -110,8 +110,8 @@ AAPT2="$(find_verifier_tool aapt2 || true)"
   || fail "aapt2 not found at pinned Build Tools $PINNED_BUILD_TOOLS under $SDK/build-tools"
 
 badging="$($AAPT2 dump badging "$APK")"
-grep -Eq "^package: name='org\.apollo\.agcdsky' versionCode='7' versionName='0\.7'" <<<"$badging" \
-  || fail "APK package/version is not org.apollo.agcdsky versionCode 7 versionName 0.7"
+grep -Eq "^package: name='org\.apollo\.agcdsky' versionCode='17' versionName='0\.17'" <<<"$badging" \
+  || fail "APK package/version is not org.apollo.agcdsky versionCode 17 versionName 0.17"
 grep -Fq "sdkVersion:'26'" <<<"$badging" \
   || fail "APK minSdk is not 26"
 grep -Fq "targetSdkVersion:'37'" <<<"$badging" \
@@ -129,6 +129,34 @@ grep -Fq 'android.permission.ACCESS_COARSE_LOCATION' <<<"$permissions" \
 grep -Fq 'android.permission.ACCESS_FINE_LOCATION' <<<"$permissions" \
   || fail "merged APK is missing fine location required for WebView geolocation compatibility"
 
+# Verify that the packaged application really contains the EL-only AppWidget,
+# not merely the Java source in the checkout. Source geometry/layout policy is
+# covered by tools/el-widget-smoke.js before Gradle; here we prove the merged
+# manifest, compiled resources and widget class survived packaging.
+manifest_tree="$($AAPT2 dump xmltree --file AndroidManifest.xml "$APK")"
+grep -Fq '="org.apollo.agcdsky.ElWidgetProvider"' <<<"$manifest_tree" \
+  || grep -Fq '=".ElWidgetProvider"' <<<"$manifest_tree" \
+  || fail "merged manifest is missing ElWidgetProvider receiver"
+grep -Fq 'android.appwidget.action.APPWIDGET_UPDATE' <<<"$manifest_tree" \
+  || fail "merged manifest is missing APPWIDGET_UPDATE action"
+grep -Fq 'android.appwidget.provider' <<<"$manifest_tree" \
+  || fail "merged manifest is missing appwidget provider metadata"
+
+resources="$($AAPT2 dump resources "$APK")"
+grep -Eq 'resource 0x[0-9a-f]+ id/el_widget_image' <<<"$resources" \
+  || fail "APK resource table is missing el_widget_image"
+grep -Eq 'resource 0x[0-9a-f]+ layout/el_widget' <<<"$resources" \
+  || fail "APK resource table is missing layout/el_widget"
+grep -Eq 'resource 0x[0-9a-f]+ xml/el_widget_info' <<<"$resources" \
+  || fail "APK resource table is missing xml/el_widget_info"
+
+DEXDUMP="$(find_verifier_tool dexdump || true)"
+[[ -n "$DEXDUMP" ]] \
+  || fail "dexdump not found at pinned Build Tools $PINNED_BUILD_TOOLS under $SDK/build-tools"
+"$DEXDUMP" -f "$APK" 2>/dev/null \
+  | grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/ElWidgetProvider;'" \
+  || fail "APK dex is missing ElWidgetProvider class"
+
 APKSIGNER="$(find_verifier_tool apksigner || true)"
 [[ -n "$APKSIGNER" ]] \
   || fail "apksigner not found at pinned Build Tools $PINNED_BUILD_TOOLS under $SDK/build-tools"
@@ -137,10 +165,11 @@ APKSIGNER="$(find_verifier_tool apksigner || true)"
 
 printf 'APK verification: PASS\n'
 printf '  %s\n' "$APK"
-printf '  package/version/minSdk/targetSdk match v0.7 source\n'
+printf '  package/version/minSdk/targetSdk match v0.17 source\n'
 printf '  APK is debuggable for the ADB smoke/report workflow\n'
 printf '  pinned yaAGC/WASM + both ropes match exact Git blobs\n'
 printf '  index.html and every referenced frontend asset match the current checkout byte-for-byte\n'
+printf '  EL AppWidget receiver/class/resources are present in the packaged APK\n'
 printf '  unused upstream vendor assets are absent\n'
 printf '  merged manifest has location permissions and no INTERNET permission\n'
 printf '  verifier Build Tools: %s\n' "$PINNED_BUILD_TOOLS"
