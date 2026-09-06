@@ -3,6 +3,7 @@ plugins {
 }
 
 def generatedAgcAssetsDir = layout.buildDirectory.dir('generated/agcAssets').get().asFile
+def generatedElSecondsResDir = layout.buildDirectory.dir('generated/elSecondsRes').get().asFile
 
 android {
     namespace 'org.apollo.agcdsky'
@@ -13,19 +14,22 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 20
-        versionName '0.20'
+        versionCode 21
+        versionName '0.21'
     }
 
-    // Only the three required pinned webAGC binary inputs are staged into this
-    // generated asset directory. Do not add the whole vendor source/demo trees
-    // as Android asset roots; doing so packages unused upstream JS/Validation
-    // files and weakens the exact-input boundary.
+    // Only the required pinned AGC inputs plus generated EL second-frame
+    // drawables are staged into the Android build. The second frames are
+    // generated from the same exact Apollo EL polygons used by the renderer.
     sourceSets {
         main {
             assets.srcDirs = [
                 'src/main/assets',
                 generatedAgcAssetsDir
+            ]
+            res.srcDirs = [
+                'src/main/res',
+                generatedElSecondsResDir
             ]
         }
     }
@@ -106,12 +110,22 @@ def stagePinnedAgcAssets = tasks.register('stagePinnedAgcAssets', Sync) {
     into generatedAgcAssetsDir
 }
 
-// Make staging part of the ordinary Android pre-build path. The merge-task
-// dependency is retained as a direct guard for callers that invoke merge tasks
-// without going through assemble/preBuild.
+def generateElSecondFrames = tasks.register('generateElSecondFrames', Exec) {
+    group = 'build setup'
+    description = 'Generate 00-59 Apollo-vector register frames for the live seconds flipper.'
+    inputs.file(file('../tools/generate-el-second-frames.js'))
+    outputs.dir(generatedElSecondsResDir)
+    commandLine 'node', file('../tools/generate-el-second-frames.js'), generatedElSecondsResDir
+}
+
+// Make staging/generation part of the ordinary Android build path.
 tasks.matching { it.name == 'preBuild' }.configureEach {
     dependsOn stagePinnedAgcAssets
+    dependsOn generateElSecondFrames
 }
 tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
     dependsOn stagePinnedAgcAssets
+}
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Resources') }.configureEach {
+    dependsOn generateElSecondFrames
 }
