@@ -3,194 +3,238 @@
 /*
  * Spacecraft-specific DSKY installation scenes.
  *
- * CM geometry is reconstructed from the Apollo Operations Handbook Block II
- * Main Display Console, Figure 3-1 sheet 3 of 7: the DSKY is on Panel 2 with
- * the FDAI/flight instruments to its left, CSM/LM/telemetry controls above,
- * RCS/propellant controls to the right, and abort/launch-vehicle controls below.
+ * CM: Apollo Operations Handbook Block II, Main Display Console Panel 2.
+ * Panel 2B = FDAI No. 2, 2C = CMC DSKY, 2D = abort/boost/entry controls,
+ * 2E = RCS management, 2F = ECS/cryogenic management, 2A = caution/warning,
+ * docking and mission-timer controls.
  *
- * LM geometry is reconstructed around LM Panel 4 from LMA790-2/LMA790-3.  Panel
- * 4 is the DSKY, centered between the CDR and LMP and above the forward hatch;
- * Panels 1 and 2 are above it and Panel 3 is adjacent below the main panels.
- * The scene targets the Apollo-11-era LM-5 arrangement used with Luminary 099.
+ * LM: LMA790-2/LMA790-3. Panels 1 and 2 are the two eye-level main panels;
+ * Panel 3 immediately below them spans both, and Panel 4 is centered below
+ * Panel 3 above the forward hatch. Panel 4 carries the LGC/DSKY plus the
+ * CDR/LMP ACA/4-JET and TTCA/TRANSL controls. Panel 5 (CDR) and Panel 6 (LMP)
+ * flank the lower center area.
  *
- * The shared DSKY remains a separate 320 x 372 element.  Each scene contains a
- * 320 x 372 registration aperture.  syncPanel() scales a scene from that exact
- * aperture, so phone aspect ratio only changes the crop; it never stretches or
- * relocates the physical DSKY relative to the surrounding panel artwork.
+ * The existing Block II DSKY remains a separate exact 320 x 372 element. Each
+ * scene has a 320 x 372 registration rectangle. Scaling is derived only from
+ * that rectangle, so rotation/aspect ratio changes crop the cockpit scene but
+ * never stretch or move the DSKY relative to its spacecraft panel.
  */
 (() => {
-  const SVG_NS = 'http://www.w3.org/2000/svg';
   const app = document.getElementById('app');
   const dsky = document.getElementById('dsky');
   if (!app || !dsky || document.getElementById('spacecraft-panel')) return;
 
+  const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const label = (x,y,text,cls='panel-micro') => `<text class="panel-label ${cls}" x="${x}" y="${y}">${esc(text)}</text>`;
+
   const screw = (x,y,r=5) => `
     <g transform="translate(${x} ${y})">
-      <circle class="screw" r="${r}"/><line class="screw-slot" x1="-${r*.62}" y1="0" x2="${r*.62}" y2="0" transform="rotate(-18)"/>
+      <circle class="screw" r="${r}"/>
+      <line class="screw-slot" x1="-${(r*.62).toFixed(2)}" y1="0" x2="${(r*.62).toFixed(2)}" y2="0" transform="rotate(-18)"/>
     </g>`;
 
-  const toggle = (x,y,labelTop='',labelBottom='') => `
+  const toggle = (x,y,top='',bottom='') => `
     <g transform="translate(${x} ${y})">
-      <circle class="toggle-base" r="8"/><line class="toggle-stem" x1="0" y1="1" x2="0" y2="-16"/>
-      ${labelTop?`<text class="panel-label panel-micro" y="-25">${labelTop}</text>`:''}
-      ${labelBottom?`<text class="panel-label panel-micro" y="24">${labelBottom}</text>`:''}
+      <circle class="toggle-base" r="8"/>
+      <line class="toggle-stem" x1="0" y1="1" x2="0" y2="-16"/>
+      ${top?label(0,-25,top):''}
+      ${bottom?label(0,25,bottom):''}
     </g>`;
 
-  const guardedToggle = (x,y,label) => `
+  const guardedToggle = (x,y,text) => `
     <g transform="translate(${x} ${y})">
       <rect class="guard" x="-16" y="-25" width="32" height="46" rx="3"/>
-      <circle class="toggle-base" r="7"/><line class="toggle-stem" x1="0" y1="1" x2="0" y2="-14"/>
-      <text class="panel-label panel-micro" y="34">${label}</text>
+      <circle class="toggle-base" r="7"/>
+      <line class="toggle-stem" x1="0" y1="1" x2="0" y2="-14"/>
+      ${label(0,34,text)}
     </g>`;
 
-  const meter = (x,y,r,label,value='') => {
-    const ticks = Array.from({length:11},(_,i)=>{
-      const a=(-130+i*26)*Math.PI/180;
-      const x1=(r*.70*Math.cos(a)).toFixed(2),y1=(r*.70*Math.sin(a)).toFixed(2);
-      const x2=(r*.88*Math.cos(a)).toFixed(2),y2=(r*.88*Math.sin(a)).toFixed(2);
+  const push = (x,y,w,h,text,kind='off') => `
+    <g transform="translate(${x} ${y})">
+      <rect class="indicator-${kind}" width="${w}" height="${h}" rx="2"/>
+      ${label(w/2,h/2+2.4,text)}
+    </g>`;
+
+  const talkback = (x,y,text,open=false) => `
+    <g transform="translate(${x} ${y})">
+      <rect x="-15" y="-7" width="30" height="14" rx="2" fill="${open?'#aaa99f':'#272a27'}" stroke="#111311" stroke-width="1.4"/>
+      ${!open?'<path d="M-13 -5 L-6 5 M-5 -5 L2 5 M3 -5 L10 5" stroke="#b8bbb1" stroke-width="2"/>':''}
+      ${text?label(0,20,text):''}
+    </g>`;
+
+  const meter = (x,y,r,text) => {
+    const ticks = Array.from({length:13},(_,i)=>{
+      const a=(-132+i*22)*Math.PI/180;
+      const x1=(r*.72*Math.cos(a)).toFixed(2), y1=(r*.72*Math.sin(a)).toFixed(2);
+      const x2=(r*.88*Math.cos(a)).toFixed(2), y2=(r*.88*Math.sin(a)).toFixed(2);
       return `<line class="meter-tick" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
     }).join('');
-    return `<g transform="translate(${x} ${y})"><circle class="meter-face" r="${r}"/><circle class="meter-ring" r="${r-4}"/>${ticks}<line class="meter-pointer" x1="0" y1="4" x2="${r*.48}" y2="-${r*.40}"/><circle fill="#262925" r="5"/><text class="panel-label panel-small" y="${r+16}">${label}</text>${value?`<text fill="#1d201d" font-family="monospace" font-size="11" text-anchor="middle" y="8">${value}</text>`:''}</g>`;
+    return `<g transform="translate(${x} ${y})"><circle class="meter-face" r="${r}"/><circle class="meter-ring" r="${r-4}"/>${ticks}<line class="meter-pointer" x1="0" y1="4" x2="${(r*.47).toFixed(1)}" y2="-${(r*.39).toFixed(1)}"/><circle fill="#252825" r="5"/>${label(0,r+17,text,'panel-tiny')}</g>`;
   };
 
-  const indicator = (x,y,w,h,text,kind='off') => `
-    <g transform="translate(${x} ${y})"><rect class="indicator-${kind}" x="0" y="0" width="${w}" height="${h}" rx="2"/><text class="panel-label panel-micro" x="${w/2}" y="${h/2+2.3}">${text}</text></g>`;
-
-  const bank = (x,y,title,labels,cols=4,dx=46,dy=54) => {
-    let out=`<g transform="translate(${x} ${y})"><rect class="cm-subplate" x="0" y="0" width="${cols*dx+18}" height="${Math.ceil(labels.length/cols)*dy+36}" rx="5"/><text class="panel-label panel-small" x="${(cols*dx+18)/2}" y="16">${title}</text>`;
-    labels.forEach((lab,i)=>{const cx=18+(i%cols)*dx+dx/2,cy=30+Math.floor(i/cols)*dy+22;out+=toggle(cx,cy,'',lab)});
-    return out+'</g>';
-  };
+  const digital = (x,y,w,h,text='888:88') => `<g transform="translate(${x} ${y})"><rect class="cm-black" width="${w}" height="${h}" rx="3"/><text x="${w/2}" y="${h*.70}" class="panel-label panel-num">${esc(text)}</text></g>`;
 
   function cmSvg(){
-    /* Scene coordinates: DSKY aperture x=490,y=300,w=320,h=372. */
-    const switchesTop=['UP TLM','CM DCS','ACCEPT','BLOCK'];
-    const rcs=['A PRIM','A SEC','B PRIM','B SEC','C PRIM','C SEC','D PRIM','D SEC'];
+    // Registration aperture: x=505, y=300, width=320, height=372.
+    const cw = [
+      'BMAG 1','BMAG 2','PITCH GMBL','YAW GMBL','CM RCS 1','CM RCS 2',
+      'SM RCS A','SM RCS B','SM RCS C','SM RCS D','CRYO PRESS','CO2 PP HI',
+      'GLYCOL TEMP','SPS TEMP','CMC','ISS','FC 1','FC 2','FC 3','AC BUS'
+    ];
+    const cwGrid = cw.map((s,i)=>push(62+(i%5)*64,94+Math.floor(i/5)*28,58,20,s,(s==='CMC'||s==='ISS')?'red':'amber')).join('');
+    const helium = ['A1','A2','B1','B2','C1','C2','D1','D2'];
     return `
-    <svg class="cm-scene" viewBox="0 0 1360 980" role="presentation">
+    <svg class="cm-scene" viewBox="0 0 1640 1030" role="presentation">
       <defs>
-        <linearGradient id="cmMetal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#777d76"/><stop offset=".5" stop-color="#5d625d"/><stop offset="1" stop-color="#4c514c"/></linearGradient>
-        <filter id="cmGrain"><feTurbulence type="fractalNoise" baseFrequency=".18" numOctaves="2" seed="11" result="n"/><feColorMatrix in="n" values="1 0 0 0 .45  0 1 0 0 .45  0 0 1 0 .42  0 0 0 .055 0"/><feBlend in="SourceGraphic" mode="multiply"/></filter>
+        <linearGradient id="cmMetal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#777d76"/><stop offset=".5" stop-color="#5d625d"/><stop offset="1" stop-color="#474c47"/></linearGradient>
+        <filter id="cmGrain"><feTurbulence type="fractalNoise" baseFrequency=".17" numOctaves="2" seed="11" result="n"/><feColorMatrix in="n" values="1 0 0 0 .45 0 1 0 0 .45 0 0 1 0 .42 0 0 0 .045 0"/><feBlend in="SourceGraphic" mode="multiply"/></filter>
       </defs>
-      <path d="M30 28 H1325 V930 H30 Z" fill="url(#cmMetal)" stroke="#181b18" stroke-width="10" filter="url(#cmGrain)"/>
-      <path class="seam" d="M50 55 H1310 M50 908 H1310 M462 55 V908 M835 55 V908" opacity=".5"/>
-      <text class="panel-label panel-small" x="680" y="48">COMMAND MODULE — MAIN DISPLAY CONSOLE / PANEL 2</text>
+      <path d="M24 24 H1616 V1006 H24 Z" fill="url(#cmMetal)" stroke="#171a17" stroke-width="10" filter="url(#cmGrain)"/>
+      <path class="seam" d="M45 48H1595 M45 990H1595 M430 48V990 M850 48V990 M1320 48V990" opacity=".42"/>
 
-      <!-- Flight director/attitude instrumentation immediately to the left of the DSKY zone. -->
+      <!-- PANEL 2A: caution/warning, docking probe and mission timer. -->
       <g>
-        <rect class="cm-subplate" x="115" y="145" width="325" height="440" rx="8"/>
-        <text class="panel-label panel-small" x="278" y="170">FLIGHT / GUIDANCE</text>
-        ${meter(278,300,112,'FDAI')}
-        ${meter(190,495,52,'ROLL RATE')}
-        ${meter(362,495,52,'YAW RATE')}
-        <rect class="cm-black" x="132" y="545" width="292" height="28" rx="3"/><text class="panel-label panel-tiny" x="278" y="563">ATT SET — ROLL / PITCH / YAW</text>
+        <rect class="cm-subplate" x="45" y="62" width="350" height="250" rx="7"/>
+        ${label(220,82,'PANEL 2A — CAUTION / WARNING','panel-small')}
+        ${cwGrid}
+        ${digital(60,222,128,42,'000:00')}
+        ${toggle(225,247,'MSN TIMER','START')}${toggle(285,247,'C/W','NORMAL')}${toggle(345,247,'LM PWR','OFF')}
       </g>
 
-      <!-- CSM/LM telemetry and guidance controls that sit above the MDC DSKY on Sheet 3. -->
+      <!-- PANEL 2B: second FDAI. -->
       <g>
-        <rect class="cm-subplate" x="475" y="105" width="355" height="155" rx="7"/>
-        <text class="panel-label panel-small" x="652" y="126">CMC / UPLINK</text>
-        ${switchesTop.map((s,i)=>guardedToggle(515+i*82,184,s)).join('')}
-        ${indicator(493,136,58,22,'UPLINK','off')}
-        ${indicator(562,136,58,22,'COMP','off')}
-        <text class="panel-label panel-micro" x="738" y="149">UP TELEMETRY</text>
+        <rect class="cm-subplate" x="65" y="335" width="360" height="445" rx="8"/>
+        ${label(245,357,'PANEL 2B — FDAI NO. 2','panel-small')}
+        ${meter(245,525,124,'FDAI')}
+        ${meter(145,705,50,'RATE')}${meter(345,705,50,'ERROR')}
       </g>
 
-      <!-- DSKY registration aperture; actual DSKY element overlays this exact 320x372 rectangle. -->
-      <rect x="482" y="292" width="336" height="388" rx="5" fill="#171917" stroke="#0a0b0a" stroke-width="8"/>
-      <rect x="490" y="300" width="320" height="372" fill="#111311"/>
-
-      <!-- Propulsion/RCS management to the right of the DSKY, matching Sheet 3 grouping. -->
+      <!-- PANEL 2C: exact DSKY aperture. -->
       <g>
-        <rect class="cm-subplate" x="850" y="100" width="430" height="585" rx="8"/>
-        <text class="panel-label panel-small" x="1065" y="124">RCS / PROPELLANT MANAGEMENT</text>
-        ${meter(935,210,58,'SM RCS He','1')}
-        ${meter(1070,210,58,'SM RCS He','2')}
-        ${meter(1205,210,58,'PRPLNT QTY')}
-        <rect class="cm-black" x="880" y="290" width="370" height="36" rx="3"/><text class="panel-label panel-tiny" x="1065" y="313">CM RCS PRPLNT — OPEN / CLOSE / TRANSFER</text>
-        ${rcs.map((s,i)=>toggle(900+(i%4)*105,372+Math.floor(i/4)*92,'',s)).join('')}
-        <rect class="cm-black" x="880" y="545" width="370" height="30" rx="3"/><text class="panel-label panel-tiny" x="1065" y="565">SM RCS HEATERS — PRIM / SEC</text>
-        ${['A','B','C','D'].map((s,i)=>guardedToggle(920+i*102,625,s)).join('')}
+        <rect class="cm-subplate" x="487" y="280" width="356" height="410" rx="8"/>
+        ${label(665,297,'PANEL 2C — CMC DISPLAY & KEYBOARD','panel-small')}
+        <rect x="497" y="292" width="336" height="388" rx="5" fill="#171917" stroke="#090a09" stroke-width="7"/>
+        <rect x="505" y="300" width="320" height="372" fill="#111311"/>
       </g>
 
-      <!-- Abort/launch vehicle controls below the DSKY on Panel 2. -->
+      <!-- PANEL 2D: abort / boost / entry key switches. -->
       <g>
-        <rect class="cm-subplate" x="300" y="705" width="675" height="180" rx="8"/>
-        <text class="panel-label panel-small" x="638" y="728">ABORT SYSTEM / LAUNCH VEHICLE</text>
-        ${indicator(328,744,92,34,'ABORT','red')}
-        ${guardedToggle(468,800,'LV RATES')}
-        ${guardedToggle(555,800,'TWR JETT')}
-        ${guardedToggle(642,800,'PRPLNT DUMP')}
-        ${guardedToggle(729,800,'ENG AUTO')}
-        ${guardedToggle(816,800,'RCS CMD')}
-        ${guardedToggle(903,800,'MAIN RELEASE')}
+        <rect class="cm-subplate" x="455" y="720" width="420" height="245" rx="8"/>
+        ${label(665,742,'PANEL 2D — ABORT / BOOST / ENTRY','panel-small')}
+        ${guardedToggle(495,800,'EDS AUTO')}${guardedToggle(565,800,'CSM/LM SEP')}${guardedToggle(635,800,'CM/SM SEP')}${guardedToggle(705,800,'S-IVB/LM')}${guardedToggle(775,800,'TWR JETT')}${guardedToggle(845,800,'MAIN RELEASE')}
+        ${toggle(505,900,'ABORT','PRPLNT')}${toggle(585,900,'2 ENG','OUT')}${toggle(665,900,'LV','RATES')}${toggle(745,900,'GUIDANCE','IU/CMC')}${toggle(825,900,'XLUNAR','INHIBIT')}
       </g>
 
-      <!-- Panel fasteners. -->
-      ${[[65,72],[445,72],[840,72],[1300,72],[65,900],[445,900],[840,900],[1300,900],[470,280],[830,280],[470,692],[830,692]].map(p=>screw(...p)).join('')}
+      <!-- PANEL 2E: RCS management. -->
+      <g>
+        <rect class="cm-subplate" x="885" y="72" width="430" height="660" rx="8"/>
+        ${label(1100,94,'PANEL 2E — RCS MANAGEMENT','panel-small')}
+        ${meter(940,185,48,'TEMP PKG')}${meter(1045,185,48,'He PRESS')}${meter(1150,185,48,'SEC FUEL')}${meter(1255,185,48,'PRPLNT QTY')}
+        ${label(1100,262,'SM RCS HELIUM 1 / 2','panel-tiny')}
+        ${helium.map((s,i)=>`${talkback(925+(i%4)*100,298+Math.floor(i/4)*76,'')}${toggle(925+(i%4)*100,330+Math.floor(i/4)*76,'',s)}`).join('')}
+        ${label(1100,490,'SM RCS PRPLNT','panel-tiny')}
+        ${['A','B','C','D'].map((s,i)=>`${talkback(945+i*103,520,'')}${toggle(945+i*103,553,'',s)}`).join('')}
+        ${label(1015,623,'CM RCS PRPLNT','panel-tiny')}${talkback(975,650,'SYS 1')}${talkback(1055,650,'SYS 2')}
+        ${toggle(1190,650,'RCS IND','SM/CM')}${toggle(1270,650,'RCS CMD','ON')}
+      </g>
+
+      <!-- PANEL 2F: ECS / cryogenic management. -->
+      <g>
+        <rect class="cm-subplate" x="1340" y="72" width="260" height="660" rx="8"/>
+        ${label(1470,94,'PANEL 2F — ECS','panel-small')}
+        ${meter(1400,175,44,'H2 PRESS')}${meter(1540,175,44,'O2 PRESS')}${meter(1400,285,44,'H2 QTY')}${meter(1540,285,44,'O2 QTY')}
+        ${toggle(1390,385,'CABIN FAN','1')}${toggle(1465,385,'CABIN FAN','2')}${toggle(1540,385,'ECS IND','PRI/SEC')}
+        ${toggle(1390,480,'H2 HTR','1')}${toggle(1465,480,'H2 HTR','2')}${toggle(1540,480,'O2 HTR','1/2')}
+        ${toggle(1390,575,'H2 FAN','1')}${toggle(1465,575,'H2 FAN','2')}${toggle(1540,575,'O2 FAN','1/2')}
+        ${meter(1410,680,38,'SUIT')}${meter(1525,680,38,'CABIN')}
+      </g>
+
+      ${[[50,50],[420,50],[875,50],[1325,50],[1600,50],[50,990],[420,990],[875,990],[1325,990],[1600,990],[470,270],[850,270],[470,700],[850,700]].map(p=>screw(...p)).join('')}
     </svg>`;
   }
 
-  function lmSwitchBank(x,y,title,labels,cols=4){
-    const dx=58,dy=62,w=cols*dx+24,h=Math.ceil(labels.length/cols)*dy+40;
-    let out=`<g transform="translate(${x} ${y})"><rect class="lm-subplate" x="0" y="0" width="${w}" height="${h}" rx="5"/><text class="panel-label panel-small" x="${w/2}" y="18">${title}</text>`;
-    labels.forEach((lab,i)=>{out+=toggle(18+(i%cols)*dx+dx/2,38+Math.floor(i/cols)*dy+22,'',lab)});
-    return out+'</g>';
-  }
+  const lmBank = (x,y,w,h,title,items,cols=6) => {
+    const dx=(w-24)/cols, rows=Math.ceil(items.length/cols), dy=(h-40)/Math.max(1,rows);
+    return `<g><rect class="lm-subplate" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>${label(x+w/2,y+18,title,'panel-small')}${items.map((s,i)=>toggle(x+12+(i%cols)*dx+dx/2,y+34+Math.floor(i/cols)*dy+dy/2,'',s)).join('')}</g>`;
+  };
 
   function lmSvg(){
-    /* Scene coordinates: LM Panel 4 / DSKY aperture x=400,y=515,w=320,h=372. */
+    // Registration aperture: x=430, y=690, width=320, height=372.
     return `
-    <svg class="lm-scene" viewBox="0 0 1120 1220" role="presentation">
+    <svg class="lm-scene" viewBox="0 0 1180 1400" role="presentation">
       <defs>
-        <linearGradient id="lmMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#666d68"/><stop offset=".55" stop-color="#4c524f"/><stop offset="1" stop-color="#3d433f"/></linearGradient>
-        <filter id="lmGrain"><feTurbulence type="fractalNoise" baseFrequency=".22" numOctaves="2" seed="5" result="n"/><feColorMatrix in="n" values="1 0 0 0 .4  0 1 0 0 .4  0 0 1 0 .38  0 0 0 .05 0"/><feBlend in="SourceGraphic" mode="multiply"/></filter>
+        <linearGradient id="lmMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#69706a"/><stop offset=".55" stop-color="#4d534f"/><stop offset="1" stop-color="#3b413d"/></linearGradient>
+        <filter id="lmGrain"><feTurbulence type="fractalNoise" baseFrequency=".21" numOctaves="2" seed="5" result="n"/><feColorMatrix in="n" values="1 0 0 0 .4 0 1 0 0 .4 0 0 1 0 .38 0 0 0 .045 0"/><feBlend in="SourceGraphic" mode="multiply"/></filter>
       </defs>
-      <path d="M25 25 H1095 V1185 H25 Z" fill="url(#lmMetal)" stroke="#151815" stroke-width="10" filter="url(#lmGrain)"/>
-      <text class="panel-label panel-small" x="560" y="49">LUNAR MODULE — FORWARD COCKPIT / LM-5 CONFIGURATION</text>
+      <path d="M22 22 H1158 V1378 H22 Z" fill="url(#lmMetal)" stroke="#151815" stroke-width="10" filter="url(#lmGrain)"/>
 
-      <!-- Commander Panel 1 above/left of Panel 4. -->
+      <!-- PANEL 1: Commander, eye-level. -->
       <g>
-        <rect class="lm-subplate" x="55" y="75" width="485" height="400" rx="7"/>
-        <text class="panel-label panel-small" x="298" y="96">PANEL 1 — COMMANDER</text>
-        ${indicator(78,112,95,36,'MASTER ALARM','red')}
-        ${meter(255,255,118,'FDAI')}
-        <g transform="translate(405 160)"><rect class="tape-window" x="0" y="0" width="78" height="190" rx="4"/><line x1="39" y1="8" x2="39" y2="182" stroke="#282b27" stroke-width="1"/>${Array.from({length:9},(_,i)=>`<line x1="12" y1="${20+i*19}" x2="66" y2="${20+i*19}" stroke="#2c2f2b" stroke-width="1"/>`).join('')}<text fill="#1d201d" font-size="10" text-anchor="middle" x="39" y="104">ALT / RANGE</text></g>
-        ${meter(112,380,46,'T/W')}
-        ${guardedToggle(213,397,'GUID CONT')}
-        ${guardedToggle(306,397,'MODE SEL')}
-        ${guardedToggle(399,397,'RNG/ALT MON')}
+        <rect class="lm-subplate" x="55" y="60" width="505" height="410" rx="8"/>
+        ${label(307,82,'PANEL 1 — COMMANDER','panel-small')}
+        ${push(78,102,92,34,'MASTER ALARM','red')}
+        ${digital(185,102,105,40,'000:00')}${digital(310,102,105,40,'000:00')}
+        ${meter(285,275,112,'FDAI')}
+        ${meter(105,270,46,'THRUST')}${meter(470,270,46,'PRPLNT')}
+        ${meter(105,390,42,'T/W')}${meter(470,390,42,'ALT/RANGE')}
+        ${guardedToggle(190,410,'GUID CONT')}${guardedToggle(285,410,'MODE SEL')}${guardedToggle(380,410,'RNG/ALT MON')}
       </g>
 
-      <!-- LM Pilot Panel 2 above/right.  The symmetric flight station is real;
-           labels differ where AGS/PGNS responsibility differs. -->
+      <!-- PANEL 2: LM Pilot, eye-level. -->
       <g>
-        <rect class="lm-subplate" x="580" y="75" width="485" height="400" rx="7"/>
-        <text class="panel-label panel-small" x="822" y="96">PANEL 2 — LM PILOT</text>
-        ${indicator(947,112,95,36,'MASTER ALARM','red')}
-        ${meter(865,255,118,'FDAI')}
-        <g transform="translate(625 160)"><rect class="tape-window" x="0" y="0" width="78" height="190" rx="4"/>${Array.from({length:9},(_,i)=>`<line x1="12" y1="${20+i*19}" x2="66" y2="${20+i*19}" stroke="#2c2f2b" stroke-width="1"/>`).join('')}<text fill="#1d201d" font-size="10" text-anchor="middle" x="39" y="104">ALT / RATE</text></g>
-        ${guardedToggle(684,397,'ATT MON')}
-        ${guardedToggle(777,397,'RATE/ERR')}
-        ${guardedToggle(963,397,'MODE CONT')}
+        <rect class="lm-subplate" x="620" y="60" width="505" height="410" rx="8"/>
+        ${label(872,82,'PANEL 2 — LM PILOT','panel-small')}
+        ${push(1010,102,92,34,'MASTER ALARM','red')}
+        ${meter(880,275,112,'FDAI')}
+        ${meter(695,220,45,'RCS A')}${meter(1060,220,45,'RCS B')}
+        ${meter(695,360,45,'SUIT/CABIN')}${meter(1060,360,45,'ECS')}
+        ${guardedToggle(765,410,'ATT MON')}${guardedToggle(865,410,'RATE/ERR')}${guardedToggle(965,410,'MODE CONT')}
       </g>
 
-      <!-- Narrow utility-lighting strip between the two main panels. -->
-      <g><rect class="lm-black" x="530" y="105" width="60" height="335" rx="4"/><text class="panel-label panel-micro" x="560" y="130">UTILITY</text><text class="panel-label panel-micro" x="560" y="141">LIGHTING</text>${toggle(560,205,'','FLOOD')}${toggle(560,285,'','ANUN')}${toggle(560,365,'','INTEG')}</g>
+      <!-- PANEL 3 spans the width immediately below Panels 1 and 2. -->
+      ${lmBank(55,492,1070,155,'PANEL 3 — RADAR / STABILITY / ENGINE / EVENT TIMER / RCS / LIGHTING',[
+        'RR MODE','RR SLEW','LR ANT','LR MODE','TEMP MON','ENG GMBL','DESC ENG','ASC ENG','GUID CONT','MODE CONT','ROLL','PITCH','YAW','RCS A/B','QUAD 1','QUAD 2','QUAD 3','QUAD 4','EVENT TMR','FLOOD','SIDE PNL','DOCK LTS','TRACK LT','LAMP/TONE'
+      ],8)}
 
-      <!-- Panel 3 beside the DSKY: radar/heater/lighting controls. -->
-      ${lmSwitchBank(60,515,'PANEL 3 — RADAR / HEATERS',['RR MODE','LR ANT','RR HEAT','LR HEAT','SIDE LTS','DOCK LTS','TRACK LT','LAMP/TONE'],2)}
+      <!-- PANEL 4: centered below Panel 3. DSKY plus controller-enable and inertial controls. -->
+      <g>
+        <rect class="lm-subplate" x="350" y="660" width="480" height="430" rx="9"/>
+        ${label(590,680,'PANEL 4 — FLIGHT CONTROL / LGC','panel-small')}
+        ${guardedToggle(382,760,'CDR ACA/4 JET')}${guardedToggle(382,855,'CDR TTCA/TRANSL')}
+        ${guardedToggle(798,760,'LMP ACA/4 JET')}${guardedToggle(798,855,'LMP TTCA/TRANSL')}
+        ${push(370,970,82,28,'LGC','off')}${push(728,970,82,28,'ISS','off')}
+        <rect x="412" y="672" width="356" height="410" rx="7" fill="#171a17" stroke="#090b09" stroke-width="7"/>
+        <rect x="422" y="682" width="336" height="388" rx="5" fill="#171a17" stroke="#090b09" stroke-width="5"/>
+        <rect x="430" y="690" width="320" height="372" fill="#111311"/>
+      </g>
 
-      <!-- Panel 4 registration aperture. -->
-      <g><rect class="lm-subplate" x="382" y="495" width="356" height="410" rx="8"/><text class="panel-label panel-small" x="560" y="512">PANEL 4 — LGC DISPLAY & KEYBOARD</text><rect x="392" y="507" width="336" height="388" rx="5" fill="#171a17" stroke="#090b09" stroke-width="7"/><rect x="400" y="515" width="320" height="372" fill="#111311"/></g>
+      <!-- PANEL 5: CDR waist-level controls. -->
+      <g>
+        <rect class="lm-subplate" x="55" y="690" width="260" height="330" rx="7"/>
+        ${label(185,712,'PANEL 5 — CDR','panel-small')}
+        ${push(82,750,88,40,'ENGINE START','off')}${push(195,750,88,40,'ENGINE STOP','red')}
+        ${push(118,825,130,40,'+X TRANSL','off')}
+        ${toggle(105,910,'MISSION','TIMER')}${toggle(185,910,'FLOOD','LIGHTS')}${toggle(265,910,'TRACK','LIGHT')}
+      </g>
 
-      <!-- Right-side central controls near the hatch/Panel 4 boundary. -->
-      <g><rect class="lm-subplate" x="765" y="515" width="295" height="372" rx="7"/><text class="panel-label panel-small" x="912" y="537">ENGINE / GUIDANCE</text>${guardedToggle(820,610,'ENG ARM')}${guardedToggle(912,610,'THR CONT')}${guardedToggle(1004,610,'BAL CPL')}${indicator(812,682,86,38,'ABORT','red')}${indicator(926,682,106,38,'ABORT STAGE','red')}${guardedToggle(820,790,'ASC He REG')}${guardedToggle(912,790,'DESC He REG')}${guardedToggle(1004,790,'ACA PROP')}</g>
+      <!-- PANEL 6: LMP waist-level Abort Guidance controls. -->
+      <g>
+        <rect class="lm-subplate" x="865" y="690" width="260" height="330" rx="7"/>
+        ${label(995,712,'PANEL 6 — ABORT GUIDANCE','panel-small')}
+        ${digital(895,750,200,48,'00000')}
+        ${push(890,825,92,38,'ABORT','red')}${push(1008,825,92,38,'ABORT STAGE','red')}
+        ${toggle(910,925,'DEDA','READ OUT')}${toggle(995,925,'AGS','OPERATE')}${toggle(1080,925,'MODE','SELECT')}
+      </g>
 
-      <!-- Forward hatch directly below center panels/DSKY. -->
-      <g><path class="hatch" d="M250 1020 Q250 920 350 920 H770 Q870 920 870 1020 V1180 H250 Z"/><path class="hatch-inner" d="M292 1030 Q292 965 360 965 H760 Q828 965 828 1030 V1180 H292 Z"/><text class="panel-label panel-small" x="560" y="950">FORWARD HATCH</text><rect x="515" y="1000" width="90" height="25" rx="4" fill="#adb1a8" stroke="#20231f" stroke-width="2"/></g>
+      <!-- Forward hatch immediately below the center panels. -->
+      <g>
+        <path class="hatch" d="M310 1390 V1230 Q310 1115 420 1115 H760 Q870 1115 870 1230 V1390 Z"/>
+        <path class="hatch-inner" d="M350 1390 V1240 Q350 1160 430 1160 H750 Q830 1160 830 1240 V1390 Z"/>
+        ${label(590,1142,'FORWARD HATCH','panel-small')}
+        <rect x="545" y="1190" width="90" height="24" rx="4" fill="#aeb2a8" stroke="#1c201c" stroke-width="2"/>
+      </g>
 
-      ${[[48,58],[555,58],[1072,58],[48,485],[370,485],[750,485],[1072,485],[48,910],[370,910],[750,910],[1072,910]].map(p=>screw(...p)).join('')}
+      ${[[45,45],[575,45],[1135,45],[45,480],[575,480],[1135,480],[45,1080],[340,1080],[840,1080],[1135,1080]].map(p=>screw(...p)).join('')}
     </svg>`;
   }
 
@@ -198,20 +242,21 @@
   panel.id = 'spacecraft-panel';
   panel.setAttribute('aria-hidden','true');
   panel.innerHTML = cmSvg() + lmSvg();
-  app.insertBefore(panel, dsky);
+  app.insertBefore(panel,dsky);
 
-  const spec = {
-    cm:{w:1360,h:980,x:490,y:300},
-    lm:{w:1120,h:1220,x:400,y:515}
+  const specs = {
+    cm:{w:1640,h:1030,x:505,y:300},
+    lm:{w:1180,h:1400,x:430,y:690}
   };
 
-  function currentSpec(){return document.body.classList.contains('spacecraft-lm')?spec.lm:spec.cm}
+  const currentSpec = () => document.body.classList.contains('spacecraft-lm') ? specs.lm : specs.cm;
 
   function syncPanel(){
     if (document.body.classList.contains('dream') || document.body.classList.contains('screen-only') || document.body.classList.contains('display-only')) return;
     const r=dsky.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    const s=currentSpec(),scale=r.width/320;
+    const s=currentSpec();
+    const scale=r.width/320;
     panel.style.width=(s.w*scale)+'px';
     panel.style.height=(s.h*scale)+'px';
     panel.style.left=(r.left-s.x*scale)+'px';
@@ -223,8 +268,10 @@
   window.addEventListener('resize',queueSync,{passive:true});
   window.addEventListener('orientationchange',queueSync,{passive:true});
   new MutationObserver(queueSync).observe(document.body,{attributes:true,attributeFilter:['class']});
-  if (window.ResizeObserver) new ResizeObserver(queueSync).observe(dsky);
+  if (window.ResizeObserver) {
+    const observer = new ResizeObserver(queueSync);
+    observer.observe(dsky);
+  }
   queueSync();
-
   if (window.AGCDSKY) window.AGCDSKY.syncSpacecraftPanel=syncPanel;
 })();
