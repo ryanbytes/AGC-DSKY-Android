@@ -24,6 +24,19 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".ElWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/el_widget_info" />
+        </receiver>
+
         <service
             android:name=".AgcDreamService"
             android:exported="true"
