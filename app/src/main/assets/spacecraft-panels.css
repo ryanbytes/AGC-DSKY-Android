@@ -1,0 +1,79 @@
+/* Apollo spacecraft installation surrounds for the normal interactive app.
+   These are separate CM and LM scenes, aligned to the shared 320x372 Block II
+   DSKY rectangle by spacecraft-panels.js.  They intentionally disappear in
+   Dream/SCREEN/display-only presentations. */
+
+body:not(.dream):not(.screen-only):not(.display-only) #app{
+  background:#11130f!important;
+  isolation:isolate;
+}
+
+#spacecraft-panel{
+  position:fixed;
+  z-index:0;
+  pointer-events:none;
+  overflow:visible;
+  transform:none;
+  transform-origin:0 0;
+  contain:layout paint style;
+}
+#spacecraft-panel svg{
+  display:block;
+  width:100%;
+  height:100%;
+  overflow:visible;
+}
+#spacecraft-panel .cm-scene,
+#spacecraft-panel .lm-scene{display:none}
+body.spacecraft-cm #spacecraft-panel .cm-scene{display:block}
+body.spacecraft-lm #spacecraft-panel .lm-scene{display:block}
+
+body:not(.dream):not(.screen-only):not(.display-only) .dsky{
+  z-index:3;
+}
+
+body.dream #spacecraft-panel,
+body.screen-only #spacecraft-panel,
+body.display-only #spacecraft-panel{display:none!important}
+
+/* Panel engraving.  The drawings use explicit geometry for equipment and only
+   use text for the actual placards, not as decorative filler. */
+#spacecraft-panel .panel-label{
+  fill:#e8eadf;
+  font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
+  font-weight:700;
+  letter-spacing:.6px;
+  text-anchor:middle;
+}
+#spacecraft-panel .panel-small{font-size:10px}
+#spacecraft-panel .panel-tiny{font-size:7.5px;letter-spacing:.32px}
+#spacecraft-panel .panel-micro{font-size:6px;letter-spacing:.18px}
+#spacecraft-panel .panel-num{font-family:monospace;font-size:18px;letter-spacing:1px}
+
+#spacecraft-panel .cm-plate{fill:#5d625d;stroke:#1b1e1b;stroke-width:3}
+#spacecraft-panel .cm-subplate{fill:#747a73;stroke:#262a26;stroke-width:2}
+#spacecraft-panel .cm-black{fill:#171a17;stroke:#080908;stroke-width:2}
+#spacecraft-panel .lm-plate{fill:#4d524f;stroke:#171a18;stroke-width:3}
+#spacecraft-panel .lm-subplate{fill:#5f6561;stroke:#202420;stroke-width:2}
+#spacecraft-panel .lm-black{fill:#111411;stroke:#050605;stroke-width:2}
+#spacecraft-panel .seam{fill:none;stroke:#121512;stroke-width:4}
+#spacecraft-panel .fine-seam{fill:none;stroke:#252925;stroke-width:1.4}
+#spacecraft-panel .screw{fill:#242724;stroke:#a5aaa1;stroke-width:1.1}
+#spacecraft-panel .screw-slot{stroke:#9da198;stroke-width:1}
+#spacecraft-panel .toggle-stem{stroke:#d3d6cc;stroke-width:3;stroke-linecap:round}
+#spacecraft-panel .toggle-base{fill:#232623;stroke:#aeb1aa;stroke-width:1}
+#spacecraft-panel .guard{fill:none;stroke:#c3c6bd;stroke-width:2}
+#spacecraft-panel .meter-face{fill:#e5e4d8;stroke:#1c1e1b;stroke-width:3}
+#spacecraft-panel .meter-ring{fill:none;stroke:#9ba098;stroke-width:5}
+#spacecraft-panel .meter-tick{stroke:#222520;stroke-width:1.4}
+#spacecraft-panel .meter-pointer{stroke:#1d201d;stroke-width:4;stroke-linecap:round}
+#spacecraft-panel .indicator-off{fill:#30342f;stroke:#0c0e0c;stroke-width:1.3}
+#spacecraft-panel .indicator-red{fill:#8d3128;stroke:#37120f;stroke-width:1.5}
+#spacecraft-panel .indicator-amber{fill:#9a7b29;stroke:#332b12;stroke-width:1.5}
+#spacecraft-panel .tape-window{fill:#e3e2d8;stroke:#121412;stroke-width:2}
+#spacecraft-panel .hatch{fill:#343936;stroke:#171a18;stroke-width:9}
+#spacecraft-panel .hatch-inner{fill:#242825;stroke:#8c9189;stroke-width:3}
+
+/* Keep normal DIM behavior physically coherent: cockpit panel illumination
+   drops with the DSKY rather than leaving a bright fake surround. */
+body.dim #spacecraft-panel{filter:brightness(.27) saturate(.72)}
