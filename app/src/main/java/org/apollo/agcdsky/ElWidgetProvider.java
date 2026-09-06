@@ -15,6 +15,7 @@ import android.graphics.Path;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 import java.util.Calendar;
@@ -24,341 +25,184 @@ import java.util.Locale;
 public final class ElWidgetProvider extends AppWidgetProvider {
     private static final String ACTION_TICK = "org.apollo.agcdsky.EL_WIDGET_TICK";
     private static final long MINUTE_MS = 60_000L;
-    private static final int TICK_REQUEST_CODE = 20;
+    private static final int TICK_REQUEST_CODE = 21;
+    private static final float PANEL_W = 106f;
+    private static final float PANEL_H = 190f;
+    private static final int[] SECOND_DRAWABLES = {
+            R.drawable.el_sec_00,R.drawable.el_sec_01,R.drawable.el_sec_02,R.drawable.el_sec_03,R.drawable.el_sec_04,
+            R.drawable.el_sec_05,R.drawable.el_sec_06,R.drawable.el_sec_07,R.drawable.el_sec_08,R.drawable.el_sec_09,
+            R.drawable.el_sec_10,R.drawable.el_sec_11,R.drawable.el_sec_12,R.drawable.el_sec_13,R.drawable.el_sec_14,
+            R.drawable.el_sec_15,R.drawable.el_sec_16,R.drawable.el_sec_17,R.drawable.el_sec_18,R.drawable.el_sec_19,
+            R.drawable.el_sec_20,R.drawable.el_sec_21,R.drawable.el_sec_22,R.drawable.el_sec_23,R.drawable.el_sec_24,
+            R.drawable.el_sec_25,R.drawable.el_sec_26,R.drawable.el_sec_27,R.drawable.el_sec_28,R.drawable.el_sec_29,
+            R.drawable.el_sec_30,R.drawable.el_sec_31,R.drawable.el_sec_32,R.drawable.el_sec_33,R.drawable.el_sec_34,
+            R.drawable.el_sec_35,R.drawable.el_sec_36,R.drawable.el_sec_37,R.drawable.el_sec_38,R.drawable.el_sec_39,
+            R.drawable.el_sec_40,R.drawable.el_sec_41,R.drawable.el_sec_42,R.drawable.el_sec_43,R.drawable.el_sec_44,
+            R.drawable.el_sec_45,R.drawable.el_sec_46,R.drawable.el_sec_47,R.drawable.el_sec_48,R.drawable.el_sec_49,
+            R.drawable.el_sec_50,R.drawable.el_sec_51,R.drawable.el_sec_52,R.drawable.el_sec_53,R.drawable.el_sec_54,
+            R.drawable.el_sec_55,R.drawable.el_sec_56,R.drawable.el_sec_57,R.drawable.el_sec_58,R.drawable.el_sec_59
+    };
 
-    @Override
-    public void onEnabled(Context context) {
+    @Override public void onEnabled(Context context) {
         super.onEnabled(context);
-        scheduleNextTick(context);
+        scheduleNextMinute(context);
     }
 
-    @Override
-    public void onDisabled(Context context) {
+    @Override public void onDisabled(Context context) {
         cancelTick(context);
         super.onDisabled(context);
     }
 
-    @Override
-    public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {
-        for (int appWidgetId : appWidgetIds) {
-            updateOne(context, manager, appWidgetId);
-        }
-        if (appWidgetIds.length > 0) {
-            scheduleNextTick(context);
-        }
+    @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
+        for (int id : ids) updateOne(context, manager, id);
+        if (ids.length > 0) scheduleNextMinute(context);
     }
 
-    @Override
-    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
+    @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
             int appWidgetId, Bundle newOptions) {
         super.onAppWidgetOptionsChanged(context, manager, appWidgetId, newOptions);
         updateOne(context, manager, appWidgetId);
     }
 
-    @Override
-    public void onReceive(Context context, Intent intent) {
+    @Override public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
         String action = intent.getAction();
         if (!ACTION_TICK.equals(action)
                 && !Intent.ACTION_TIME_CHANGED.equals(action)
                 && !Intent.ACTION_TIMEZONE_CHANGED.equals(action)
-                && !Intent.ACTION_DATE_CHANGED.equals(action)) {
-            return;
-        }
-
+                && !Intent.ACTION_DATE_CHANGED.equals(action)) return;
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, ElWidgetProvider.class));
-        for (int id : ids) {
-            updateOne(context, manager, id);
-        }
-        if (ids.length > 0) {
-            scheduleNextTick(context);
-        } else {
-            cancelTick(context);
-        }
+        for (int id : ids) updateOne(context, manager, id);
+        if (ids.length > 0) scheduleNextMinute(context); else cancelTick(context);
     }
 
     private static void updateOne(Context context, AppWidgetManager manager, int appWidgetId) {
         Bundle options = manager.getAppWidgetOptions(appWidgetId);
-        int widthDp = Math.max(80,
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110));
-        int heightDp = Math.max(100,
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 190));
+        int widthDp = Math.max(80, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110));
+        int heightDp = Math.max(100, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 190));
+        float scaleDp = Math.min(widthDp / PANEL_W, heightDp / PANEL_H);
+        float panelWidthDp = PANEL_W * scaleDp;
+        float panelHeightDp = PANEL_H * scaleDp;
         float density = context.getResources().getDisplayMetrics().density;
-        int widthPx = clamp(Math.round(widthDp * density), 160, 1200);
-        int heightPx = clamp(Math.round(heightDp * density), 200, 1800);
+        int panelWidthPx = clamp(Math.round(panelWidthDp * density), 1, 1200);
+        int panelHeightPx = clamp(Math.round(panelHeightDp * density), 1, 1800);
 
+        Calendar now = Calendar.getInstance();
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.el_widget);
-        views.setImageViewBitmap(R.id.el_widget_image,
-                ElRenderer.render(widthPx, heightPx, Calendar.getInstance()));
+        views.setImageViewBitmap(R.id.el_widget_image, ElRenderer.render(panelWidthPx, panelHeightPx, now));
+
+        // R3 runs in the launcher process. AdapterViewFlipper advances through
+        // 60 pre-rendered exact Apollo-vector frames every second. Android 12+
+        // can receive the complete in-memory RemoteCollectionItems adapter, so
+        // no RemoteViewsService, app process, TextClock, or custom font is used.
+        if (Build.VERSION.SDK_INT >= 31) {
+            RemoteViews.RemoteCollectionItems.Builder seconds =
+                    new RemoteViews.RemoteCollectionItems.Builder();
+            for (int i = 0; i < SECOND_DRAWABLES.length; i++) {
+                RemoteViews frame = new RemoteViews(context.getPackageName(), R.layout.el_second_frame);
+                frame.setImageViewResource(R.id.el_second_image, SECOND_DRAWABLES[i]);
+                seconds.addItem(i, frame);
+            }
+            views.setRemoteAdapter(R.id.el_seconds_flipper, seconds.build());
+            views.setDisplayedChild(R.id.el_seconds_flipper, now.get(Calendar.SECOND));
+
+            views.setViewLayoutWidth(R.id.el_widget_panel, panelWidthDp, TypedValue.COMPLEX_UNIT_DIP);
+            views.setViewLayoutHeight(R.id.el_widget_panel, panelHeightDp, TypedValue.COMPLEX_UNIT_DIP);
+            views.setViewLayoutMargin(R.id.el_seconds_flipper, RemoteViews.MARGIN_START,
+                    3f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+            views.setViewLayoutMargin(R.id.el_seconds_flipper, RemoteViews.MARGIN_TOP,
+                    165f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+            views.setViewLayoutWidth(R.id.el_seconds_flipper, 100f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+            views.setViewLayoutHeight(R.id.el_seconds_flipper, 21f * scaleDp, TypedValue.COMPLEX_UNIT_DIP);
+        }
 
         Intent launch = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent openApp = PendingIntent.getActivity(
-                context,
-                appWidgetId,
-                launch,
+        PendingIntent openApp = PendingIntent.getActivity(context, appWidgetId, launch,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.el_widget_root, openApp);
         manager.updateAppWidget(appWidgetId, views);
     }
 
-    private static int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
     private static PendingIntent tickIntent(Context context) {
         Intent tick = new Intent(context, ElWidgetProvider.class).setAction(ACTION_TICK);
-        return PendingIntent.getBroadcast(
-                context,
-                TICK_REQUEST_CODE,
-                tick,
+        return PendingIntent.getBroadcast(context, TICK_REQUEST_CODE, tick,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static void scheduleNextTick(Context context) {
+    private static void scheduleNextMinute(Context context) {
         AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (alarm == null) {
-            return;
-        }
+        if (alarm == null) return;
         long now = System.currentTimeMillis();
-        long nextMinute = now - (now % MINUTE_MS) + MINUTE_MS;
-        PendingIntent tick = tickIntent(context);
-
-        // Exact alarms are used only when Android already permits them. On
-        // Android 12+ without that special access, fall back to the ordinary
-        // alarm path rather than requesting a new permission just for a widget.
+        long next = now - (now % MINUTE_MS) + MINUTE_MS;
+        PendingIntent pi = tickIntent(context);
         if (Build.VERSION.SDK_INT < 31 || alarm.canScheduleExactAlarms()) {
-            alarm.setExact(AlarmManager.RTC, nextMinute, tick);
+            alarm.setExactAndAllowWhileIdle(AlarmManager.RTC, next, pi);
         } else {
-            alarm.set(AlarmManager.RTC, nextMinute, tick);
+            alarm.setAndAllowWhileIdle(AlarmManager.RTC, next, pi);
         }
     }
 
     private static void cancelTick(Context context) {
         AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (alarm != null) {
-            alarm.cancel(tickIntent(context));
-        }
+        if (alarm != null) alarm.cancel(tickIntent(context));
     }
 
-    /** Bitmap renderer for the 106 x 190 EL coordinate system. */
+    private static int clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
+
     static final class ElRenderer {
-        private static final float PANEL_W = 106f;
-        private static final float PANEL_H = 190f;
-
-        private static final int CORE = Color.rgb(201, 245, 189);
-        private static final int LABEL = Color.rgb(172, 220, 167);
-        private static final int RULE = Color.rgb(181, 230, 172);
-        private static final int OFF = Color.rgb(28, 39, 28);
-
-        private static final float SRC_X = 88.116524f;
-        private static final float SRC_Y = 85.303059f;
-        private static final float SRC_W = 11.685430f;
-        private static final float SRC_H = 12.700000f;
-        private static final float SRC_PITCH = 10.668000f;
-        private static final float DIGIT_SCALE = 1.58f;
-        private static final float MIRROR_X = 2f * SRC_X + SRC_W;
-        private static final float ADVANCE = SRC_PITCH * DIGIT_SCALE;
-        private static final float DIGIT_H = SRC_H * DIGIT_SCALE;
-        private static final float FIRST_DIGIT_X = 12.0f;
-
-        // Exact numeric segment polygons from Ben Krasnow's DSKY V2.svg.
-        private static final float[][][] SOURCE = new float[][][] {
-                {
-                        {95.137274f, 86.827056f}, {96.244524f, 85.303059f},
-                        {90.088724f, 85.303059f}, {90.497084f, 86.827056f}
-                },
-                {
-                        {91.361734f, 91.526056f}, {89.694284f, 85.303059f},
-                        {88.116524f, 85.303059f}, {89.783974f, 91.526056f}
-                },
-                {
-                        {89.886064f, 91.907059f}, {91.463824f, 91.907059f},
-                        {92.620814f, 96.224998f}, {91.456914f, 97.769549f}
-                },
-                {
-                        {93.002124f, 96.352056f}, {91.758014f, 98.003059f},
-                        {99.570014f, 98.003059f}, {97.418394f, 96.352056f}
-                },
-                {
-                        {95.390774f, 87.126332f}, {96.543434f, 85.539832f},
-                        {98.147444f, 91.526056f}, {96.569684f, 91.526056f}
-                },
-                {
-                        {96.671774f, 91.907059f}, {98.249534f, 91.907059f},
-                        {99.801954f, 97.700791f}, {97.815844f, 96.176791f}
-                },
-                {
-                        {96.005094f, 90.891059f}, {96.447474f, 92.542059f},
-                        {92.028414f, 92.542059f}, {91.586024f, 90.891059f}
-                }
+        private static final int CORE = Color.rgb(201,245,189);
+        private static final int LABEL = Color.rgb(172,220,167);
+        private static final int RULE = Color.rgb(181,230,172);
+        private static final int OFF = Color.rgb(28,39,28);
+        private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,SRC_H=12.7f;
+        private static final float SRC_PITCH=10.668f,DIGIT_SCALE=1.58f,MIRROR_X=2f*SRC_X+SRC_W;
+        private static final float ADVANCE=SRC_PITCH*DIGIT_SCALE,DIGIT_H=SRC_H*DIGIT_SCALE,FIRST_DIGIT_X=12f;
+        private static final float[][][] SOURCE={
+            {{95.137274f,86.827056f},{96.244524f,85.303059f},{90.088724f,85.303059f},{90.497084f,86.827056f}},
+            {{91.361734f,91.526056f},{89.694284f,85.303059f},{88.116524f,85.303059f},{89.783974f,91.526056f}},
+            {{89.886064f,91.907059f},{91.463824f,91.907059f},{92.620814f,96.224998f},{91.456914f,97.769549f}},
+            {{93.002124f,96.352056f},{91.758014f,98.003059f},{99.570014f,98.003059f},{97.418394f,96.352056f}},
+            {{95.390774f,87.126332f},{96.543434f,85.539832f},{98.147444f,91.526056f},{96.569684f,91.526056f}},
+            {{96.671774f,91.907059f},{98.249534f,91.907059f},{99.801954f,97.700791f},{97.815844f,96.176791f}},
+            {{96.005094f,90.891059f},{96.447474f,92.542059f},{92.028414f,92.542059f},{91.586024f,90.891059f}}
         };
-
-        // logical a,b,c,d,e,f,g -> source a,f,e,d,c,b,g after crew-face mirroring.
-        private static final int[] LOGICAL_TO_SOURCE = {0, 1, 2, 3, 5, 4, 6};
-        private static final String[] DIGIT_SEGMENTS = {
-                "abcdef", "bc", "abdeg", "abcdg", "bcfg",
-                "acdfg", "acdefg", "abc", "abcdefg", "abcdfg"
-        };
-
-        // Apollo sign cell from the EL artwork: one 6.731 x 1.524 horizontal
-        // section and two 1.524 x 3.175 vertical sections with 0.381 gaps.
-        private static final float SIGN_W = 6.731f * DIGIT_SCALE;
-        private static final float SIGN_T = 1.524f * DIGIT_SCALE;
-        private static final float SIGN_ARM = 3.175f * DIGIT_SCALE;
-        private static final float SIGN_GAP = 0.381f * DIGIT_SCALE;
-        private static final float SIGN_H = 2f * SIGN_ARM + SIGN_T + 2f * SIGN_GAP;
-        private static final float SIGN_TOP = (DIGIT_H - SIGN_H) * 0.5f;
-        private static final float SIGN_X = 0.40f;
-        private static final float SIGN_VX = SIGN_X + (SIGN_W - SIGN_T) * 0.5f;
-        private static final float SIGN_HY = SIGN_TOP + SIGN_ARM + SIGN_GAP;
-
-        private static final Paint SEG_ON = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private static final Paint SEG_OFF = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private static final Paint LABEL_PAINT = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private static final Paint RULE_PAINT = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private static final Paint COMP_PAINT = new Paint(Paint.ANTI_ALIAS_FLAG);
-
+        private static final int[] MAP={0,1,2,3,5,4,6};
+        private static final String[] SEG={"abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc","abcdefg","abcdfg"};
+        private static final float SIGN_W=6.731f*DIGIT_SCALE,SIGN_T=1.524f*DIGIT_SCALE,
+                SIGN_ARM=3.175f*DIGIT_SCALE,SIGN_GAP=.381f*DIGIT_SCALE;
+        private static final float SIGN_H=2f*SIGN_ARM+SIGN_T+2f*SIGN_GAP;
+        private static final float SIGN_TOP=(DIGIT_H-SIGN_H)*.5f,SIGN_X=.4f,
+                SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5f,SIGN_HY=SIGN_TOP+SIGN_ARM+SIGN_GAP;
+        private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),
+                RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG);
         static {
-            SEG_ON.setStyle(Paint.Style.FILL);
-            SEG_ON.setColor(CORE);
-            SEG_ON.setShadowLayer(0.75f, 0f, 0f, CORE);
-
-            SEG_OFF.setStyle(Paint.Style.FILL);
-            SEG_OFF.setColor(OFF);
-            SEG_OFF.setAlpha(145);
-
-            Typeface condensedBold = Typeface.create("sans-serif-condensed", Typeface.BOLD);
-            LABEL_PAINT.setTypeface(condensedBold);
-            LABEL_PAINT.setTextAlign(Paint.Align.CENTER);
-            LABEL_PAINT.setTextSize(5.1f);
-            LABEL_PAINT.setColor(LABEL);
-            LABEL_PAINT.setAlpha(220);
-
-            RULE_PAINT.setStyle(Paint.Style.FILL);
-            RULE_PAINT.setColor(RULE);
-            RULE_PAINT.setAlpha(212);
-
-            COMP_PAINT.setTypeface(condensedBold);
-            COMP_PAINT.setTextAlign(Paint.Align.CENTER);
-            COMP_PAINT.setTextSize(4.9f);
-            COMP_PAINT.setColor(OFF);
-            COMP_PAINT.setAlpha(150);
+            ON.setStyle(Paint.Style.FILL); ON.setColor(CORE); ON.setShadowLayer(.75f,0,0,CORE);
+            Typeface tf=Typeface.create("sans-serif-condensed",Typeface.BOLD);
+            LABEL_P.setTypeface(tf); LABEL_P.setTextAlign(Paint.Align.CENTER); LABEL_P.setTextSize(5.1f); LABEL_P.setColor(LABEL); LABEL_P.setAlpha(220);
+            RULE_P.setStyle(Paint.Style.FILL); RULE_P.setColor(RULE); RULE_P.setAlpha(212);
+            COMP_P.setTypeface(tf); COMP_P.setTextAlign(Paint.Align.CENTER); COMP_P.setTextSize(4.9f); COMP_P.setColor(OFF); COMP_P.setAlpha(150);
         }
-
-        private ElRenderer() {}
-
-        static Bitmap render(int width, int height, Calendar now) {
-            int fitWidth = Math.max(1, width);
-            int fitHeight = Math.max(1, Math.round(fitWidth * PANEL_H / PANEL_W));
-            if (fitHeight > height) {
-                fitHeight = Math.max(1, height);
-                fitWidth = Math.max(1, Math.round(fitHeight * PANEL_W / PANEL_H));
-            }
-
-            Bitmap bitmap = Bitmap.createBitmap(fitWidth, fitHeight, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-            canvas.drawColor(Color.BLACK);
-            float scale = Math.min(fitWidth / PANEL_W, fitHeight / PANEL_H);
-            canvas.scale(scale, scale);
-            drawElPanel(canvas, now);
-            return bitmap;
+        static Bitmap render(int width,int height,Calendar now){
+            Bitmap b=Bitmap.createBitmap(Math.max(1,width),Math.max(1,height),Bitmap.Config.ARGB_8888);
+            Canvas c=new Canvas(b); c.drawColor(Color.BLACK); c.scale(width/PANEL_W,height/PANEL_H); drawPanel(c,now); return b;
         }
-
-        private static void drawElPanel(Canvas canvas, Calendar now) {
-            canvas.drawText("PROG", 87f, 9f, LABEL_PAINT);
-            canvas.drawText("VERB", 20f, 54f, LABEL_PAINT);
-            canvas.drawText("NOUN", 87f, 54f, LABEL_PAINT);
-            drawRule(canvas, 12f, 89f, 82f, 1.524f);
-            drawRule(canvas, 12f, 125f, 82f, 1.524f);
-            drawRule(canvas, 12f, 159f, 82f, 1.524f);
-
-            canvas.drawText("COMP", 19f, 14f, COMP_PAINT);
-            canvas.drawText("ACTY", 19f, 22f, COMP_PAINT);
-
-            drawDigits(canvas, "00", 68f, 14f);
-            drawDigits(canvas, "16", 3f, 59f);
-            drawDigits(canvas, "65", 68f, 59f);
-
-            drawRegister(canvas, '+', five(now.get(Calendar.HOUR_OF_DAY)), 3f, 97f);
-            drawRegister(canvas, '+', five(now.get(Calendar.MINUTE)), 3f, 131f);
-            drawRegister(canvas, '+', five(now.get(Calendar.SECOND)), 3f, 165f);
+        private static void drawPanel(Canvas c,Calendar now){
+            c.drawText("PROG",87,9,LABEL_P); c.drawText("VERB",20,54,LABEL_P); c.drawText("NOUN",87,54,LABEL_P);
+            rule(c,12,89,82,1.524f); rule(c,12,125,82,1.524f); rule(c,12,159,82,1.524f);
+            c.drawText("COMP",19,14,COMP_P); c.drawText("ACTY",19,22,COMP_P);
+            digits(c,"00",68,14); digits(c,"16",3,59); digits(c,"65",68,59);
+            register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),3,97);
+            register(c,'+',five(now.get(Calendar.MINUTE)),3,131);
         }
-
-        private static String five(int value) {
-            return String.format(Locale.US, "%05d", value);
-        }
-
-        private static void drawRule(Canvas canvas, float x, float y, float width, float height) {
-            Path p = new Path();
-            p.moveTo(x, y);
-            p.lineTo(x + width, y);
-            p.lineTo(x + width, y + height);
-            p.lineTo(x, y + height);
-            p.close();
-            canvas.drawPath(p, RULE_PAINT);
-        }
-
-        private static void drawDigits(Canvas canvas, String text, float x, float y) {
-            for (int i = 0; i < text.length(); i++) {
-                drawDigit(canvas, text.charAt(i), x + i * ADVANCE, y);
-            }
-        }
-
-        private static void drawRegister(Canvas canvas, char sign, String digits, float x, float y) {
-            drawSign(canvas, sign, x, y);
-            for (int i = 0; i < digits.length(); i++) {
-                drawDigit(canvas, digits.charAt(i), x + FIRST_DIGIT_X + i * ADVANCE, y);
-            }
-        }
-
-        private static void drawDigit(Canvas canvas, char ch, float originX, float originY) {
-            String lit = ch >= '0' && ch <= '9' ? DIGIT_SEGMENTS[ch - '0'] : "";
-            for (int logical = 0; logical < 7; logical++) {
-                drawSegment(canvas, logical,
-                        lit.indexOf((char) ('a' + logical)) >= 0, originX, originY);
-            }
-        }
-
-        private static void drawSegment(Canvas canvas, int logical, boolean on,
-                float originX, float originY) {
-            float[][] points = SOURCE[LOGICAL_TO_SOURCE[logical]];
-            Path path = new Path();
-            for (int i = 0; i < points.length; i++) {
-                float px = originX + (MIRROR_X - points[i][0] - SRC_X) * DIGIT_SCALE;
-                float py = originY + (points[i][1] - SRC_Y) * DIGIT_SCALE;
-                if (i == 0) {
-                    path.moveTo(px, py);
-                } else {
-                    path.lineTo(px, py);
-                }
-            }
-            path.close();
-            canvas.drawPath(path, on ? SEG_ON : SEG_OFF);
-        }
-
-        private static void drawSign(Canvas canvas, char sign, float originX, float originY) {
-            boolean horizontalOn = sign == '+' || sign == '-';
-            boolean verticalOn = sign == '+';
-            drawBox(canvas, originX + SIGN_X, originY + SIGN_HY,
-                    SIGN_W, SIGN_T, horizontalOn);
-            drawBox(canvas, originX + SIGN_VX, originY + SIGN_TOP,
-                    SIGN_T, SIGN_ARM, verticalOn);
-            drawBox(canvas, originX + SIGN_VX,
-                    originY + SIGN_HY + SIGN_T + SIGN_GAP,
-                    SIGN_T, SIGN_ARM, verticalOn);
-        }
-
-        private static void drawBox(Canvas canvas, float x, float y,
-                float width, float height, boolean on) {
-            Path p = new Path();
-            p.moveTo(x, y);
-            p.lineTo(x + width, y);
-            p.lineTo(x + width, y + height);
-            p.lineTo(x, y + height);
-            p.close();
-            canvas.drawPath(p, on ? SEG_ON : SEG_OFF);
-        }
+        private static String five(int v){ return String.format(Locale.US,"%05d",v); }
+        private static void rule(Canvas c,float x,float y,float w,float h){ Path p=box(x,y,w,h); c.drawPath(p,RULE_P); }
+        private static void digits(Canvas c,String s,float x,float y){ for(int i=0;i<s.length();i++) digit(c,s.charAt(i),x+i*ADVANCE,y); }
+        private static void register(Canvas c,char sign,String s,float x,float y){ sign(c,sign,x,y); for(int i=0;i<s.length();i++) digit(c,s.charAt(i),x+FIRST_DIGIT_X+i*ADVANCE,y); }
+        private static void digit(Canvas c,char ch,float ox,float oy){ String lit=SEG[ch-'0']; for(int l=0;l<7;l++) if(lit.indexOf((char)('a'+l))>=0) segment(c,l,ox,oy); }
+        private static void segment(Canvas c,int logical,float ox,float oy){ float[][] pts=SOURCE[MAP[logical]]; Path p=new Path(); for(int i=0;i<pts.length;i++){ float x=ox+(MIRROR_X-pts[i][0]-SRC_X)*DIGIT_SCALE; float y=oy+(pts[i][1]-SRC_Y)*DIGIT_SCALE; if(i==0)p.moveTo(x,y); else p.lineTo(x,y);} p.close(); c.drawPath(p,ON); }
+        private static void sign(Canvas c,char s,float ox,float oy){ if(s!='+'&&s!='-')return; c.drawPath(box(ox+SIGN_X,oy+SIGN_HY,SIGN_W,SIGN_T),ON); if(s=='+'){ c.drawPath(box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_ARM),ON); c.drawPath(box(ox+SIGN_VX,oy+SIGN_HY+SIGN_T+SIGN_GAP,SIGN_T,SIGN_ARM),ON);} }
+        private static Path box(float x,float y,float w,float h){ Path p=new Path(); p.moveTo(x,y);p.lineTo(x+w,y);p.lineTo(x+w,y+h);p.lineTo(x,y+h);p.close();return p; }
     }
 }
