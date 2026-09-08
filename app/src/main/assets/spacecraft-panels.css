@@ -1,41 +1,12 @@
-/* v0.35: photographic CM/LM surroundings.  No simulated SVG controls. */
-/* v0.37.5: Do not let the mounted-panel dark-glass rule override the
-   illuminated .lamp.on state.  V35 and normal AGC annunciators must
-   remain visibly lit when their relay state is on. */
-#spacecraft-panel{
-  position:fixed;
-  z-index:0;
-  pointer-events:none;
-  overflow:visible;
-  transform-origin:0 0;
-  contain:layout paint style;
-  background:#090a09;
-}
-#spacecraft-panel .spacecraft-photo{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:fill;
-  display:none;
-  user-select:none;
-  -webkit-user-drag:none;
-  image-rendering:auto;
-  filter:contrast(1.025) saturate(.92);
-}
-body.spacecraft-cm #spacecraft-panel .cm-photo{display:block}
-body.dream #spacecraft-panel,
-body.screen-only #spacecraft-panel,
-body.display-only #spacecraft-panel{display:none!important}
+/* CM-mounted Apollo Block II DSKY finish.
+   The photographic spacecraft-panel compositor is intentionally absent. */
+
 body:not(.dream):not(.screen-only):not(.display-only) .dsky{
   z-index:3;
   filter:drop-shadow(0 5px 7px rgba(0,0,0,.72));
 }
-body.dim #spacecraft-panel{filter:brightness(.22) saturate(.62)}
 
-/* Apollo Block II DSKY external finish: FS 36231 Dark Gull Gray.
-   Keep the mounted DSKY in the same gray family rather than the older
-   charcoal console-match treatment. */
+/* Apollo Block II DSKY external finish: FS 36231 Dark Gull Gray. */
 body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky{
   background:
     radial-gradient(circle at 18% 12%,rgba(255,255,255,.065) 0 1px,transparent 1.4px),
@@ -76,118 +47,4 @@ body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .lamp:not(.o
 }
 body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
   border-color:#70716c;
-}
-
-/* v0.36: true DSKY cutout and live phone-attitude FDAI. */
-#spacecraft-panel{
-  overflow:visible;
-  contain:layout style;
-}
-.spacecraft-scene{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-}
-.spacecraft-piece{
-  position:absolute;
-  overflow:hidden;
-  pointer-events:none;
-}
-.spacecraft-piece .spacecraft-photo{
-  display:block!important;
-  position:absolute;
-  max-width:none;
-  object-fit:fill;
-  user-select:none;
-  -webkit-user-drag:none;
-  image-rendering:auto;
-  filter:contrast(1.02) saturate(.91);
-}
-.attitude-live{
-  position:absolute;
-  z-index:2;
-  display:block;
-  border-radius:50%;
-  pointer-events:auto;
-  touch-action:manipulation;
-  filter:contrast(1.035) saturate(.92) drop-shadow(0 .12vmin .18vmin rgba(0,0,0,.55));
-}
-body.dim .attitude-live{filter:brightness(.24) saturate(.62)}
-
-
-
-/* v0.36.3 portrait compositor hotfix.
-   Orientation visibility is controlled by spacecraft-panels.js rather than
-   CSS media queries. Android WebView can report orientation media state at a
-   different point in the rotation/layout cycle, which previously left the
-   portrait upper/lower bands hidden. The DSKY itself is never resized here. */
-#spacecraft-panel{
-  position:fixed;
-  inset:0;
-  width:100vw;
-  height:100vh;
-  overflow:hidden;
-  background:#242523;
-}
-.spacecraft-scene{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-}
-.spacecraft-landscape,
-.spacecraft-portrait{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-  display:none;
-}
-.spacecraft-portrait-band{
-  position:absolute;
-  left:0;
-  width:100%;
-  overflow:hidden;
-  pointer-events:none;
-  z-index:1;
-  background:#242523;
-}
-.spacecraft-portrait-band img{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:fill;
-  display:block;
-  max-width:none;
-  user-select:none;
-  -webkit-user-drag:none;
-  image-rendering:auto;
-  filter:contrast(1.02) saturate(.91);
-}
-.spacecraft-portrait-side{
-  position:absolute;
-  z-index:1;
-  background:
-    radial-gradient(circle at 20% 25%,rgba(255,255,255,.025) 0 1px,transparent 1.5px),
-    repeating-linear-gradient(92deg,rgba(255,255,255,.009) 0 1px,rgba(0,0,0,.014) 1px 3px),
-    #292a28;
-  box-shadow:inset 0 0 12px rgba(0,0,0,.55);
-}
-.attitude-live{z-index:2}
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky{
-  z-index:3;
-}
-
-/* v0.36.6: diagram-scaled portrait masters.  Portrait pieces now use the same
-   clipped-source mechanism as landscape; no viewport-stretched top/bottom art. */
-.spacecraft-portrait .spacecraft-piece{position:absolute;overflow:hidden;pointer-events:none}
-.spacecraft-portrait .spacecraft-piece .spacecraft-photo{
-  display:block!important;position:absolute;max-width:none;object-fit:fill;
-  user-select:none;-webkit-user-drag:none;image-rendering:auto;
-  filter:contrast(1.035) saturate(.84);
 }
