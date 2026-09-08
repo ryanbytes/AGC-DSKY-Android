@@ -167,7 +167,8 @@ function enterProgram00(core, errors, channelUpdates) {
 function proveV16N65Monitor(core, errors, channelUpdates) {
     core.reset();
     core.configureInputMasks();
-    assert(core.totalSteps === 1, 'peripheral setup must account for one initialization step');
+    assert(core.totalSteps === 0,
+        'peripheral setup must leave mission accounting at the true reset vector');
     channelUpdates.length = 0;
     errors.length = 0;
     core.step(100000);
@@ -230,7 +231,8 @@ function proveV16N65Monitor(core, errors, channelUpdates) {
 function proveV35LightTest(core, errors, channelUpdates) {
     core.reset();
     core.configureInputMasks();
-    assert(core.totalSteps === 1, 'V35 setup must account for one initialization step');
+    assert(core.totalSteps === 0,
+        'V35 setup must leave mission accounting at the true reset vector');
     channelUpdates.length = 0;
     errors.length = 0;
     core.step(100000);
@@ -288,8 +290,8 @@ async function main() {
     assert(errors.length === 0, 'Comanche055: error during real WASM load');
     assert(core.instance && core.exports && core.memory,
         'Comanche055: real WASM instance did not initialize completely');
-    assert(core.totalSteps === 1,
-        'Comanche055: load must leave one accounted ring-buffer initialization step');
+    assert(core.totalSteps === 0,
+        'Comanche055: load must begin mission accounting at the true reset vector');
 
     const version = core.version();
     assert(typeof version === 'string' && version.length > 0,
@@ -310,13 +312,13 @@ async function main() {
     core.proceedKey(false);
     core.step(250);
     assert(errors.length === 0, 'Comanche055: real DSKY I/O path reported an error');
-    assert(core.totalSteps === 3501,
+    assert(core.totalSteps === 3500,
         `Comanche055: unexpected real execution step count ${core.totalSteps}`);
 
     core.reset();
     core.configureInputMasks();
-    assert(core.totalSteps === 1,
-        'Comanche055: reset + peripheral setup must leave one initialization step');
+    assert(core.totalSteps === 0,
+        'Comanche055: reset + peripheral setup must return to true-reset mission accounting');
 
     console.log(`real yaAGC ${ROPE_NAME}: PASS (${version})`);
     console.log(`  V16N65E monitor: PASS (V=0o${v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${v16n65.nounRelay.toString(8).padStart(4, '0')}; selectors ${v16n65.responseRelays.join(',')}; within ${v16n65.responseSteps} steps)`);
