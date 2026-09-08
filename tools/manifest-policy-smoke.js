@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -21,21 +22,35 @@ assert(manifest.includes('android:allowBackup="false"'),
     'application backup must remain disabled');
 assert(manifest.includes('android:usesCleartextTraffic="false"'),
     'cleartext traffic must remain explicitly disabled');
-assert(manifest.includes('android:icon="@mipmap/ic_launcher_original"'),
-    'original launcher icon reference missing');
-assert(manifest.includes('android:roundIcon="@mipmap/ic_launcher_original"'),
-    'original round launcher icon reference missing');
-assert(fs.existsSync(path.resolve(__dirname,
-    '../app/src/main/res/mipmap-xxhdpi/ic_launcher_original.png')),
-    'recovered original launcher bitmap missing');
-for (const rel of [
-    '../app/src/main/res/mipmap-anydpi/ic_launcher.xml',
-    '../app/src/main/res/mipmap-anydpi/ic_launcher_round.xml',
-    '../app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml',
-    '../app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml',
-    '../app/src/main/res/drawable/ic_launcher_foreground.xml']) {
-  assert(!fs.existsSync(path.resolve(__dirname, rel)),
-      `superseded generic launcher resource must stay removed: ${rel}`);
+assert(manifest.includes('android:icon="@mipmap/ic_launcher"'),
+    'standard launcher icon reference missing');
+assert(manifest.includes('android:roundIcon="@mipmap/ic_launcher_round"'),
+    'standard round launcher icon reference missing');
+
+const res = rel => path.resolve(__dirname, '../app/src/main/res', rel);
+const original = res('mipmap-xxhdpi/ic_launcher_original.png');
+const expectedFiles = [
+    original,
+    res('mipmap-anydpi/ic_launcher.xml'),
+    res('mipmap-anydpi/ic_launcher_round.xml'),
+    res('mipmap-anydpi-v26/ic_launcher.xml'),
+    res('mipmap-anydpi-v26/ic_launcher_round.xml'),
+    res('drawable/ic_launcher_foreground.xml'),
+];
+for (const file of expectedFiles) {
+    assert(fs.existsSync(file), `launcher resource missing: ${file}`);
+}
+const originalHash = crypto.createHash('sha256').update(fs.readFileSync(original)).digest('hex');
+assert(originalHash === 'c82697819d541a8ed0b90bd9aacdf132685cc686953acf32229b3bfc6fd6bed5',
+    `recovered launcher artwork changed: ${originalHash}`);
+const foreground = fs.readFileSync(res('drawable/ic_launcher_foreground.xml'), 'utf8');
+assert(foreground.includes('@mipmap/ic_launcher_original'),
+    'adaptive icon foreground must use recovered original artwork');
+for (const rel of ['mipmap-anydpi-v26/ic_launcher.xml', 'mipmap-anydpi-v26/ic_launcher_round.xml']) {
+    const xml = fs.readFileSync(res(rel), 'utf8');
+    assert(xml.includes('<adaptive-icon'), `${rel} must remain adaptive`);
+    assert(xml.includes('@drawable/ic_launcher_foreground'),
+        `${rel} must use the recovered-art foreground`);
 }
 assert(manifest.includes('android.webkit.WebView.MetricsOptOut'),
     'WebView metrics opt-out missing');
