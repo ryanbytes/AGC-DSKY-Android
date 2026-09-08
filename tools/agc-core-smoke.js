@@ -61,23 +61,21 @@ async function testResetAndPeripheralSetup() {
     const { core, calls, setPacketWriteResult } = makeCoreHarness();
 
     core.reset();
-    assert(calls.filter(([name]) => name === 'reset').length === 1,
-        'reset must call cpu_reset exactly once');
-    assert(core.totalSteps === 0, 'reset must clear scheduler step accounting');
+    assert(calls.filter(([name]) => name === 'reset').length === 2,
+        'reset must prime the transport and then return to the true reset vector');
+    assert(calls.some(([name, steps]) => name === 'step' && steps === 1),
+        'reset must execute one transport-initialization CPU step');
+    assert(calls.some(([name]) => name === 'read'),
+        'reset must drain transient transport output before the final reset');
+    assert(core.totalSteps === 0,
+        'transport initialization must not count as mission execution');
 
     calls.length = 0;
     core.configureInputMasks();
-    assert(calls[0][0] === 'step' && calls[0][1] === 1,
-        'first peripheral setup must initialize the yaAGC ring buffer with one CPU step');
-    assert(core.totalSteps === 1,
-        'ring-buffer initialization step must be reflected in totalSteps');
-
     const writes = calls.filter(([name]) => name === 'write');
     const expected = [
         [0x100 | 0o15, 0o37],
-        [0x100 | 0o32, 0o20000],
-        [0x100 | 0o30, 0o00400],
-        [0o30, 0]
+        [0x100 | 0o32, 0o20000]
     ];
     assert(writes.length === expected.length,
         `expected ${expected.length} startup I/O writes, got ${writes.length}`);
@@ -85,6 +83,8 @@ async function testResetAndPeripheralSetup() {
         assert(writes[i][1] === channel && writes[i][2] === value,
             `startup I/O write ${i} mismatch`);
     });
+    assert(!writes.some(([, channel]) => channel === (0x100 | 0o30) || channel === 0o30),
+        'startup must not synthesize an ISS OPERATE transition on channel 030');
 
     calls.length = 0;
     setPacketWriteResult(0);
@@ -263,14 +263,14 @@ async function testLoadPipeline() {
         'default load did not fetch Comanche055.bin');
     assert(!fetched.includes('Luminary099.bin'),
         'CM-only default load unexpectedly fetched Luminary099.bin');
-    assert(calls.filter(([name]) => name === 'reset').length === 1,
-        'load must reset the AGC exactly once');
+    assert(calls.filter(([name]) => name === 'reset').length === 2,
+        'load must prime transport state and then restore the true AGC reset vector');
     assert(calls.filter(([name, count]) => name === 'step' && count === 1).length === 1,
-        'load must initialize the ring buffer with one CPU step');
-    assert(calls.filter(([name]) => name === 'write').length === 4,
-        'load must queue the two DSKY masks, ISS mask, and ISS OPERATE value');
-    assert(core.totalSteps === 1,
-        'post-load accounting must include the ring-buffer initialization step');
+        'load must initialize the ring buffer with exactly one CPU step');
+    assert(calls.filter(([name]) => name === 'write').length === 2,
+        'load must queue only the two DSKY input masks');
+    assert(core.totalSteps === 0,
+        'post-load mission accounting must begin at the true reset vector');
 }
 
 async function main() {
