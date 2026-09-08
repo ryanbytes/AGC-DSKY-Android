@@ -34,6 +34,8 @@ for (const ref of refs) {
 
 for (const stale of ['app-refine.js', 'runtime-debug.js', 'v35-audio-refine.js', 'spacecraft-panels.js']) {
     assert(!refs.includes(stale), `current DSKY-only index unexpectedly loads stale renderer/patch asset ${stale}`);
+    assert(!fs.existsSync(path.join(ASSETS, stale)),
+        `current DSKY-only asset tree unexpectedly retains stale renderer/patch asset ${stale}`);
 }
 
 const app = fs.readFileSync(APP, 'utf8');
@@ -58,5 +60,13 @@ const rasterPanels = fs.readdirSync(ASSETS)
     .filter((name) => /\.(jpe?g|webp)$/i.test(name));
 assert(rasterPanels.length === 0,
     `DSKY-only asset tree unexpectedly contains raster panel images: ${rasterPanels.join(', ')}`);
+
+const rasterReferences = [];
+for (const name of fs.readdirSync(ASSETS).filter((entry) => /\.(html|css|js)$/i.test(entry))) {
+    const source = fs.readFileSync(path.join(ASSETS, name), 'utf8');
+    if (/[^\s"'()]+\.(?:jpe?g|webp)(?:[?#][^\s"'()]*)?/i.test(source)) rasterReferences.push(name);
+}
+assert(rasterReferences.length === 0,
+    `DSKY-only frontend unexpectedly references raster panel images from: ${rasterReferences.join(', ')}`);
 
 console.log('asset-reference smoke: PASS');
