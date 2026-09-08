@@ -137,6 +137,8 @@ The build verifies the pinned `webAGC` revision and exact Git-blob identities of
 The current source is exercised by the repository verification harness and a clean Android `assembleDebug` build using Gradle 9.5.1. The gate verifies, among other things:
 
 - frontend dependency isolation and current module ordering;
+- cheat-sheet close/minimize controls remain reachable on phone-width layouts, with horizontally scrollable tabs and a CHEAT-button close fallback;
+- launcher icon and round-icon manifest references plus adaptive/fallback icon resources are present;
 - EL-widget source and generated 00–59 second frames;
 - DSKY relay/key/channel mappings and V35 policy;
 - the corrected yaAGC reset/ring-buffer startup contract;
