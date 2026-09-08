@@ -100,6 +100,48 @@
     });
   }
 
+  function releaseCamera(){
+    if (stream) for (const t of stream.getTracks()) t.stop();
+    stream = null;
+    track = null;
+    const video = document.getElementById('sxt-video');
+    if (video) video.srcObject = null;
+  }
+
+  async function acquireCamera(){
+    const view = document.getElementById('sxt-view');
+    if (!view || !view.classList.contains('open') || document.hidden || stream) return;
+    const status = document.getElementById('sxt-status');
+    if (status) status.textContent = 'SXT · REQUESTING CAMERA';
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (status) status.textContent = 'SXT · CAMERA UNAVAILABLE';
+      return;
+    }
+    try {
+      const nextStream = await navigator.mediaDevices.getUserMedia({
+        audio:false,
+        video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}
+      });
+      if (document.hidden || !view.classList.contains('open')) {
+        for (const t of nextStream.getTracks()) t.stop();
+        return;
+      }
+      stream = nextStream;
+      const video = document.getElementById('sxt-video');
+      if (!video) { releaseCamera(); return; }
+      video.srcObject = stream;
+      await video.play();
+      track = stream.getVideoTracks()[0] || null;
+      if (status) status.textContent = 'SXT · MOVE PHONE TO AIM · 1.8+';
+      configureCameraZoom();
+      updateReadout();
+    } catch (err) {
+      releaseCamera();
+      if (status && view.classList.contains('open')) status.textContent = 'SXT · CAMERA DENIED';
+      console.error('SXT camera', err);
+    }
+  }
+
   async function open(){
     buildUi();
     const view = document.getElementById('sxt-view');
@@ -111,40 +153,31 @@
     // Keep the pointing display alive independently of camera permission or
     // camera startup. The star cue is phone-sensor driven, not video driven.
     if (!readoutTimer) readoutTimer = setInterval(updateReadout, 100);
-    document.getElementById('sxt-status').textContent = 'SXT · REQUESTING CAMERA';
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      document.getElementById('sxt-status').textContent = 'SXT · CAMERA UNAVAILABLE';
-      return;
-    }
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio:false,
-        video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}
-      });
-      const video = document.getElementById('sxt-video');
-      video.srcObject = stream;
-      await video.play();
-      track = stream.getVideoTracks()[0] || null;
-      document.getElementById('sxt-status').textContent = 'SXT · MOVE PHONE TO AIM · 1.8°';
-      configureCameraZoom();
-      updateReadout();
-    } catch (err) {
-      document.getElementById('sxt-status').textContent = 'SXT · CAMERA DENIED';
-      console.error('SXT camera', err);
-    }
+    await acquireCamera();
   }
 
   function close(){
     const view = document.getElementById('sxt-view');
     if (view) view.classList.remove('open');
-    if (stream) for (const t of stream.getTracks()) t.stop();
-    stream = null; track = null;
-    const video = document.getElementById('sxt-video');
-    if (video) video.srcObject = null;
+    releaseCamera();
     if (readoutTimer) { clearInterval(readoutTimer); readoutTimer = 0; }
     lastPhoneAngles = null;
     if (typeof api.setOpticsCaptureActive === 'function') api.setOpticsCaptureActive(false);
   }
+
+  function handleVisibilityChange(){
+    const view = document.getElementById('sxt-view');
+    if (!view || !view.classList.contains('open')) return;
+    if (document.hidden) {
+      releaseCamera();
+      const status = document.getElementById('sxt-status');
+      if (status) status.textContent = 'SXT · CAMERA PAUSED';
+      return;
+    }
+    acquireCamera();
+  }
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
 
   function configureCameraZoom(){
     cameraZoom = 1;
