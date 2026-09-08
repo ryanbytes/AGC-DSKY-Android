@@ -35,14 +35,8 @@ const visibleFraction = 1 - clippedBottom;
 const translateFraction = Number(translate[1]) / 100;
 const expectedVisibleFraction = 220 / 372;
 
-// The display-only presentation intentionally shows the physical DSKY from
-// y=0 through the keyboard boundary at y=220 in the 320x372 normalized drawing.
 close(visibleFraction, expectedVisibleFraction, 0.0001,
   'display-only visible physical-height fraction');
-
-// The full element remains 372 units high and clip-path only changes what is
-// visible. Moving it upward by half the visible fraction centers the 220-unit
-// visible section on the viewport rather than centering the hidden full unit.
 close(translateFraction, visibleFraction / 2, 0.0001,
   'display-only vertical centering translation');
 
@@ -57,15 +51,29 @@ assert(STYLE.includes('@media (orientation:landscape)'),
 assert(STYLE.match(/calc\(100vh \* 320 \/ 220\)/g)?.length >= 2,
   'display-only 320x220 scaling must be preserved in base and landscape rules');
 
-assert(CONTROLS.includes('max-width:calc(100vw - 12px)'),
-  'hidden control strip must remain constrained to the phone viewport');
-assert(CONTROLS.includes('flex-wrap:wrap'),
-  'hidden control strip must wrap on narrow portrait screens');
-assert(CONTROLS.includes('flex:1 0 100%'),
-  'mode/status text must retain its own wrapped row');
-assert(CONTROLS.includes('text-overflow:ellipsis'),
-  'mode/status text must not force controls beyond the viewport');
+// v0.38.0+ gives the controls a flowing strip below the DSKY. It reserves
+// vertical room in the DSKY size calculation, wraps buttons without clipping
+// their labels, and hides the no-longer-useful status span.
+assert(CONTROLS.includes('max-width:calc(100vw - 8px)'),
+  'control strip must remain constrained to the phone viewport');
+assert(CONTROLS.includes('flex-flow:row wrap'),
+  'control strip must wrap on narrow portrait screens');
+assert(CONTROLS.includes('max-height:30vh') && CONTROLS.includes('overflow-y:auto'),
+  'portrait control strip must stay vertically bounded and scroll if necessary');
+assert(CONTROLS.includes('min-width:max-content'),
+  'control labels must retain enough width to avoid truncation');
+assert(CONTROLS.includes('text-overflow:clip') && CONTROLS.includes('white-space:nowrap'),
+  'control button labels must remain unellipsized and on one line');
+assert(CONTROLS.includes('.app-controls span{display:none!important}'),
+  'obsolete mode/status span must stay hidden in the flowing control strip');
+assert(CONTROLS.includes('100vh - 124px') && CONTROLS.includes('100vh - 145px'),
+  'DSKY sizing must continue reserving control-strip room in normal/narrow portrait');
+assert(CONTROLS.includes('@media (orientation:landscape)'),
+  'control strip landscape sizing override missing');
+assert(CONTROLS.includes('body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}'),
+  'dream/display-only/screen-only modes must suppress app controls');
 
 console.log('display/layout geometry smoke: PASS');
 console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${expectedVisibleFraction.toFixed(6)})`);
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
+console.log('  flowing control strip: bounded, wrapping, untruncated labels');
