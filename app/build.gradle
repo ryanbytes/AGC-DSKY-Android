@@ -14,8 +14,8 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 32
-        versionName '0.32'
+        versionCode 20033
+        versionName '0.38.3-diagnostics-state-fix'
     }
 
     sourceSets {
@@ -31,15 +31,15 @@ android {
     }
 }
 
+// The refactored CM app packages only the WASM core and Comanche 055 rope.
 def pinnedAgcAssets = [
         [label:'yaAGC.wasm', file:file('../vendor/webAGC/src/yaAGC.wasm'), size:132617L, gitBlobSha1:'713685680492098d05437b99c26403f683d56009'],
-        [label:'Luminary099.bin', file:file('../vendor/webAGC/demo/agc/Luminary099.bin'), size:73728L, gitBlobSha1:'cd2ec9992d5863e1c7234fa760020f68ef946202'],
         [label:'Comanche055.bin', file:file('../vendor/webAGC/demo/agc/Comanche055.bin'), size:73728L, gitBlobSha1:'9e4ec167dc99ac12b233df07b6b91fef585e5015']
 ]
 
 def verifyPinnedAgcAssets = tasks.register('verifyPinnedAgcAssets') {
     group = 'verification'
-    description = 'Verify the exact pinned yaAGC WASM and Apollo rope assets.'
+    description = 'Verify the exact pinned yaAGC WASM and Apollo CM rope assets.'
     inputs.files(pinnedAgcAssets.collect { it.file })
     doLast {
         pinnedAgcAssets.each { spec ->
@@ -57,7 +57,7 @@ def verifyPinnedAgcAssets = tasks.register('verifyPinnedAgcAssets') {
 
 def stagePinnedAgcAssets = tasks.register('stagePinnedAgcAssets', Sync) {
     group = 'build setup'
-    description = 'Stage only the verified yaAGC WASM and two selected Apollo ropes.'
+    description = 'Stage only the verified yaAGC WASM and selected Apollo CM rope.'
     dependsOn verifyPinnedAgcAssets
     from pinnedAgcAssets.collect { it.file }
     into generatedAgcAssetsDir
