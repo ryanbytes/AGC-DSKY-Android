@@ -127,7 +127,8 @@ AAPT2="$(find_verifier_tool aapt2 || true)"
 badging="$($AAPT2 dump badging "$APK")"
 grep -Eq "^package: name='org\\.apollo\\.agcdsky' versionCode='${EXPECTED_VERSION_CODE}' versionName='${EXPECTED_VERSION_NAME//./\\.}'" <<<"$badging" \
   || fail "APK package/version does not match org.apollo.agcdsky ${EXPECTED_VERSION_CODE}/${EXPECTED_VERSION_NAME} from app/build.gradle"
-grep -Fq "sdkVersion:'26'" <<<"$badging" \
+# Build Tools 36 aapt2 emits minSdkVersion; older aapt/aapt2 builds emitted sdkVersion.
+grep -Eq "^(minSdkVersion|sdkVersion):'26'$" <<<"$badging" \
   || fail "APK minSdk is not 26"
 grep -Fq "targetSdkVersion:'37'" <<<"$badging" \
   || fail "APK targetSdk is not 37"
