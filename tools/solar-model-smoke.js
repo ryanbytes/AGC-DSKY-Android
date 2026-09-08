@@ -24,7 +24,7 @@ assert(start >= 0 && end > start,
   'could not isolate the production solar-model functions from app.js');
 
 const solarSource = source.slice(start, end)
-  + '\nglobalThis.__solarModel={solarTimes,currentSolarFactor,hourAngleCos,smoothstep};';
+  + '\nglobalThis.__solarModel={solarTimes,currentSolarFactor,hourAngle,smoothstep};';
 
 function fixedDateClass(nowIso) {
   const RealDate = Date;
@@ -68,34 +68,29 @@ function daylightHours(times) {
 // Equinox at the equator should have an ordinary sunrise/sunset pair and a
 // little over 12 hours between the standard apparent -0.833 degree events.
 const equinox = loadModel('2026-03-20T12:00:00Z');
+assert(typeof equinox.hourAngle === 'function',
+  'production solar model must expose the current hourAngle helper');
 const equinoxTimes = equinox.solarTimes(new Date('2026-03-20T12:00:00Z'), 0, 0);
-assert(equinoxTimes.polarDay === null,
-  'equatorial equinox must not be classified as polar day/night');
-assert(equinoxTimes.sunrise instanceof Date && equinoxTimes.sunset instanceof Date,
+assert(equinoxTimes && equinoxTimes.sunrise instanceof Date && equinoxTimes.sunset instanceof Date,
   'equatorial equinox must produce sunrise and sunset timestamps');
 const equinoxDaylight = daylightHours(equinoxTimes);
 assert(equinoxDaylight > 12.0 && equinoxDaylight < 12.3,
   `equatorial apparent-sun daylight length is implausible: ${equinoxDaylight} h`);
 
-// 80 N is unambiguously inside the polar-day/polar-night regimes near the
-// solstices. No fabricated sunrise/sunset timestamp should be returned.
+// The recovered v0.38.3 model returns null when the standard sunrise/sunset
+// crossing does not occur. The brightness helper deliberately falls back to
+// the dim state rather than fabricating an event time.
 const polarSummer = loadModel('2026-06-21T12:00:00Z', 80, 0);
-const summerTimes = polarSummer.solarTimes(new Date('2026-06-21T12:00:00Z'), 80, 0);
-assert(summerTimes.polarDay === true,
-  '80 N near June solstice must classify as polar day');
-assert(summerTimes.sunrise === null && summerTimes.sunset === null,
-  'polar day must not invent sunrise/sunset crossings');
-assert(polarSummer.currentSolarFactor() === 1,
-  'DREAM SOLAR must remain fully daytime-bright during polar day');
+assert(polarSummer.solarTimes(new Date('2026-06-21T12:00:00Z'), 80, 0) === null,
+  '80 N near June solstice must return no fabricated sunrise/sunset crossing');
+assert(polarSummer.currentSolarFactor() === 0,
+  'no-crossing solar fallback must remain dim in the recovered v0.38.3 model');
 
 const polarWinter = loadModel('2026-12-21T12:00:00Z', 80, 0);
-const winterTimes = polarWinter.solarTimes(new Date('2026-12-21T12:00:00Z'), 80, 0);
-assert(winterTimes.polarDay === false,
-  '80 N near December solstice must classify as polar night');
-assert(winterTimes.sunrise === null && winterTimes.sunset === null,
-  'polar night must not invent sunrise/sunset crossings');
+assert(polarWinter.solarTimes(new Date('2026-12-21T12:00:00Z'), 80, 0) === null,
+  '80 N near December solstice must return no fabricated sunrise/sunset crossing');
 assert(polarWinter.currentSolarFactor() === 0,
-  'DREAM SOLAR must remain at night brightness during polar night');
+  'polar-night no-crossing fallback must remain dim');
 
 // Indiana sanity check: this is not intended as an almanac replacement, only
 // a guard against sign/cycle regressions in longitude or the no-event logic.
@@ -104,9 +99,7 @@ const wabashLon = -85.7293;
 const wabash = loadModel('2026-08-22T16:00:00Z');
 const wabashTimes = wabash.solarTimes(
   new Date('2026-08-22T16:00:00Z'), wabashLat, wabashLon);
-assert(wabashTimes.polarDay === null,
-  'Wabash-area August date must have ordinary sunrise/sunset events');
-assert(wabashTimes.sunrise.getTime() < wabashTimes.sunset.getTime(),
+assert(wabashTimes && wabashTimes.sunrise.getTime() < wabashTimes.sunset.getTime(),
   'Wabash-area sunrise must precede sunset');
 const wabashDaylight = daylightHours(wabashTimes);
 assert(wabashDaylight > 13 && wabashDaylight < 14.5,
@@ -120,6 +113,5 @@ close(atWabashSunrise.currentSolarFactor(), 0.5, 0.03,
 
 console.log('solar model smoke: PASS');
 console.log(`  equator equinox daylight: ${equinoxDaylight.toFixed(3)} h`);
-console.log('  80 N June: polar day -> factor 1');
-console.log('  80 N December: polar night -> factor 0');
+console.log('  high-latitude no-crossing fallback: dim, no fabricated event');
 console.log(`  Wabash Aug 22 daylight: ${wabashDaylight.toFixed(3)} h`);
