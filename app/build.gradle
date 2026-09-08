@@ -6,7 +6,7 @@ def generatedAgcAssetsDir = layout.buildDirectory.dir('generated/agcAssets').get
 def generatedElSecondsResDir = layout.buildDirectory.dir('generated/elSecondsRes').get().asFile
 
 android {
-    namespace 'org.apollo.agcdsky'
+    namespace = 'org.apollo.agcdsky'
     compileSdk 37
     buildToolsVersion '36.0.0'
 
