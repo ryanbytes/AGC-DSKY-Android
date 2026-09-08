@@ -9,8 +9,6 @@ fail() {
   exit 1
 }
 
-# Numeric dotted-version comparison without GNU sort -V. This must work with
-# the Bash 3.2 / BSD userland still present on many macOS installations.
 version_ge() {
   local lhs="$1" rhs="$2"
   local l1=0 l2=0 l3=0 r1=0 r2=0 r3=0
@@ -56,9 +54,6 @@ NODE_MAJOR="${NODE_VERSION%%.*}"
 (( NODE_MAJOR >= 18 )) \
   || fail "Node.js 18 or newer is required for source smoke tests; found $NODE_VERSION"
 
-# Prefer an already installed Gradle. Otherwise use the repository's local-only
-# bootstrap, which downloads Gradle 9.5.1 from services.gradle.org, verifies the
-# pinned official SHA-256, caches it under GRADLE_USER_HOME, and runs it locally.
 if command -v gradle >/dev/null 2>&1; then
   GRADLE_CMD=("$(command -v gradle)")
   GRADLE_SOURCE="system"
@@ -103,7 +98,6 @@ WEBAGC_HEAD="$(git -C vendor/webAGC rev-parse HEAD 2>/dev/null || true)"
 
 required_assets=(
   vendor/webAGC/src/yaAGC.wasm
-  vendor/webAGC/demo/agc/Luminary099.bin
   vendor/webAGC/demo/agc/Comanche055.bin
 )
 for asset in "${required_assets[@]}"; do
@@ -111,9 +105,6 @@ for asset in "${required_assets[@]}"; do
     || fail "missing $asset; run: git submodule update --init --recursive"
 done
 
-# Catch helper syntax regressions before any source smoke or expensive Gradle
-# work. This includes device-only scripts that are not executed during a normal
-# host build but still need to remain syntactically valid.
 for script in tools/*.sh; do
   bash -n "$script" || fail "shell syntax check failed: $script"
 done
@@ -135,22 +126,18 @@ printf 'webAGC checkout: %s\n' "$WEBAGC_HEAD"
 node tools/manifest-policy-smoke.js
 node tools/csp-smoke.js
 node tools/frontend-smoke.js
-node tools/app-refine-smoke.js
 node tools/device-v35-policy-smoke.js
 node tools/display-layout-smoke.js
 node tools/el-widget-smoke.js
 node tools/solar-model-smoke.js
 node tools/agc-core-smoke.js
-node tools/runtime-debug-smoke.js
 node tools/native-diagnostic-smoke.js
 node tools/dsky-mapping-smoke.js
 node tools/v35-model-smoke.js
 node tools/asset-reference-smoke.js
 node tools/wasm-runtime-smoke.js
 
-# The accepted v0.7 APK is deliberately produced from a clean app build tree.
-# Asset staging is a Sync task and the APK verifier checks bytes again, but a
-# clean assemble removes one more source of misleading stale intermediates.
+# Build from a clean app tree so stale generated assets cannot mask source drift.
 "${GRADLE_CMD[@]}" --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleDebug
 
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"

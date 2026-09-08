@@ -3,15 +3,9 @@
 
 /*
  * Execute the real pinned yaAGC WebAssembly binary under Node using the same
- * app/src/main/assets/agc-core.js wrapper that Android WebView will load.
- *
- * This is still not an Android/WebView test, but unlike agc-core-smoke.js it
- * proves the checked-out WASM import contract, real instantiation, rope copy,
- * reset/I-O initialization, packet I/O, a representative non-V35 Pinball
- * monitor command (V16N65E), and the real V35E DSKY light test for each pinned
- * rope.
+ * agc-core.js wrapper loaded by Android. The current app is CM-only, so this
+ * smoke exercises Comanche 055 only.
  */
-
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -20,10 +14,8 @@ const { performance } = require('perf_hooks');
 const ROOT = path.resolve(__dirname, '..');
 const CORE_JS = path.join(ROOT, 'app/src/main/assets/agc-core.js');
 const WASM = path.join(ROOT, 'vendor/webAGC/src/yaAGC.wasm');
-const ROPES = [
-    ['Luminary099.bin', path.join(ROOT, 'vendor/webAGC/demo/agc/Luminary099.bin')],
-    ['Comanche055.bin', path.join(ROOT, 'vendor/webAGC/demo/agc/Comanche055.bin')]
-];
+const ROPE_NAME = 'Comanche055.bin';
+const ROPE = path.join(ROOT, 'vendor/webAGC/demo/agc/Comanche055.bin');
 
 const CHANNEL_DSKY = 0o10;
 const CHANNEL_DSKY_DISCRETES = 0o163;
@@ -34,10 +26,7 @@ const RELAY_SIGN_BIT = 0o2000;
 const PROGRAM00_LOW11 = (RELAY_ZERO << 5) | RELAY_ZERO;
 const VERB16_LOW11 = (0o03 << 5) | 0o34;
 const NOUN65_LOW11 = (0o34 << 5) | 0o36;
-const V35_RELAY12_LOW11 = Object.freeze({
-    'Luminary099.bin': 0o674,
-    'Comanche055.bin': 0o650
-});
+const COMANCHE_V35_RELAY12_LOW11 = 0o650;
 
 function assert(condition, message) {
     if (!condition) throw new Error(message);
@@ -67,16 +56,11 @@ function verifyBinaryImportContract(wasmBytes) {
         'wasi_snapshot_preview1.fd_seek:function',
         'wasi_snapshot_preview1.fd_write:function'
     ].sort();
-
     assert(JSON.stringify(actual) === JSON.stringify(expected),
-        `unexpected yaAGC WASM imports:\n  actual: ${actual.join(', ')}\n`
-        + `  expected: ${expected.join(', ')}`);
+        `unexpected yaAGC WASM imports:\n  actual: ${actual.join(', ')}\n  expected: ${expected.join(', ')}`);
 
     const exported = new Set(WebAssembly.Module.exports(module).map((entry) => entry.name));
-    for (const name of [
-        'malloc', 'free', 'set_fixed', 'cpu_reset', 'cpu_step',
-        'packet_write', 'packet_read'
-    ]) {
+    for (const name of ['malloc', 'free', 'set_fixed', 'cpu_reset', 'cpu_step', 'packet_write', 'packet_read']) {
         assert(exported.has(name), `yaAGC WASM missing required export: ${name}`);
     }
 }
@@ -88,6 +72,7 @@ function makeContext(filesByUrl) {
         console,
         TextDecoder,
         Uint8Array,
+        Uint16Array,
         DataView,
         ArrayBuffer,
         WebAssembly,
@@ -96,6 +81,8 @@ function makeContext(filesByUrl) {
         clearInterval,
         setTimeout,
         clearTimeout,
+        btoa: (text) => Buffer.from(text, 'binary').toString('base64'),
+        atob: (text) => Buffer.from(text, 'base64').toString('binary'),
         fetch: async (url) => {
             const key = String(url);
             const data = filesByUrl.get(key);
@@ -103,8 +90,7 @@ function makeContext(filesByUrl) {
                 ok: !!data,
                 status: data ? 200 : 404,
                 async arrayBuffer() {
-                    if (!data) return new ArrayBuffer(0);
-                    return arrayBufferFromBuffer(data);
+                    return data ? arrayBufferFromBuffer(data) : new ArrayBuffer(0);
                 }
             };
         }
@@ -134,14 +120,10 @@ function program00Present(relays) {
 }
 
 function pairIsEight(value) {
-    return ((value >> 5) & 0o37) === RELAY_EIGHT
-        && (value & 0o37) === RELAY_EIGHT;
+    return ((value >> 5) & 0o37) === RELAY_EIGHT && (value & 0o37) === RELAY_EIGHT;
 }
 
 function lightTestNumericsPresent(relays) {
-    // Both Apollo-11 ropes use FULLDSP=05675 / FULLDSP1=07675. Thus V35
-    // drives both five-relay character banks to code 035 on selectors 1..11,
-    // including selector 8's visually unused C bank.
     for (const relay of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
         const value = relays.get(relay);
         if (value === undefined || !pairIsEight(value)) return false;
@@ -156,18 +138,12 @@ function lightTestSignsPresent(relays) {
     });
 }
 
-function missionRelay12Present(relays, ropeName) {
-    const expected = V35_RELAY12_LOW11[ropeName];
+function completeV35RelayState(relays) {
     const relay12 = relays.get(12);
-    return expected !== undefined
-        && relay12 !== undefined
-        && (relay12 & 0o3777) === expected;
-}
-
-function completeV35RelayState(relays, ropeName) {
     return lightTestNumericsPresent(relays)
         && lightTestSignsPresent(relays)
-        && missionRelay12Present(relays, ropeName);
+        && relay12 !== undefined
+        && (relay12 & 0o3777) === COMANCHE_V35_RELAY12_LOW11;
 }
 
 function keyAndRun(core, keyCode, steps = 12000) {
@@ -179,42 +155,37 @@ function sendKeys(core, keyCodes, steps = 12000) {
     for (const keyCode of keyCodes) keyAndRun(core, keyCode, steps);
 }
 
-function enterProgram00(core, ropeName, errors, channelUpdates) {
+function enterProgram00(core, errors, channelUpdates) {
     sendKeys(core, [0o21, 0o03, 0o07, 0o34, 0o20, 0o20, 0o34]);
-    assert(errors.length === 0, `${ropeName}: error while entering P00 with V37E00E`);
+    assert(errors.length === 0, 'Comanche055: error while entering P00 with V37E00E');
     const relays = relayStateFromUpdates(channelUpdates);
     assert(program00Present(relays),
-        `${ropeName}: V37E00E did not leave channel-010 relay 11 at PROG 00 (low-11 0o${PROGRAM00_LOW11.toString(8)})`);
+        `Comanche055: V37E00E did not leave relay 11 at PROG 00 (0o${PROGRAM00_LOW11.toString(8)})`);
     return relays;
 }
 
-function proveV16N65Monitor(core, ropeName, errors, channelUpdates) {
+function proveV16N65Monitor(core, errors, channelUpdates) {
     core.reset();
     core.configureInputMasks();
+    assert(core.totalSteps === 1, 'peripheral setup must account for one initialization step');
     channelUpdates.length = 0;
     errors.length = 0;
     core.step(100000);
 
-    enterProgram00(core, ropeName, errors, channelUpdates);
+    enterProgram00(core, errors, channelUpdates);
     channelUpdates.length = 0;
 
-    // VirtualAGC's own DSKY automation uses V16N65E as a representative
-    // non-V35 monitor command. Enter every key except final ENTER first so the
-    // typed VERB/NOUN relay state can be proved separately from command output.
     sendKeys(core, [0o21, 0o01, 0o06, 0o37, 0o06, 0o05]);
-    assert(errors.length === 0, `${ropeName}: error while typing V16N65`);
+    assert(errors.length === 0, 'Comanche055: error while typing V16N65');
 
     const enteredRelays = relayStateFromUpdates(channelUpdates);
     const verbRelay = enteredRelays.get(10);
     const nounRelay = enteredRelays.get(9);
     assert(verbRelay !== undefined && (verbRelay & 0o3777) === VERB16_LOW11,
-        `${ropeName}: V16 did not produce relay-10 low-11 0o${VERB16_LOW11.toString(8)}`);
+        'Comanche055: V16 relay state is wrong');
     assert(nounRelay !== undefined && (nounRelay & 0o3777) === NOUN65_LOW11,
-        `${ropeName}: N65 did not produce relay-9 low-11 0o${NOUN65_LOW11.toString(8)}`);
+        'Comanche055: N65 relay state is wrong');
 
-    // Discard the entry echo. A pass now requires the final ENTER to make the
-    // AGC produce an actual numeric-register channel-010 response, rather than
-    // merely proving that Pinball echoed the typed verb/noun digits.
     channelUpdates.length = 0;
     core.keyPress(0o34);
 
@@ -243,33 +214,28 @@ function proveV16N65Monitor(core, ropeName, errors, channelUpdates) {
         }
     }
 
-    assert(errors.length === 0, `${ropeName}: error while executing V16N65E`);
-    assert(!operatorErrorObserved,
-        `${ropeName}: V16N65E asserted OPR ERR instead of accepting the monitor command`);
+    assert(errors.length === 0, 'Comanche055: error while executing V16N65E');
+    assert(!operatorErrorObserved, 'Comanche055: V16N65E asserted OPR ERR');
     assert(numericResponse,
-        `${ropeName}: V16N65E produced no numeric-register channel-010 response within ${maxResponseSteps} AGC steps`);
+        `Comanche055: V16N65E produced no numeric response within ${maxResponseSteps} steps`);
 
     return {
         responseSteps,
-        channelUpdates: channelUpdates.length,
         verbRelay: verbRelay & 0o3777,
         nounRelay: nounRelay & 0o3777,
         responseRelays: Array.from(responseRelays).sort((a, b) => a - b)
     };
 }
 
-function proveV35LightTest(core, ropeName, errors, channelUpdates) {
+function proveV35LightTest(core, errors, channelUpdates) {
     core.reset();
     core.configureInputMasks();
+    assert(core.totalSteps === 1, 'V35 setup must account for one initialization step');
     channelUpdates.length = 0;
     errors.length = 0;
     core.step(100000);
 
-    // Explicitly enter P00 and prove the channel-driven program row rather than
-    // treating a fixed delay/step count as evidence of the precondition.
-    const p00Relays = enterProgram00(core, ropeName, errors, channelUpdates);
-
-    // Authentic Pinball codes for V35 before final ENTER.
+    const p00Relays = enterProgram00(core, errors, channelUpdates);
     sendKeys(core, [0o21, 0o03, 0o05]);
     channelUpdates.length = 0;
     core.keyPress(0o34);
@@ -280,7 +246,7 @@ function proveV35LightTest(core, ropeName, errors, channelUpdates) {
     const maxResponseSteps = 350000;
     const chunkSteps = 10000;
 
-    while (responseSteps < maxResponseSteps && !completeV35RelayState(relays, ropeName)) {
+    while (responseSteps < maxResponseSteps && !completeV35RelayState(relays)) {
         core.step(chunkSteps);
         responseSteps += chunkSteps;
         for (; eventIndex < channelUpdates.length; eventIndex++) {
@@ -289,54 +255,53 @@ function proveV35LightTest(core, ropeName, errors, channelUpdates) {
         }
     }
 
-    assert(errors.length === 0, `${ropeName}: error while executing real V35E`);
-    assert(lightTestNumericsPresent(relays),
-        `${ropeName}: V35E did not produce FULLDSP digit-8 codes on every numeric relay row within ${maxResponseSteps} AGC steps`);
-    assert(lightTestSignsPresent(relays),
-        `${ropeName}: V35E did not assert the R1/R2/R3 plus-sign relay bits`);
-    assert(missionRelay12Present(relays, ropeName),
-        `${ropeName}: V35E relay 12 low-11 state was not exact expected 0o${V35_RELAY12_LOW11[ropeName].toString(8)}`);
+    assert(errors.length === 0, 'Comanche055: error while executing real V35E');
+    assert(lightTestNumericsPresent(relays), 'Comanche055: V35E did not produce all numeric 8s');
+    assert(lightTestSignsPresent(relays), 'Comanche055: V35E did not assert all plus signs');
+    assert(relays.has(12) && (relays.get(12) & 0o3777) === COMANCHE_V35_RELAY12_LOW11,
+        `Comanche055: V35E relay 12 is not 0o${COMANCHE_V35_RELAY12_LOW11.toString(8)}`);
 
     return {
         responseSteps,
-        channelUpdates: channelUpdates.length,
         p00Relay11: p00Relays.get(11) & 0o3777,
         relay12: relays.get(12) & 0o3777
     };
 }
 
-async function smokeMission(context, ropeName) {
+async function main() {
+    const wasmBytes = requireFile(WASM, 132617);
+    const ropeBytes = requireFile(ROPE, 73728);
+    verifyBinaryImportContract(wasmBytes);
+
+    const context = makeContext(new Map([
+        ['yaAGC.wasm', wasmBytes],
+        [ROPE_NAME, ropeBytes]
+    ]));
     const errors = [];
     const channelUpdates = [];
     const core = new context.AgcCore({
-        onError(error) {
-            errors.push(error);
-        },
-        onChannelUpdate(channel, value) {
-            channelUpdates.push([channel, value]);
-        }
+        onError(error) { errors.push(error); },
+        onChannelUpdate(channel, value) { channelUpdates.push([channel, value]); }
     });
 
-    await core.load({ wasmUrl: 'yaAGC.wasm', ropeUrl: ropeName });
-    assert(errors.length === 0, `${ropeName}: error during real WASM load`);
+    await core.load();
+    assert(errors.length === 0, 'Comanche055: error during real WASM load');
     assert(core.instance && core.exports && core.memory,
-        `${ropeName}: real WASM instance did not initialize completely`);
+        'Comanche055: real WASM instance did not initialize completely');
+    assert(core.totalSteps === 1,
+        'Comanche055: load must leave one accounted ring-buffer initialization step');
 
     const version = core.version();
     assert(typeof version === 'string' && version.length > 0,
-        `${ropeName}: yaAGC version export returned no usable string`);
+        'Comanche055: yaAGC version export returned no usable string');
 
-    core.step(2000);
-    assert(errors.length === 0, `${ropeName}: error during initial CPU execution`);
-
-    const v16n65 = proveV16N65Monitor(core, ropeName, errors, channelUpdates);
-    const v35 = proveV35LightTest(core, ropeName, errors, channelUpdates);
+    const v16n65 = proveV16N65Monitor(core, errors, channelUpdates);
+    const v35 = proveV35LightTest(core, errors, channelUpdates);
 
     core.reset();
     core.configureInputMasks();
     channelUpdates.length = 0;
     errors.length = 0;
-
     core.step(2000);
     core.keyPress(0o21);
     core.step(1000);
@@ -344,52 +309,19 @@ async function smokeMission(context, ropeName) {
     core.step(250);
     core.proceedKey(false);
     core.step(250);
-
-    assert(errors.length === 0, `${ropeName}: real DSKY I/O path reported an error`);
-    assert(core.totalSteps === 3500,
-        `${ropeName}: unexpected real execution step count ${core.totalSteps}`);
+    assert(errors.length === 0, 'Comanche055: real DSKY I/O path reported an error');
+    assert(core.totalSteps === 3501,
+        `Comanche055: unexpected real execution step count ${core.totalSteps}`);
 
     core.reset();
     core.configureInputMasks();
-    assert(core.totalSteps === 0, `${ropeName}: reset did not clear mission step count`);
+    assert(core.totalSteps === 1,
+        'Comanche055: reset + peripheral setup must leave one initialization step');
 
-    return {
-        instance: core.instance,
-        memory: core.memory,
-        version,
-        channelUpdates: channelUpdates.length,
-        v16n65,
-        v35
-    };
-}
-
-async function main() {
-    const wasmBytes = requireFile(WASM, 132617);
-    verifyBinaryImportContract(wasmBytes);
-
-    const filesByUrl = new Map([['yaAGC.wasm', wasmBytes]]);
-    for (const [name, file] of ROPES) {
-        filesByUrl.set(name, requireFile(file, 73728));
-    }
-
-    const context = makeContext(filesByUrl);
-    const runs = [];
-    for (const [name] of ROPES) {
-        const result = await smokeMission(context, name);
-        runs.push(result);
-        console.log(`real yaAGC ${name}: PASS (${result.channelUpdates} generic channel updates; ${result.version})`);
-        console.log(`  V16N65E monitor: PASS (V=0o${result.v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${result.v16n65.nounRelay.toString(8).padStart(4, '0')}; numeric response selectors ${result.v16n65.responseRelays.join(',')}; within ${result.v16n65.responseSteps} steps)`);
-        console.log(`  P00 precondition relay 11: 0o${result.v35.p00Relay11.toString(8).padStart(4, '0')}`);
-        console.log(`  V35E semantic relay test: PASS (${result.v35.channelUpdates} channel updates; response within ${result.v35.responseSteps} steps)`);
-        console.log(`  V35E relay 12 low-11 state: 0o${result.v35.relay12.toString(8).padStart(4, '0')}`);
-    }
-
-    assert(runs.length === 2, 'expected exactly two real mission runs');
-    assert(runs[0].instance !== runs[1].instance,
-        'LM and CM mission loads must use distinct WebAssembly instances');
-    assert(runs[0].memory !== runs[1].memory,
-        'LM and CM mission loads must use distinct WebAssembly memories');
-
+    console.log(`real yaAGC ${ROPE_NAME}: PASS (${version})`);
+    console.log(`  V16N65E monitor: PASS (V=0o${v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${v16n65.nounRelay.toString(8).padStart(4, '0')}; selectors ${v16n65.responseRelays.join(',')}; within ${v16n65.responseSteps} steps)`);
+    console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
+    console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log('real yaAGC WASM runtime smoke: PASS');
 }
 

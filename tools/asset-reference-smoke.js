@@ -31,22 +31,31 @@ for (const ref of refs) {
         `index.html references missing packaged asset: ${ref}`);
 }
 
-const app = fs.readFileSync(APP, 'utf8');
-for (const rope of ['Luminary099.bin', 'Comanche055.bin']) {
-    assert(app.includes(`rope:'${rope}'`),
-        `mission selector no longer references staged rope ${rope}`);
+for (const stale of ['app-refine.js', 'runtime-debug.js', 'v35-audio-refine.js', 'spacecraft-panels.js']) {
+    assert(!refs.includes(stale), `current DSKY-only index unexpectedly loads stale renderer/patch asset ${stale}`);
 }
+
+const app = fs.readFileSync(APP, 'utf8');
+assert(app.includes("comanche055:{label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}"),
+    'current app no longer defines the Comanche 055 mission');
+assert(!app.includes('Luminary099.bin'),
+    'CM-only app unexpectedly references Luminary099.bin');
 
 const core = fs.readFileSync(CORE, 'utf8');
 assert(core.includes("options.wasmUrl || 'yaAGC.wasm'"),
     'AGC core default WASM filename changed from staged yaAGC.wasm');
-assert(core.includes("options.ropeUrl || 'Luminary099.bin'"),
-    'AGC core default rope filename changed from staged Luminary099.bin');
+assert(core.includes("options.ropeUrl || 'Comanche055.bin'"),
+    'AGC core default rope filename changed from staged Comanche055.bin');
+assert(!core.includes('Luminary099.bin'),
+    'AGC core unexpectedly references the removed LM rope');
 
-const localNames = new Set(refs.concat([
-    'yaAGC.wasm', 'Luminary099.bin', 'Comanche055.bin'
-]));
-assert(localNames.size === refs.length + 3,
+const localNames = new Set(refs.concat(['yaAGC.wasm', 'Comanche055.bin']));
+assert(localNames.size === refs.length + 2,
     'a binary asset name unexpectedly collides with a frontend asset name');
+
+const rasterPanels = fs.readdirSync(ASSETS)
+    .filter((name) => /\.(jpe?g|webp)$/i.test(name));
+assert(rasterPanels.length === 0,
+    `DSKY-only asset tree unexpectedly contains raster panel images: ${rasterPanels.join(', ')}`);
 
 console.log('asset-reference smoke: PASS');

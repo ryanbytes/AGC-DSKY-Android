@@ -64,15 +64,12 @@ verify_source_asset() {
 }
 
 verify_blob assets/yaAGC.wasm 132617 713685680492098d05437b99c26403f683d56009
-verify_blob assets/Luminary099.bin 73728 cd2ec9992d5863e1c7234fa760020f68ef946202
 verify_blob assets/Comanche055.bin 73728 9e4ec167dc99ac12b233df07b6b91fef585e5015
 
 # Prove that the APK contains the frontend/metadata from this checkout rather
 # than stale assets from an older build tree. Verify index.html first, then
 # discover every src=/href= asset it references and compare that file
-# byte-for-byte. This deliberately avoids a manually maintained script/style
-# list so a future required frontend layer cannot be added to index.html while
-# being accidentally omitted from APK verification.
+# byte-for-byte.
 verify_source_asset assets/index.html "$ASSET_SOURCE/index.html"
 reference_count=0
 while IFS= read -r ref; do
@@ -89,10 +86,12 @@ done < <(
 (( reference_count > 0 )) || fail "index.html contains no frontend src/href assets to verify"
 verify_source_asset assets/BUILD_SOURCE.txt "$ASSET_SOURCE/BUILD_SOURCE.txt"
 
-# The Android build stages only the three required vendor binaries. Whole
-# upstream source/demo trees must never leak into the APK again.
 apk_entries="$(unzip -Z1 "$APK")"
+
+# Only the CM runtime is staged. Legacy LM rope and upstream helper/demo assets
+# must not leak into the packaged application.
 for forbidden in \
+  assets/Luminary099.bin \
   assets/Validation.bin \
   assets/webAGC.js \
   assets/lib/wasm_c_utilities/load.js \
@@ -101,6 +100,13 @@ for forbidden in \
     fail "unexpected unused vendor asset packaged: $forbidden"
   fi
 done
+
+# The v0.38.3 DSKY-only runtime intentionally packages no raster spacecraft
+# panel photographs.
+if grep -Eiq '^assets/.*\.(jpe?g|webp)$' <<<"$apk_entries"; then
+  grep -Ei '^assets/.*\.(jpe?g|webp)$' <<<"$apk_entries" >&2 || true
+  fail "unexpected raster spacecraft-panel asset packaged"
+fi
 
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 [[ -n "$SDK" ]] \
@@ -133,15 +139,14 @@ if grep -Fq 'android.permission.INTERNET' <<<"$permissions"; then
   fail "merged APK requests android.permission.INTERNET"
 fi
 
+grep -Fq 'android.permission.CAMERA' <<<"$permissions" \
+  || fail "merged APK is missing camera permission required for optics"
 grep -Fq 'android.permission.ACCESS_COARSE_LOCATION' <<<"$permissions" \
-  || fail "merged APK is missing coarse location required for DREAM SOLAR"
+  || fail "merged APK is missing coarse location required for solar/sky behavior"
 grep -Fq 'android.permission.ACCESS_FINE_LOCATION' <<<"$permissions" \
   || fail "merged APK is missing fine location required for WebView geolocation compatibility"
 
-# Verify that the packaged application really contains the EL-only AppWidget,
-# not merely the Java source in the checkout. Source geometry/layout policy is
-# covered by tools/el-widget-smoke.js before Gradle; here we prove the merged
-# manifest, compiled resources and widget class survived packaging.
+# Verify that the packaged application really contains the EL-only AppWidget.
 manifest_tree="$($AAPT2 dump xmltree --file AndroidManifest.xml "$APK")"
 grep -Fq '="org.apollo.agcdsky.ElWidgetProvider"' <<<"$manifest_tree" \
   || grep -Fq '=".ElWidgetProvider"' <<<"$manifest_tree" \
@@ -150,6 +155,10 @@ grep -Fq 'android.appwidget.action.APPWIDGET_UPDATE' <<<"$manifest_tree" \
   || fail "merged manifest is missing APPWIDGET_UPDATE action"
 grep -Fq 'android.appwidget.provider' <<<"$manifest_tree" \
   || fail "merged manifest is missing appwidget provider metadata"
+
+grep -Fq '="org.apollo.agcdsky.SensorMainActivity"' <<<"$manifest_tree" \
+  || grep -Fq '=".SensorMainActivity"' <<<"$manifest_tree" \
+  || fail "merged manifest is missing SensorMainActivity launcher target"
 
 resources="$($AAPT2 dump resources "$APK")"
 grep -Eq 'resource 0x[0-9a-f]+ id/el_widget_image' <<<"$resources" \
@@ -165,6 +174,8 @@ DEXDUMP="$(find_verifier_tool dexdump || true)"
 dexdump_output="$("$DEXDUMP" -f "$APK" 2>/dev/null)"
 grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/ElWidgetProvider;'" <<<"$dexdump_output" \
   || fail "APK dex is missing ElWidgetProvider class"
+grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/SensorMainActivity;'" <<<"$dexdump_output" \
+  || fail "APK dex is missing SensorMainActivity class"
 
 APKSIGNER="$(find_verifier_tool apksigner || true)"
 [[ -n "$APKSIGNER" ]] \
@@ -176,10 +187,10 @@ printf 'APK verification: PASS\n'
 printf '  %s\n' "$APK"
 printf '  package/version/minSdk/targetSdk match source (%s / %s)\n' "$EXPECTED_VERSION_CODE" "$EXPECTED_VERSION_NAME"
 printf '  APK is debuggable for the ADB smoke/report workflow\n'
-printf '  pinned yaAGC/WASM + both ropes match exact Git blobs\n'
+printf '  pinned yaAGC/WASM + Comanche 055 rope match exact Git blobs\n'
 printf '  index.html and every referenced frontend asset match the current checkout byte-for-byte\n'
-printf '  EL AppWidget receiver/class/resources are present in the packaged APK\n'
-printf '  unused upstream vendor assets are absent\n'
-printf '  merged manifest has location permissions and no INTERNET permission\n'
+printf '  SensorMainActivity and EL AppWidget classes/resources are packaged\n'
+printf '  LM rope, raster panel images, and unused upstream vendor assets are absent\n'
+printf '  merged manifest has camera/location permissions and no INTERNET permission\n'
 printf '  verifier Build Tools: %s\n' "$PINNED_BUILD_TOOLS"
 printf '  APK signature verifies\n'
