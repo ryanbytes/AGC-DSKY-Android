@@ -72,9 +72,10 @@ version_ge "$GRADLE_VERSION" 9.5.0 \
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 [[ -n "$SDK" ]] || fail "ANDROID_SDK_ROOT or ANDROID_HOME must point to the Android SDK"
 [[ -d "$SDK" ]] || fail "Android SDK directory does not exist: $SDK"
-[[ -f "$SDK/platforms/android-37/android.jar" ]] \
-  || fail "Android SDK platform 37/android.jar is not installed under $SDK/platforms/android-37"
 
+# AGP 9.3 can resolve its compile SDK without a legacy physical
+# $ANDROID_SDK_ROOT/platforms/android-37/android.jar entry. Do not reject a
+# valid toolchain before Gradle has a chance to resolve compileSdk 37.
 BUILD_TOOLS_VERSION=36.0.0
 BUILD_TOOLS_DIR="$SDK/build-tools/$BUILD_TOOLS_VERSION"
 [[ -d "$BUILD_TOOLS_DIR" ]] \
@@ -118,7 +119,7 @@ printf 'Java: %s\n' "$JAVA_VERSION"
 printf 'Node: %s\n' "$NODE_VERSION"
 printf 'Gradle: %s (%s)\n' "$GRADLE_VERSION" "$GRADLE_SOURCE"
 printf 'Android SDK: %s\n' "$SDK"
-printf 'SDK platform: android-37\n'
+printf 'compileSdk: 37 (resolved by Android Gradle Plugin)\n'
 printf 'Build Tools: %s\n' "$BUILD_TOOLS_VERSION"
 printf 'webAGC gitlink: %s\n' "$WEBAGC_GITLINK"
 printf 'webAGC checkout: %s\n' "$WEBAGC_HEAD"
