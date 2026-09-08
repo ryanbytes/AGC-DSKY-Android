@@ -8,8 +8,6 @@
   const PROCEED_CHANNEL = 0o32;
   const NORMAL_KEY_MASK = 0o37;
   const PROCEED_MASK = 0o20000; // Input channel 032, bit 14.
-  const ISS_STATUS_CHANNEL = 0o30;
-  const ISS_OPERATE_MASK = 0o00400; // Channel 030 bit 9; active-low ISS OPERATE discrete.
   const WASI_ESPIPE = 70;
 
   function makeWasi(memory){
@@ -140,31 +138,29 @@
     }
 
     configureInputMasks(){
-      // ringbuffer_api.c performs its one-time ChannelSetup on the first CPU
-      // step and clears the input ring buffer.  Initialize it before queuing
-      // masks/discretes, otherwise startup hardware packets are discarded.
-      if (this.totalSteps === 0) {
-        this.exports.cpu_step(1);
-        this.totalSteps = 1;
-        this.drainIo();
-      }
-
-      // The U-bit message sets which bits each simulated peripheral is allowed
-      // to affect, matching the VirtualAGC socket protocol semantics.
+      // The U-bit message sets which bits this DSKY peripheral is allowed to
+      // affect, matching the VirtualAGC socket protocol semantics. Spacecraft
+      // status channels are deliberately not synthesized here: changing the
+      // active-low ISS OPERATE discrete is a real flight-software transition,
+      // not a harmless startup default.
       this.writeIo(U_BIT | NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK);
       this.writeIo(U_BIT | PROCEED_CHANNEL, PROCEED_MASK);
-
-      // The phone-backed IMU represents a CSM whose ISS is already switched to
-      // OPERATE when the CMC comes up.  Apollo channel 030 bit 9 is active-low.
-      // Own only that one bit; Comanche's IMUMON/TNONTEST code then performs
-      // the real operate-only ICDU initialization and updates IMODES30 itself.
-      this.writeIo(U_BIT | ISS_STATUS_CHANNEL, ISS_OPERATE_MASK);
-      this.writeIo(ISS_STATUS_CHANNEL, 0);
     }
 
     reset(){
-      this.channels = Object.create(null);
+      this.stop();
+
+      // ringbuffer_api.c initializes ringbuffer_in/out lazily from the first
+      // ChannelInput/ChannelOutput call. Packets queued before that setup are
+      // discarded. Prime one engine pass solely to initialize the transport,
+      // drain its transient output, then reset again so mission execution still
+      // begins at the true reset vector with peripheral masks ready to queue.
       this.exports.cpu_reset();
+      this.exports.cpu_step(1);
+      this.discardIo();
+      this.exports.cpu_reset();
+
+      this.channels = Object.create(null);
       this.totalSteps = 0;
       this.startTime = performance.now();
     }
@@ -285,6 +281,14 @@
     readIo(){
       const packed = this.exports.packet_read() >>> 0;
       return [packed >>> 16, packed & 0xffff];
+    }
+
+    discardIo(){
+      for (let i = 0; i < 10000; i++) {
+        const [channel, value] = this.readIo();
+        if (channel === 0 && value === 0) return;
+      }
+      throw new Error('yaAGC I/O queue did not drain during reset');
     }
 
     drainIo(){
