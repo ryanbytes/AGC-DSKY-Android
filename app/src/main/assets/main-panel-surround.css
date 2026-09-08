@@ -1,5 +1,1 @@
-/* Legacy compatibility hook.
-   The v0.28 generic faceplate-material filler was intentionally removed.
-   Normal app surroundings are now rendered by spacecraft-panels.css/js as
-   separate CM and LM cockpit installations. Dream, SCREEN, and display-only
-   presentation continue to be controlled by their dedicated styles. */
+/* Legacy generic surround removed. CM/LM scenes are in spacecraft-panels.css/js. */

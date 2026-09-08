@@ -1,85 +1,41 @@
-/* EL-focused app mode with an accurately scaled DSKY faceplate surround.
-   The canonical 320 x 372 DSKY drawing remains the coordinate master. Its
-   electroluminescent glass occupies exactly x=184..290, y=19..209 (106 x 190).
-
-   Portrait: scale from the 106-unit EL width so the real faceplate continues
-   above and below the glass.
-   Landscape: scale from the 190-unit EL height so the real faceplate continues
-   to the sides.
-
-   Only the faceplate material and the real display recess/frame are exposed;
-   annunciators, keyboard and fasteners remain intentionally absent in SCREEN
-   mode. No stretched or invented bezel geometry is used around the EL glass. */
-body.screen-only #app{
-  padding:0!important;
-  overflow:hidden!important;
-  background:
-    radial-gradient(circle at 18% 12%,rgba(255,255,255,.10) 0 1px,transparent 1.4px),
-    radial-gradient(circle at 74% 38%,rgba(0,0,0,.055) 0 1px,transparent 1.5px),
-    repeating-linear-gradient(94deg,rgba(255,255,255,.017) 0 1px,rgba(0,0,0,.012) 1px 3px),
-    linear-gradient(145deg,#c7c6bd 0%,#bab9b0 34%,#aeafa8 72%,#c2c1b8 100%)!important;
-}
+/* Borderless EL readout mode. The physical DSKY faceplate remains untouched
+   in normal mode; this presentation isolates only the electroluminescent
+   display artwork on a black field. */
+body.screen-only #app{padding:0!important;overflow:hidden!important;background:#000!important}
 body.screen-only .app-controls,
 body.screen-only .hint,
 body.screen-only .ann-well,
+body.screen-only .display-well,
 body.screen-only .ann-grid,
 body.screen-only .key,
 body.screen-only .fastener{display:none!important}
-
-/* Keep the existing display-well geometry. It is already tied to the same
-   320 x 372 source drawing and therefore remains correctly registered around
-   the 106 x 190 EL glass at every scale. */
-body.screen-only .display-well{display:block!important}
-
 body.screen-only .dsky{
   position:fixed!important;
   left:calc(50% + var(--drift-x,0px))!important;
   top:calc(50% + var(--drift-y,0px))!important;
+  width:100vw!important;
+  height:100vh!important;
   max-width:none!important;
-  aspect-ratio:320/372!important;
+  aspect-ratio:auto!important;
   overflow:visible!important;
   background:none!important;
   border:0!important;
   border-radius:0!important;
   box-shadow:none!important;
   clip-path:none!important;
-  /* EL center in the canonical panel is (237,114):
-     237/320 = 74.0625%, 114/372 = 30.645161%. */
-  transform:translate(-74.0625%,-30.645161%)!important;
+  transform:translate(-50%,-50%)!important;
 }
 body.screen-only .dsky::before,
 body.screen-only .dsky::after{display:none!important}
-
-/* Restore the exact source-space EL rectangle instead of independently
-   stretching it to the viewport. Scaling the parent keeps the display recess,
-   faceplate and EL geometry locked together. */
 body.screen-only .elpanel{
   display:block!important;
   position:absolute!important;
-  left:57.5%!important;
-  top:5.1075269%!important;
-  width:33.125%!important;
-  height:51.0752688%!important;
-  transform:none!important;
+  left:50%!important;
+  top:50%!important;
+  width:min(90vw,calc(90vh * 106 / 190))!important;
+  height:min(90vh,calc(90vw * 190 / 106))!important;
+  transform:translate(-50%,-50%)!important;
   overflow:visible!important;
 }
-
-/* 320/106 maps the canonical full-panel width from a viewport-wide EL glass.
-   The excess screen height is therefore real faceplate above/below the EL. */
-@media (orientation:portrait){
-  body.screen-only .dsky{
-    width:calc(100vw * 320 / 106)!important;
-    height:auto!important;
-  }
-}
-
-/* 372/190 maps the canonical full-panel height from a viewport-tall EL glass.
-   The excess screen width is therefore faceplate to the left/right of the EL. */
-@media (orientation:landscape){
-  body.screen-only .dsky{
-    width:auto!important;
-    height:calc(100vh * 372 / 190)!important;
-  }
-}
-
 body.dream.screen-only .dsky{transition:left 1.6s ease,top 1.6s ease!important}
+

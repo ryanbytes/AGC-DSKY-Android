@@ -1,8 +1,8 @@
 :root{
   color-scheme:dark;
-  --face:#b9b8af;
-  --face-hi:#d1d0c7;
-  --face-lo:#8e8f88;
+  --face:#6f7571;
+  --face-hi:#858b87;
+  --face-lo:#5b615d;
   --frame:#6b6c67;
   --ann:#9c9c95;
   --key:#1d1e1c;
@@ -24,12 +24,12 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
     radial-gradient(circle at 18% 12%,rgba(255,255,255,.10) 0 1px,transparent 1.4px),
     radial-gradient(circle at 74% 38%,rgba(0,0,0,.055) 0 1px,transparent 1.5px),
     repeating-linear-gradient(94deg,rgba(255,255,255,.017) 0 1px,rgba(0,0,0,.012) 1px 3px),
-    linear-gradient(145deg,#c7c6bd 0%,#bab9b0 34%,#aeafa8 72%,#c2c1b8 100%);
+    linear-gradient(145deg,#858b87 0%,#747a76 34%,#656b67 72%,#7b817d 100%);
   border:clamp(2px,.43vmin,4px) solid #171817;
   border-radius:.25vmin;
   box-shadow:
-    inset 0 0 0 .22vmin #dddcd3,
-    inset 0 0 0 .55vmin #9b9c95,
+    inset 0 0 0 .22vmin #929894,
+    inset 0 0 0 .55vmin #555b57,
     inset 0 0 1.7vmin rgba(0,0,0,.34),
     0 .35vmin .7vmin rgba(0,0,0,.6);
   transform-origin:center;

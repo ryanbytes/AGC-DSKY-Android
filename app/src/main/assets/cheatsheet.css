@@ -1,0 +1,54 @@
+#agc-cheat-sheet{
+  --sheet-x:0px;
+  --sheet-y:0px;
+  position:fixed;
+  left:50%;
+  top:max(6px,env(safe-area-inset-top));
+  width:min(94vw,720px);
+  max-height:min(35vh,360px);
+  transform:translate(calc(-50% + var(--sheet-x)),var(--sheet-y));
+  z-index:48;
+  display:none;
+  overflow:hidden;
+  color:#d8e6d2;
+  background:rgba(8,11,8,.94);
+  border:1px solid #667363;
+  border-radius:6px;
+  box-shadow:0 3px 18px rgba(0,0,0,.72),inset 0 0 0 1px rgba(210,240,202,.05);
+  font:600 12px/1.25 Arial,Helvetica,sans-serif;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+}
+#agc-cheat-sheet.open{display:flex;flex-direction:column}
+#agc-cheat-sheet.minimized{width:auto;max-width:94vw}
+#agc-cheat-sheet.minimized .cheat-tabs,
+#agc-cheat-sheet.minimized .cheat-body{display:none}
+.cheat-head{
+  display:flex;align-items:center;gap:6px;min-height:36px;padding:5px 6px 5px 10px;
+  background:linear-gradient(#1b211b,#111611);border-bottom:1px solid #3c493a;
+  cursor:move;touch-action:none
+}
+.cheat-title{font:800 12px/1 monospace;letter-spacing:.08em;white-space:nowrap;color:#c9f5bd;flex:1}
+.cheat-head button,.cheat-tabs button,.cheat-reset{
+  border:1px solid #596458;background:#171c17;color:#d8e6d2;border-radius:3px;
+  padding:6px 9px;font:800 10px/1 Arial,Helvetica,sans-serif
+}
+.cheat-head button:active,.cheat-tabs button:active,.cheat-reset:active{background:#2a3329}
+.cheat-tabs{display:flex;gap:4px;padding:5px 6px;background:#0c100c;border-bottom:1px solid #283027}
+.cheat-tabs button.active{background:#334032;color:#eaffdf;border-color:#71806f}
+.cheat-body{overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:4px 7px 7px}
+.cheat-pane{display:none}.cheat-pane.active{display:block}
+.cheat-step{display:grid;grid-template-columns:24px 1fr;gap:5px;align-items:start;padding:5px 1px;border-bottom:1px solid rgba(190,220,183,.09)}
+.cheat-step:last-child{border-bottom:0}
+.cheat-step input{width:17px;height:17px;margin:0;accent-color:#91c687}
+.cheat-step code,.cheat-code{font:800 12px/1.25 monospace;color:#c9f5bd;user-select:text;-webkit-user-select:text}
+.cheat-muted{color:#96a491;font-weight:600;font-size:10px}
+.cheat-key{display:inline-block;padding:1px 4px;margin:0 1px;border:1px solid #637060;border-radius:2px;background:#1b201b;color:#e0e9dc;font:800 10px monospace}
+.cheat-row{padding:5px 2px;border-bottom:1px solid rgba(190,220,183,.09)}
+.cheat-row:last-child{border-bottom:0}
+.cheat-actions{display:flex;justify-content:flex-end;padding-top:6px}
+body.dream #agc-cheat-sheet,body.display-only #agc-cheat-sheet,body.screen-only #agc-cheat-sheet{display:none!important}
+@media (orientation:landscape){
+  #agc-cheat-sheet{left:auto;right:6px;top:max(6px,env(safe-area-inset-top));width:min(38vw,520px);max-height:92vh;transform:translate(var(--sheet-x),var(--sheet-y))}
+}

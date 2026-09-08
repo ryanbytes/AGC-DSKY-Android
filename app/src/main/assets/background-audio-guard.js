@@ -1,10 +1,6 @@
 'use strict';
 
-// Relay audio is only valid while the interactive DSKY activity is actually
-// visible. The Android DreamService intentionally reuses the same clock page,
-// and a paused WebView can keep JavaScript timers alive long enough to produce
-// stray relay clicks. Suppress every relay-audio path when the page is hidden
-// or when it is running as the Android screensaver.
+// Relay audio is only valid while the interactive DSKY activity is visible.
 (() => {
   const audibleNow = () => !dream && !document.hidden && appVisible;
 
@@ -24,8 +20,6 @@
     };
   }
 
-  // Kill queued clock relay work as soon as the interactive page is hidden.
-  // Dream mode still updates its display, but remains silent by design.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && !dream && typeof stopClockQueue === 'function') {
       stopClockQueue();
