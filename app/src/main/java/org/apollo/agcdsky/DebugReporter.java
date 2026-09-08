@@ -179,12 +179,23 @@ public final class DebugReporter {
         }
     }
 
+    private static long packageVersionCode(PackageInfo info) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            return info.getLongVersionCode();
+        }
+        return legacyPackageVersionCode(info);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static long legacyPackageVersionCode(PackageInfo info) {
+        return info.versionCode;
+    }
+
     private static String packageVersion(Context context) {
         try {
             PackageInfo info = context.getPackageManager()
                     .getPackageInfo(context.getPackageName(), 0);
-            long code = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-                    ? info.getLongVersionCode() : info.versionCode;
+            long code = packageVersionCode(info);
             return String.valueOf(info.versionName) + " (" + code + ")";
         } catch (Exception ignored) {
             return "unknown";
@@ -195,8 +206,7 @@ public final class DebugReporter {
         try {
             PackageInfo info = WebView.getCurrentWebViewPackage();
             if (info == null) return "unknown";
-            long code = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-                    ? info.getLongVersionCode() : info.versionCode;
+            long code = packageVersionCode(info);
             return info.packageName + " " + String.valueOf(info.versionName)
                     + " (" + code + ")";
         } catch (Throwable ignored) {
