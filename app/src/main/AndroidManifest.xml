@@ -2,11 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
 
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:label="AGC DSKY"
+        android:label="AGC DSKY v0.38.3"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <meta-data
@@ -14,7 +18,7 @@
             android:value="true" />
 
         <activity
-            android:name=".MainActivity"
+            android:name=".SensorMainActivity"
             android:exported="true"
             android:screenOrientation="unspecified"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden">
@@ -23,6 +27,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The existing widget targets MainActivity. Keep that component name as
+             an alias so widget taps route into the sensor-enabled launcher. -->
+        <activity-alias
+            android:name=".MainActivity"
+            android:targetActivity=".SensorMainActivity"
+            android:exported="false" />
 
         <receiver
             android:name=".ElWidgetProvider"
