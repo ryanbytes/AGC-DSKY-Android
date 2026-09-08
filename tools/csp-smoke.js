@@ -53,7 +53,7 @@ const scripts = [
   'phone-icdu.js',
   'apollo-stars.js',
   'optics.js',
-  'spacecraft-panel-mode.js',
+  'cm-mode.js',
   'relay-audio-refine.js',
   'dsky-geometry.js',
   'hardware-fidelity.js',
@@ -70,10 +70,15 @@ for (const script of scripts) {
   assert(index > previous, `frontend script order changed around ${script}`);
   previous = index;
 }
-assert(!html.includes('runtime-debug.js'), 'removed runtime-debug patch must not be loaded');
-assert(!html.includes('app-refine.js'), 'removed app-refine patch must not be loaded');
-assert(!html.includes('v35-audio-refine.js'), 'removed V35 audio patch must not be loaded');
-assert(!html.includes('spacecraft-panels.js'), 'DSKY-only runtime must not load spacecraft panel renderer');
+for (const stale of [
+  'runtime-debug.js',
+  'app-refine.js',
+  'v35-audio-refine.js',
+  'spacecraft-panels.js',
+  'spacecraft-panel-mode.js'
+]) {
+  assert(!html.includes(stale), `DSKY-only runtime must not load stale frontend asset ${stale}`);
+}
 
 console.log('frontend isolation smoke: PASS');
 console.log(`  ${assetRefs.length} local asset references; ${scripts.length} scripts in verified order`);
