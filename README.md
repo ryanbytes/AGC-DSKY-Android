@@ -145,6 +145,7 @@ The current source is exercised by the repository verification harness and a cle
 - packaged frontend assets matching the current checkout byte-for-byte;
 - package/version, minSdk 26, targetSdk 37, and debug-signature validity;
 - `SensorMainActivity` and EL-widget classes/resources in the APK;
+- Android 11+ system-bar handling uses `WindowInsetsController`, with Android 8–10 legacy fallbacks isolated to compatibility helpers;
 - no LM rope, raster panel images, stale panel compositor, or unused upstream demo assets; and
 - camera/location permissions present with no Android INTERNET permission.
 
