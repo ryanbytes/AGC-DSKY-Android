@@ -27,7 +27,8 @@ for (const ref of refs) {
         `index.html must not reference an external URL: ${ref}`);
     assert(!ref.startsWith('/') && !ref.includes('..'),
         `index.html reference must stay in the packaged asset root: ${ref}`);
-    assert(fs.isFileSync(path.join(ASSETS, ref)),
+    const full = path.join(ASSETS, ref);
+    assert(fs.existsSync(full) && fs.statSync(full).isFile(),
         `index.html references missing packaged asset: ${ref}`);
 }
 
