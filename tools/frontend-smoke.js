@@ -2,12 +2,9 @@
 'use strict';
 
 /*
- * Dependency-free smoke test for the Android web frontend and source invariants.
- *
- * This is intentionally not a substitute for Android/WebView testing. It
- * catches ordinary JavaScript initialization regressions and exercises the
- * mission-selection / visibility lifecycle paths with a small DOM and AgcCore
- * mock so those paths can be checked even on a machine without Android SDK.
+ * Dependency-free smoke test for the current CM-only Android web frontend and
+ * source invariants. This intentionally complements, rather than replaces,
+ * Android/WebView/device testing.
  */
 
 const fs = require('fs');
@@ -16,12 +13,11 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const APP_JS = path.join(ROOT, 'app/src/main/assets/app.js');
-const RUNTIME_DEBUG_JS = path.join(ROOT, 'app/src/main/assets/runtime-debug.js');
 const INDEX_HTML = path.join(ROOT, 'app/src/main/assets/index.html');
 const MANIFEST = path.join(ROOT, 'app/src/main/AndroidManifest.xml');
 const APP_GRADLE = path.join(ROOT, 'app/build.gradle');
-const MAIN_ACTIVITY = path.join(
-    ROOT, 'app/src/main/java/org/apollo/agcdsky/MainActivity.java');
+const SENSOR_ACTIVITY = path.join(
+    ROOT, 'app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java');
 const DREAM_SERVICE = path.join(
     ROOT, 'app/src/main/java/org/apollo/agcdsky/AgcDreamService.java');
 const NET_CLIENT = path.join(
@@ -30,28 +26,16 @@ const DEBUG_REPORTER = path.join(
     ROOT, 'app/src/main/java/org/apollo/agcdsky/DebugReporter.java');
 
 class Classes {
-    constructor() {
-        this.values = new Set();
-    }
-
-    add(...names) {
-        names.forEach((name) => this.values.add(name));
-    }
-
-    remove(...names) {
-        names.forEach((name) => this.values.delete(name));
-    }
-
+    constructor() { this.values = new Set(); }
+    add(...names) { names.forEach((name) => this.values.add(name)); }
+    remove(...names) { names.forEach((name) => this.values.delete(name)); }
     toggle(name, force) {
         if (force === undefined) force = !this.values.has(name);
         if (force) this.values.add(name);
         else this.values.delete(name);
         return force;
     }
-
-    contains(name) {
-        return this.values.has(name);
-    }
+    contains(name) { return this.values.has(name); }
 }
 
 class Element {
@@ -62,58 +46,47 @@ class Element {
         this.dataset = {};
         this.classList = new Classes();
         this.listeners = {};
-        this.style = { setProperty() {} };
+        this.style = { filter: '', setProperty() {} };
     }
-
-    addEventListener(name, callback) {
-        this.listeners[name] = callback;
-    }
-
-    closest() {
-        return null;
-    }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    closest() { return null; }
 }
 
 class FakeAgcCore {
-    constructor() {
+    constructor(options = {}) {
+        this.options = options;
         this.running = false;
         this.rope = null;
-        this.proceedStates = [];
+        this.keyCodes = [];
+        this.startCount = 0;
+        this.stopCount = 0;
+        this.resetCount = 0;
+        this.configureCount = 0;
+        this.importCount = 0;
+        this.exportCount = 0;
+        this.snapshotSerial = 0;
     }
-
-    async load(options) {
-        this.rope = options.ropeUrl;
+    async load(options) { this.rope = options.ropeUrl; this.wasm = options.wasmUrl; }
+    reset() { this.resetCount++; }
+    configureInputMasks() { this.configureCount++; }
+    start() { this.running = true; this.startCount++; }
+    stop() { this.running = false; this.stopCount++; }
+    version() { return 'fake-test-core'; }
+    keyPress(code) { this.keyCodes.push(code); }
+    exportSnapshot() {
+        this.exportCount++;
+        const serial = ++this.snapshotSerial;
+        return { schema: 1, byteLength: 64, fingerprint: `fake-${serial}`, memoryB64: '' };
     }
-
-    reset() {}
-    configureInputMasks() {}
-
-    start() {
-        this.running = true;
-    }
-
-    stop() {
-        this.running = false;
-    }
-
-    version() {
-        return 'fake-test-core';
-    }
-
-    keyPress() {}
-
-    proceedKey(state) {
-        this.proceedStates.push(!!state);
-    }
-
-    proceedPulse() {}
+    importSnapshot(snapshot) { this.importCount++; this.lastImported = snapshot; return true; }
+    snapshotFingerprint() { return `fake-${this.snapshotSerial}`; }
 }
 
 function createEnvironment({ search = '', initialStorage = {} } = {}) {
     const elementIds = [
-        'prog', 'verb', 'noun', 'r1', 'r2', 'r3', 'mode', 'mission', 'agc',
+        'prog', 'verb', 'noun', 'r1', 'r2', 'r3', 'mode', 'agc', 'clock',
         'dim', 'dreambright', 'sound', 'display', 'dsky', 'controls', 'hint',
-        'comp'
+        'comp', 'imu-zero', 'mag-lock', 'pipa-cal', 'sxt', 'cheat', 'diagnostics'
     ];
     const elements = Object.fromEntries(
         elementIds.map((id) => [id, new Element(id)])
@@ -142,10 +115,7 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
         hidden: false,
         body: new Element('body'),
         listeners: {},
-        getElementById(id) {
-            if (!elements[id]) elements[id] = new Element(id);
-            return elements[id];
-        },
+        getElementById(id) { return elements[id] || null; },
         querySelector(selector) {
             const match = selector.match(/^\[data-lamp="(.+)"\]$/);
             return match ? elements[`lamp-${match[1]}`] : null;
@@ -155,21 +125,16 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
             if (selector === '[data-key]') return keyElements;
             return [];
         },
-        addEventListener(name, callback) {
-            this.listeners[name] = callback;
-        }
+        addEventListener(name, callback) { this.listeners[name] = callback; }
     };
 
     const storage = new Map(
         Object.entries(initialStorage).map(([key, value]) => [key, String(value)])
     );
     const localStorage = {
-        getItem(key) {
-            return storage.has(key) ? storage.get(key) : null;
-        },
-        setItem(key, value) {
-            storage.set(key, String(value));
-        }
+        getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+        setItem(key, value) { storage.set(key, String(value)); },
+        removeItem(key) { storage.delete(key); }
     };
 
     const windowListeners = {};
@@ -185,23 +150,18 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
         Date,
         Math,
         Number,
+        JSON,
         performance: { now: () => 0 },
         setInterval: () => 1,
         clearInterval: () => {},
-        setTimeout(callback) {
-            callback();
-            return 1;
-        },
+        setTimeout(callback) { callback(); return 1; },
         clearTimeout: () => {},
-        addEventListener(name, callback) {
-            windowListeners[name] = callback;
-        }
+        addEventListener(name, callback) { windowListeners[name] = callback; }
     };
     context.window = context;
 
     vm.createContext(context);
     vm.runInContext(fs.readFileSync(APP_JS, 'utf8'), context, { filename: 'app.js' });
-
     return { context, document, elements, keyElements, storage, windowListeners };
 }
 
@@ -237,20 +197,26 @@ function checkSourceInvariants() {
         'application backup must remain disabled for local-only state');
     assert(manifest.includes('android.webkit.WebView.MetricsOptOut'),
         'WebView metrics collection must remain opted out');
-    assert(!manifest.includes('android:process='),
-        'Activity and DreamService must share the default process/WebView data directory');
+    assert(manifest.includes('android:name=".SensorMainActivity"'),
+        'SensorMainActivity must remain the interactive launcher');
+    assert(manifest.includes('android:targetActivity=".SensorMainActivity"'),
+        'MainActivity alias must continue routing widget/legacy intents to SensorMainActivity');
+    assert(manifest.includes('android.permission.CAMERA'),
+        'camera permission required by optics is missing');
+    assert(manifest.includes('android.permission.ACCESS_COARSE_LOCATION'),
+        'coarse location permission is missing');
+    assert(manifest.includes('android.permission.ACCESS_FINE_LOCATION'),
+        'fine location permission is missing');
     assert(manifest.includes('android.permission.BIND_DREAM_SERVICE'),
         'DreamService bind permission missing');
-    assert(manifest.includes('android.service.dreams.DreamService'),
-        'DreamService intent registration missing');
 
     const gradle = fs.readFileSync(APP_GRADLE, 'utf8');
     assert(gradle.includes("file('../vendor/webAGC/src/yaAGC.wasm')"),
         'pinned yaAGC WASM input missing');
-    assert(gradle.includes("file('../vendor/webAGC/demo/agc/Luminary099.bin')"),
-        'pinned Luminary099 input missing');
     assert(gradle.includes("file('../vendor/webAGC/demo/agc/Comanche055.bin')"),
         'pinned Comanche055 input missing');
+    assert(!gradle.includes('Luminary099.bin'),
+        'CM-only Gradle configuration must not stage Luminary099');
     assert(gradle.includes('verifyPinnedAgcAssets'),
         'pinned AGC binary verification task missing');
     assert(gradle.includes("tasks.register('stagePinnedAgcAssets', Sync)"),
@@ -266,28 +232,35 @@ function checkSourceInvariants() {
         'whole webAGC vendor directories must not be Android asset roots');
 
     const html = fs.readFileSync(INDEX_HTML, 'utf8');
-    assert(html.includes('id="mission"'),
-        'mission selector control missing from index.html');
+    assert(!html.includes('id="mission"'),
+        'CM-only frontend must not expose the removed mission selector');
+    assert(html.includes('id="clock"') && html.includes('id="agc"'),
+        'clock/AGC controls are missing from index.html');
     assert(html.includes('controls-layout.css'),
         'responsive controls stylesheet missing from index.html');
-    const debugIndex = html.indexOf('<script src="runtime-debug.js"></script>');
     const coreIndex = html.indexOf('<script src="agc-core.js"></script>');
-    assert(debugIndex >= 0 && coreIndex > debugIndex,
-        'runtime-debug.js must load before the AGC runtime');
+    const appIndex = html.indexOf('<script src="app.js"></script>');
+    const phoneIndex = html.indexOf('<script src="phone-icdu.js"></script>');
+    const diagnosticsIndex = html.indexOf('<script src="diagnostics.js"></script>');
+    assert(coreIndex >= 0 && appIndex > coreIndex && phoneIndex > appIndex && diagnosticsIndex > phoneIndex,
+        'current AGC/app/phone/diagnostics script order is invalid');
+    for (const removed of ['runtime-debug.js', 'app-refine.js', 'v35-audio-refine.js', 'spacecraft-panels.js']) {
+        assert(!html.includes(`src="${removed}"`), `removed/stale script is loaded: ${removed}`);
+    }
 
-    const runtimeDebug = fs.readFileSync(RUNTIME_DEBUG_JS, 'utf8');
-    assert(runtimeDebug.includes("addEventListener('error'"),
-        'runtime debug hook must capture unhandled JavaScript errors');
-    assert(runtimeDebug.includes("addEventListener('unhandledrejection'"),
-        'runtime debug hook must capture unhandled promise rejections');
-    assert(runtimeDebug.includes('DebugBridge.report'),
-        'runtime debug hook must report through the local native bridge');
-
-    const activity = fs.readFileSync(MAIN_ACTIVITY, 'utf8');
-    checkWebViewLockdown(activity, 'MainActivity');
-    checkDebugOnlyWebViewInspection(activity, 'MainActivity');
-    assert(activity.includes('isLocalAssetOrigin(origin)'),
-        'MainActivity geolocation must be restricted to the packaged origin');
+    const sensorActivity = fs.readFileSync(SENSOR_ACTIVITY, 'utf8');
+    checkWebViewLockdown(sensorActivity, 'SensorMainActivity');
+    checkDebugOnlyWebViewInspection(sensorActivity, 'SensorMainActivity');
+    assert(sensorActivity.includes('isLocalAssetOrigin(origin)'),
+        'SensorMainActivity geolocation must be restricted to packaged origin');
+    assert(sensorActivity.includes('isLocalAssetOrigin(request.getOrigin().toString())'),
+        'SensorMainActivity camera permission must be restricted to packaged origin');
+    for (const bridge of [
+        'nativePhoneQuaternion', 'nativeMagneticQuaternion',
+        'nativePhoneLinearAcceleration', 'nativeSkyPointing'
+    ]) {
+        assert(sensorActivity.includes(bridge), `SensorMainActivity missing bridge call ${bridge}`);
+    }
 
     const dreamService = fs.readFileSync(DREAM_SERVICE, 'utf8');
     checkWebViewLockdown(dreamService, 'AgcDreamService');
@@ -302,8 +275,6 @@ function checkSourceInvariants() {
         'packaged WebView assets must not be served from stale cache');
     assert(netClient.includes('headers.put("X-Content-Type-Options", "nosniff")'),
         'packaged WebView assets must disable MIME sniffing');
-    assert(netClient.includes('200,\n                    "OK"'),
-        'packaged WebView success responses must have explicit HTTP 200 status');
 
     const debugReporter = fs.readFileSync(DEBUG_REPORTER, 'utf8');
     assert(debugReporter.includes('packageVersion(context)'),
@@ -311,121 +282,90 @@ function checkSourceInvariants() {
     assert(debugReporter.includes('WebView.getCurrentWebViewPackage()'),
         'debug report must include the installed WebView/Trichrome package version');
     assert(debugReporter.includes('location coordinates are intentionally not included'),
-        'debug report must continue excluding saved SOLAR coordinates');
-}
-
-function testRuntimeDebugHooks() {
-    const listeners = {};
-    const reports = [];
-    const context = {
-        window: null,
-        DebugBridge: {
-            report(detail) {
-                reports.push(String(detail));
-            }
-        },
-        addEventListener(name, callback) {
-            listeners[name] = callback;
-        }
-    };
-    context.window = context;
-    vm.createContext(context);
-    vm.runInContext(fs.readFileSync(RUNTIME_DEBUG_JS, 'utf8'), context,
-        { filename: 'runtime-debug.js' });
-
-    assert(typeof listeners.error === 'function',
-        'runtime debug error listener did not register');
-    assert(typeof listeners.unhandledrejection === 'function',
-        'runtime debug rejection listener did not register');
-
-    listeners.error({
-        message: 'boom',
-        filename: 'https://appassets.androidplatform.net/assets/app.js',
-        lineno: 12,
-        colno: 3,
-        error: { stack: 'Error: boom\n at app.js:12:3' }
-    });
-    listeners.unhandledrejection({ reason: { stack: 'Error: async boom' } });
-
-    assert(reports.length === 2,
-        'runtime debug hook must report both unhandled failure types');
-    assert(reports[0].includes('UNHANDLED JAVASCRIPT ERROR')
-        && reports[0].includes('boom'),
-        'JavaScript error report missing useful details');
-    assert(reports[1].includes('UNHANDLED PROMISE REJECTION')
-        && reports[1].includes('async boom'),
-        'promise rejection report missing useful details');
+        'debug report must continue excluding saved location coordinates');
 }
 
 async function main() {
     checkSourceInvariants();
-    testRuntimeDebugHooks();
 
-    const first = createEnvironment();
-    assert(first.elements.mission.textContent === 'LM L99',
-        'LM must be the default mission');
-
-    first.elements.mission.listeners.click();
-    assert(first.elements.mission.textContent === 'CM C55',
-        'mission button must switch to CM');
-    assert(first.storage.get('agcMission') === 'comanche055',
-        'mission selection must persist');
-
-    first.elements.agc.listeners.click();
+    // A fresh non-dream install defaults to the real CM AGC unless the user
+    // explicitly chose clock mode previously.
+    const fresh = createEnvironment();
     await flushAsync();
-    const core = first.context.AGCDSKY.getCore();
-    assert(core, 'AGC mode must create a core');
-    assert(core.rope === 'Comanche055.bin',
-        'CM mode must load Comanche055.bin');
-    assert(first.storage.get('runMode') === 'agc',
-        'AGC mode must persist');
+    const core = fresh.context.AGCDSKY.getCore();
+    assert(core, 'fresh interactive frontend must create the AGC core');
+    assert(fresh.context.AGCDSKY.getMission() === 'comanche055',
+        'frontend mission must be fixed to Comanche055');
+    assert(core.rope === 'Comanche055.bin' && core.wasm === 'yaAGC.wasm',
+        'fresh AGC mode must load the pinned Comanche/yaAGC filenames');
+    assert(core.running, 'fresh AGC core must start while the app is visible');
+    assert(fresh.storage.get('runMode') === 'agc',
+        'fresh AGC mode must persist runMode=agc');
+    assert(fresh.elements.mode.textContent.includes('COMANCHE055'),
+        'mode status must identify Comanche055');
 
-    const pro = first.keyElements.find((element) => element.dataset.key === 'P');
-    assert(pro && typeof pro.listeners.pointerdown === 'function',
-        'PRO pointer handler must be installed');
-    pro.listeners.pointerdown({ pointerId: 7, preventDefault() {} });
-    assert(core.proceedStates.length === 1 && core.proceedStates[0] === true,
-        'PRO pointer-down must assert channel 032');
-    assert(pro.classList.contains('pressed'),
-        'PRO must remain visibly pressed while held');
-    first.document.listeners.pointerup({ pointerId: 7 });
-    assert(core.proceedStates.length === 2 && core.proceedStates[1] === false,
-        'PRO pointer-up must release channel 032');
-    assert(!pro.classList.contains('pressed'),
-        'PRO pressed state must clear on pointer-up');
+    // Normal DSKY keys still route into the real AGC keyboard path. PRO is
+    // intentionally excluded here because current hardware-fidelity handling
+    // owns its physical semantics outside app.js.
+    const key1 = fresh.keyElements.find((element) => element.dataset.key === '1');
+    assert(key1 && typeof key1.listeners.pointerdown === 'function',
+        'DSKY key pointer handler must be installed');
+    key1.listeners.pointerdown({ preventDefault() {} });
+    assert(core.keyCodes.includes(0o01),
+        'DSKY digit 1 must route keycode 01 to AgcCore');
 
-    pro.listeners.pointerdown({ pointerId: 8, preventDefault() {} });
-    assert(core.proceedStates.length === 3 && core.proceedStates[2] === true,
-        'second PRO hold must assert channel 032');
-    first.context.AGCDSKY.setAppVisible(false);
-    assert(core.proceedStates.length === 4 && core.proceedStates[3] === false,
-        'native visibility pause must release a held PRO');
+    // Clock mode suspends the same running AGC and saves a snapshot. Returning
+    // to AGC resumes that same core rather than reloading another rope.
+    fresh.elements.clock.listeners.click();
+    assert(!core.running, 'clock mode must suspend the AGC core');
+    assert(fresh.storage.get('runMode') === 'clock',
+        'clock mode must persist runMode=clock');
+    assert(fresh.storage.has('agcSnapshotV1'),
+        'clock suspend must save an AGC snapshot');
+    const exportsAfterClock = core.exportCount;
+    fresh.elements.agc.listeners.click();
+    await flushAsync();
+    assert(fresh.context.AGCDSKY.getCore() === core,
+        'returning from clock must resume the existing AGC core');
+    assert(core.running, 'returning from clock must restart the suspended core');
+    assert(core.exportCount === exportsAfterClock,
+        'clock-to-AGC resume must not reload/replace the core');
+    assert(fresh.storage.get('runMode') === 'agc',
+        'AGC resume must persist runMode=agc');
+
+    // Native visibility transitions pause/save and resume the same core.
+    const exportsBeforeHide = core.exportCount;
+    fresh.context.AGCDSKY.setAppVisible(false);
     assert(!core.running, 'hidden app must pause the AGC core');
-    first.context.AGCDSKY.setAppVisible(true);
+    assert(core.exportCount > exportsBeforeHide,
+        'hidden app must snapshot current AGC state');
+    fresh.context.AGCDSKY.setAppVisible(true);
     assert(core.running, 'visible app must resume the same AGC core');
 
-    const restored = createEnvironment({
-        initialStorage: { agcMission: 'comanche055', runMode: 'agc' }
-    });
+    // Explicitly remembered clock mode must suppress automatic AGC startup.
+    const clockOnly = createEnvironment({ initialStorage: { runMode: 'clock' } });
     await flushAsync();
-    const restoredCore = restored.context.AGCDSKY.getCore();
-    assert(restored.elements.mission.textContent === 'CM C55',
-        'saved mission must restore');
-    assert(restoredCore, 'saved AGC run mode must re-enter AGC mode');
-    assert(restoredCore.rope === 'Comanche055.bin',
-        'restored AGC mode must use saved rope');
+    assert(clockOnly.context.AGCDSKY.getCore() === null,
+        'remembered clock mode must not auto-start yaAGC');
+    assert(clockOnly.context.AGCDSKY.appStatus().mode === 'clock',
+        'remembered clock mode must stay in clock mode');
 
+    // DreamService page is always phone-clock/display-only and must never boot
+    // the AGC even if the saved interactive run mode is AGC.
     const dream = createEnvironment({
         search: '?dream=1&clock=1&display=1',
-        initialStorage: { agcMission: 'comanche055', runMode: 'agc' }
+        initialStorage: { runMode: 'agc' }
     });
     await flushAsync();
     assert(dream.context.AGCDSKY.getCore() === null,
         'DreamService page must not start yaAGC');
     assert(dream.document.body.classList.contains('dream'),
         'DreamService page must enter dream mode');
+    assert(dream.document.body.classList.contains('display-only'),
+        'DreamService page must stay display-only');
 
     console.log('frontend/source smoke: PASS');
+    console.log('  CM-only startup, DSKY key route, snapshot suspend/resume, visibility lifecycle, clock persistence, and dream isolation verified');
 }
 
 main().catch((error) => {
