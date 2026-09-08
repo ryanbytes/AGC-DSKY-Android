@@ -41,10 +41,14 @@ forbid(layout, 'fontFamily=', 'widget layout');
 requireText(info, 'android:updatePeriodMillis="1800000"', 'widget metadata');
 requireText(info, 'android:widgetCategory="home_screen"', 'widget metadata');
 
-requireText(provider, 'RemoteViews.RemoteCollectionItems.Builder', 'live seconds adapter');
+requireText(provider, 'RemoteViews.RemoteCollectionItems.Builder', 'live register adapter');
+requireText(provider, 'views.setRemoteAdapter(R.id.el_hour_flipper', 'live hour adapter');
+requireText(provider, 'views.setRemoteAdapter(R.id.el_minute_flipper', 'live minute adapter');
 requireText(provider, 'views.setRemoteAdapter(R.id.el_seconds_flipper', 'live seconds adapter');
 requireText(provider, 'views.setDisplayedChild(R.id.el_seconds_flipper', 'live seconds adapter');
-requireText(provider, 'SECOND_DRAWABLES.length', 'live seconds adapter');
+requireText(provider, 'private static final int[] SECOND_DRAWABLES', 'generated EL frame table');
+requireText(provider, 'R.drawable.el_sec_59', 'generated EL frame table');
+requireText(provider, 'buildFrames(context, 60)', 'minute/seconds frame count');
 requireText(provider, 'alarm.setExactAndAllowWhileIdle', 'minute refresh');
 requireText(provider, 'alarm.setAndAllowWhileIdle', 'minute refresh fallback');
 forbid(provider, 'R.id.el_clock_', 'widget renderer');
@@ -64,10 +68,11 @@ for (const needle of [
   'FIRST_DIGIT_X = 12.0'
 ]) requireText(geometry, needle, 'WebView Apollo sign geometry');
 
-requireText(gradle, 'versionCode 21', 'Gradle');
-requireText(gradle, "versionName '0.21'", 'Gradle');
+requireText(gradle, 'versionCode 20033', 'Gradle');
+requireText(gradle, "versionName '0.38.3-diagnostics-state-fix'", 'Gradle');
 requireText(gradle, 'generateElSecondFrames', 'Gradle');
 requireText(generator, 'for (let sec=0; sec<60; sec++)', 'seconds generator');
 requireText(generator, 'android:pathData', 'seconds generator');
 
 console.log('EL widget source smoke: PASS');
+console.log('  EL-only widget, 60 generated register frames, Apollo sign geometry, and minute resync verified');
