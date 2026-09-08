@@ -9,15 +9,17 @@
     <section id="agc-cheat-sheet" aria-label="AGC cheat sheet">
       <div class="cheat-head" id="cheat-drag">
         <span class="cheat-title">AGC QUICK SHEET</span>
-        <div class="cheat-tabs">
-          <button data-cheat-tab="p51" class="active">P51 TEST</button>
-          <button data-cheat-tab="p51real">P51 REAL SKY</button>
-          <button data-cheat-tab="quick">QUICK</button>
-          <button data-cheat-tab="sxt">SXT</button>
-          <button data-cheat-tab="verify">VERIFY</button>
+        <div class="cheat-head-actions">
+          <button id="cheat-min" type="button" aria-label="Minimize cheat sheet">MIN</button>
+          <button id="cheat-close" type="button" aria-label="Close cheat sheet">X</button>
         </div>
-        <button id="cheat-min" aria-label="Minimize cheat sheet">MIN</button>
-        <button id="cheat-close" aria-label="Close cheat sheet">X</button>
+      </div>
+      <div class="cheat-tabs">
+        <button data-cheat-tab="p51" class="active">P51 TEST</button>
+        <button data-cheat-tab="p51real">P51 REAL SKY</button>
+        <button data-cheat-tab="quick">QUICK</button>
+        <button data-cheat-tab="sxt">SXT</button>
+        <button data-cheat-tab="verify">VERIFY</button>
       </div>
       <div class="cheat-body">
         <div class="cheat-pane active" data-cheat-pane="p51">
@@ -112,11 +114,11 @@
     if(r.top<2)dy=2-r.top;if(r.bottom>innerHeight-2)dy=(innerHeight-2)-r.bottom;
     pos.x+=dx;pos.y+=dy;applyPos();savePos();
   }
-  function open(){sheet.classList.add('open');sheet.classList.remove('minimized');requestAnimationFrame(()=>{fitAboveDsky();clampPos()})}
-  function close(){sheet.classList.remove('open')}
+  function open(){sheet.classList.add('open');sheet.classList.remove('minimized');const min=document.getElementById('cheat-min');if(min)min.textContent='MIN';requestAnimationFrame(()=>{fitAboveDsky();clampPos()})}
+  function close(){dragging=false;sheet.classList.remove('open','minimized');const min=document.getElementById('cheat-min');if(min)min.textContent='MIN'}
   function init(){
     document.body.insertAdjacentHTML('beforeend',markup());sheet=document.getElementById('agc-cheat-sheet');loadChecks();loadPos();
-    const launch=document.getElementById('cheat');if(launch)launch.addEventListener('click',open);
+    const launch=document.getElementById('cheat');if(launch)launch.addEventListener('click',()=>sheet.classList.contains('open')?close():open());
     document.getElementById('cheat-close').addEventListener('click',e=>{e.stopPropagation();close()});
     document.getElementById('cheat-min').addEventListener('click',e=>{e.stopPropagation();sheet.classList.toggle('minimized');e.currentTarget.textContent=sheet.classList.contains('minimized')?'OPEN':'MIN';requestAnimationFrame(clampPos)});
     document.getElementById('cheat-reset').addEventListener('click',()=>{sheet.querySelectorAll('[data-cheat-check]').forEach(c=>c.checked=false);saveChecks()});

@@ -127,6 +127,7 @@ printf 'webAGC checkout: %s\n' "$WEBAGC_HEAD"
 node tools/manifest-policy-smoke.js
 node tools/csp-smoke.js
 node tools/frontend-smoke.js
+node tools/cheatsheet-smoke.js
 node tools/device-v35-policy-smoke.js
 node tools/display-layout-smoke.js
 node tools/el-widget-smoke.js

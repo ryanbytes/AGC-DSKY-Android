@@ -29,13 +29,16 @@
   background:linear-gradient(#1b211b,#111611);border-bottom:1px solid #3c493a;
   cursor:move;touch-action:none
 }
-.cheat-title{font:800 12px/1 monospace;letter-spacing:.08em;white-space:nowrap;color:#c9f5bd;flex:1}
+.cheat-title{font:800 12px/1 monospace;letter-spacing:.08em;white-space:nowrap;color:#c9f5bd;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.cheat-head-actions{display:flex;gap:6px;flex:0 0 auto}
+#cheat-min,#cheat-close{min-width:44px;min-height:36px;flex:0 0 auto;position:relative;z-index:1}
 .cheat-head button,.cheat-tabs button,.cheat-reset{
   border:1px solid #596458;background:#171c17;color:#d8e6d2;border-radius:3px;
   padding:6px 9px;font:800 10px/1 Arial,Helvetica,sans-serif
 }
 .cheat-head button:active,.cheat-tabs button:active,.cheat-reset:active{background:#2a3329}
-.cheat-tabs{display:flex;gap:4px;padding:5px 6px;background:#0c100c;border-bottom:1px solid #283027}
+.cheat-tabs{display:flex;gap:4px;padding:5px 6px;background:#0c100c;border-bottom:1px solid #283027;overflow-x:auto;overscroll-behavior-x:contain;touch-action:pan-x;flex:0 0 auto}
+.cheat-tabs button{flex:0 0 auto}
 .cheat-tabs button.active{background:#334032;color:#eaffdf;border-color:#71806f}
 .cheat-body{overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:4px 7px 7px}
 .cheat-pane{display:none}.cheat-pane.active{display:block}
