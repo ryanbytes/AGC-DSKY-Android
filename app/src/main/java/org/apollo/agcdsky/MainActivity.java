@@ -9,6 +9,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.GeolocationPermissions;
@@ -56,14 +58,9 @@ public final class MainActivity extends Activity {
      */
     private void configureWindow() {
         Window window = getWindow();
-        window.setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         window.addFlags(
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
                         | WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        window.setStatusBarColor(CM_PANEL_COLOR);
-        window.setNavigationBarColor(CM_PANEL_COLOR);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WindowManager.LayoutParams params = window.getAttributes();
@@ -71,12 +68,40 @@ public final class MainActivity extends Activity {
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
             window.setAttributes(params);
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false);
-        }
 
         View decor = window.getDecorView();
         decor.setBackgroundColor(CM_PANEL_COLOR);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            configureModernSystemBars(window);
+        } else {
+            configureLegacySystemBars(window, decor);
+        }
+    }
+
+    /** Android 11+ fullscreen path. API 35 deprecates explicit bar colors. */
+    @SuppressWarnings("deprecation")
+    private static void configureModernSystemBars(Window window) {
+        window.setDecorFitsSystemWindows(false);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            window.setStatusBarColor(CM_PANEL_COLOR);
+            window.setNavigationBarColor(CM_PANEL_COLOR);
+        }
+        WindowInsetsController controller = window.getInsetsController();
+        if (controller != null) {
+            controller.hide(WindowInsets.Type.systemBars());
+            controller.setSystemBarsBehavior(
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
+    }
+
+    /** Android 8-10 compatibility path. These flags are intentionally legacy-only. */
+    @SuppressWarnings("deprecation")
+    private static void configureLegacySystemBars(Window window, View decor) {
+        window.setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        window.setStatusBarColor(CM_PANEL_COLOR);
+        window.setNavigationBarColor(CM_PANEL_COLOR);
         decor.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
