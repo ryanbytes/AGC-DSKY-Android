@@ -32,10 +32,21 @@ for (const ref of refs) {
         `index.html references missing packaged asset: ${ref}`);
 }
 
-for (const stale of ['app-refine.js', 'runtime-debug.js', 'v35-audio-refine.js', 'spacecraft-panels.js']) {
+for (const stale of [
+    'app-refine.js',
+    'runtime-debug.js',
+    'v35-audio-refine.js',
+    'spacecraft-panels.js',
+    'spacecraft-panels.css',
+    'spacecraft-panel-mode.js'
+]) {
     assert(!refs.includes(stale), `current DSKY-only index unexpectedly loads stale renderer/patch asset ${stale}`);
     assert(!fs.existsSync(path.join(ASSETS, stale)),
         `current DSKY-only asset tree unexpectedly retains stale renderer/patch asset ${stale}`);
+}
+
+for (const required of ['cm-dsky-finish.css', 'cm-mode.js']) {
+    assert(refs.includes(required), `current CM-only index is missing required frontend asset ${required}`);
 }
 
 const app = fs.readFileSync(APP, 'utf8');
