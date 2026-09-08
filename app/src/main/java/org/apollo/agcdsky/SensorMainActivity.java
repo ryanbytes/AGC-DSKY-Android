@@ -16,6 +16,8 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.GeolocationPermissions;
@@ -141,25 +143,46 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
 
     private void configureWindow() {
         Window window = getWindow();
-        window.setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         window.addFlags(
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
                         | WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        window.setStatusBarColor(CM_PANEL_COLOR);
-        window.setNavigationBarColor(CM_PANEL_COLOR);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WindowManager.LayoutParams params = window.getAttributes();
             params.layoutInDisplayCutoutMode =
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
             window.setAttributes(params);
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false);
-        }
         View decor = window.getDecorView();
         decor.setBackgroundColor(CM_PANEL_COLOR);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            configureModernSystemBars(window);
+        } else {
+            configureLegacySystemBars(window, decor);
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void configureModernSystemBars(Window window) {
+        window.setDecorFitsSystemWindows(false);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            window.setStatusBarColor(CM_PANEL_COLOR);
+            window.setNavigationBarColor(CM_PANEL_COLOR);
+        }
+        WindowInsetsController controller = window.getInsetsController();
+        if (controller != null) {
+            controller.hide(WindowInsets.Type.systemBars());
+            controller.setSystemBarsBehavior(
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void configureLegacySystemBars(Window window, View decor) {
+        window.setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        window.setStatusBarColor(CM_PANEL_COLOR);
+        window.setNavigationBarColor(CM_PANEL_COLOR);
         decor.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
@@ -170,12 +193,8 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     }
 
     private int displayAngleDegrees() {
-        Display display;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            display = getDisplay();
-        } else {
-            display = getWindowManager().getDefaultDisplay();
-        }
+        Display display = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                ? getDisplay() : legacyDefaultDisplay();
         if (display == null) return 0;
         switch (display.getRotation()) {
             case Surface.ROTATION_90: return 90;
@@ -183,6 +202,11 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
             case Surface.ROTATION_270: return 270;
             default: return 0;
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private Display legacyDefaultDisplay() {
+        return getWindowManager().getDefaultDisplay();
     }
 
     private boolean hasCameraPermission() {
