@@ -124,6 +124,7 @@ printf 'Build Tools: %s\n' "$BUILD_TOOLS_VERSION"
 printf 'webAGC gitlink: %s\n' "$WEBAGC_GITLINK"
 printf 'webAGC checkout: %s\n' "$WEBAGC_HEAD"
 
+node tools/branding-smoke.js
 node tools/manifest-policy-smoke.js
 node tools/csp-smoke.js
 node tools/frontend-smoke.js
