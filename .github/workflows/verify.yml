@@ -40,3 +40,7 @@ jobs:
       - name: Run repository build and verification harness
         shell: bash
         run: bash tools/build-local.sh
+
+      - name: Verify packaged launcher icon
+        shell: bash
+        run: bash tools/verify-launcher-icon.sh
