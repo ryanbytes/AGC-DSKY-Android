@@ -23,13 +23,12 @@ The sextant screenshot shows the real app UI with a static demonstration pointin
 - Synthetic relay-click audio.
 - Android DreamService clock/screensaver.
 - Resizable **EL-only** home-screen widget.
-- Optional Android **Home app** mode for dedicated phones/tablets.
-- Sideload-only Amazon Fire mode using an opt-in accessibility redirect when Fire OS refuses normal Home replacement.
+- Optional Android **Home app** mode for dedicated boot-to-DSKY phones/tablets.
 - No Android `INTERNET` permission in the packaged app.
 
-## Dedicated Home / Fire modes
+## Dedicated Home mode
 
-Standard Android Home mode is part of both builds. The Fire-specific accessibility redirect is isolated to the `fire` product flavor and is not packaged in the Play build.
+AGC DSKY can be selected manually as Android's default **Home app**. When selected, Android launches it as Home after boot and when Home is pressed. Installing the app does not replace the normal launcher automatically.
 
 See [docs/HOME_MODE.md](docs/HOME_MODE.md).
 
@@ -40,9 +39,8 @@ Requirements: JDK 17, Node.js 18+, Android SDK 37 / Build Tools 36, and the pinn
 ```bash
 git clone --recurse-submodules https://github.com/ryanbytes/AGC-DSKY-Android.git
 cd AGC-DSKY-Android
+bash tools/build-local.sh
 ```
-
-Build the Play variant with `:app:assemblePlayDebug` / `:app:bundlePlayRelease` and the sideload Fire variant with `:app:assembleFireDebug` / `:app:assembleFireRelease`.
 
 The build verifies the pinned webAGC revision and packaged `yaAGC.wasm` / `Comanche055.bin` identities before packaging.
 
@@ -61,4 +59,4 @@ The app includes an offline **LEGAL / SOURCE** screen with the privacy policy, c
 
 ## Current commercial release
 
-**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The current build keeps version name `1.0` and uses Android version code `20037`.
+**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The Home-mode build keeps version name `1.0` and uses Android version code `20038`.
