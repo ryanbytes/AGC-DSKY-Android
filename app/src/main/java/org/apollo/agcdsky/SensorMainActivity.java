@@ -580,19 +580,39 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
         super.onSaveInstanceState(outState);
     }
 
+    private void destroyWebView() {
+        WebView doomed = webView;
+        webView = null;
+        WebViewTeardown.destroy(doomed, "DebugBridge", "SkyBridge");
+    }
+
     @Override
     protected void onDestroy() {
         unregisterSensors();
+        pendingWebViewState = null;
+        if (pendingGeoCallback != null) {
+            try {
+                pendingGeoCallback.invoke(pendingGeoOrigin, false, false);
+            } catch (RuntimeException ignored) {
+            }
+        }
         pendingGeoOrigin = null;
         pendingGeoCallback = null;
         if (pendingCameraRequest != null) {
             pendingCameraRequest.deny();
             pendingCameraRequest = null;
         }
-        if (webView != null) {
-            webView.destroy();
-            webView = null;
-        }
+        destroyWebView();
+
+        // These managers/sensors are process services, but clearing the Activity's
+        // references shortens their reachability window during configuration churn.
+        sensorManager = null;
+        attitudeSensor = null;
+        magneticAttitudeSensor = null;
+        linearAccelerationSensor = null;
+        accelerometerSensor = null;
+        gravitySensor = null;
+
         super.onDestroy();
     }
 }
