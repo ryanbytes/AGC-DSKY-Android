@@ -1,42 +1,39 @@
-# Third-party references and software
+# Third-party software and references
 
 ## Virtual AGC / yaAGC
 
-The Android source now integrates the real yaAGC execution core through a pinned `webAGC` submodule:
+- Project: https://github.com/virtualagc/virtualagc
+- Documentation: https://www.ibiblio.org/apollo/
+- License: GNU GPL version 2 or later.
 
-- Virtual AGC: https://github.com/virtualagc/virtualagc
-- Project documentation: https://www.ibiblio.org/apollo/
-- yaAGC/Virtual AGC source is GPL-2.0-or-later.
-
-The app's Gradle asset sources package `yaAGC.wasm` from the pinned submodule into v0.7 builds. This repository's own Android/frontend code remains GPL-2.0 compatible.
+The Android app executes the real `yaAGC` core through WebAssembly.
 
 ## webAGC
 
-Michael Franzl's webAGC project supplies the browser-oriented yaAGC WebAssembly build and Apollo 11 rope binaries used by the Android integration:
+- Project: https://github.com/michaelfranzl/webAGC
+- Pinned submodule revision: `0575ea7a1231e3948bae7d2c22a6ac146da0c38d`
+- License: GNU GPL version 2 or later for the upstream software.
 
-- https://github.com/michaelfranzl/webAGC
-- Pinned submodule commit: `0575ea7a1231e3948bae7d2c22a6ac146da0c38d`
-- Upstream webAGC source is GPL-2.0-or-later.
+The pinned project supplies the browser-oriented yaAGC WebAssembly build and the Apollo 11 **Comanche 055** rope used by this CM-only app.
 
-The Android app does not use webAGC's Wasmer JavaScript runtime. `app/src/main/assets/agc-core.js` provides a small embedding layer for the four WASI calls imported by this yaAGC WASM build and exposes the yaAGC packet/cpu API to the local DSKY frontend.
+## Apollo AGC flight software
 
-## Apollo 11 rope images
+`Comanche055.bin` is historical Apollo 11 Command Module AGC flight software preserved by the Virtual AGC/Apollo source-preservation projects and treated there as public-domain U.S. Government material.
 
-The pinned webAGC submodule contains the Apollo 11 AGC rope images used here:
+## DSKY electroluminescent geometry
 
-- `Luminary099.bin` — Lunar Module Apollo 11 flight software; initial/default AGC mode.
-- `Comanche055.bin` — Command Module Apollo 11 flight software; retained for later selectable CM mode.
+The normalized EL segment outlines used by `dsky-geometry.js` and the native EL-only widget are derived from Ben Krasnow's `DSKY_EL_replica` project (`graphics/DSKY V2.svg`).
 
-The original Apollo AGC flight software is treated as public-domain material by the Virtual AGC/Apollo source preservation projects.
+- Project: https://github.com/benkrasnow/DSKY_EL_replica
+- Copyright (c) 2019 Ben Krasnow
+- License: MIT
 
-## DSKY geometry/reference artwork
+The copyright and MIT permission notice are retained in the source and packaged `THIRD_PARTY_NOTICES.txt`.
 
-Development used Apollo-derived DSKY artwork and VirtualAGC configuration data to correct the keyboard, annunciator, and display geometry. One useful open-source reference is `Apollo_DSKY_interface.svg` in the PyDevices examples, which in turn identifies the Wikimedia/NASA-derived DSKY interface artwork as its source.
+## Reference material
 
-The exact electroluminescent digit-segment outlines used by `dsky-geometry.js` and the native EL-only home-screen widget are normalized from Ben Krasnow's `DSKY_EL_replica` project, `graphics/DSKY V2.svg` (`EL_Segments`). That artwork/code is distributed under the MIT license; the copyright and permission notice are retained in `app/src/main/assets/dsky-geometry.js` and this application distribution.
+Historical Apollo documentation, Virtual AGC data, and CuriousMarc restoration material were used as technical/visual references. No CuriousMarc video frames are bundled.
 
-VirtualAGC `LM.ini` and Apollo Pinball source were used to verify the Apollo LM annunciator map, relay-word display format, and DSKY key codes.
+## NASA / U.S. Government non-endorsement
 
-## CuriousMarc restoration material
-
-CuriousMarc's videos of a genuine restored Apollo DSKY were used as visual reference for the physical display, key depth, electroluminescent appearance, panel construction, and general proportions. No video frames or copyrighted images are bundled in this repository.
+AGC DSKY Android is an independent historical simulator. It is not affiliated with, sponsored by, or endorsed by NASA or the United States Government. NASA names and mission references are used descriptively.
