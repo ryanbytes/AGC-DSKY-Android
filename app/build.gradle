@@ -14,8 +14,18 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 20036
+        versionCode 20037
         versionName '1.0'
+    }
+
+    flavorDimensions += 'distribution'
+    productFlavors {
+        play {
+            dimension 'distribution'
+        }
+        fire {
+            dimension 'distribution'
+        }
     }
 
     sourceSets {
