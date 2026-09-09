@@ -59,4 +59,4 @@ The app includes an offline **LEGAL / SOURCE** screen with the privacy policy, c
 
 ## Current commercial release
 
-**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The Home-mode build keeps version name `1.0` and uses Android version code `20038`.
+**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The Home-mode build keeps version name `1.0` and uses Android version code `20039`.
