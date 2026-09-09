@@ -175,14 +175,19 @@
         configureCameraZoom();
         updateReadout();
       } catch (err) {
-        // Only the request that still owns the current generation may tear down
-        // camera state. A stale rejection must not stop a newer reopened stream.
+        // Acquisition failure is not a lifecycle invalidation. Do not advance
+        // cameraGeneration here: doing so would make finally() treat a denied or
+        // broken camera as a pause/reopen event and immediately retry forever.
+        if (nextStream) stopStream(nextStream);
+        if (stream === nextStream) {
+          stream = null;
+          track = null;
+          const video = document.getElementById('sxt-video');
+          if (video && video.srcObject === nextStream) video.srcObject = null;
+        }
         if (generation === cameraGeneration) {
-          releaseCamera();
           if (status && view.classList.contains('open')) status.textContent = 'SXT · CAMERA DENIED';
           console.error('SXT camera', err);
-        } else if (nextStream) {
-          stopStream(nextStream);
         }
       }
     })();
