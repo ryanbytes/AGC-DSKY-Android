@@ -72,6 +72,7 @@ public final class AgcDreamService extends DreamService {
         } catch (Throwable error) {
             DebugReporter.appendWebError(this,
                     "DreamService startup failure\n" + error.toString());
+            destroyWebView();
             finish();
         }
     }
@@ -134,12 +135,15 @@ public final class AgcDreamService extends DreamService {
         }
     }
 
+    private void destroyWebView() {
+        WebView doomed = webView;
+        webView = null;
+        WebViewTeardown.destroy(doomed, "DreamBridge", "DebugBridge");
+    }
+
     @Override
     public void onDetachedFromWindow() {
-        if (webView != null) {
-            webView.destroy();
-            webView = null;
-        }
+        destroyWebView();
         super.onDetachedFromWindow();
     }
 }
