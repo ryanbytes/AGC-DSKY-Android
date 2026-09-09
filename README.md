@@ -52,6 +52,6 @@ The app includes an offline **LEGAL / SOURCE** screen with:
 
 See [`LICENSE`](LICENSE) and [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
-## Current commercial source snapshot
+## Current commercial release
 
-`release/0.38.3-commercial-1` is the fixed corresponding-source branch for the commercial-ready APK built from this release pass.
+**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch.
