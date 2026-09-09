@@ -3,7 +3,6 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
@@ -16,7 +15,9 @@
         android:label="AGC DSKY v1.0"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
-        <meta-data android:name="android.webkit.WebView.MetricsOptOut" android:value="true" />
+        <meta-data
+            android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
 
         <activity
             android:name=".SensorMainActivity"
@@ -34,30 +35,14 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".FireModeActivity"
-            android:exported="true"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:label="AGC DSKY Fire Mode">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
         <activity-alias
             android:name=".MainActivity"
             android:targetActivity=".SensorMainActivity"
             android:exported="false" />
 
-        <receiver android:name=".FireBootReceiver" android:enabled="false" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
-        <receiver android:name=".ElWidgetProvider" android:exported="false">
+        <receiver
+            android:name=".ElWidgetProvider"
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.TIME_SET" />
@@ -65,7 +50,9 @@
                 <action android:name="android.intent.action.DATE_CHANGED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/el_widget_info" />
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/el_widget_info" />
         </receiver>
 
         <service
