@@ -11,6 +11,9 @@ import android.widget.Toast;
 
 /** Toggle for the sideload-only Amazon Fire launcher redirect. */
 public final class FireModeActivity extends Activity {
+    public static final String ACTION_ENABLE = "org.apollo.agcdsky.FIRE_ENABLE";
+    public static final String ACTION_DISABLE = "org.apollo.agcdsky.FIRE_DISABLE";
+
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         if (!FireBootReceiver.isAmazonDevice()) {
@@ -20,7 +23,12 @@ public final class FireModeActivity extends Activity {
         }
 
         boolean enabled = FireBootReceiver.isEnabled(this);
-        boolean next = !enabled;
+        String action = getIntent() == null ? null : getIntent().getAction();
+        boolean next;
+        if (ACTION_ENABLE.equals(action)) next = true;
+        else if (ACTION_DISABLE.equals(action)) next = false;
+        else next = !enabled;
+
         getSharedPreferences(FireBootReceiver.PREFS, Context.MODE_PRIVATE)
                 .edit().putBoolean(FireBootReceiver.KEY_ENABLED, next).apply();
 
