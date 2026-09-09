@@ -37,20 +37,18 @@ bash tools/build-local.sh
 
 The build verifies the pinned webAGC revision and packaged `yaAGC.wasm` / `Comanche055.bin` identities before packaging.
 
-## Licensing and commercial distribution
+## Privacy, licensing, and distribution
 
 The Android/frontend project is **GNU GPL version 2**. GPLv2 permits selling copies, but recipients retain the GPL rights to source, modification, and redistribution.
 
-Commercial binary releases should publish the complete corresponding source snapshot for that binary and include the GPL and third-party notices. See [`docs/COMMERCIAL_RELEASE.md`](docs/COMMERCIAL_RELEASE.md).
+- [Privacy policy](PRIVACY.md)
+- [GPLv2 license](LICENSE)
+- [Third-party notices](THIRD_PARTY.md)
+- [Commercial release checklist](docs/COMMERCIAL_RELEASE.md)
+- [Google Play listing copy](docs/PLAY_STORE_LISTING.md)
+- [Google Play submission checklist](docs/PLAY_STORE_SUBMISSION.md)
 
-The app includes an offline **LEGAL / SOURCE** screen with:
-
-- the public corresponding-source location;
-- the complete GPLv2 text;
-- third-party notices and the Ben Krasnow MIT notice; and
-- a NASA/U.S. Government non-endorsement statement.
-
-See [`LICENSE`](LICENSE) and [`THIRD_PARTY.md`](THIRD_PARTY.md).
+The app includes an offline **LEGAL / SOURCE** screen with the privacy policy, corresponding-source location, complete GPLv2 text, third-party notices, and NASA/U.S. Government non-endorsement statement.
 
 ## Current commercial release
 
