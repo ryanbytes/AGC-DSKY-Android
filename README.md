@@ -24,11 +24,12 @@ The sextant screenshot shows the real app UI with a static demonstration pointin
 - Android DreamService clock/screensaver.
 - Resizable **EL-only** home-screen widget.
 - Optional Android **Home app** mode for dedicated boot-to-DSKY phones/tablets.
+- Optional **Amazon Fire Mode** boot relaunch helper, disabled by default.
 - No Android `INTERNET` permission in the packaged app.
 
-## Dedicated Home mode
+## Dedicated Home / Fire modes
 
-AGC DSKY can be selected manually as Android's default **Home app**. When selected, Android launches it as Home after boot and when Home is pressed. Installing the app does not replace the normal launcher automatically.
+On standard Android, AGC DSKY can be selected manually as the default **Home app**. Fire OS also gets a separate **AGC DSKY Fire Mode** launcher entry that toggles an Amazon-only boot receiver on or off.
 
 See [docs/HOME_MODE.md](docs/HOME_MODE.md).
 
@@ -59,4 +60,4 @@ The app includes an offline **LEGAL / SOURCE** screen with the privacy policy, c
 
 ## Current commercial release
 
-**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The Home-mode build keeps version name `1.0` and uses Android version code `20035`.
+**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The current Home + Fire build keeps version name `1.0` and uses Android version code `20036`.
