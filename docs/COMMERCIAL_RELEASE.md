@@ -2,7 +2,7 @@
 
 This project can be sold under GNU GPL version 2. A price may be charged for the APK or for distribution/support, but recipients keep the GPL rights to copy, modify, and redistribute the GPL-covered software.
 
-For the current commercial-ready line, keep `release/0.38.3-commercial-1` fixed as the corresponding-source snapshot for the APK built from that source state.
+For **version 1.0**, keep `release/1.0-commercial-1` fixed as the corresponding-source snapshot for the distributed APK.
 
 ## Before distributing an APK
 
@@ -34,6 +34,7 @@ Suggested disclosure:
 ## Source and notices
 
 - Repository: https://github.com/ryanbytes/AGC-DSKY-Android
+- Version 1.0 source snapshot: `release/1.0-commercial-1`
 - GPLv2: `LICENSE`
 - Third-party notices: `THIRD_PARTY.md`
 - Packaged GPL text: `app/src/main/assets/LICENSE-GPL-2.0.txt`
