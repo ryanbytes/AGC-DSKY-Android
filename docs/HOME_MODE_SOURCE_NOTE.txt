@@ -1,0 +1,1 @@
+Home mode implementation is intentionally manifest-only: SensorMainActivity remains the normal launcher activity and also advertises ACTION_MAIN + CATEGORY_HOME + CATEGORY_DEFAULT so Android can launch it as Home only after the user selects AGC DSKY as the default Home app.
