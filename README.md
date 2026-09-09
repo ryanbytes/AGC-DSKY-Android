@@ -23,13 +23,13 @@ The sextant screenshot shows the real app UI with a static demonstration pointin
 - Synthetic relay-click audio.
 - Android DreamService clock/screensaver.
 - Resizable **EL-only** home-screen widget.
-- Optional Android **Home app** mode for dedicated boot-to-DSKY phones/tablets.
-- Optional **Amazon Fire Mode** boot relaunch helper, disabled by default.
+- Optional Android **Home app** mode for dedicated phones/tablets.
+- Sideload-only Amazon Fire mode using an opt-in accessibility redirect when Fire OS refuses normal Home replacement.
 - No Android `INTERNET` permission in the packaged app.
 
 ## Dedicated Home / Fire modes
 
-On standard Android, AGC DSKY can be selected manually as the default **Home app**. Fire OS also gets a separate **AGC DSKY Fire Mode** launcher entry that toggles an Amazon-only boot receiver on or off.
+Standard Android Home mode is part of both builds. The Fire-specific accessibility redirect is isolated to the `fire` product flavor and is not packaged in the Play build.
 
 See [docs/HOME_MODE.md](docs/HOME_MODE.md).
 
@@ -40,8 +40,9 @@ Requirements: JDK 17, Node.js 18+, Android SDK 37 / Build Tools 36, and the pinn
 ```bash
 git clone --recurse-submodules https://github.com/ryanbytes/AGC-DSKY-Android.git
 cd AGC-DSKY-Android
-bash tools/build-local.sh
 ```
+
+Build the Play variant with `:app:assemblePlayDebug` / `:app:bundlePlayRelease` and the sideload Fire variant with `:app:assembleFireDebug` / `:app:assembleFireRelease`.
 
 The build verifies the pinned webAGC revision and packaged `yaAGC.wasm` / `Comanche055.bin` identities before packaging.
 
@@ -60,4 +61,4 @@ The app includes an offline **LEGAL / SOURCE** screen with the privacy policy, c
 
 ## Current commercial release
 
-**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The current Home + Fire build keeps version name `1.0` and uses Android version code `20036`.
+**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The current build keeps version name `1.0` and uses Android version code `20037`.
