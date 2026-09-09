@@ -28,10 +28,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
-        <!-- The existing widget targets MainActivity. Keep that component name as
-             an alias so widget taps route into the sensor-enabled launcher. -->
         <activity-alias
             android:name=".MainActivity"
             android:targetActivity=".SensorMainActivity"

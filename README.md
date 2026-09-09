@@ -23,7 +23,14 @@ The sextant screenshot shows the real app UI with a static demonstration pointin
 - Synthetic relay-click audio.
 - Android DreamService clock/screensaver.
 - Resizable **EL-only** home-screen widget.
+- Optional Android **Home app** mode for dedicated boot-to-DSKY phones/tablets.
 - No Android `INTERNET` permission in the packaged app.
+
+## Dedicated Home mode
+
+AGC DSKY can be selected manually as Android's default **Home app**. When selected, Android launches it as Home after boot and when Home is pressed. Installing the app does not replace the normal launcher automatically.
+
+See [docs/HOME_MODE.md](docs/HOME_MODE.md).
 
 ## Build
 
@@ -52,4 +59,4 @@ The app includes an offline **LEGAL / SOURCE** screen with the privacy policy, c
 
 ## Current commercial release
 
-**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch.
+**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The Home-mode build keeps version name `1.0` and uses Android version code `20035`.
