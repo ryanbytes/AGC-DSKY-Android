@@ -113,9 +113,18 @@ public final class AgcDreamService extends DreamService {
         WebViewTeardown.destroy(doomed, "DreamBridge", "DebugBridge");
     }
 
-    @Override public void onDetachedFromWindow() {
+    private void cleanupWebView() {
         webViewHandler.removeCallbacksAndMessages(null);
         destroyWebView();
+    }
+
+    @Override public void onDetachedFromWindow() {
+        cleanupWebView();
         super.onDetachedFromWindow();
+    }
+
+    @Override public void onDestroy() {
+        cleanupWebView();
+        super.onDestroy();
     }
 }
