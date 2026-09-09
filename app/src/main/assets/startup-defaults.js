@@ -118,31 +118,7 @@
     });
   })();
 
-  // WebView may briefly change page visibility while Android is presenting the
-  // runtime camera permission UI. optics.js can therefore enter getUserMedia()
-  // twice before its first request has populated the stream variable. Coalesce
-  // simultaneous native camera requests so Chromium never has to arbitrate two
-  // camera opens from the same page.
-  (() => {
-    const media = navigator.mediaDevices;
-    if (!media || typeof media.getUserMedia !== 'function' || media.__agcSingleFlightCamera) return;
-    const nativeGetUserMedia = media.getUserMedia.bind(media);
-    let inFlight = null;
-    try {
-      media.getUserMedia = constraints => {
-        if (inFlight) return inFlight;
-        const request = Promise.resolve().then(() => nativeGetUserMedia(constraints));
-        inFlight = request.finally(() => {
-          if (inFlight) inFlight = null;
-        });
-        return inFlight;
-      };
-      Object.defineProperty(media, '__agcSingleFlightCamera', {
-        value: true,
-        enumerable: false
-      });
-    } catch (_) {}
-  })();
+  // Camera acquisition lifecycle is owned by optics.js.
 
   // The prototype debug reporter intentionally records console.error. Camera
   // permission denial and WebView lifecycle AbortError are normal UI outcomes,
