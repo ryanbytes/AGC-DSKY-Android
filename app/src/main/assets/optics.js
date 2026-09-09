@@ -98,7 +98,7 @@
     document.getElementById('sxt-calibrate').addEventListener('click', calibratePointing);
     document.getElementById('sxt-cal-clear').addEventListener('click', clearPointingCalibration);
     document.getElementById('sxt-reticle-bright').addEventListener('input', e => {
-      wrap.style.setProperty('--reticle-opacity', String(Math.max(.05, Number(e.target.value)/100));
+      wrap.style.setProperty('--reticle-opacity', String(Math.max(.05, Number(e.target.value)/100)));
     });
   }
 
