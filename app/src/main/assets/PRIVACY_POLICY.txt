@@ -1,0 +1,45 @@
+PRIVACY POLICY — AGC DSKY ANDROID
+Effective date: September 9, 2026
+
+AGC DSKY Android is an independent historical Apollo Guidance Computer / DSKY simulator.
+
+DATA ACCESSED
+- Camera: used for the live sextant view.
+- Approximate or precise location: used for local astronomical calculations such as horizon and navigation-star assistance.
+- Motion and orientation sensor data: used for simulated spacecraft/optics input paths.
+- App state and preferences: simulator state, settings, and related configuration may be stored locally so the app can restore its state.
+
+COLLECTION, TRANSMISSION, AND SHARING
+AGC DSKY Android does not declare the Android INTERNET permission. The app does not intentionally transmit camera imagery, location, sensor readings, simulator state, or other user data to the developer or to third parties.
+
+The app contains no advertising SDK, analytics SDK, user account system, cloud synchronization service, or developer-operated backend. The developer does not sell or share personal data obtained through the app.
+
+For Google Play Data safety purposes, information that is accessed and processed only on the device and is not transmitted off the device is not treated as collected by the developer.
+
+DATA SECURITY
+Sensitive inputs are processed locally within the Android application sandbox. Because the app has no Android Internet permission, it does not provide a direct network path for transmitting those inputs.
+
+RETENTION AND DELETION
+Camera, location, and motion data used by live features are processed locally. App preferences and saved simulator state may remain in the app's private local storage until overwritten, cleared through Android app-storage controls, or removed when the app is uninstalled.
+
+The app does not create user accounts and the developer does not maintain a server-side user-data record to delete.
+
+PERMISSIONS AND USER CONTROL
+Camera and location permissions can be denied or revoked through Android system settings. Users can delete local app data through Android App info > Storage > Clear storage/data or by uninstalling the app.
+
+CHILDREN
+The app is a general historical/technical simulator and is not specifically directed to children. It does not knowingly collect personal information from children or other users.
+
+THIRD PARTIES
+The app bundles open-source and historical simulation components described in the project's third-party notices. These components operate locally in this Android build. No third-party advertising, analytics, or cloud-data service is integrated into the app.
+
+PRIVACY INQUIRIES
+https://github.com/ryanbytes/AGC-DSKY-Android/issues
+
+PUBLIC PRIVACY POLICY
+https://github.com/ryanbytes/AGC-DSKY-Android/blob/release/1.0-commercial-1/PRIVACY.md
+
+Project repository:
+https://github.com/ryanbytes/AGC-DSKY-Android
+
+AGC DSKY Android is not affiliated with, sponsored by, or endorsed by NASA or the United States Government.
