@@ -270,14 +270,24 @@ public final class MainActivity extends Activity {
         super.onSaveInstanceState(outState);
     }
 
+    private void destroyWebView() {
+        WebView doomed = webView;
+        webView = null;
+        WebViewTeardown.destroy(doomed, "DebugBridge");
+    }
+
     @Override
     protected void onDestroy() {
+        pendingWebViewState = null;
+        if (pendingGeoCallback != null) {
+            try {
+                pendingGeoCallback.invoke(pendingGeoOrigin, false, false);
+            } catch (RuntimeException ignored) {
+            }
+        }
         pendingGeoOrigin = null;
         pendingGeoCallback = null;
-        if (webView != null) {
-            webView.destroy();
-            webView = null;
-        }
+        destroyWebView();
         super.onDestroy();
     }
 }
