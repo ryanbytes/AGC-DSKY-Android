@@ -118,6 +118,65 @@
     });
   })();
 
+  // WebView may briefly change page visibility while Android is presenting the
+  // runtime camera permission UI. optics.js can therefore enter getUserMedia()
+  // twice before its first request has populated the stream variable. Coalesce
+  // simultaneous native camera requests so Chromium never has to arbitrate two
+  // camera opens from the same page.
+  (() => {
+    const media = navigator.mediaDevices;
+    if (!media || typeof media.getUserMedia !== 'function' || media.__agcSingleFlightCamera) return;
+    const nativeGetUserMedia = media.getUserMedia.bind(media);
+    let inFlight = null;
+    try {
+      media.getUserMedia = constraints => {
+        if (inFlight) return inFlight;
+        const request = Promise.resolve().then(() => nativeGetUserMedia(constraints));
+        inFlight = request.finally(() => {
+          if (inFlight) inFlight = null;
+        });
+        return inFlight;
+      };
+      Object.defineProperty(media, '__agcSingleFlightCamera', {
+        value: true,
+        enumerable: false
+      });
+    } catch (_) {}
+  })();
+
+  // The prototype debug reporter intentionally records console.error. Camera
+  // permission denial and WebView lifecycle AbortError are normal UI outcomes,
+  // not application failures. Downgrade those specific SXT cases to warnings;
+  // for real camera failures preserve console.error but stringify the DOMException
+  // so the report contains its useful name/message instead of [object DOMException].
+  (() => {
+    if (!window.console || typeof console.error !== 'function' || console.__agcCameraErrorsClassified) return;
+    const nativeError = console.error.bind(console);
+    const nativeWarn = typeof console.warn === 'function'
+      ? console.warn.bind(console) : nativeError;
+    console.error = (...args) => {
+      if (args[0] === 'SXT camera' && args[1] && typeof args[1] === 'object') {
+        const err = args[1];
+        const name = err.name ? String(err.name) : 'CameraError';
+        const message = err.message ? String(err.message) : '';
+        const detail = message ? `${name}: ${message}` : name;
+        if (name === 'AbortError' || name === 'NotAllowedError' || name === 'SecurityError') {
+          nativeWarn('SXT camera', detail);
+          return;
+        }
+        nativeError('SXT camera', detail);
+        return;
+      }
+      nativeError(...args);
+    };
+    try {
+      Object.defineProperty(console, '__agcCameraErrorsClassified', {
+        value: true,
+        enumerable: false
+      });
+    } catch (_) {}
+  })();
+
   const timeouts = new Set();
   const intervals = new Set();
   const animationFrames = new Set();
