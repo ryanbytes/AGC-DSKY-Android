@@ -19,6 +19,7 @@
   const nativeCancelAnimationFrame = typeof window.cancelAnimationFrame === 'function'
     ? window.cancelAnimationFrame.bind(window) : null;
 
+
   // Track every Web Audio context created by the page. app.js normally creates
   // only one relay-click context, but closing all of them here guarantees native
   // audio resources are released immediately during WebView teardown.
