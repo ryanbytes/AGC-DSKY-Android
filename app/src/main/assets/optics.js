@@ -24,6 +24,8 @@
 
   let stream = null;
   let track = null;
+  let cameraAcquire = null;
+  let cameraGeneration = 0;
   let pending = [0, 0]; // shaft, trunnion counts
   let fraction = [0, 0];
   let lastPhoneAngles = null;
@@ -96,50 +98,108 @@
     document.getElementById('sxt-calibrate').addEventListener('click', calibratePointing);
     document.getElementById('sxt-cal-clear').addEventListener('click', clearPointingCalibration);
     document.getElementById('sxt-reticle-bright').addEventListener('input', e => {
-      wrap.style.setProperty('--reticle-opacity', String(Math.max(.05, Number(e.target.value)/100)));
+      wrap.style.setProperty('--reticle-opacity', String(Math.max(.05, Number(e.target.value)/100));
     });
   }
 
+  function stopStream(mediaStream){
+    if (!mediaStream || typeof mediaStream.getTracks !== 'function') return;
+    for (const t of mediaStream.getTracks()) {
+      try { t.stop(); } catch (_) {}
+    }
+  }
+
   function releaseCamera(){
-    if (stream) for (const t of stream.getTracks()) t.stop();
+    // Invalidate any unresolved acquireCamera() continuation. The underlying
+    // getUserMedia promise cannot be cancelled, so a stale result is stopped
+    // when it eventually resolves instead of being attached after close/pause.
+    cameraGeneration++;
+    stopStream(stream);
     stream = null;
     track = null;
     const video = document.getElementById('sxt-video');
     if (video) video.srcObject = null;
   }
 
-  async function acquireCamera(){
+  function acquireCamera(){
     const view = document.getElementById('sxt-view');
-    if (!view || !view.classList.contains('open') || document.hidden || stream) return;
+    if (!view || !view.classList.contains('open') || document.hidden || stream) return Promise.resolve();
+    // A permission/visibility transition can re-enter this path while the first
+    // getUserMedia call is unresolved. Return the same local request so only one
+    // continuation can attach/configure the stream.
+    if (cameraAcquire) return cameraAcquire;
     const status = document.getElementById('sxt-status');
     if (status) status.textContent = 'SXT · REQUESTING CAMERA';
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       if (status) status.textContent = 'SXT · CAMERA UNAVAILABLE';
-      return;
+      return Promise.resolve();
     }
-    try {
-      const nextStream = await navigator.mediaDevices.getUserMedia({
-        audio:false,
-        video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}
-      });
-      if (document.hidden || !view.classList.contains('open')) {
-        for (const t of nextStream.getTracks()) t.stop();
-        return;
+
+    const generation = cameraGeneration;
+    const request = (async () => {
+      let nextStream = null;
+      try {
+        nextStream = await navigator.mediaDevices.getUserMedia({
+          audio:false,
+          video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}
+        });
+        if (generation !== cameraGeneration || document.hidden || !view.classList.contains('open')) {
+          stopStream(nextStream);
+          return;
+        }
+
+        const video = document.getElementById('sxt-video');
+        if (!video) {
+          stopStream(nextStream);
+          return;
+        }
+        stream = nextStream;
+        video.srcObject = nextStream;
+        await video.play();
+
+        // close(), visibility pause, or another lifecycle invalidation may have
+        // happened while play() was awaiting Chromium. Never resurrect that stream.
+        if (generation !== cameraGeneration || document.hidden
+            || !view.classList.contains('open') || stream !== nextStream) {
+          stopStream(nextStream);
+          if (stream === nextStream) {
+            stream = null;
+            track = null;
+            video.srcObject = null;
+          }
+          return;
+        }
+
+        track = nextStream.getVideoTracks()[0] || null;
+        if (status) status.textContent = 'SXT · MOVE PHONE TO AIM · 1.8+';
+        configureCameraZoom();
+        updateReadout();
+      } catch (err) {
+        // Only the request that still owns the current generation may tear down
+        // camera state. A stale rejection must not stop a newer reopened stream.
+        if (generation === cameraGeneration) {
+          releaseCamera();
+          if (status && view.classList.contains('open')) status.textContent = 'SXT · CAMERA DENIED';
+          console.error('SXT camera', err);
+        } else if (nextStream) {
+          stopStream(nextStream);
+        }
       }
-      stream = nextStream;
-      const video = document.getElementById('sxt-video');
-      if (!video) { releaseCamera(); return; }
-      video.srcObject = stream;
-      await video.play();
-      track = stream.getVideoTracks()[0] || null;
-      if (status) status.textContent = 'SXT · MOVE PHONE TO AIM · 1.8+';
-      configureCameraZoom();
-      updateReadout();
-    } catch (err) {
-      releaseCamera();
-      if (status && view.classList.contains('open')) status.textContent = 'SXT · CAMERA DENIED';
-      console.error('SXT camera', err);
-    }
+    })();
+
+    cameraAcquire = request;
+    request.finally(() => {
+      if (cameraAcquire === request) cameraAcquire = null;
+      const currentView = document.getElementById('sxt-view');
+      // If close/pause invalidated the request and the user has already returned
+      // to an open/visible SXT, start one fresh acquisition after the stale one
+      // fully settles. This avoids overlapping native opens and stale setup.
+      if (generation !== cameraGeneration && !stream && !document.hidden
+          && currentView && currentView.classList.contains('open')) {
+        queueMicrotask(() => acquireCamera());
+      }
+    });
+    return request;
   }
 
   async function open(){
@@ -425,5 +485,5 @@
 
   api.openSextant = open;
   api.closeSextant = close;
-  api.sextantStatus = () => ({open:document.getElementById('sxt-view')?.classList.contains('open')||false,pending:{shaft:pending[0],trunnion:pending[1]},camera:!!stream,aimScale,finderEnabled,location:skyLocation,target:selectedStar?{code:selectedStar.code,name:selectedStar.name,mag:selectedStar.mag}:null,pair:selectedPair?{a:selectedPair.a.star.code,b:selectedPair.b.star.code,sep:selectedPair.sep,index:pairIndex,count:pairCandidates.length}:null,pointingCalibration:typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null,health:{writeRejected:opticsWriteRejected,lastAccept:lastOpticsAccept}});
+  api.sextantStatus = () => ({open:document.getElementById('sxt-view')?.classList.contains('open')||false,pending:{shaft:pending[0],trunnion:pending[1]},camera:!!stream,cameraPending:!!cameraAcquire,aimScale,finderEnabled,location:skyLocation,target:selectedStar?{code:selectedStar.code,name:selectedStar.name,mag:selectedStar.mag}:null,pair:selectedPair?{a:selectedPair.a.star.code,b:selectedPair.b.star.code,sep:selectedPair.sep,index:pairIndex,count:pairCandidates.length}:null,pointingCalibration:typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null,health:{writeRejected:opticsWriteRejected,lastAccept:lastOpticsAccept}});
 })();
