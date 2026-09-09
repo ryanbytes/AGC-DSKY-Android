@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const SOURCE_REPO = 'https://github.com/ryanbytes/AGC-DSKY-Android';
-  const SOURCE_SNAPSHOT = 'release/0.38.3-commercial-1';
+  const SOURCE_SNAPSHOT = 'release/1.0-commercial-1';
   let panel = null;
   let loaded = false;
 
@@ -15,7 +15,7 @@
       <section id="legal-panel" role="dialog" aria-modal="true" aria-label="Legal and source information">
         <div class="legal-head"><strong>LEGAL / SOURCE</strong><button id="legal-close" type="button">CLOSE</button></div>
         <div class="legal-body">
-          <h2>AGC DSKY Android</h2>
+          <h2>AGC DSKY Android 1.0</h2>
           <p class="legal-note">Independent historical simulator. Not affiliated with, sponsored by, or endorsed by NASA or the United States Government.</p>
           <h3>Corresponding source</h3>
           <p>This binary is distributed under GNU GPL version 2. The public corresponding-source repository is:</p>
