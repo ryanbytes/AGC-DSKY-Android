@@ -15,6 +15,27 @@
     else if (channel === 0o163) decodeChannel163(value);
   }
 
+  function restoreDreamClone() {
+    // Clone the most recent interactive AGC snapshot into this DreamService's
+    // in-memory core. Never call the normal restore helper here: on malformed
+    // data that helper deletes the user's saved snapshot. A dream is read-only
+    // with respect to the interactive app's state.
+    try {
+      const raw = localStorage.getItem('agcSnapshotV1');
+      if (!raw) return false;
+      const payload = JSON.parse(raw);
+      if (!payload || payload.schema !== 1 || payload.mission !== selectedMission || !payload.core) {
+        return false;
+      }
+      agcCore.importSnapshot(payload.core);
+      applySnapshotUi(payload.ui);
+      return true;
+    } catch (error) {
+      console.warn('Dream AGC snapshot clone ignored', String(error && error.message || error));
+      return false;
+    }
+  }
+
   function failDreamAgc(error) {
     console.error('Dream AGC core stopped', error);
     try { if (agcCore) agcCore.stop(); } catch (_) {}
@@ -33,9 +54,8 @@
 
     try {
       const selected = missionSpec();
-      // A dream always starts a fresh core. It intentionally does not call the
-      // interactive snapshot restore/save helpers, so the screensaver cannot
-      // alter the user's normal AGC session.
+      // The dream owns a separate core. It may clone the last saved interactive
+      // state, but it never saves back, changes runMode, or alters the live app.
       if (agcCore) agcCore.stop();
       agcCore = new AgcCore({
         onChannelUpdate: routeDreamChannel,
@@ -43,9 +63,11 @@
       });
       await agcCore.load({ wasmUrl: 'yaAGC.wasm', ropeUrl: selected.rope });
       agcLoadedMission = selectedMission;
+      const restored = restoreDreamClone();
       mode = 'dream-agc';
+      if (restored) renderAgcSnapshot();
       const status = $('mode');
-      if (status) status.textContent = `${selected.label} · DREAM · ${agcCore.version()}`;
+      if (status) status.textContent = `${selected.label} · DREAM · ${agcCore.version()}${restored ? ' · STATE CLONED' : ''}`;
       if (!document.hidden) agcCore.start(1);
       else stoppedForVisibility = true;
     } catch (error) {
