@@ -1,0 +1,76 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		010000000000000000000001 = {isa = PBXBuildFile; fileRef = 020000000000000000000001; };
+		010000000000000000000002 = {isa = PBXBuildFile; fileRef = 020000000000000000000002; };
+		010000000000000000000003 = {isa = PBXBuildFile; fileRef = 020000000000000000000003; };
+		010000000000000000000011 = {isa = PBXBuildFile; fileRef = 020000000000000000000001; };
+		010000000000000000000012 = {isa = PBXBuildFile; fileRef = 020000000000000000000002; };
+		010000000000000000000013 = {isa = PBXBuildFile; fileRef = 020000000000000000000003; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		020000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AGCDSKYApp.swift; sourceTree = "<group>"; };
+		020000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AGCWebView.swift; sourceTree = "<group>"; };
+		020000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AGCAssetSchemeHandler.swift; sourceTree = "<group>"; };
+		020000000000000000000010 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AGC DSKY.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		020000000000000000000020 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AGC DSKY.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		030000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		030000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		040000000000000000000001 = {isa = PBXGroup; children = (040000000000000000000002, 040000000000000000000003, ); sourceTree = "<group>"; };
+		040000000000000000000002 = {isa = PBXGroup; children = (020000000000000000000001, 020000000000000000000002, 020000000000000000000003, ); path = Sources; sourceTree = "<group>"; };
+		040000000000000000000003 = {isa = PBXGroup; children = (020000000000000000000010, 020000000000000000000020, ); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		050000000000000000000001 = {isa = PBXNativeTarget; buildConfigurationList = 0A0000000000000000000001; buildPhases = (060000000000000000000001, 030000000000000000000001, 070000000000000000000001, 080000000000000000000001, ); buildRules = (); dependencies = (); name = AGCDSKYiOS; productName = "AGC DSKY"; productReference = 020000000000000000000010; productType = "com.apple.product-type.application"; };
+		050000000000000000000002 = {isa = PBXNativeTarget; buildConfigurationList = 0A0000000000000000000002; buildPhases = (060000000000000000000002, 030000000000000000000002, 070000000000000000000002, 080000000000000000000002, ); buildRules = (); dependencies = (); name = AGCDSKYmacOS; productName = "AGC DSKY"; productReference = 020000000000000000000020; productType = "com.apple.product-type.application"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		090000000000000000000001 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2600; LastUpgradeCheck = 2600; TargetAttributes = {050000000000000000000001 = {CreatedOnToolsVersion = 26.0; }; 050000000000000000000002 = {CreatedOnToolsVersion = 26.0; }; }; }; buildConfigurationList = 0A0000000000000000000000; compatibilityVersion = "Xcode 15.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base, ); mainGroup = 040000000000000000000001; productRefGroup = 040000000000000000000003; projectDirPath = ""; projectRoot = ""; targets = (050000000000000000000001, 050000000000000000000002, ); };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		070000000000000000000001 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		070000000000000000000002 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		080000000000000000000001 = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputFileListPaths = (); inputPaths = (); name = "Stage shared AGC web assets"; outputFileListPaths = (); outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/bash; shellScript = "\"$SRCROOT/tools/stage-web-assets.sh\"\n"; };
+		080000000000000000000002 = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputFileListPaths = (); inputPaths = (); name = "Stage shared AGC web assets"; outputFileListPaths = (); outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/bash; shellScript = "\"$SRCROOT/tools/stage-web-assets.sh\"\n"; };
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		060000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (010000000000000000000001, 010000000000000000000002, 010000000000000000000003, ); runOnlyForDeploymentPostprocessing = 0; };
+		060000000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (010000000000000000000011, 010000000000000000000012, 010000000000000000000013, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0B0000000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; GCC_C_LANGUAGE_STANDARD = gnu17; GCC_OPTIMIZATION_LEVEL = 0; ONLY_ACTIVE_ARCH = YES; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_VERSION = 5.0; }; name = Debug; };
+		0B0000000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; GCC_C_LANGUAGE_STANDARD = gnu17; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_VERSION = 5.0; }; name = Release; };
+		0B0000000000000000000011 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_USER_SCRIPT_SANDBOXING = NO; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "AGC DSKY"; INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is used by the Apollo sextant view."; INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used for sky pointing and magnetic declination in the sextant view."; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UIRequiresFullScreen = NO; INFOPLIST_KEY_UIStatusBarHidden = YES; INFOPLIST_KEY_UIViewControllerBasedStatusBarAppearance = NO; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; IPHONEOS_DEPLOYMENT_TARGET = 16.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = org.apollo.agcdsky.ios; PRODUCT_NAME = "AGC DSKY"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_STRICT_CONCURRENCY = minimal; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		0B0000000000000000000012 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_USER_SCRIPT_SANDBOXING = NO; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "AGC DSKY"; INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is used by the Apollo sextant view."; INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used for sky pointing and magnetic declination in the sextant view."; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UIRequiresFullScreen = NO; INFOPLIST_KEY_UIStatusBarHidden = YES; INFOPLIST_KEY_UIViewControllerBasedStatusBarAppearance = NO; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; IPHONEOS_DEPLOYMENT_TARGET = 16.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = org.apollo.agcdsky.ios; PRODUCT_NAME = "AGC DSKY"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_STRICT_CONCURRENCY = minimal; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		0B0000000000000000000021 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; COMBINE_HIDPI_IMAGES = YES; CURRENT_PROJECT_VERSION = 1; ENABLE_HARDENED_RUNTIME = NO; ENABLE_USER_SCRIPT_SANDBOXING = NO; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "AGC DSKY"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education"; INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is used by the Apollo sextant view."; INFOPLIST_KEY_NSLocationUsageDescription = "Location is used for sky pointing and magnetic declination in the sextant view."; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; MACOSX_DEPLOYMENT_TARGET = 13.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = org.apollo.agcdsky.macos; PRODUCT_NAME = "AGC DSKY"; SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_STRICT_CONCURRENCY = minimal; }; name = Debug; };
+		0B0000000000000000000022 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; COMBINE_HIDPI_IMAGES = YES; CURRENT_PROJECT_VERSION = 1; ENABLE_HARDENED_RUNTIME = NO; ENABLE_USER_SCRIPT_SANDBOXING = NO; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "AGC DSKY"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education"; INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is used by the Apollo sextant view."; INFOPLIST_KEY_NSLocationUsageDescription = "Location is used for sky pointing and magnetic declination in the sextant view."; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; MACOSX_DEPLOYMENT_TARGET = 13.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = org.apollo.agcdsky.macos; PRODUCT_NAME = "AGC DSKY"; SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_STRICT_CONCURRENCY = minimal; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0A0000000000000000000000 = {isa = XCConfigurationList; buildConfigurations = (0B0000000000000000000001, 0B0000000000000000000002, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		0A0000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (0B0000000000000000000011, 0B0000000000000000000012, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		0A0000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (0B0000000000000000000021, 0B0000000000000000000022, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = 090000000000000000000001;
+}
