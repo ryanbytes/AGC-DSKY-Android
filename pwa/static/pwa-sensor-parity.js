@@ -124,19 +124,26 @@
   async function requestSensorPermissions() {
     if (permissionAttempted) return;
     permissionAttempted = true;
-    let orientationAllowed = true;
-    let motionAllowed = true;
 
+    // On iOS both permission calls must be initiated while the same user
+    // activation is still live. Start both requests before awaiting either one.
+    let orientationRequest = Promise.resolve('granted');
+    let motionRequest = Promise.resolve('granted');
     try {
       const Orientation = window.DeviceOrientationEvent;
-      if (Orientation && typeof Orientation.requestPermission === 'function') orientationAllowed = (await Orientation.requestPermission()) === 'granted';
-    } catch (_) { orientationAllowed = false; }
-
+      if (Orientation && typeof Orientation.requestPermission === 'function') orientationRequest = Orientation.requestPermission();
+    } catch (_) { orientationRequest = Promise.resolve('denied'); }
     try {
       const Motion = window.DeviceMotionEvent;
-      if (Motion && typeof Motion.requestPermission === 'function') motionAllowed = (await Motion.requestPermission()) === 'granted';
-    } catch (_) { motionAllowed = false; }
+      if (Motion && typeof Motion.requestPermission === 'function') motionRequest = Motion.requestPermission();
+    } catch (_) { motionRequest = Promise.resolve('denied'); }
 
+    const [orientationState, motionState] = await Promise.all([
+      Promise.resolve(orientationRequest).catch(() => 'denied'),
+      Promise.resolve(motionRequest).catch(() => 'denied')
+    ]);
+    const orientationAllowed = orientationState === 'granted';
+    const motionAllowed = motionState === 'granted';
     status.orientation = orientationAllowed ? 'enabled' : 'denied';
     status.motion = motionAllowed ? 'enabled' : 'denied';
     status.absoluteOrientation = orientationAllowed ? 'enabled' : 'denied';
@@ -148,6 +155,7 @@
     try {
       wakeLock = await navigator.wakeLock.request('screen');
       status.wakeLock = 'active';
+      delete status.wakeLockError;
       wakeLock.addEventListener('release', () => {
         wakeLock = null;
         status.wakeLock = 'released';
@@ -180,6 +188,9 @@
   }, {passive:true});
 
   window.addEventListener('pageshow', acquireWakeLock, {passive:true});
+  api.requestSensorPermissions = requestSensorPermissions;
+  api.acquireWakeLock = acquireWakeLock;
+  api.parityStatus = () => ({...status});
   acquireWakeLock();
   publish();
 })();
