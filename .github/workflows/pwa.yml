@@ -1,0 +1,70 @@
+name: PWA build
+
+on:
+  push:
+    branches: [main, apple-port]
+    paths:
+      - 'pwa/**'
+      - 'app/src/main/assets/**'
+      - 'vendor/webAGC'
+      - 'apple/tools/verify-pinned-assets.sh'
+      - '.github/workflows/pwa.yml'
+  pull_request:
+    paths:
+      - 'pwa/**'
+      - 'app/src/main/assets/**'
+      - 'vendor/webAGC'
+      - 'apple/tools/verify-pinned-assets.sh'
+      - '.github/workflows/pwa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build PWA site
+        run: pwa/tools/build-site.sh "$RUNNER_TEMP/agc-dsky-pwa"
+
+      - name: PWA smoke test
+        run: node pwa/tools/pwa-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
+
+      - name: Shared AGC smoke tests
+        run: |
+          node tools/frontend-smoke.js
+          node tools/agc-core-smoke.js
+          node tools/wasm-runtime-smoke.js
+
+      - name: Upload PWA bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: AGC-DSKY-PWA
+          path: ${{ runner.temp }}/agc-dsky-pwa
+          include-hidden-files: true
+          if-no-files-found: error
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/agc-dsky-pwa
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
