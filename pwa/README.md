@@ -8,6 +8,8 @@ The PWA is the no-developer-account iPhone/iPad distribution path and the instal
 git submodule update --init --recursive
 pwa/tools/build-site.sh
 node pwa/tools/pwa-smoke.js pwa/dist
+node pwa/tools/pwa-sensor-parity-smoke.js
+node pwa/tools/pwa-auto-dim-smoke.js
 node pwa/tools/pwa-parity-smoke.js pwa/dist
 ```
 
@@ -21,7 +23,7 @@ The generated site is in `pwa/dist/` and can be served by any HTTPS static host.
 2. Let the first page load complete so the service worker can pre-cache the AGC runtime.
 3. Use **Share → Add to Home Screen → Add**.
 4. Launch **AGC DSKY** from the Home Screen.
-5. Tap once inside the app when prompted by iOS so motion/orientation access can be granted.
+5. Tap once inside the app when prompted by iOS so motion/orientation and location-backed features can be granted.
 
 ### Android
 
@@ -31,7 +33,7 @@ The installed web app has no Apple developer signing period and does not expire 
 
 ## Web-capable parity with the packaged app
 
-The PWA uses the Android app's frontend directly rather than maintaining a fork. CI now verifies the shared frontend is copied into the PWA byte-for-byte except for the intentional PWA index/privacy overlays.
+The PWA uses the Android app's frontend directly rather than maintaining a fork. CI verifies the shared frontend is copied into the PWA byte-for-byte except for intentional PWA overlays.
 
 The browser parity layer supplies web equivalents for shell features where the browser exposes an API:
 
@@ -42,10 +44,14 @@ The browser parity layer supplies web equivalents for shell features where the b
 - phone orientation input for ICDU simulation;
 - `DeviceMotionEvent` linear-acceleration input for the PIPA path, including a gravity-estimation fallback when only acceleration-with-gravity is exposed;
 - absolute browser orientation/compass input for magnetic yaw correction and star-finder pointing when the browser supplies it;
+- automatic DSKY brightness from the browser ambient-light sensor when `AmbientLightSensor` is available;
+- local sunrise/sunset brightness as the automatic fallback, using cached geolocation and the same 60-minute sunrise/sunset transition model as the Android dream;
 - screen Wake Lock where supported, matching Android's keep-screen-on behavior;
 - fullscreen/standalone operation and offline service-worker caching.
 
-Browser permissions and hardware support still control camera, location, motion, compass and Wake Lock availability. iOS requires motion/orientation permission to be requested from a user gesture; the parity bridge requests both permissions from the same completed gesture.
+The otherwise-unused Dream brightness control becomes the PWA brightness selector: **AUTO → BRIGHT → DIM**. In AUTO, current ambient illuminance is preferred. If the browser does not expose ambient lux, cached location drives sunrise/sunset dimming. If neither source is available yet, the DSKY stays bright rather than becoming unreadable.
+
+Browser permissions and hardware support still control camera, location, motion, compass, ambient light and Wake Lock availability. iOS requires motion/orientation permission to be requested from a user gesture; the parity bridge requests both permissions from the same completed gesture. Browsers that do not expose an ambient-light API still receive the location-aware solar fallback.
 
 Android-only operating-system integrations cannot exist as ordinary web APIs and are therefore outside PWA parity: Android DreamService/screensaver registration, the native home-screen widget, and selection as the Android HOME launcher.
 
