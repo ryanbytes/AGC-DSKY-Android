@@ -21,11 +21,12 @@ function assert(condition, message) {
 }
 
 function checkNativeConsoleFilter(source, label) {
-    assert(source.includes('message.messageLevel() == ConsoleMessage.MessageLevel.ERROR'),
+    const compact = source.replace(/\s+/g, '');
+    assert(compact.includes('message.messageLevel()==ConsoleMessage.MessageLevel.ERROR'),
         `${label} must keep native ERROR-level console diagnostics`);
-    assert(source.includes('!text.startsWith("[yaAGC]")'),
+    assert(compact.includes('!text.startsWith("[yaAGC]")'),
         `${label} must not persist informational [yaAGC] WASI stderr as an app failure`);
-    assert(source.includes('DebugReporter.appendWebError'),
+    assert(compact.includes('DebugReporter.appendWebError'),
         `${label} must still persist non-yaAGC console errors`);
 }
 
@@ -34,7 +35,8 @@ checkNativeConsoleFilter(dreamService, 'AgcDreamService');
 
 assert(activity.includes('DebugReporter.install(this)'),
     'SensorMainActivity must install the native crash/error reporter');
-assert(activity.includes('new DebugReporter.JsBridge(this), "DebugBridge"'),
+assert(activity.includes('new DebugReporter.JsBridge(this),"DebugBridge"') ||
+       activity.includes('new DebugReporter.JsBridge(this), "DebugBridge"'),
     'SensorMainActivity must expose the local diagnostic bridge to packaged content');
 assert(activity.includes('AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)'),
     'SensorMainActivity resume must force a hidden transition before visible resume');
