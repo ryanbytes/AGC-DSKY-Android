@@ -8,6 +8,8 @@ const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
   './pwa-bootstrap.js',
+  './pwa-sensor-parity.js',
+  './pwa-auto-dim.js',
   './analytics.js',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',
