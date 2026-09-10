@@ -54,9 +54,6 @@ requireText(provider, 'alarm.setExactAndAllowWhileIdle', 'minute refresh');
 requireText(provider, 'alarm.setAndAllowWhileIdle', 'minute refresh fallback');
 forbid(provider, 'R.id.el_clock_', 'widget renderer');
 
-// Keep both Android widget rendering paths locked to the same early-panel cyan-blue
-// used by the shared DSKY CSS. This prevents a future app-color change leaving the
-// native widget on the old pale green phosphor approximation.
 requireText(provider, 'CORE=Color.rgb(98,217,232)', 'widget EL color');
 requireText(provider, 'LABEL=CORE,RULE=CORE', 'widget EL label/rule color');
 requireText(generator, 'android:fillColor="#62D9E8"', 'generated widget frame color');
@@ -78,8 +75,8 @@ for (const needle of [
   'FIRST_DIGIT_X = 12.0'
 ]) requireText(geometry, needle, 'WebView Apollo sign geometry');
 
-requireText(gradle, 'versionCode 20045', 'Gradle');
-requireText(gradle, "versionName '1.0.6'", 'Gradle');
+requireText(gradle, 'versionCode 20046', 'Gradle');
+requireText(gradle, "versionName '1.0.7'", 'Gradle');
 requireText(gradle, 'generateElSecondFrames', 'Gradle');
 requireText(generator, 'for (let sec=0; sec<60; sec++)', 'seconds generator');
 requireText(generator, 'android:pathData', 'seconds generator');
