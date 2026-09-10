@@ -77,12 +77,14 @@ The script performs these gates in order:
 9. Runs asset-reference checks.
 10. Runs `tools/wasm-runtime-smoke.js` against the **real pinned yaAGC WASM and both real ropes**. It requires the `V37E00E` P00 precondition to reach channel-010 PROG `00` / relay-11 low-11 `01265`, then requires a real `V35E` FULLDSP/FULLDSP1 relay response.
 11. Runs clean `:app:clean`, `:app:verifyPinnedAgcAssets`, and `:app:assembleDebug` with stacktraces enabled.
-12. Runs `tools/verify-apk.sh` against the produced APK, including merged EL AppWidget receiver/class/resource checks.
+12. Builds and verifies separate regular and Fire APKs, including merged HOME,
+    EL AppWidget, and Fire-only component checks.
 
-The expected debug APK is:
+The expected debug APKs are:
 
 ```text
-app/build/outputs/apk/debug/app-debug.apk
+app/build/outputs/apk/regular/debug/app-regular-debug.apk
+app/build/outputs/apk/fire/debug/app-fire-debug.apk
 ```
 
 ## EL home-screen widget source invariant
@@ -190,7 +192,7 @@ It verifies:
 With exactly one authorized Android/GrapheneOS device connected over ADB, the preferred current-source acceptance command is:
 
 ```bash
-bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+bash tools/device-full-smoke.sh app/build/outputs/apk/regular/debug/app-regular-debug.apk
 ```
 
 The first layer, `tools/device-smoke.sh`:

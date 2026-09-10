@@ -182,7 +182,7 @@ Per owner instruction:
 The preferred Android checkpoint is:
 
 ```bash
-bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+bash tools/device-full-smoke.sh app/build/outputs/apk/regular/debug/app-regular-debug.apk
 ```
 
 Its V35 semantic driver now proves a channel-driven P00 `PROG 00` precondition before V35, exact FULLDSP/FULLDSP1 relay latches, rendered `88` / `+88888`, expected annunciators with COMP excluded, and a real yaAGC-modulated V/N + KEY REL/OPR ERR off phase.

@@ -22,6 +22,9 @@ for (const required of [
     'cmd package resolve-activity --brief --user',
     'pm disable-user --user',
     'pm enable --user',
+    'FireRedirectAccessibilityService',
+    'FIRE_ENABLE',
+    'home_path=protected-fire-redirect',
     'input keyevent KEYCODE_HOME',
     'sys.boot_completed',
     'wait-for-device']) {
@@ -45,6 +48,8 @@ assert(script.includes("trap 'recover_launcher $? $LINENO' ERR"),
     'failure trap must restore Amazon Fire Launcher');
 assert(script.includes('launcher_safety_required=true'),
     'safe-launcher recovery gate missing');
+assert(script.includes('installed APK is not the Fire variant'),
+    'setup must reject an APK without restored Fire components');
 assert(script.includes('Rebooting for the real Fire OS boot-path check'),
     'setup must perform a real reboot check');
 

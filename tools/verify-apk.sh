@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
+APK="${1:-$ROOT/app/build/outputs/apk/regular/debug/app-regular-debug.apk}"
+VARIANT="${2:-auto}"
 PINNED_BUILD_TOOLS=36.0.0
 ASSET_SOURCE="$ROOT/app/src/main/assets"
 BUILD_GRADLE="$ROOT/app/build.gradle"
@@ -13,6 +14,14 @@ fail() {
 }
 
 [[ -f "$APK" ]] || fail "APK not found: $APK"
+if [[ "$VARIANT" == auto ]]; then
+  case "$(basename "$APK")" in
+    *fire*) VARIANT=fire ;;
+    *) VARIANT=regular ;;
+  esac
+fi
+[[ "$VARIANT" == regular || "$VARIANT" == fire ]] \
+  || fail "variant must be regular, fire, or auto; found: $VARIANT"
 [[ -f "$BUILD_GRADLE" ]] || fail "app/build.gradle is missing"
 command -v unzip >/dev/null 2>&1 || fail "unzip is required"
 command -v git >/dev/null 2>&1 || fail "git is required for Git-blob verification"
@@ -147,6 +156,15 @@ grep -Fq 'android.permission.ACCESS_COARSE_LOCATION' <<<"$permissions" \
 grep -Fq 'android.permission.ACCESS_FINE_LOCATION' <<<"$permissions" \
   || fail "merged APK is missing fine location required for WebView geolocation compatibility"
 
+if [[ "$VARIANT" == fire ]]; then
+  grep -Fq 'android.permission.RECEIVE_BOOT_COMPLETED' <<<"$permissions" \
+    || fail "Fire APK is missing RECEIVE_BOOT_COMPLETED"
+else
+  if grep -Fq 'android.permission.RECEIVE_BOOT_COMPLETED' <<<"$permissions"; then
+    fail "regular APK unexpectedly contains Fire boot permission"
+  fi
+fi
+
 # Verify that the packaged application really contains the EL-only AppWidget.
 manifest_tree="$($AAPT2 dump xmltree --file AndroidManifest.xml "$APK")"
 grep -Fq '="org.apollo.agcdsky.ElWidgetProvider"' <<<"$manifest_tree" \
@@ -200,6 +218,20 @@ grep -Fq 'android.intent.category.HOME' <<<"$sensor_activity_tree" \
 grep -Fq 'android.intent.category.DEFAULT' <<<"$sensor_activity_tree" \
   || fail "merged SensorMainActivity HOME filter is missing DEFAULT category"
 
+if [[ "$VARIANT" == fire ]]; then
+  for component in FireModeActivity FireRedirectAccessibilityService FireBootReceiver; do
+    grep -Fq "org.apollo.agcdsky.$component" <<<"$manifest_tree" \
+      || fail "Fire merged manifest is missing $component"
+  done
+  grep -Fq 'android.permission.BIND_ACCESSIBILITY_SERVICE' <<<"$manifest_tree" \
+    || fail "Fire redirect service is missing accessibility bind permission"
+  grep -Fq 'android.accessibilityservice.AccessibilityService' <<<"$manifest_tree" \
+    || fail "Fire redirect service intent registration missing"
+else
+  grep -Fq 'FireRedirectAccessibilityService' <<<"$manifest_tree" \
+    && fail "regular merged manifest unexpectedly contains Fire redirect service"
+fi
+
 resources="$($AAPT2 dump resources "$APK")"
 grep -Eq 'resource 0x[0-9a-f]+ id/el_widget_image' <<<"$resources" \
   || fail "APK resource table is missing el_widget_image"
@@ -216,6 +248,12 @@ grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/ElWidgetProvider;'" <<<"$dexd
   || fail "APK dex is missing ElWidgetProvider class"
 grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/SensorMainActivity;'" <<<"$dexdump_output" \
   || fail "APK dex is missing SensorMainActivity class"
+if [[ "$VARIANT" == fire ]]; then
+  for component in FireModeActivity FireRedirectAccessibilityService FireBootReceiver; do
+    grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/$component;'" <<<"$dexdump_output" \
+      || fail "Fire APK dex is missing $component class"
+  done
+fi
 
 APKSIGNER="$(find_verifier_tool apksigner || true)"
 [[ -n "$APKSIGNER" ]] \
@@ -225,12 +263,18 @@ APKSIGNER="$(find_verifier_tool apksigner || true)"
 
 printf 'APK verification: PASS\n'
 printf '  %s\n' "$APK"
+printf '  variant: %s\n' "$VARIANT"
 printf '  package/version/minSdk/targetSdk match source (%s / %s)\n' "$EXPECTED_VERSION_CODE" "$EXPECTED_VERSION_NAME"
 printf '  APK is debuggable for the ADB smoke/report workflow\n'
 printf '  pinned yaAGC/WASM + Comanche 055 rope match exact Git blobs\n'
 printf '  index.html and every referenced frontend asset match the current checkout byte-for-byte\n'
 printf '  SensorMainActivity has packaged MAIN/LAUNCHER and MAIN/HOME/DEFAULT handling\n'
 printf '  SensorMainActivity and EL AppWidget classes/resources are packaged\n'
+if [[ "$VARIANT" == fire ]]; then
+  printf '  same-package Fire accessibility redirect and boot receiver are packaged\n'
+else
+  printf '  regular APK excludes Fire-only boot/accessibility components\n'
+fi
 printf '  LM rope, raster panel images, and unused upstream vendor assets are absent\n'
 printf '  merged manifest has camera/location permissions and no INTERNET permission\n'
 printf '  verifier Build Tools: %s\n' "$PINNED_BUILD_TOOLS"

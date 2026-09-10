@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE=org.apollo.agcdsky
 ACTIVITY="$PACKAGE/.MainActivity"
-APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
+APK="${1:-$ROOT/app/build/outputs/apk/regular/debug/app-regular-debug.apk}"
 LOG_DIR="$ROOT/app/build/device-smoke"
 
 fail() {

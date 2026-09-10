@@ -18,6 +18,16 @@ android {
         versionName '1.1.2'
     }
 
+    flavorDimensions += 'target'
+    productFlavors {
+        regular {
+            dimension 'target'
+        }
+        fire {
+            dimension 'target'
+        }
+    }
+
     sourceSets {
         main {
             assets.srcDirs = ['src/main/assets', generatedAgcAssetsDir]

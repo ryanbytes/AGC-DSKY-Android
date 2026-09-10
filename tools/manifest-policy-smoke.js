@@ -6,6 +6,8 @@ const path = require('path');
 
 const manifest = fs.readFileSync(
     path.resolve(__dirname, '../app/src/main/AndroidManifest.xml'), 'utf8');
+const fireManifest = fs.readFileSync(
+    path.resolve(__dirname, '../app/src/fire/AndroidManifest.xml'), 'utf8');
 
 function assert(condition, message) {
     if (!condition) throw new Error(message);
@@ -63,5 +65,21 @@ assert(intentFilters.some(filter =>
     filter.includes('android.intent.category.HOME') &&
     filter.includes('android.intent.category.DEFAULT')),
     'SensorMainActivity MAIN/HOME/DEFAULT filter missing');
+assert(!manifest.includes('android.permission.RECEIVE_BOOT_COMPLETED'),
+    'regular/main manifest must not contain Fire boot permission');
+assert(!manifest.includes('FireRedirectAccessibilityService'),
+    'regular/main manifest must not contain Fire redirect service');
+assert(!fireManifest.includes('android.permission.INTERNET'),
+    'Fire manifest must not request INTERNET');
+assert(fireManifest.includes('android.permission.RECEIVE_BOOT_COMPLETED'),
+    'Fire manifest boot permission missing');
+assert(fireManifest.includes('FireRedirectAccessibilityService'),
+    'Fire manifest redirect service missing');
+assert(fireManifest.includes('android.permission.BIND_ACCESSIBILITY_SERVICE'),
+    'Fire redirect bind permission missing');
+assert(fireManifest.includes('android.accessibilityservice.AccessibilityService'),
+    'Fire accessibility service intent registration missing');
+assert(fireManifest.includes('FireBootReceiver'),
+    'Fire boot receiver missing');
 
 console.log('manifest policy smoke: PASS');

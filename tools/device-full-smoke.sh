@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
+APK="${1:-$ROOT/app/build/outputs/apk/regular/debug/app-regular-debug.apk}"
 
 [[ -f "$APK" ]] || {
   printf 'DEVICE FULL SMOKE FAIL: APK not found: %s\n' "$APK" >&2

@@ -24,6 +24,7 @@ The sextant screenshot shows the real app UI with a static demonstration pointin
 - Android DreamService clock/screensaver.
 - Resizable **EL-only** home-screen widget.
 - Optional Android **Home app** mode for dedicated boot-to-DSKY phones/tablets.
+- Separate Fire APK with the restored opt-in same-package boot/Home redirect.
 - No Android `INTERNET` permission in the packaged app.
 
 ## Dedicated Home mode

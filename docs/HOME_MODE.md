@@ -1,6 +1,6 @@
-# Dedicated Home mode
+# Dedicated Home and Fire modes
 
-AGC DSKY 1.0 can be selected as Android's default **Home app** for a dedicated phone or tablet display.
+AGC DSKY can be selected as Android's default **Home app** for a dedicated phone or tablet display.
 
 This is optional. Installing AGC DSKY does not replace the normal launcher automatically.
 
@@ -20,15 +20,18 @@ record DSKY as the preferred HOME activity while still resolving HOME to
 For a dedicated Fire tablet, build the current APK and run:
 
 ```bash
-bash tools/fire-tablet-home-setup.sh app/build/outputs/apk/debug/app-debug.apk
+bash tools/fire-tablet-home-setup.sh app/build/outputs/apk/fire/debug/app-fire-debug.apk
 ```
 
 The setup script installs and launches DSKY once, verifies both the regular
 launcher and HOME registrations, assigns `SensorMainActivity` as HOME, and only
-then disables `com.amazon.firelauncher`. It verifies the HOME resolver, presses
-HOME, reboots, and requires DSKY to return as the foreground HOME activity. If
-any check fails after the safety point, it re-enables Amazon Fire Launcher and
-returns it to HOME.
+then attempts to disable `com.amazon.firelauncher`. If disabling is supported,
+it requires the native HOME resolver to return DSKY. Fire OS builds that protect
+Amazon Launcher cannot meet that resolver condition without root; on those
+builds the Fire APK restores the previous same-package accessibility/boot path.
+The script enables that path, presses HOME, reboots, and requires DSKY to return
+to the foreground. If any post-safety check fails, it idles Fire Mode,
+re-enables Amazon Fire Launcher, and returns it to HOME.
 
 The resulting HOME component is:
 
@@ -49,3 +52,8 @@ adb shell input keyevent KEYCODE_HOME
 ```
 
 No `BOOT_COMPLETED` receiver, background-start permission, Internet permission, or always-running startup service is used for this feature.
+
+The regular APK has no boot receiver or accessibility service. The Fire APK is
+a separate build flavor and adds only the opt-in Fire boot receiver and
+same-package launcher redirect needed on protected Fire OS firmware. Neither
+variant requests Internet access.

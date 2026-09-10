@@ -143,13 +143,18 @@ node tools/asset-reference-smoke.js
 node tools/wasm-runtime-smoke.js
 
 # Build from a clean app tree so stale generated assets cannot mask source drift.
-"${GRADLE_CMD[@]}" --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleDebug
+"${GRADLE_CMD[@]}" --no-daemon --stacktrace \
+  :app:clean :app:verifyPinnedAgcAssets :app:assembleRegularDebug :app:assembleFireDebug
 
-APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
-[[ -f "$APK" ]] || fail "Gradle reported success but debug APK is missing: $APK"
+REGULAR_APK="$ROOT/app/build/outputs/apk/regular/debug/app-regular-debug.apk"
+FIRE_APK="$ROOT/app/build/outputs/apk/fire/debug/app-fire-debug.apk"
+[[ -f "$REGULAR_APK" ]] || fail "Gradle reported success but regular debug APK is missing: $REGULAR_APK"
+[[ -f "$FIRE_APK" ]] || fail "Gradle reported success but Fire debug APK is missing: $FIRE_APK"
 
-bash tools/verify-apk.sh "$APK"
+bash tools/verify-apk.sh "$REGULAR_APK" regular
+bash tools/verify-apk.sh "$FIRE_APK" fire
 
-printf 'Local debug build: PASS\n'
+printf 'Local regular + Fire debug build: PASS\n'
 printf 'Source commit: %s\n' "$ROOT_HEAD"
-printf 'APK: %s\n' "$APK"
+printf 'Regular APK: %s\n' "$REGULAR_APK"
+printf 'Fire APK: %s\n' "$FIRE_APK"

@@ -52,19 +52,26 @@ Normal keys use channel `015`. PRO uses channel `032` bit `020000` and remains p
 ## Amazon Fire HOME startup
 
 `SensorMainActivity` retains separate `MAIN`/`LAUNCHER` and
-`MAIN`/`HOME`/`DEFAULT` filters and remains exported. Git history shows those
-properties are unchanged between the corrected v1.0 HOME release (`12584f5`)
-and v1.1.1; there is no activity rename, alias, package/application-ID,
-launch-mode, task-affinity, flavor, or manifest-overlay change in that range.
-The setup/verification repair is released as Android v1.1.2 (`20051`).
+`MAIN`/`HOME`/`DEFAULT` filters and remains exported. Those properties are
+unchanged between the corrected v1.0 HOME release (`12584f5`) and v1.1.1; there
+was no activity rename, alias, package/application-ID, launch-mode, or
+task-affinity regression in the main manifest.
+
+The Fire-specific regression is commit `1a4d43a`: it removed the `fire` product
+flavor, manifest overlay, `FireBootReceiver`, `FireModeActivity`, and
+`FireRedirectAccessibilityService`. The connected tablet retained the old
+service name in `enabled_accessibility_services`, but v1.1.1 no longer packaged
+the component. Android v1.1.2 (`20051`) restores those components only in the
+Fire flavor; the regular flavor remains free of Fire boot/accessibility code.
 
 On Fire OS 7.3.2.9, `set-home-activity` can report success and persist DSKY as
 the preferred HOME while `resolve-activity` still chooses Amazon's priority-50
-launcher. `tools/fire-tablet-home-setup.sh` now verifies DSKY's normal launcher
-and HOME candidacy before disabling anything, assigns HOME, then disables
-`com.amazon.firelauncher`, checks resolver/foreground behavior, and performs a
-real reboot gate. Any failure after the launcher safety point re-enables Amazon
-Home. `tools/fire-home-setup-smoke.js` guards this ordering and recovery path.
+launcher. This tablet's firmware also rejects package and component disable
+with `SecurityException: Cannot disable a protected package`.
+`tools/fire-tablet-home-setup.sh` verifies DSKY's launcher/HOME candidacy before
+changing Amazon Home, uses native HOME when Fire Launcher can be disabled, and
+otherwise activates the restored same-package redirect. Both paths require
+foreground and reboot checks; failures re-enable Amazon Home.
 
 ## EL-only home-screen widget
 

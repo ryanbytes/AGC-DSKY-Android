@@ -13,7 +13,7 @@ The current-source debug APK has layered device-level smoke gates. They do not r
 ## One-command gate
 
 ```bash
-bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+bash tools/device-full-smoke.sh app/build/outputs/apk/regular/debug/app-regular-debug.apk
 ```
 
 This runs the immediate install/launch/frontend smoke, live AGC/WebView checks, page-recreation check, and finally an Android process force-stop/relaunch check.
