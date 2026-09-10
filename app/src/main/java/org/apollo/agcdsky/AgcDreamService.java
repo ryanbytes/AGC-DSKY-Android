@@ -72,16 +72,21 @@ public final class AgcDreamService extends DreamService {
     }
 
     /**
-     * Dream windows are not activities, so they do not inherit the activity's
-     * screenOrientation manifest attribute. Leaving this unspecified lets some
-     * Android/Fire OS builds reuse a stale display rotation when the dream starts.
-     * FULL_SENSOR makes the dream track the physical device in all four rotations,
-     * including reverse landscape/portrait, without rotating the WebView content
-     * separately in CSS.
+     * DreamService can receive configuration callbacks before its dream window is
+     * attached. getWindow() is therefore legitimately null during early startup.
+     * Once attached, FULL_SENSOR lets the dream follow the physical device in all
+     * four rotations, including reverse landscape/portrait, without rotating the
+     * WebView content separately in CSS.
      */
     private void applyDreamOrientation() {
         Window window = getWindow();
+        if (window == null) return;
         WindowManager.LayoutParams lp = window.getAttributes();
+        if (lp == null) return;
+        if (lp.screenOrientation == ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                && lp.rotationAnimation == WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS) {
+            return;
+        }
         lp.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR;
         lp.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS;
         window.setAttributes(lp);
@@ -90,14 +95,15 @@ public final class AgcDreamService extends DreamService {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        // The DreamService window survives rotation. Re-apply immersive mode and
-        // force the WebView to lay out against the new viewport instead of keeping
-        // the pre-rotation dimensions.
+        // Android 17 can deliver this callback while DreamService is still being
+        // launched, before getWindow() exists. All helpers below are intentionally
+        // safe no-ops until onAttachedToWindow supplies the real dream window.
         applyDreamOrientation();
         hideSystemBars();
-        if (webView != null) {
-            webView.requestLayout();
-            webView.invalidate();
+        WebView current = webView;
+        if (current != null) {
+            current.requestLayout();
+            current.invalidate();
         }
     }
 
@@ -109,6 +115,7 @@ public final class AgcDreamService extends DreamService {
 
     private void hideSystemBars() {
         Window window = getWindow();
+        if (window == null) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) hideModernSystemBars(window);
         else hideLegacySystemBars(window.getDecorView());
     }
@@ -125,24 +132,32 @@ public final class AgcDreamService extends DreamService {
 
     @SuppressWarnings("deprecation")
     private static void hideLegacySystemBars(View decor) {
+        if (decor == null) return;
         decor.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
     }
 
     private void setWindowBrightness(float value) {
+        Window window = getWindow();
+        if (window == null) return;
+        WindowManager.LayoutParams lp = window.getAttributes();
+        if (lp == null) return;
         float clamped = Math.max(0.01f, Math.min(1.0f, value));
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
         lp.screenBrightness = clamped;
-        getWindow().setAttributes(lp);
+        window.setAttributes(lp);
     }
 
     private final class DreamBridge {
         @JavascriptInterface public void setBrightness(final double value) {
-            if (webView != null) webViewHandler.post(() -> { if (webView != null) setWindowBrightness((float) value); });
+            if (webView != null) webViewHandler.post(() -> {
+                if (webView != null) setWindowBrightness((float) value);
+            });
         }
         @JavascriptInterface public void finishDream() {
-            if (webView != null) webViewHandler.post(() -> { if (webView != null) AgcDreamService.this.finish(); }); else finish();
+            if (webView != null) webViewHandler.post(() -> {
+                if (webView != null) AgcDreamService.this.finish();
+            }); else finish();
         }
     }
 
