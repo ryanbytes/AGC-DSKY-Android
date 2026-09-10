@@ -17,37 +17,73 @@
     } catch (_) {}
   }
 
-  // Brave Android cannot mint a WebAPK, so its install action may create a
-  // browser shortcut instead of a standalone app. In that case, use the
-  // Fullscreen API on the first user gesture to remove browser chrome.
+  // Brave Android can fall back to a browser shortcut rather than a standalone
+  // WebAPK. If that happens, request document fullscreen on a completed user
+  // gesture. Touchscreen activation is granted on pointerup/touchend/click,
+  // not necessarily on pointerdown/touchstart.
   const androidBrowserMode = /Android/i.test(navigator.userAgent || '') && !standalone;
   let fullscreenSucceeded = false;
+  let fullscreenPending = false;
 
   function tryAndroidFullscreen() {
-    if (!androidBrowserMode || fullscreenSucceeded || document.fullscreenElement) return;
-    const root = document.documentElement;
-    if (!document.fullscreenEnabled || !root || typeof root.requestFullscreen !== 'function') return;
+    if (!androidBrowserMode || fullscreenSucceeded || fullscreenPending || document.fullscreenElement) return;
 
+    const root = document.documentElement;
+    const request = root && (
+      (typeof root.requestFullscreen === 'function' && (() => root.requestFullscreen())) ||
+      (typeof root.webkitRequestFullscreen === 'function' && (() => root.webkitRequestFullscreen()))
+    );
+    if (!request) return;
+    if (document.fullscreenEnabled === false && document.webkitFullscreenEnabled === false) return;
+
+    fullscreenPending = true;
     try {
-      const request = root.requestFullscreen({navigationUI: 'hide'});
-      if (request && typeof request.then === 'function') {
-        request.then(() => {
+      const result = request();
+      if (result && typeof result.then === 'function') {
+        result.then(() => {
           fullscreenSucceeded = true;
+          fullscreenPending = false;
           api.fullscreen = true;
+          delete api.fullscreenError;
           publish();
-        }).catch(() => {});
+        }).catch(error => {
+          fullscreenPending = false;
+          api.fullscreenError = String(error && error.name ? error.name : 'request rejected');
+          publish();
+        });
+      } else {
+        fullscreenSucceeded = true;
+        fullscreenPending = false;
+        api.fullscreen = true;
+        delete api.fullscreenError;
+        publish();
       }
-    } catch (_) {}
+    } catch (error) {
+      fullscreenPending = false;
+      api.fullscreenError = String(error && error.name ? error.name : 'request failed');
+      publish();
+    }
   }
 
   if (androidBrowserMode) {
-    document.addEventListener('pointerdown', tryAndroidFullscreen, {capture: true, passive: true});
-    document.addEventListener('touchstart', tryAndroidFullscreen, {capture: true, passive: true});
+    // Capture the completed tap before DSKY button handlers consume it.
+    for (const eventName of ['pointerup', 'touchend', 'click']) {
+      document.addEventListener(eventName, tryAndroidFullscreen, {capture: true, passive: true});
+    }
+    document.addEventListener('keyup', tryAndroidFullscreen, {capture: true});
   }
 
   document.addEventListener('fullscreenchange', () => {
+    fullscreenPending = false;
     api.fullscreen = Boolean(document.fullscreenElement) || displayFullscreen;
     if (document.fullscreenElement) fullscreenSucceeded = true;
+    publish();
+  });
+
+  document.addEventListener('webkitfullscreenchange', () => {
+    fullscreenPending = false;
+    api.fullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement) || displayFullscreen;
+    if (document.fullscreenElement || document.webkitFullscreenElement) fullscreenSucceeded = true;
     publish();
   });
 
