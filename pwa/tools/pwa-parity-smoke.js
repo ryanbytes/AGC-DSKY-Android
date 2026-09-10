@@ -35,6 +35,12 @@ for (const rel of sourceFiles) {
   }
 }
 
+// The PWA serves the same clock-behavior bytes through a one-time v2 filename
+// so browsers with the old experimental COMP ACTY helper cached cannot reuse it.
+const sourceClock = fs.readFileSync(path.join(source, 'clock-behavior.js'));
+const pwaClockAlias = fs.readFileSync(path.join(site, 'clock-behavior-v2.js'));
+if (!sourceClock.equals(pwaClockAlias)) fail('clock-behavior-v2.js diverged from shared clock behavior');
+
 const sourceIndex = fs.readFileSync(path.join(source, 'index.html'), 'utf8');
 const builtIndex = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
 const refs = html => [...html.matchAll(/<(?:script|link)[^>]+(?:src|href)="([^"]+)"/g)].map(m => m[1]);
@@ -42,8 +48,9 @@ const sharedRefs = refs(sourceIndex);
 const builtRefs = refs(builtIndex);
 let cursor = -1;
 for (const ref of sharedRefs) {
-  const next = builtRefs.indexOf(ref, cursor + 1);
-  if (next < 0) fail(`shared index dependency missing or reordered: ${ref}`);
+  const expected = ref === 'clock-behavior.js' ? 'clock-behavior-v2.js' : ref;
+  const next = builtRefs.indexOf(expected, cursor + 1);
+  if (next < 0) fail(`shared index dependency missing or reordered: ${expected}`);
   cursor = next;
 }
 
@@ -53,11 +60,12 @@ for (const rel of sourceFiles) {
   if (!sw.includes(`'./${rel}'`)) fail(`shared asset is not available offline: ${rel}`);
 }
 
-for (const rel of ['pwa-bootstrap.js', 'pwa-sensor-parity.js', 'analytics.js', 'manifest.webmanifest', 'yaAGC.wasm', 'Comanche055.bin']) {
+for (const rel of ['pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'clock-behavior-v2.js', 'analytics.js', 'manifest.webmanifest', 'yaAGC.wasm', 'Comanche055.bin']) {
   if (!sw.includes(`'./${rel}'`)) fail(`PWA-only runtime asset is not available offline: ${rel}`);
 }
 
 console.log('PWA parity smoke: PASS');
 console.log(`  ${sourceFiles.length} shared Android frontend assets present in PWA`);
+console.log('  shared clock behavior is byte-identical through cache-busted PWA alias');
 console.log('  shared assets byte-identical except intentional index/privacy overlays');
 console.log('  shared and PWA runtime assets available offline');
