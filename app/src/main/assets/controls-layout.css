@@ -20,7 +20,7 @@
   width:min(calc(100vw - 8px),920px);
   max-width:calc(100vw - 8px);
   min-height:0;
-  max-height:31vh;
+  max-height:30vh;
   flex:0 0 auto;
   display:flex;
   flex-flow:row wrap;
@@ -148,7 +148,7 @@
     height:calc(100vh - 82px - max(4px,env(safe-area-inset-bottom)));
     max-width:92vw;
   }
-  .app-controls{width:min(calc(100vw - 8px),1180px);max-height:31vh;gap:4px;padding:5px}
+  .app-controls{width:min(calc(100vw - 8px),1180px);max-height:30vh;gap:4px;padding:5px}
   .app-controls button{min-height:34px;font-size:7.6px;padding:7px 9px 6px}
 }
 body.dream #app,body.display-only #app,body.screen-only #app{gap:0}
