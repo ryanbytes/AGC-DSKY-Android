@@ -22,7 +22,7 @@ requireText(index, '<script src="dream-agc.js"></script>', 'dream bootstrap scri
 requireText(bootstrap, "params.get('dream') === '1' && params.get('agc') === '1'", 'explicit dream-AGC gate');
 requireText(bootstrap, "mode = 'dream-agc-loading'", 'clock suppression while AGC loads');
 requireText(bootstrap, "mode = 'dream-agc'", 'dedicated dream AGC mode');
-requireText(bootstrap, "new AgcCore({", 'fresh AGC core');
+requireText(bootstrap, "new AgcCore({", 'separate AGC core');
 requireText(bootstrap, "wasmUrl: 'yaAGC.wasm'", 'pinned yaAGC WASM');
 requireText(bootstrap, 'ropeUrl: selected.rope', 'Comanche mission rope');
 requireText(bootstrap, 'decodeChannel10(value)', 'DSKY relay channel route');
@@ -31,11 +31,22 @@ requireText(bootstrap, 'decodeChannel163(value)', 'DSKY alarm channel route');
 requireText(bootstrap, 'agcCore.start(1)', 'AGC execution start');
 requireText(bootstrap, "addEventListener('pagehide'", 'dream teardown stop');
 
-// The dream must never restore or overwrite the interactive app's AGC snapshot.
-forbid(bootstrap, 'restoreSavedAgcState', 'interactive snapshot restore');
+// The screensaver must show the user's current AGC display instead of a bare
+// reset-vector blank DSKY. It clones the saved snapshot into a separate core.
+requireText(bootstrap, "localStorage.getItem('agcSnapshotV1')", 'read-only saved snapshot lookup');
+requireText(bootstrap, 'agcCore.importSnapshot(payload.core)', 'snapshot core clone');
+requireText(bootstrap, 'applySnapshotUi(payload.ui)', 'snapshot DSKY clone');
+requireText(bootstrap, 'renderAgcSnapshot()', 'cloned DSKY render');
+
+// Dream execution is read-only with respect to the interactive app. In
+// particular, do not use the normal restore helper because it can delete a bad
+// snapshot, and never save/autosave or change the interactive run mode.
+forbid(bootstrap, 'restoreSavedAgcState', 'interactive snapshot restore helper');
 forbid(bootstrap, 'saveAgcState', 'interactive snapshot save');
 forbid(bootstrap, 'scheduleAgcAutosave', 'interactive snapshot autosave');
 forbid(bootstrap, "store.set('runMode'", 'interactive run-mode mutation');
+forbid(bootstrap, "localStorage.setItem('agcSnapshotV1'", 'dream snapshot write');
+forbid(bootstrap, "localStorage.removeItem('agcSnapshotV1'", 'dream snapshot delete');
 
 console.log('dream AGC smoke: PASS');
-console.log('  Android DreamService launches a fresh Comanche/yaAGC DSKY without touching interactive saved state');
+console.log('  DreamService clones the last interactive Comanche/yaAGC state into a separate read-only AGC core');
