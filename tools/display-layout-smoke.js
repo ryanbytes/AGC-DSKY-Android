@@ -51,9 +51,9 @@ assert(STYLE.includes('@media (orientation:landscape)'),
 assert(STYLE.match(/calc\(100vh \* 320 \/ 220\)/g)?.length >= 2,
   'display-only 320x220 scaling must be preserved in base and landscape rules');
 
-// v0.38.0+ gives the controls a flowing strip below the DSKY. It reserves
-// vertical room in the DSKY size calculation, wraps buttons without clipping
-// their labels, and hides the no-longer-useful status span.
+// The controls are a flowing, bounded strip below the DSKY.  The current
+// Series-2 operator-indicator treatment is taller than the former flat buttons,
+// so portrait sizing reserves correspondingly more vertical space.
 assert(CONTROLS.includes('max-width:calc(100vw - 8px)'),
   'control strip must remain constrained to the phone viewport');
 assert(CONTROLS.includes('flex-flow:row wrap'),
@@ -66,14 +66,24 @@ assert(CONTROLS.includes('text-overflow:clip') && CONTROLS.includes('white-space
   'control button labels must remain unellipsized and on one line');
 assert(CONTROLS.includes('.app-controls span{display:none!important}'),
   'obsolete mode/status span must stay hidden in the flowing control strip');
-assert(CONTROLS.includes('100vh - 124px') && CONTROLS.includes('100vh - 145px'),
-  'DSKY sizing must continue reserving control-strip room in normal/narrow portrait');
+assert(CONTROLS.includes('100vh - 138px') && CONTROLS.includes('100vh - 164px'),
+  'DSKY sizing must reserve room for the taller Series 2 control strip');
 assert(CONTROLS.includes('@media (orientation:landscape)'),
   'control strip landscape sizing override missing');
 assert(CONTROLS.includes('body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}'),
   'dream/display-only/screen-only modes must suppress app controls');
 
+for (const marker of [
+  'Series 2 barrier-mount operator indicators',
+  '.app-controls button::before',
+  'linear-gradient(180deg,#e5e3d8',
+  'transform:translateY(2px)',
+  '"Arial Narrow"'
+]) {
+  assert(CONTROLS.includes(marker), 'Series 2 settings-button treatment missing: ' + marker);
+}
+
 console.log('display/layout geometry smoke: PASS');
 console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${expectedVisibleFraction.toFixed(6)})`);
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
-console.log('  flowing control strip: bounded, wrapping, untruncated labels');
+console.log('  flowing Series 2 control strip: bounded, wrapping, untruncated labels');
