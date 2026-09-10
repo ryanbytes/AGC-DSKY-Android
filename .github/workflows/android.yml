@@ -40,6 +40,7 @@ jobs:
           node tools/display-layout-smoke.js
           node tools/el-widget-smoke.js
           node tools/dream-orientation-smoke.js
+          node tools/dream-mode-smoke.js
           node tools/solar-model-smoke.js
           node tools/agc-core-smoke.js
           node tools/native-diagnostic-smoke.js
