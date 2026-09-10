@@ -6,7 +6,11 @@
   --frame:#6b6c67;
   --ann:#9c9c95;
   --key:#1d1e1c;
-  --el:#9cff9f;
+  /* Production Block II EL-panel drawing revisions specify a 5300-A
+     (530 nm) dominant wavelength. This sRGB value is a display-safe
+     approximation of that yellow-green phosphor rather than the prior
+     pale mint/white rendering. */
+  --el:#79ef4f;
 }
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}
@@ -36,7 +40,10 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
 }
 .dsky:before{content:"";position:absolute;inset:.72%;z-index:1;pointer-events:none;border:.12vmin solid rgba(36,36,34,.58);box-shadow:inset 0 .1vmin .22vmin rgba(255,255,255,.34),0 .08vmin .12vmin rgba(255,255,255,.16)}
 .dsky:after{content:"";position:absolute;inset:0;z-index:12;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.045),transparent 29%,rgba(0,0,0,.025) 72%,rgba(255,255,255,.025));mix-blend-mode:overlay}
-.dim .dsky{filter:brightness(.20) saturate(.62)}
+/* The EL supply is nominally about 250 VAC at 800 Hz. The spacecraft dimmer
+   varies drive amplitude/luminance; it does not justify shifting the phosphor
+   hue at the same frequency, so dimming must not desaturate the EL color. */
+.dim .dsky{filter:brightness(.20)}
 
 /* Upper modules are recessed behind machined metal frames. */
 .ann-well{
@@ -75,20 +82,22 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
 }
 .el-static{filter:url(#elSoft)}
 .el-field,.comp-el{filter:url(#elGlow)}
+/* Labels, rules, COMP ACTY and numeric strokes are all phosphor features on
+   the same EL panel, so illuminated elements share the same 530-nm hue. */
 .el-label{
-  fill:#acdca7;opacity:.86;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
+  fill:var(--el);opacity:.78;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
   font-size:5.1px;font-weight:700;letter-spacing:.22px;
 }
-.el-rule{stroke:#b5e6ac;stroke-width:2.05;stroke-linecap:round;opacity:.83}
+.el-rule{stroke:var(--el);stroke-width:2.05;stroke-linecap:round;opacity:.76}
 .comp-el text{
-  fill:#4e6a4e;opacity:.24;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
+  fill:var(--el);opacity:.10;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
   font-size:5.2px;font-weight:700;letter-spacing:.05px;
 }
-.comp-el.on text{fill:#caf3bd;opacity:1}
-.el-seg{fill:#90c88d;stroke:none}
-.el-seg.off{opacity:.018}
-.el-seg.on{fill:#c9f5bd;opacity:1}
-/* EL phosphor has a bright emitting core with restrained optical bloom through the glass. */
+.comp-el.on text{fill:var(--el);opacity:.92}
+.el-seg{fill:var(--el);stroke:none}
+.el-seg.off{opacity:.014}
+.el-seg.on{fill:var(--el);opacity:.92}
+/* Lower EL voltage reduces light output while preserving the phosphor hue. */
 .dim .el-seg.on,.dim .el-label,.dim .el-rule,.dim .comp-el.on text{opacity:.62}
 
 /* Illuminated black keycaps with deep mechanical bevel. */
