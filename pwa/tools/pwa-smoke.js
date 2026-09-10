@@ -11,7 +11,7 @@ const text = rel => read(rel).toString('utf8');
 const exists = rel => fs.existsSync(path.join(site, rel));
 
 for (const rel of [
-  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'analytics.js', 'sw.js',
+  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'analytics.js', 'sw.js',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'PRIVACY_POLICY.txt', 'yaAGC.wasm', 'Comanche055.bin'
 ]) {
@@ -24,13 +24,14 @@ for (const marker of [
   'apple-mobile-web-app-capable',
   'apple-touch-icon',
   '<script src="pwa-sensor-parity.js"></script>',
+  '<script src="pwa-auto-dim.js"></script>',
   '<script src="pwa-bootstrap.js"></script>',
   '<script src="analytics.js"></script>'
 ]) {
   if (!index.includes(marker)) fail('index.html missing ' + marker);
 }
-if (index.indexOf('pwa-sensor-parity.js') > index.indexOf('pwa-bootstrap.js')) {
-  fail('sensor parity bridge must initialize before generic PWA bootstrap');
+if (index.indexOf('pwa-sensor-parity.js') > index.indexOf('pwa-auto-dim.js') || index.indexOf('pwa-auto-dim.js') > index.indexOf('pwa-bootstrap.js')) {
+  fail('PWA parity scripts must initialize before generic PWA bootstrap');
 }
 
 let manifest;
@@ -96,6 +97,24 @@ if (parity.includes("'pointerdown'")) fail('PWA parity permission request must u
 try { new Function(parity); }
 catch (error) { fail('pwa-sensor-parity.js syntax error: ' + error.message); }
 
+const autoDim = text('pwa-auto-dim.js');
+for (const marker of [
+  'AmbientLightSensor',
+  'navigator.geolocation.getCurrentPosition',
+  "const LAT_KEY = 'solarLat'",
+  "const LON_KEY = 'solarLon'",
+  'SOLAR_FADE_HALF_MS = 30 * 60 * 1000',
+  'luxToFactor',
+  "source:'ambient'",
+  "source:'solar'",
+  "panel.style.setProperty('filter'",
+  'AUTO DIM'
+]) {
+  if (!autoDim.includes(marker)) fail('PWA auto dim layer missing ' + marker);
+}
+try { new Function(autoDim); }
+catch (error) { fail('pwa-auto-dim.js syntax error: ' + error.message); }
+
 const analytics = text('analytics.js');
 if (analytics.includes('__ANALYTICS_ENDPOINT_JSON__') || analytics.includes('__APP_VERSION_JSON__')) {
   fail('analytics build tokens were not replaced');
@@ -106,13 +125,13 @@ if (!analytics.includes("navigator.doNotTrack === '1'")) fail('analytics client 
 if (!analytics.includes("credentials: 'omit'")) fail('analytics client must omit credentials');
 
 const privacy = text('PRIVACY_POLICY.txt');
-for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=off']) {
+for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=off', 'Ambient light sensor']) {
   if (!privacy.includes(marker)) fail('PWA privacy policy missing ' + marker);
 }
 
 const sw = text('sw.js');
 if (sw.includes('__CACHE_VERSION__')) fail('service-worker cache version was not stamped');
-for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'analytics.js']) {
+for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'analytics.js']) {
   if (!sw.includes(`'./${required}'`)) fail('service worker does not pre-cache ' + required);
 }
 
@@ -134,4 +153,5 @@ console.log('yaAGC.wasm: ' + wasm.length + ' bytes');
 console.log('Comanche055.bin: ' + rope.length + ' bytes');
 console.log('Android browser fullscreen touch fallback: PASS');
 console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
+console.log('Ambient-light / solar-location auto dimming: PASS');
 console.log('Analytics client: PASS');
