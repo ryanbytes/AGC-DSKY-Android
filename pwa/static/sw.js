@@ -38,6 +38,7 @@ const CORE_ASSETS = [
   './cheatsheet.js',
   './diagnostics.js',
   './legal.js',
+  './dream-agc.js',
   './BUILD_SOURCE.txt',
   './LICENSE-GPL-2.0.txt',
   './PRIVACY_POLICY.txt',
