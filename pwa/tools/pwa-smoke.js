@@ -58,8 +58,12 @@ const rope = read('Comanche055.bin');
 if (rope.length !== 73728) fail('Comanche055.bin size mismatch: ' + rope.length);
 
 const bootstrap = text('pwa-bootstrap.js');
-for (const marker of ['requestFullscreen', "navigationUI: 'hide'", '/Android/i']) {
+for (const marker of ['requestFullscreen', '/Android/i', "'pointerup'", "'touchend'", "'click'"]) {
   if (!bootstrap.includes(marker)) fail('PWA bootstrap missing Android fullscreen fallback marker ' + marker);
+}
+if (bootstrap.includes("navigationUI: 'hide'")) fail('PWA bootstrap should use plain requestFullscreen for Brave compatibility');
+if (bootstrap.includes("'pointerdown'") || bootstrap.includes("'touchstart'")) {
+  fail('PWA bootstrap must request fullscreen after completed touch activation, not pointerdown/touchstart');
 }
 try { new Function(bootstrap); }
 catch (error) { fail('pwa-bootstrap.js syntax error: ' + error.message); }
@@ -100,5 +104,5 @@ console.log('PWA smoke: PASS');
 console.log('Site: ' + site);
 console.log('yaAGC.wasm: ' + wasm.length + ' bytes');
 console.log('Comanche055.bin: ' + rope.length + ' bytes');
-console.log('Android browser fullscreen fallback: PASS');
+console.log('Android browser fullscreen touch fallback: PASS');
 console.log('Analytics client: PASS');
