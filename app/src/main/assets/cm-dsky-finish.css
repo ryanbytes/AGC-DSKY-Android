@@ -1,6 +1,14 @@
 /* CM-mounted Apollo Block II DSKY finish.
    The photographic spacecraft-panel compositor is intentionally absent. */
 
+/* CuriousMarc/Carl Claunch's relit original panel is an early 1006315 unit.
+   The unrevised drawing called out 5100 A (510 nm), and the surviving panel is
+   visibly bluer/cooler than the later 5300-A production revisions.  Use a
+   cyan-blue display-space match to that powered panel/video appearance. */
+:root{
+  --el:#62d9e8;
+}
+
 body:not(.dream):not(.screen-only):not(.display-only) .dsky{
   z-index:3;
   filter:drop-shadow(0 5px 7px rgba(0,0,0,.72));
