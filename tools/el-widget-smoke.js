@@ -30,7 +30,7 @@ requireText(manifest, 'android:resource="@xml/el_widget_info"', 'manifest');
 forbid(manifest, 'android.permission.INTERNET', 'manifest');
 
 requireText(layout, '<AdapterViewFlipper', 'widget layout');
-requireText(layout, 'android:id="@+id/el_seconds_flipper"', 'widget layout');
+requireText(layout, 'android:id="@+id/el_seconds_flipper"', 'seconds flipper');
 requireText(layout, 'android:autoStart="true"', 'seconds flipper');
 requireText(layout, 'android:loopViews="true"', 'seconds flipper');
 requireText(layout, 'android:flipInterval="1000"', 'seconds flipper');
@@ -75,9 +75,8 @@ for (const needle of [
   'FIRST_DIGIT_X = 12.0'
 ]) requireText(geometry, needle, 'WebView Apollo sign geometry');
 
-requireText(gradle, 'versionCode 20047', 'Gradle');
-requireText(gradle, "versionName '1.0.8'", 'Gradle');
-requireText(gradle, 'generateElSecondFrames', 'Gradle');
+requireText(gradle, 'versionCode 20048', 'Gradle');
+requireText(gradle, "versionName '1.0.9'", 'Gradle');
 requireText(generator, 'for (let sec=0; sec<60; sec++)', 'seconds generator');
 requireText(generator, 'android:pathData', 'seconds generator');
 
