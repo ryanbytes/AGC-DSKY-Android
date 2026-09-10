@@ -26,7 +26,7 @@ assert(manifest.includes('android:icon="@mipmap/ic_launcher_original"'),
 assert(manifest.includes('android:roundIcon="@mipmap/ic_launcher_original"'),
     'original round launcher icon reference missing');
 assert(fs.existsSync(path.resolve(__dirname,
-    '../app/src/main/res/mipmap-xxhdpi/ic_launcher_original.png')),
+    '../app/src/main/res/mipmap-xxhdpi/ic_launcher_original.webp')),
     'recovered original launcher bitmap missing');
 for (const rel of [
     '../app/src/main/res/mipmap-anydpi/ic_launcher.xml',
