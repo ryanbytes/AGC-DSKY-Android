@@ -250,35 +250,46 @@ This prevents a required frontend layer such as `app-refine.js` from being missi
 
 ## Verification boundary
 
-The current complete revision has **not** been built or run against the pinned WASM/ropes or an Android device in this restricted execution environment. The shell here does not have the complete private recursive checkout needed for the canonical build.
+The v1.1.2 regular and Fire debug APKs were built locally with Android SDK 37,
+Build Tools 36.0.0, Gradle 9.5.1, Java 25, and the exact pinned webAGC
+submodule. The canonical host suite and real Comanche055 yaAGC WASM semantic
+gate passed. `aapt2` inspection of both APKs proved the exported
+`SensorMainActivity` MAIN/LAUNCHER and MAIN/HOME/DEFAULT filters. The Fire APK
+also passed packaged permission/component and DEX checks for
+`FireModeActivity`, `FireRedirectAccessibilityService`, and
+`FireBootReceiver`; the regular APK proved those Fire-only additions absent.
 
-For the new widget resources specifically, Android SDK Platform 37 plus Build Tools 36 `aapt2` were exercised locally against the new `el_widget.xml`, `el_widget_info.xml`, and equivalent manifest registration; resource compilation and linking passed. That proves the widget XML/attributes are accepted by the requested Android toolchain. It does **not** prove the complete application Java source, canonical Gradle build, APK package verification, launcher behavior, alarm delivery, or device rendering.
+The Fire debug APK was installed on Amazon KFKAWI / Fire OS 7.3.2.9. Because
+the previous v1.1.1 APK was signed with an unavailable private release key, the
+old APK was preserved and the app was uninstalled before the differently
+signed debug build was installed; AGC DSKY local app data was reset. Live
+verification proved explicit launch, HOME registration, HOME-key redirect,
+full reboot return to `SensorMainActivity`, and HOME-key return after reboot.
+Amazon Launcher remained enabled because this firmware protects it from ADB
+disable; the native resolver therefore remains Amazon Home and the verified
+boot path is the restored same-package Fire redirect.
 
-The new scheduler/lifecycle assertions were separately exercised against the exact live `app/src/main/assets/agc-core.js` Git blob `057124c3e5c7858813a54323d59daeef91bd08ae` and passed. This is a narrow host-wrapper result only; it is not evidence that the full committed source gate, pinned-WASM semantic gate, Gradle build, APK verifier, or Android device gates pass for this revision.
-
-The new `V16N65E` real-WASM gate is present in source but has **not** been executed here. The saved Library source ZIP does not contain the pinned WASM/rope binaries, and connector access does not expose those binary bytes to the local runtime. Do not infer a pass from source review alone.
-
-The strengthened two-second/visibility-held PRO device gate is also present but has **not** been executed here. It uses CDP-injected pointer events inside a real packaged WebView; even when it passes on-device it does not replace the separate physical-finger PRO acceptance check.
-
-Do not report the strengthened gates as passing until they are actually executed against the corresponding source revision.
+The full CDP-based AGC/device suite, widget rendering, DreamService UI, and
+physical long-PRO behavior were not rerun during this Fire HOME repair.
 
 Hard checkpoint:
 
 ```bash
 bash tools/build-local.sh
-bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+bash tools/device-full-smoke.sh app/build/outputs/apk/regular/debug/app-regular-debug.apk
+bash tools/fire-tablet-home-setup.sh app/build/outputs/apk/fire/debug/app-fire-debug.apk
 ```
 
 ## Remaining acceptance gates
 
-- [ ] Exact recursive checkout and pinned binary verification pass.
-- [ ] Canonical local build and APK verifier pass.
-- [ ] APK installs/launches on target Android/GrapheneOS.
+- [x] Exact recursive checkout and pinned binary verification pass.
+- [x] Canonical local build and APK verifier pass for regular and Fire variants.
+- [x] Fire APK installs/launches and returns after reboot on KFKAWI / Fire OS 7.3.2.9.
 - [ ] EL home-screen widget appears as EL section only, with no bezel/case/keyboard/annunciator bank/chrome.
 - [ ] Widget resize preserves the 106:190 EL aspect without clipping and tap opens the app.
 - [ ] Widget refresh/timezone behavior is verified on the target launcher, including Android alarm batching behavior.
 - [ ] Real relay/raw-channel-aware Luminary V35 device gate passes.
-- [ ] Host Comanche V35 produces exact raw relay-12 `00650` as source specifies.
+- [x] Host Comanche V35 produces exact raw relay-12 `00650` as source specifies.
 - [ ] Real pinned-WASM `V16N65E` host gate passes for both ropes (representative non-V35 Pinball semantics through channel `015`).
 - [ ] Long physical PRO hold produces intended behavior through channel `032`.
 - [ ] Real OS screen-off/on preserves a surviving in-memory core.

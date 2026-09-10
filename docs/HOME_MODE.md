@@ -51,7 +51,8 @@ adb shell cmd package set-home-activity --user 0 com.amazon.firelauncher/.Launch
 adb shell input keyevent KEYCODE_HOME
 ```
 
-No `BOOT_COMPLETED` receiver, background-start permission, Internet permission, or always-running startup service is used for this feature.
+The regular Home mode uses no `BOOT_COMPLETED` receiver, background-start
+permission, Internet permission, or always-running startup service.
 
 The regular APK has no boot receiver or accessibility service. The Fire APK is
 a separate build flavor and adds only the opt-in Fire boot receiver and

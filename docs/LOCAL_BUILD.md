@@ -76,7 +76,8 @@ The script performs these gates in order:
 8. Runs `tools/dsky-mapping-smoke.js` and `tools/v35-model-smoke.js`, including the effective `app.js` + `app-refine.js` relay model.
 9. Runs asset-reference checks.
 10. Runs `tools/wasm-runtime-smoke.js` against the **real pinned yaAGC WASM and both real ropes**. It requires the `V37E00E` P00 precondition to reach channel-010 PROG `00` / relay-11 low-11 `01265`, then requires a real `V35E` FULLDSP/FULLDSP1 relay response.
-11. Runs clean `:app:clean`, `:app:verifyPinnedAgcAssets`, and `:app:assembleDebug` with stacktraces enabled.
+11. Runs clean `:app:clean`, `:app:verifyPinnedAgcAssets`,
+    `:app:assembleRegularDebug`, and `:app:assembleFireDebug` with stacktraces enabled.
 12. Builds and verifies separate regular and Fire APKs, including merged HOME,
     EL AppWidget, and Fire-only component checks.
 

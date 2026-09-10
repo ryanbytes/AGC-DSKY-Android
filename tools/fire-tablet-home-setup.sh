@@ -124,11 +124,14 @@ else
     "::") new_services="$FIRE_SERVICE_FULL" ;;
     *) new_services="$current_services:$FIRE_SERVICE_FULL" ;;
   esac
+  # Replacing an APK can leave the service name persisted while Fire OS has no
+  # live binding. Cycle the framework so the restored component is rebound.
+  "${ADB[@]}" shell settings put secure accessibility_enabled 0
   "${ADB[@]}" shell settings put secure enabled_accessibility_services "$new_services"
   "${ADB[@]}" shell settings put secure accessibility_enabled 1
   "${ADB[@]}" shell am start -a "$PACKAGE.FIRE_ENABLE" -n "$FIRE_MODE" >/dev/null
   "${ADB[@]}" shell pm enable "$FIRE_RECEIVER" >/dev/null 2>&1 || true
-  sleep 3
+  sleep 5
   retained_services="$("${ADB[@]}" shell settings get secure enabled_accessibility_services | tr -d '\r\n')"
   case ":$retained_services:" in
     *":$FIRE_SERVICE_FULL:"*|*":$FIRE_SERVICE_SHORT:"*) ;;
@@ -138,9 +141,14 @@ else
 fi
 
 "${ADB[@]}" shell input keyevent KEYCODE_HOME
-sleep 2
-foreground="$("${ADB[@]}" shell dumpsys activity activities | tr -d '\r' \
-  | grep -m1 -E 'mResumedActivity|mFocusedActivity' || true)"
+foreground=""
+home_deadline=$((SECONDS + 12))
+while (( SECONDS < home_deadline )); do
+  foreground="$("${ADB[@]}" shell dumpsys activity activities | tr -d '\r' \
+    | grep -m1 -E 'mResumedActivity|mFocusedActivity' || true)"
+  grep -Fq "$PACKAGE" <<<"$foreground" && break
+  sleep 1
+done
 grep -Fq "$PACKAGE" <<<"$foreground" \
   || fail "HOME did not bring DSKY to the foreground: ${foreground:-unknown}"
 printf 'HOME key foreground check: PASS\n'
@@ -174,9 +182,14 @@ grep -Fq "$PACKAGE" <<<"$foreground" \
   || fail "DSKY did not become foreground HOME after reboot: ${foreground:-unknown}"
 
 "${ADB[@]}" shell input keyevent KEYCODE_HOME
-sleep 2
-foreground="$("${ADB[@]}" shell dumpsys activity activities | tr -d '\r' \
-  | grep -m1 -E 'mResumedActivity|mFocusedActivity' || true)"
+foreground=""
+home_deadline=$((SECONDS + 12))
+while (( SECONDS < home_deadline )); do
+  foreground="$("${ADB[@]}" shell dumpsys activity activities | tr -d '\r' \
+    | grep -m1 -E 'mResumedActivity|mFocusedActivity' || true)"
+  grep -Fq "$PACKAGE" <<<"$foreground" && break
+  sleep 1
+done
 grep -Fq "$PACKAGE" <<<"$foreground" \
   || fail "HOME key after reboot did not return to DSKY: ${foreground:-unknown}"
 
