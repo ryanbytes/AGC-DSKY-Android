@@ -11,7 +11,6 @@ const CORE_ASSETS = [
   './pwa-sensor-parity.js',
   './pwa-auto-dim.js',
   './pwa-clock-guard.js',
-  './analytics.js',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
