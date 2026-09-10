@@ -48,7 +48,8 @@ requireText(provider, 'views.setRemoteAdapter(R.id.el_seconds_flipper', 'live se
 requireText(provider, 'views.setDisplayedChild(R.id.el_seconds_flipper', 'live seconds adapter');
 requireText(provider, 'private static final int[] SECOND_DRAWABLES', 'generated EL frame table');
 requireText(provider, 'R.drawable.el_sec_59', 'generated EL frame table');
-requireText(provider, 'buildFrames(context, 60)', 'minute/seconds frame count');
+requireText(provider, 'pairFrames=buildFrames(context,60)', 'minute/seconds 60-frame adapter');
+requireText(provider, 'hourFrames=buildFrames(context,24)', 'hour 24-frame adapter');
 requireText(provider, 'alarm.setExactAndAllowWhileIdle', 'minute refresh');
 requireText(provider, 'alarm.setAndAllowWhileIdle', 'minute refresh fallback');
 forbid(provider, 'R.id.el_clock_', 'widget renderer');
@@ -68,8 +69,8 @@ for (const needle of [
   'FIRST_DIGIT_X = 12.0'
 ]) requireText(geometry, needle, 'WebView Apollo sign geometry');
 
-requireText(gradle, 'versionCode 20033', 'Gradle');
-requireText(gradle, "versionName '0.38.3-diagnostics-state-fix'", 'Gradle');
+requireText(gradle, 'versionCode 20040', 'Gradle');
+requireText(gradle, "versionName '1.0.1'", 'Gradle');
 requireText(gradle, 'generateElSecondFrames', 'Gradle');
 requireText(generator, 'for (let sec=0; sec<60; sec++)', 'seconds generator');
 requireText(generator, 'android:pathData', 'seconds generator');
