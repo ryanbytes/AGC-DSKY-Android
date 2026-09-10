@@ -14,8 +14,8 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 20043
-        versionName '1.0.4'
+        versionCode 20044
+        versionName '1.0.5'
     }
 
     sourceSets {
