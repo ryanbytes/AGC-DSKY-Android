@@ -39,6 +39,9 @@ jobs:
       - name: PWA smoke test
         run: node pwa/tools/pwa-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
 
+      - name: PWA sensor parity behavior test
+        run: node pwa/tools/pwa-sensor-parity-smoke.js
+
       - name: Android frontend parity test
         run: node pwa/tools/pwa-parity-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
 
