@@ -16,12 +16,20 @@ command -v git >/dev/null 2>&1 || fail "git is required"
 head_sha="$(git -C "$WEBAGC" rev-parse HEAD 2>/dev/null || true)"
 [[ "$head_sha" == "$PINNED_WEBAGC" ]] || fail "vendor/webAGC is at ${head_sha:-unknown}; expected $PINNED_WEBAGC"
 
+file_size() {
+  local path="$1"
+  case "$(uname -s)" in
+    Darwin) stat -f '%z' "$path" ;;
+    *) stat -c '%s' "$path" ;;
+  esac
+}
+
 verify_blob() {
   local path="$1" expected_size="$2" expected_blob="$3" label="$4"
   [[ -f "$path" ]] || fail "missing $label at $path"
 
   local size
-  size="$(stat -f '%z' "$path" 2>/dev/null || stat -c '%s' "$path" 2>/dev/null || true)"
+  size="$(file_size "$path" 2>/dev/null || true)"
   [[ "$size" == "$expected_size" ]] || fail "$label size is ${size:-unknown}; expected $expected_size"
 
   local blob
