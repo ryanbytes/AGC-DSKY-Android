@@ -1,71 +1,155 @@
-/* v0.38.0: application controls occupy their own flowing strip below the DSKY.
-   Labels never truncate; the strip wraps as needed and the DSKY reserves room
-   for it instead of being covered. */
+/* Application controls occupy their own flowing strip below the DSKY.
+   The controls intentionally borrow the panel appearance of Honeywell/MICRO
+   SWITCH Series 2 barrier-mount operator indicators: a dark mounting barrier
+   around a raised translucent legend screen.  The actual DSKY keypad retains
+   its Apollo keycap styling in style.css. */
 #app{
   flex-direction:column;
   justify-content:center;
-  gap:5px;
+  gap:6px;
   overflow:hidden;
 }
 .dsky{
-  width:min(calc(100vw - 4px),calc((100vh - 124px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372));
+  width:min(calc(100vw - 4px),calc((100vh - 138px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372));
 }
 .app-controls{
   position:relative;
   left:auto;
   bottom:auto;
   transform:none;
-  width:min(calc(100vw - 8px),900px);
+  width:min(calc(100vw - 8px),920px);
   max-width:calc(100vw - 8px);
   min-height:0;
-  max-height:30vh;
+  max-height:31vh;
   flex:0 0 auto;
   display:flex;
   flex-flow:row wrap;
   justify-content:center;
   align-items:center;
   align-content:flex-start;
-  gap:4px;
-  padding:5px;
+  gap:5px;
+  padding:7px;
   margin:0;
   overflow-y:auto;
-  background:rgba(12,12,12,.94);
-  border:1px solid #3a3a3a;
-  border-radius:5px;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 4px),
+    linear-gradient(180deg,#41433e 0%,#2b2d29 46%,#1b1c1a 100%);
+  border:1px solid #090a09;
+  border-radius:2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.18),
+    inset 0 -2px 4px rgba(0,0,0,.72),
+    0 2px 5px rgba(0,0,0,.58);
   opacity:0;
   visibility:hidden;
   pointer-events:none;
   transition:opacity .16s ease;
   z-index:20;
 }
-.controls-visible .app-controls{opacity:.96;visibility:visible;pointer-events:auto;transform:none}
+.controls-visible .app-controls{opacity:.98;visibility:visible;pointer-events:auto;transform:none}
+
+/* Series 2-style operator-indicator housing.  The black outer element is the
+   barrier/housing; ::before is the translucent single-section display cap. */
 .app-controls button{
+  position:relative;
+  isolation:isolate;
   flex:0 0 auto;
   width:auto;
   min-width:max-content;
   max-width:none;
-  min-height:27px;
-  padding:5px 8px;
+  min-height:36px;
+  padding:8px 11px 7px;
   overflow:visible;
   text-overflow:clip;
   white-space:nowrap;
-  font:700 8.4px/1.05 Arial,Helvetica,sans-serif;
-  letter-spacing:.015em;
+  border:2px solid #11120f;
+  border-radius:1px;
+  outline:1px solid #555850;
+  background:linear-gradient(90deg,#171815 0 8%,#292b26 8% 92%,#11120f 92% 100%);
+  color:#181a17;
+  font:800 8.2px/.98 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+  text-shadow:0 1px rgba(255,255,255,.28);
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.13),
+    inset -1px -2px 2px rgba(0,0,0,.72),
+    0 2px 0 #080908,
+    0 3px 4px rgba(0,0,0,.45);
+  -webkit-tap-highlight-color:transparent;
+  transform:translateY(0);
+  transition:transform 45ms linear,box-shadow 45ms linear,filter 90ms linear;
+}
+.app-controls button::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:4px 5px 5px;
+  border:1px solid #7c7e76;
+  border-radius:1px;
+  background:
+    linear-gradient(112deg,rgba(255,255,255,.42) 0 10%,transparent 27% 72%,rgba(0,0,0,.08) 100%),
+    linear-gradient(180deg,#e5e3d8 0%,#cacac0 48%,#acada4 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.78),
+    inset 0 -2px 2px rgba(62,64,58,.38),
+    0 0 0 1px #050605,
+    0 1px 2px rgba(0,0,0,.65);
+}
+.app-controls button::after{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:2px;
+  right:2px;
+  bottom:-3px;
+  height:3px;
+  background:#080908;
+  opacity:.75;
+}
+.app-controls button:hover{filter:brightness(1.06)}
+.app-controls button:active,
+.app-controls button[aria-pressed="true"]{
+  transform:translateY(2px);
+  box-shadow:
+    inset 1px 2px 2px rgba(0,0,0,.55),
+    inset -1px -1px 0 rgba(255,255,255,.08),
+    0 0 0 #080908,
+    0 1px 2px rgba(0,0,0,.45);
+}
+.app-controls button:active::before,
+.app-controls button[aria-pressed="true"]::before{
+  inset:5px 5px 4px;
+  background:
+    linear-gradient(112deg,rgba(255,255,255,.22) 0 9%,transparent 28% 72%,rgba(0,0,0,.11) 100%),
+    linear-gradient(180deg,#c9c9c0 0%,#b8b9b0 52%,#9d9f97 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,.22),
+    inset 0 -1px 0 rgba(255,255,255,.40),
+    0 0 0 1px #050605;
+}
+.app-controls button:active::after,
+.app-controls button[aria-pressed="true"]::after{opacity:.15}
+.app-controls button:focus-visible{
+  outline:2px solid #c8c9bd;
+  outline-offset:2px;
 }
 .app-controls span{display:none!important}
+
 @media (max-width:380px){
-  .dsky{width:min(calc(100vw - 4px),calc((100vh - 145px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372))}
-  .app-controls{gap:3px;padding:4px}
-  .app-controls button{font-size:7.7px;padding:5px 6px}
+  .dsky{width:min(calc(100vw - 4px),calc((100vh - 164px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372))}
+  .app-controls{gap:4px;padding:5px}
+  .app-controls button{min-height:34px;font-size:7.3px;padding:8px 8px 7px}
+  .app-controls button::before{inset:4px 4px 5px}
 }
 @media (orientation:landscape){
   .dsky,.dream .dsky{
     width:auto!important;
-    height:calc(100vh - 72px - max(4px,env(safe-area-inset-bottom)));
+    height:calc(100vh - 82px - max(4px,env(safe-area-inset-bottom)));
     max-width:92vw;
   }
-  .app-controls{width:min(calc(100vw - 8px),1180px);max-height:28vh;gap:4px;padding:4px}
-  .app-controls button{min-height:26px;font-size:8px;padding:4px 7px}
+  .app-controls{width:min(calc(100vw - 8px),1180px);max-height:31vh;gap:4px;padding:5px}
+  .app-controls button{min-height:34px;font-size:7.6px;padding:7px 9px 6px}
 }
 body.dream #app,body.display-only #app,body.screen-only #app{gap:0}
 body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}
