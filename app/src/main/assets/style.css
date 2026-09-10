@@ -81,7 +81,13 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
   overflow:visible;
 }
 .el-static{filter:url(#elSoft)}
-.el-field,.comp-el{filter:url(#elGlow)}
+.comp-el{filter:url(#elGlow)}
+/* Keep unlit segment ghosts outside the SVG glow pass.  Fire OS 7's WebView
+   compositor can repeat a low-alpha segment when the filter is applied to a
+   whole multi-glyph field, producing a detached horizontal phantom after
+   PROG 00.  Filtering only energized sections preserves the halo and the
+   restrained off outlines without feeding those outlines into the blur. */
+.el-field .el-seg.on{filter:url(#elGlow)}
 /* Labels, rules, COMP ACTY and numeric strokes are all phosphor features on
    the same EL panel, so illuminated elements share the same 530-nm hue. */
 .el-label{

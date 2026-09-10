@@ -250,6 +250,15 @@ This prevents a required frontend layer such as `app-refine.js` from being missi
 
 ## Verification boundary
 
+Fire OS 7.3.2.9's WebView compositor repeated the low-alpha middle segment of
+the second zero when `elGlow` filtered the entire two-glyph PROG group. The DOM
+still contained exactly two glyphs; the detached bar was a filter artifact, not
+an AGC/display-state character. Numeric glow is now applied only to energized
+segments, while inactive segment outlines remain rendered outside the blur
+pass. The packaged Fire APK was visually checked in both the full faceplate and
+borderless screen-only views on the KFKAWI tablet; `PROG 00` rendered without
+the detached bar in both views.
+
 The v1.1.2 regular and Fire debug APKs were built locally with Android SDK 37,
 Build Tools 36.0.0, Gradle 9.5.1, Java 25, and the exact pinned webAGC
 submodule. The canonical host suite and real Comanche055 yaAGC WASM semantic
@@ -285,6 +294,7 @@ bash tools/fire-tablet-home-setup.sh app/build/outputs/apk/fire/debug/app-fire-d
 - [x] Exact recursive checkout and pinned binary verification pass.
 - [x] Canonical local build and APK verifier pass for regular and Fire variants.
 - [x] Fire APK installs/launches and returns after reboot on KFKAWI / Fire OS 7.3.2.9.
+- [x] Fire WebView renders `PROG 00` without the detached filtered-segment artifact in full and screen-only views.
 - [ ] EL home-screen widget appears as EL section only, with no bezel/case/keyboard/annunciator bank/chrome.
 - [ ] Widget resize preserves the 106:190 EL aspect without clipping and tap opens the app.
 - [ ] Widget refresh/timezone behavior is verified on the target launcher, including Android alarm batching behavior.

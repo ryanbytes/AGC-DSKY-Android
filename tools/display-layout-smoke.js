@@ -51,6 +51,16 @@ assert(STYLE.includes('@media (orientation:landscape)'),
 assert(STYLE.match(/calc\(100vh \* 320 \/ 220\)/g)?.length >= 2,
   'display-only 320x220 scaling must be preserved in base and landscape rules');
 
+// Old Fire OS WebView compositors can repeat low-alpha geometry when the SVG
+// glow filter is placed on a whole multi-glyph field.  Off-segment ghosts stay
+// visible, but only energized segments may enter the blur pass.
+assert(!STYLE.includes('.el-field,.comp-el{filter:url(#elGlow)}'),
+  'EL glow must not filter complete multi-glyph fields');
+assert(STYLE.includes('.comp-el{filter:url(#elGlow)}'),
+  'COMP ACTY glow must remain enabled');
+assert(STYLE.includes('.el-field .el-seg.on{filter:url(#elGlow)}'),
+  'numeric EL glow must be scoped to energized segments');
+
 // The controls are a flowing, bounded strip below the DSKY.  The current
 // Series-2 operator-indicator treatment is taller than the former flat buttons,
 // so portrait sizing reserves correspondingly more vertical space.
