@@ -11,9 +11,9 @@ const text = rel => read(rel).toString('utf8');
 const exists = rel => fs.existsSync(path.join(site, rel));
 
 for (const rel of [
-  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'sw.js',
+  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'analytics.js', 'sw.js',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png',
-  'yaAGC.wasm', 'Comanche055.bin'
+  'PRIVACY_POLICY.txt', 'yaAGC.wasm', 'Comanche055.bin'
 ]) {
   if (!exists(rel)) fail('missing ' + rel);
 }
@@ -23,7 +23,8 @@ for (const marker of [
   'rel="manifest" href="manifest.webmanifest"',
   'apple-mobile-web-app-capable',
   'apple-touch-icon',
-  '<script src="pwa-bootstrap.js"></script>'
+  '<script src="pwa-bootstrap.js"></script>',
+  '<script src="analytics.js"></script>'
 ]) {
   if (!index.includes(marker)) fail('index.html missing ' + marker);
 }
@@ -53,9 +54,23 @@ if (wasm.toString('hex', 0, 4) !== '0061736d') fail('yaAGC.wasm magic mismatch')
 const rope = read('Comanche055.bin');
 if (rope.length !== 73728) fail('Comanche055.bin size mismatch: ' + rope.length);
 
+const analytics = text('analytics.js');
+if (analytics.includes('__ANALYTICS_ENDPOINT_JSON__') || analytics.includes('__APP_VERSION_JSON__')) {
+  fail('analytics build tokens were not replaced');
+}
+try { new Function(analytics); }
+catch (error) { fail('analytics.js syntax error: ' + error.message); }
+if (!analytics.includes("navigator.doNotTrack === '1'")) fail('analytics client must honor Do Not Track');
+if (!analytics.includes("credentials: 'omit'")) fail('analytics client must omit credentials');
+
+const privacy = text('PRIVACY_POLICY.txt');
+for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=off']) {
+  if (!privacy.includes(marker)) fail('PWA privacy policy missing ' + marker);
+}
+
 const sw = text('sw.js');
 if (sw.includes('__CACHE_VERSION__')) fail('service-worker cache version was not stamped');
-for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js']) {
+for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'analytics.js']) {
   if (!sw.includes(`'./${required}'`)) fail('service worker does not pre-cache ' + required);
 }
 
@@ -75,3 +90,4 @@ console.log('PWA smoke: PASS');
 console.log('Site: ' + site);
 console.log('yaAGC.wasm: ' + wasm.length + ' bytes');
 console.log('Comanche055.bin: ' + rope.length + ' bytes');
+console.log('Analytics client: PASS');
