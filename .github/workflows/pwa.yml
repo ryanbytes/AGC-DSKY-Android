@@ -42,6 +42,9 @@ jobs:
       - name: PWA sensor parity behavior test
         run: node pwa/tools/pwa-sensor-parity-smoke.js
 
+      - name: PWA auto dim behavior test
+        run: node pwa/tools/pwa-auto-dim-smoke.js
+
       - name: Android frontend parity test
         run: node pwa/tools/pwa-parity-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
 
