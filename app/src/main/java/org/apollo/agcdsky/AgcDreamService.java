@@ -18,7 +18,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-/** Charging/idle Android screen saver with a borderless, AGC-driven DSKY display. */
+/** Charging/idle Android screen saver with the borderless DSKY wall-clock display. */
 public final class AgcDreamService extends DreamService {
     private WebView webView;
     private final Handler webViewHandler = new Handler(Looper.getMainLooper());
@@ -63,7 +63,9 @@ public final class AgcDreamService extends DreamService {
                 }
             });
             setContentView(webView);
-            webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX + "index.html?dream=1&agc=1&display=1");
+            // The Android DreamService is intentionally the DSKY wall clock.
+            // AGC mode remains available only in the interactive app.
+            webView.loadUrl(NetClient.ASSET_ORIGIN + NetClient.ASSET_PREFIX + "index.html?dream=1&clock=1&display=1");
         } catch (Throwable error) {
             DebugReporter.appendWebError(this, "DreamService startup failure\n" + error.toString());
             destroyWebView();
