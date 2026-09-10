@@ -75,8 +75,8 @@ for (const needle of [
   'FIRST_DIGIT_X = 12.0'
 ]) requireText(geometry, needle, 'WebView Apollo sign geometry');
 
-requireText(gradle, 'versionCode 20046', 'Gradle');
-requireText(gradle, "versionName '1.0.7'", 'Gradle');
+requireText(gradle, 'versionCode 20047', 'Gradle');
+requireText(gradle, "versionName '1.0.8'", 'Gradle');
 requireText(gradle, 'generateElSecondFrames', 'Gradle');
 requireText(generator, 'for (let sec=0; sec<60; sec++)', 'seconds generator');
 requireText(generator, 'android:pathData', 'seconds generator');
