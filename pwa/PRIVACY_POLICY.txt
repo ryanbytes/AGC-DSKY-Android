@@ -5,9 +5,10 @@ AGC DSKY is an independent historical Apollo Guidance Computer / DSKY simulator.
 
 DATA ACCESSED BY SIMULATOR FEATURES
 - Camera: may be used for a live sextant/optics view when enabled and permitted by the browser.
-- Approximate or precise location: may be used for local astronomical calculations such as horizon and navigation-star assistance when enabled and permitted by the browser.
+- Approximate or precise location: may be used for local astronomical calculations such as horizon/navigation-star assistance and local sunrise/sunset brightness control when enabled and permitted by the browser.
 - Motion and orientation sensor data: may be used for simulated spacecraft/optics input paths when enabled and permitted by the browser.
-- App state and preferences: simulator state, settings, and related configuration may be stored locally so the app can restore its state.
+- Ambient light sensor: when the browser exposes it, local illuminance readings may be used only on-device to adjust DSKY display brightness. Ambient-light readings are not sent to the analytics service.
+- App state and preferences: simulator state, settings, brightness mode, cached solar coordinates, and related configuration may be stored locally so the app can restore its state.
 
 ANONYMOUS USAGE ANALYTICS
 The PWA may send a small anonymous usage event to a developer-operated analytics endpoint when analytics are enabled for the deployed site. The event contains only:
@@ -17,20 +18,20 @@ The PWA may send a small anonymous usage event to a developer-operated analytics
 - a coarse device class such as iPhone, iPad, Android, Mac, Windows, Linux, or other;
 - the app build identifier.
 
-The analytics backend HMAC-hashes the random installation identifier before storing it. The raw installation identifier is not stored by the backend. The backend does not intentionally read or store the request IP address, exact location, browser history, camera data, sensor data, AGC inputs, simulator state, names, email addresses, or user-account information.
+The analytics backend HMAC-hashes the random installation identifier before storing it. The raw installation identifier is not stored by the backend. The backend does not intentionally read or store the request IP address, exact location, browser history, camera data, ambient-light readings, motion/orientation sensor data, AGC inputs, simulator state, names, email addresses, or user-account information.
 
 The aggregate statistics endpoint exposes counts only, such as total anonymous installations/users, launches, Home Screen users, recent active users, and coarse device totals. It does not expose per-user records.
 
 Cloudflare provides the Worker and D1 infrastructure used by the optional analytics backend and necessarily processes network requests to provide that service. The application does not use advertising analytics or sell analytics data.
 
 USER CONTROL
-Do Not Track is honored by the PWA analytics client. Analytics can also be disabled locally by opening the PWA with ?telemetry=off. Opening it with ?telemetry=on removes that local opt-out. Clearing the site's browser storage removes the locally stored random installation identifier and simulator preferences.
+Do Not Track is honored by the PWA analytics client. Analytics can also be disabled locally by opening the PWA with ?telemetry=off. Opening it with ?telemetry=on removes that local opt-out. Clearing the site's browser storage removes the locally stored random installation identifier, simulator preferences, and cached solar location.
 
 OFFLINE USE
-After the PWA has cached its required files, the AGC simulator can run offline. Analytics events cannot be transmitted while offline; failure to transmit analytics does not prevent simulator operation.
+After the PWA has cached its required files, the AGC simulator can run offline. Cached coordinates can continue to provide sunrise/sunset dimming calculations while offline. Analytics events cannot be transmitted while offline; failure to transmit analytics does not prevent simulator operation.
 
 RETENTION AND DELETION
-Simulator state, settings, and the random analytics installation identifier may remain in browser storage until cleared by the user. Aggregate analytics and HMAC-hashed anonymous installation records may be retained by the developer for usage measurement. Because the backend does not store the raw random identifier or an account identity, it is not designed to associate an analytics record with a named individual.
+Simulator state, settings, cached solar coordinates, and the random analytics installation identifier may remain in browser storage until cleared by the user. Ambient-light readings are kept only in memory while the app runs. Aggregate analytics and HMAC-hashed anonymous installation records may be retained by the developer for usage measurement. Because the backend does not store the raw random identifier or an account identity, it is not designed to associate an analytics record with a named individual.
 
 CHILDREN
 The app is a general historical/technical simulator and is not specifically directed to children. It does not knowingly collect names, contact information, precise location, or other identifying profile information from children or other users through the analytics feature.
