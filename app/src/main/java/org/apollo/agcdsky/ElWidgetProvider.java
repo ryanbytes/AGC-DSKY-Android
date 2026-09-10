@@ -57,7 +57,9 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final LruCache<String,Bitmap> BITMAP_CACHE=new LruCache<String,Bitmap>(CACHE_KIB){
         @Override protected int sizeOf(String key,Bitmap value){return Math.max(1,value.getAllocationByteCount()/1024);}
       };
-      private static final int CORE=Color.rgb(201,245,189),LABEL=Color.rgb(172,220,167),RULE=Color.rgb(181,230,172),OFF=Color.rgb(28,39,28);
+      // Match the shared CuriousMarc/Carl Claunch early-panel cyan-blue EL target (#62D9E8).
+      // Labels and rules are the same phosphor hue at lower alpha, not separate green paints.
+      private static final int CORE=Color.rgb(98,217,232),LABEL=CORE,RULE=CORE,OFF=Color.rgb(17,34,37);
       private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,SRC_H=12.7f,SRC_PITCH=10.668f,DIGIT_SCALE=1.58f,MIRROR_X=2f*SRC_X+SRC_W,ADVANCE=SRC_PITCH*DIGIT_SCALE,DIGIT_H=SRC_H*DIGIT_SCALE,FIRST_DIGIT_X=12f;
       private static final float[][][] SOURCE={
         {{95.137274f,86.827056f},{96.244524f,85.303059f},{90.088724f,85.303059f},{90.497084f,86.827056f}},
