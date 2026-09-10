@@ -30,6 +30,7 @@ const CORE_ASSETS = [
   './startup-defaults.js',
   './app.js',
   './clock-behavior.js',
+  './clock-behavior-v2.js',
   './phone-icdu.js',
   './apollo-stars.js',
   './optics.js',
@@ -98,9 +99,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Clock behavior is safety-sensitive UI state. Always prefer the deployed
-  // network copy so an older cached flicker helper cannot survive an update.
-  if (url.pathname.endsWith('/clock-behavior.js') || url.pathname.endsWith('/pwa-clock-guard.js')) {
+  if (url.pathname.endsWith('/clock-behavior.js') || url.pathname.endsWith('/clock-behavior-v2.js') || url.pathname.endsWith('/pwa-clock-guard.js')) {
     event.respondWith(
       fetch(request)
         .then(response => {
