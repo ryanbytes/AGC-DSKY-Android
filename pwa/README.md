@@ -13,7 +13,7 @@ node pwa/tools/pwa-auto-dim-smoke.js
 node pwa/tools/pwa-parity-smoke.js pwa/dist
 ```
 
-The generated site is in `pwa/dist/` and can be served by any HTTPS static host.
+The generated site is in `pwa/dist/` and can be served by any HTTPS static host. Local builds do not include analytics unless `CLOUDFLARE_WEB_ANALYTICS_TOKEN` is explicitly supplied.
 
 ## Install
 
@@ -54,6 +54,10 @@ The otherwise-unused Dream brightness control becomes the PWA brightness selecto
 Browser permissions and hardware support still control camera, location, motion, compass, ambient light and Wake Lock availability. iOS requires motion/orientation permission to be requested from a user gesture; the parity bridge requests both permissions from the same completed gesture. Browsers that do not expose an ambient-light API still receive the location-aware solar fallback.
 
 Android-only operating-system integrations cannot exist as ordinary web APIs and are therefore outside PWA parity: Android DreamService/screensaver registration, the native home-screen widget, and selection as the Android HOME launcher.
+
+## Analytics
+
+The deployed GitHub Pages build uses standard Cloudflare Web Analytics only. CI looks up or creates the `ryanbytes.github.io` Web Analytics site using the repository's existing Cloudflare credentials, obtains the public site token, and injects Cloudflare's standard beacon into the generated page. The app does not maintain a Worker/D1 analytics database, custom installation identifier, launch counter, or install counter.
 
 ## GitHub Pages
 
