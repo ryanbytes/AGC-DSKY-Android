@@ -1,6 +1,6 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-06
+Last updated: 2026-09-10
 
 ## Goal
 
@@ -48,6 +48,23 @@ Normal keys use channel `015`. PRO uses channel `032` bit `020000` and remains p
 - DreamService remains a synthetic display-only clock path and must not run yaAGC.
 - DREAM DIM / BRIGHT / SOLAR and polar day/night handling remain implemented.
 - `FRONTEND READY` now requires `snapshotRelays()`, `snapshotChannels()`, and `snapshotDsky()` in addition to rendered EL/mission UI, so a partial post-load refinement cannot pass immediate device smoke.
+
+## Amazon Fire HOME startup
+
+`SensorMainActivity` retains separate `MAIN`/`LAUNCHER` and
+`MAIN`/`HOME`/`DEFAULT` filters and remains exported. Git history shows those
+properties are unchanged between the corrected v1.0 HOME release (`12584f5`)
+and v1.1.1; there is no activity rename, alias, package/application-ID,
+launch-mode, task-affinity, flavor, or manifest-overlay change in that range.
+The setup/verification repair is released as Android v1.1.2 (`20051`).
+
+On Fire OS 7.3.2.9, `set-home-activity` can report success and persist DSKY as
+the preferred HOME while `resolve-activity` still chooses Amazon's priority-50
+launcher. `tools/fire-tablet-home-setup.sh` now verifies DSKY's normal launcher
+and HOME candidacy before disabling anything, assigns HOME, then disables
+`com.amazon.firelauncher`, checks resolver/foreground behavior, and performs a
+real reboot gate. Any failure after the launcher safety point re-enables Amazon
+Home. `tools/fire-home-setup-smoke.js` guards this ordering and recovery path.
 
 ## EL-only home-screen widget
 

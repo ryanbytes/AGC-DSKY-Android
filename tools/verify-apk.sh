@@ -161,6 +161,45 @@ grep -Fq '="org.apollo.agcdsky.SensorMainActivity"' <<<"$manifest_tree" \
   || grep -Fq '=".SensorMainActivity"' <<<"$manifest_tree" \
   || fail "merged manifest is missing SensorMainActivity launcher target"
 
+# Inspect the merged binary manifest, not only the source manifest. Isolate the
+# SensorMainActivity subtree so another component cannot accidentally satisfy
+# these launcher/HOME checks.
+sensor_activity_tree="$(awk '
+  function emit() {
+    if (block ~ /org\.apollo\.agcdsky\.SensorMainActivity|\.SensorMainActivity/) {
+      printf "%s", block
+    }
+  }
+  /^[[:space:]]+E: activity \(line=/ {
+    emit()
+    block = $0 ORS
+    activity_indent = index($0, "E:")
+    next
+  }
+  block != "" {
+    element_indent = index($0, "E:")
+    if (element_indent == activity_indent) {
+      emit()
+      block = ""
+    } else {
+      block = block $0 ORS
+    }
+  }
+  END { emit() }
+' <<<"$manifest_tree")"
+[[ -n "$sensor_activity_tree" ]] \
+  || fail "unable to isolate SensorMainActivity in merged manifest"
+grep -Eq 'android:exported.*=true' <<<"$sensor_activity_tree" \
+  || fail "merged SensorMainActivity is not exported"
+grep -Fq 'android.intent.action.MAIN' <<<"$sensor_activity_tree" \
+  || fail "merged SensorMainActivity is missing MAIN action"
+grep -Fq 'android.intent.category.LAUNCHER' <<<"$sensor_activity_tree" \
+  || fail "merged SensorMainActivity is missing regular LAUNCHER category"
+grep -Fq 'android.intent.category.HOME' <<<"$sensor_activity_tree" \
+  || fail "merged SensorMainActivity is missing HOME category"
+grep -Fq 'android.intent.category.DEFAULT' <<<"$sensor_activity_tree" \
+  || fail "merged SensorMainActivity HOME filter is missing DEFAULT category"
+
 resources="$($AAPT2 dump resources "$APK")"
 grep -Eq 'resource 0x[0-9a-f]+ id/el_widget_image' <<<"$resources" \
   || fail "APK resource table is missing el_widget_image"
@@ -190,6 +229,7 @@ printf '  package/version/minSdk/targetSdk match source (%s / %s)\n' "$EXPECTED_
 printf '  APK is debuggable for the ADB smoke/report workflow\n'
 printf '  pinned yaAGC/WASM + Comanche 055 rope match exact Git blobs\n'
 printf '  index.html and every referenced frontend asset match the current checkout byte-for-byte\n'
+printf '  SensorMainActivity has packaged MAIN/LAUNCHER and MAIN/HOME/DEFAULT handling\n'
 printf '  SensorMainActivity and EL AppWidget classes/resources are packaged\n'
 printf '  LM rope, raster panel images, and unused upstream vendor assets are absent\n'
 printf '  merged manifest has camera/location permissions and no INTERNET permission\n'

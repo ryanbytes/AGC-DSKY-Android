@@ -46,4 +46,22 @@ assert(manifest.includes('android.permission.BIND_DREAM_SERVICE'),
 assert(manifest.includes('android.service.dreams.DreamService'),
     'DreamService intent registration missing');
 
+const sensorActivity = manifest.match(
+    /<activity\s[^>]*android:name="\.SensorMainActivity"[^>]*>([\s\S]*?)<\/activity>/);
+assert(sensorActivity, 'SensorMainActivity declaration missing');
+const sensorDeclaration = sensorActivity[0];
+assert(/android:exported="true"/.test(sensorDeclaration),
+    'SensorMainActivity must be exported for launcher and HOME intents');
+const intentFilters = [...sensorDeclaration.matchAll(
+    /<intent-filter>([\s\S]*?)<\/intent-filter>/g)].map(match => match[1]);
+assert(intentFilters.some(filter =>
+    filter.includes('android.intent.action.MAIN') &&
+    filter.includes('android.intent.category.LAUNCHER')),
+    'SensorMainActivity regular MAIN/LAUNCHER filter missing');
+assert(intentFilters.some(filter =>
+    filter.includes('android.intent.action.MAIN') &&
+    filter.includes('android.intent.category.HOME') &&
+    filter.includes('android.intent.category.DEFAULT')),
+    'SensorMainActivity MAIN/HOME/DEFAULT filter missing');
+
 console.log('manifest policy smoke: PASS');

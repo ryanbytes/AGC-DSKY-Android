@@ -12,8 +12,40 @@ This is optional. Installing AGC DSKY does not replace the normal launcher autom
 
 Once selected, Android treats AGC DSKY as the device Home activity. It will be brought up as Home after boot and when the Home gesture/button is used.
 
+On Amazon Fire OS 7, Amazon's launcher advertises its HOME activity at a higher
+intent-filter priority than ordinary sideloaded apps. Fire OS can therefore
+record DSKY as the preferred HOME activity while still resolving HOME to
+`com.amazon.firelauncher/.Launcher`.
+
+For a dedicated Fire tablet, build the current APK and run:
+
+```bash
+bash tools/fire-tablet-home-setup.sh app/build/outputs/apk/debug/app-debug.apk
+```
+
+The setup script installs and launches DSKY once, verifies both the regular
+launcher and HOME registrations, assigns `SensorMainActivity` as HOME, and only
+then disables `com.amazon.firelauncher`. It verifies the HOME resolver, presses
+HOME, reboots, and requires DSKY to return as the foreground HOME activity. If
+any check fails after the safety point, it re-enables Amazon Fire Launcher and
+returns it to HOME.
+
+The resulting HOME component is:
+
+```text
+org.apollo.agcdsky/.SensorMainActivity
+```
+
 ## Disable
 
 Return to Android's **Home app** setting and select the normal launcher again.
+
+On a Fire tablet configured by the script, re-enable Amazon Home first:
+
+```bash
+adb shell pm enable --user 0 com.amazon.firelauncher
+adb shell cmd package set-home-activity --user 0 com.amazon.firelauncher/.Launcher
+adb shell input keyevent KEYCODE_HOME
+```
 
 No `BOOT_COMPLETED` receiver, background-start permission, Internet permission, or always-running startup service is used for this feature.
