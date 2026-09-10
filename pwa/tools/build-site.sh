@@ -24,6 +24,7 @@ rm -rf "$DEST"
 mkdir -p "$DEST"
 rsync -a --delete --exclude '.DS_Store' "$SOURCE_ASSETS/" "$DEST/"
 mkdir -p "$DEST/icons"
+cp "$SOURCE_ASSETS/clock-behavior.js" "$DEST/clock-behavior-v2.js"
 cp "$WEBAGC/src/yaAGC.wasm" "$DEST/yaAGC.wasm"
 cp "$WEBAGC/demo/agc/Comanche055.bin" "$DEST/Comanche055.bin"
 cp "$PWA/manifest.webmanifest" "$DEST/manifest.webmanifest"
@@ -76,8 +77,13 @@ head = '''\n<link rel="manifest" href="manifest.webmanifest">\n<meta name="theme
 boot = '\n<script src="pwa-sensor-parity.js"></script>\n<script src="pwa-auto-dim.js"></script>\n<script src="pwa-clock-guard.js"></script>\n<script src="pwa-bootstrap.js"></script>\n<script src="analytics.js"></script>\n'
 if '</head>' not in text or '</body>' not in text:
     raise SystemExit('shared index.html is missing head/body closing tags')
+if '<script src="clock-behavior.js"></script>' not in text:
+    raise SystemExit('shared index.html is missing clock behavior script')
 if any(marker in text for marker in ('manifest.webmanifest', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'pwa-bootstrap.js', 'analytics.js')):
     raise SystemExit('shared index.html already contains PWA injection markers')
+# One-time filename change intentionally defeats any old service worker cache
+# containing the experimental clock COMP ACTY helper.
+text = text.replace('<script src="clock-behavior.js"></script>', '<script src="clock-behavior-v2.js"></script>', 1)
 text = text.replace('</head>', head + '</head>', 1)
 text = text.replace('</body>', boot + '</body>', 1)
 path.write_text(text, encoding='utf-8')
