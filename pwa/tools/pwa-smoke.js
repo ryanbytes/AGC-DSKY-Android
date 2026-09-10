@@ -11,7 +11,7 @@ const text = rel => read(rel).toString('utf8');
 const exists = rel => fs.existsSync(path.join(site, rel));
 
 for (const rel of [
-  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'analytics.js', 'sw.js',
+  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'analytics.js', 'sw.js',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'PRIVACY_POLICY.txt', 'yaAGC.wasm', 'Comanche055.bin'
 ]) {
@@ -23,10 +23,14 @@ for (const marker of [
   'rel="manifest" href="manifest.webmanifest"',
   'apple-mobile-web-app-capable',
   'apple-touch-icon',
+  '<script src="pwa-sensor-parity.js"></script>',
   '<script src="pwa-bootstrap.js"></script>',
   '<script src="analytics.js"></script>'
 ]) {
   if (!index.includes(marker)) fail('index.html missing ' + marker);
+}
+if (index.indexOf('pwa-sensor-parity.js') > index.indexOf('pwa-bootstrap.js')) {
+  fail('sensor parity bridge must initialize before generic PWA bootstrap');
 }
 
 let manifest;
@@ -68,6 +72,30 @@ if (bootstrap.includes("'pointerdown'") || bootstrap.includes("'touchstart'")) {
 try { new Function(bootstrap); }
 catch (error) { fail('pwa-bootstrap.js syntax error: ' + error.message); }
 
+const parity = text('pwa-sensor-parity.js');
+for (const marker of [
+  "navigator.wakeLock.request('screen')",
+  "window.addEventListener('devicemotion'",
+  "window.addEventListener('deviceorientationabsolute'",
+  'DeviceMotionEvent',
+  'DeviceOrientationEvent',
+  'nativePhoneLinearAcceleration',
+  'nativePipaSensorStatus',
+  'nativeMagneticQuaternion',
+  'nativeMagneticSensorStatus',
+  'accelerationIncludingGravity',
+  "'web-device-motion'",
+  "'web-absolute-orientation'"
+]) {
+  if (!parity.includes(marker)) fail('PWA sensor parity bridge missing ' + marker);
+}
+for (const marker of ["'pointerup'", "'touchend'", "'click'"]) {
+  if (!parity.includes(marker)) fail('PWA sensor permission bridge missing completed gesture ' + marker);
+}
+if (parity.includes("'pointerdown'")) fail('PWA parity permission request must use a completed gesture');
+try { new Function(parity); }
+catch (error) { fail('pwa-sensor-parity.js syntax error: ' + error.message); }
+
 const analytics = text('analytics.js');
 if (analytics.includes('__ANALYTICS_ENDPOINT_JSON__') || analytics.includes('__APP_VERSION_JSON__')) {
   fail('analytics build tokens were not replaced');
@@ -84,7 +112,7 @@ for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=of
 
 const sw = text('sw.js');
 if (sw.includes('__CACHE_VERSION__')) fail('service-worker cache version was not stamped');
-for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'analytics.js']) {
+for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'analytics.js']) {
   if (!sw.includes(`'./${required}'`)) fail('service worker does not pre-cache ' + required);
 }
 
@@ -105,4 +133,5 @@ console.log('Site: ' + site);
 console.log('yaAGC.wasm: ' + wasm.length + ' bytes');
 console.log('Comanche055.bin: ' + rope.length + ' bytes');
 console.log('Android browser fullscreen touch fallback: PASS');
+console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
 console.log('Analytics client: PASS');
