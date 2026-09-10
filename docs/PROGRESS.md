@@ -71,7 +71,10 @@ with `SecurityException: Cannot disable a protected package`.
 `tools/fire-tablet-home-setup.sh` verifies DSKY's launcher/HOME candidacy before
 changing Amazon Home, uses native HOME when Fire Launcher can be disabled, and
 otherwise activates the restored same-package redirect. Both paths require
-foreground and reboot checks; failures re-enable Amazon Home.
+foreground and reboot checks; failures re-enable Amazon Home. The protected
+path also waits for the redirect service's real bound state after reboot,
+because Fire OS can report `sys.boot_completed=1` several seconds before its
+accessibility manager finishes rebinding persisted third-party services.
 
 ## EL-only home-screen widget
 

@@ -84,8 +84,18 @@ printf 'DSKY launcher and HOME registrations: PASS\n'
 
 printf 'Launching DSKY once before HOME assignment...\n'
 launch_output="$("${ADB[@]}" shell am start -W -n "$DSKY_HOME" | tr -d '\r')"
-grep -Fq "Activity: $DSKY_HOME" <<<"$launch_output" \
-  || fail "explicit launch did not resolve to $DSKY_HOME"
+grep -Fq 'Status: ok' <<<"$launch_output" \
+  || fail "explicit launch failed: $launch_output"
+launch_foreground=""
+launch_deadline=$((SECONDS + 12))
+while (( SECONDS < launch_deadline )); do
+  launch_foreground="$("${ADB[@]}" shell dumpsys activity activities | tr -d '\r' \
+    | grep -m1 -E 'mResumedActivity|mFocusedActivity' || true)"
+  grep -Fq "$PACKAGE" <<<"$launch_foreground" && break
+  sleep 1
+done
+grep -Fq "$PACKAGE" <<<"$launch_foreground" \
+  || fail "explicit launch did not foreground $DSKY_HOME: ${launch_foreground:-unknown}"
 
 set_home_output="$("${ADB[@]}" shell cmd package set-home-activity --user "$USER_ID" "$DSKY_HOME" 2>&1 | tr -d '\r')"
 grep -Fq 'Success' <<<"$set_home_output" \
@@ -109,6 +119,11 @@ resolve_home() {
   "${ADB[@]}" shell cmd package resolve-activity --brief --user "$USER_ID" \
     -a android.intent.action.MAIN -c android.intent.category.HOME \
     | tr -d '\r' | tail -n 1
+}
+
+fire_redirect_bound() {
+  "${ADB[@]}" shell dumpsys accessibility 2>/dev/null | tr -d '\r' \
+    | grep -Fq 'AGC DSKY Fire Redirect'
 }
 
 resolved="$(resolve_home)"
@@ -140,18 +155,26 @@ else
   printf 'Native HOME resolver remains protected Amazon Home: %s\n' "$resolved"
 fi
 
-"${ADB[@]}" shell input keyevent KEYCODE_HOME
-foreground=""
-home_deadline=$((SECONDS + 12))
-while (( SECONDS < home_deadline )); do
-  foreground="$("${ADB[@]}" shell dumpsys activity activities | tr -d '\r' \
-    | grep -m1 -E 'mResumedActivity|mFocusedActivity' || true)"
-  grep -Fq "$PACKAGE" <<<"$foreground" && break
-  sleep 1
-done
-grep -Fq "$PACKAGE" <<<"$foreground" \
-  || fail "HOME did not bring DSKY to the foreground: ${foreground:-unknown}"
-printf 'HOME key foreground check: PASS\n'
+# Updating the APK kills the formerly bound accessibility service. Fire OS 7
+# can retain its secure setting yet leave a dead binding until the next boot.
+# Native HOME must work immediately; the protected-launcher path may defer its
+# first behavioral check only while Amazon Home remains enabled as a fallback.
+if [[ "$home_path" == native ]] || fire_redirect_bound; then
+  "${ADB[@]}" shell input keyevent KEYCODE_HOME
+  foreground=""
+  home_deadline=$((SECONDS + 12))
+  while (( SECONDS < home_deadline )); do
+    foreground="$("${ADB[@]}" shell dumpsys activity activities | tr -d '\r' \
+      | grep -m1 -E 'mResumedActivity|mFocusedActivity' || true)"
+    grep -Fq "$PACKAGE" <<<"$foreground" && break
+    sleep 1
+  done
+  grep -Fq "$PACKAGE" <<<"$foreground" \
+    || fail "HOME did not bring DSKY to the foreground: ${foreground:-unknown}"
+  printf 'HOME key foreground check: PASS\n'
+else
+  printf 'Fire redirect setting retained; binding will be verified after reboot while Amazon Home remains enabled.\n'
+fi
 
 printf 'Rebooting for the real Fire OS boot-path check...\n'
 "${ADB[@]}" reboot
@@ -168,6 +191,13 @@ resolved="$(resolve_home)"
 if [[ "$home_path" == native ]]; then
   [[ "$resolved" == "$DSKY_HOME" ]] \
     || fail "HOME after reboot resolves to ${resolved:-nothing}, expected $DSKY_HOME"
+else
+  redirect_deadline=$((SECONDS + 45))
+  until fire_redirect_bound; do
+    (( SECONDS < redirect_deadline )) \
+      || fail "Fire redirect accessibility service did not bind within 45 seconds after reboot"
+    sleep 2
+  done
 fi
 
 foreground=""

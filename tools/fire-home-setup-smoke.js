@@ -24,7 +24,11 @@ for (const required of [
     'pm enable --user',
     'FireRedirectAccessibilityService',
     'FIRE_ENABLE',
+    'explicit launch did not foreground',
     'home_path=protected-fire-redirect',
+    'fire_redirect_bound',
+    'binding will be verified after reboot while Amazon Home remains enabled',
+    'Fire redirect accessibility service did not bind within 45 seconds after reboot',
     'input keyevent KEYCODE_HOME',
     'sys.boot_completed',
     'wait-for-device']) {
