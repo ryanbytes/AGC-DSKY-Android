@@ -1,5 +1,5 @@
 PRIVACY POLICY — AGC DSKY WEB APP (PWA)
-Effective date: September 9, 2026
+Effective date: September 10, 2026
 
 AGC DSKY is an independent historical Apollo Guidance Computer / DSKY simulator.
 
@@ -10,31 +10,21 @@ DATA ACCESSED BY SIMULATOR FEATURES
 - Ambient light sensor: when the browser exposes it, local illuminance readings may be used only on-device to adjust DSKY display brightness. Ambient-light readings are not sent to the analytics service.
 - App state and preferences: simulator state, settings, brightness mode, cached solar coordinates, and related configuration may be stored locally so the app can restore its state.
 
-ANONYMOUS USAGE ANALYTICS
-The PWA may send a small anonymous usage event to a developer-operated analytics endpoint when analytics are enabled for the deployed site. The event contains only:
-- launch or installation event type;
-- a random installation identifier generated and stored locally by the browser;
-- whether the app is running in standalone/Home Screen mode;
-- a coarse device class such as iPhone, iPad, Android, Mac, Windows, Linux, or other;
-- the app build identifier.
+CLOUDFLARE WEB ANALYTICS
+The deployed PWA may use Cloudflare Web Analytics to measure aggregate page views, visitors, referring pages, browser/device information, and web performance. The Cloudflare Web Analytics JavaScript beacon is loaded from Cloudflare and sends Web Analytics measurements to Cloudflare.
 
-The analytics backend HMAC-hashes the random installation identifier before storing it. The raw installation identifier is not stored by the backend. The backend does not intentionally read or store the request IP address, exact location, browser history, camera data, ambient-light readings, motion/orientation sensor data, AGC inputs, simulator state, names, email addresses, or user-account information.
+AGC DSKY does not create or store a custom installation identifier for Web Analytics. It does not send custom launch or installation events, AGC key presses, simulator state, camera images, ambient-light readings, motion/orientation sensor readings, or the location used by simulator features to the analytics service.
 
-The aggregate statistics endpoint exposes counts only, such as total anonymous installations/users, launches, Home Screen users, recent active users, and coarse device totals. It does not expose per-user records.
-
-Cloudflare provides the Worker and D1 infrastructure used by the optional analytics backend and necessarily processes network requests to provide that service. The application does not use advertising analytics or sell analytics data.
-
-USER CONTROL
-Do Not Track is honored by the PWA analytics client. Analytics can also be disabled locally by opening the PWA with ?telemetry=off. Opening it with ?telemetry=on removes that local opt-out. Clearing the site's browser storage removes the locally stored random installation identifier, simulator preferences, and cached solar location.
+Cloudflare describes Web Analytics as privacy-first analytics and states that it does not collect or use visitors' personal data or track individual end users across Cloudflare customers' Internet properties. The application does not use advertising analytics and does not sell analytics data.
 
 OFFLINE USE
-After the PWA has cached its required files, the AGC simulator can run offline. Cached coordinates can continue to provide sunrise/sunset dimming calculations while offline. Analytics events cannot be transmitted while offline; failure to transmit analytics does not prevent simulator operation.
+After the PWA has cached its required files, the AGC simulator can run offline. Cached coordinates can continue to provide sunrise/sunset dimming calculations while offline. Cloudflare Web Analytics cannot report measurements while the browser is offline; analytics failure does not prevent simulator operation.
 
-RETENTION AND DELETION
-Simulator state, settings, cached solar coordinates, and the random analytics installation identifier may remain in browser storage until cleared by the user. Ambient-light readings are kept only in memory while the app runs. Aggregate analytics and HMAC-hashed anonymous installation records may be retained by the developer for usage measurement. Because the backend does not store the raw random identifier or an account identity, it is not designed to associate an analytics record with a named individual.
+LOCAL STORAGE AND DELETION
+Simulator state, settings, cached solar coordinates, and related preferences may remain in browser storage until cleared by the user. Ambient-light readings are kept only in memory while the app runs. AGC DSKY does not place a custom analytics identifier in local storage.
 
 CHILDREN
-The app is a general historical/technical simulator and is not specifically directed to children. It does not knowingly collect names, contact information, precise location, or other identifying profile information from children or other users through the analytics feature.
+The app is a general historical/technical simulator and is not specifically directed to children. It does not knowingly collect names, contact information, precise location, or other identifying profile information from children or other users through an AGC DSKY-operated analytics database.
 
 SOURCE AND PRIVACY INQUIRIES
 https://github.com/ryanbytes/AGC-DSKY-Android
