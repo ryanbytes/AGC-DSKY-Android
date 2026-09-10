@@ -32,7 +32,10 @@ for (const marker of [
 let manifest;
 try { manifest = JSON.parse(text('manifest.webmanifest')); }
 catch (error) { fail('manifest is not valid JSON: ' + error.message); }
-if (manifest.display !== 'standalone') fail('manifest display must be standalone');
+if (manifest.display !== 'fullscreen') fail('manifest display must be fullscreen');
+if (!Array.isArray(manifest.display_override) || manifest.display_override[0] !== 'fullscreen') {
+  fail('manifest must prefer fullscreen in display_override');
+}
 if (manifest.start_url !== './' || manifest.scope !== './') fail('manifest must use relative project-page start_url/scope');
 const sizes = new Set((manifest.icons || []).map(icon => icon.sizes));
 if (!sizes.has('192x192') || !sizes.has('512x512')) fail('manifest must include 192x192 and 512x512 icons');
@@ -53,6 +56,13 @@ if (wasm.length !== 132617) fail('yaAGC.wasm size mismatch: ' + wasm.length);
 if (wasm.toString('hex', 0, 4) !== '0061736d') fail('yaAGC.wasm magic mismatch');
 const rope = read('Comanche055.bin');
 if (rope.length !== 73728) fail('Comanche055.bin size mismatch: ' + rope.length);
+
+const bootstrap = text('pwa-bootstrap.js');
+for (const marker of ['requestFullscreen', "navigationUI: 'hide'", '/Android/i']) {
+  if (!bootstrap.includes(marker)) fail('PWA bootstrap missing Android fullscreen fallback marker ' + marker);
+}
+try { new Function(bootstrap); }
+catch (error) { fail('pwa-bootstrap.js syntax error: ' + error.message); }
 
 const analytics = text('analytics.js');
 if (analytics.includes('__ANALYTICS_ENDPOINT_JSON__') || analytics.includes('__APP_VERSION_JSON__')) {
@@ -90,4 +100,5 @@ console.log('PWA smoke: PASS');
 console.log('Site: ' + site);
 console.log('yaAGC.wasm: ' + wasm.length + ' bytes');
 console.log('Comanche055.bin: ' + rope.length + ' bytes');
+console.log('Android browser fullscreen fallback: PASS');
 console.log('Analytics client: PASS');
