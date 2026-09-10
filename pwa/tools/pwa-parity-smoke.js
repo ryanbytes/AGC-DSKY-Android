@@ -25,7 +25,7 @@ for (const rel of sourceFiles) {
   const built = path.join(site, rel);
   if (!fs.existsSync(built)) fail(`shared Android asset missing from PWA build: ${rel}`);
 
-  // index.html receives only PWA manifest/bootstrap injection. The web privacy
+  // index.html receives only PWA manifest/bootstrap/analytics injection. The web privacy
   // policy intentionally replaces the Android-local policy. Everything else
   // must be byte-for-byte identical to the Android WebView frontend.
   if (rel !== 'index.html' && rel !== 'PRIVACY_POLICY.txt') {
@@ -60,9 +60,10 @@ for (const rel of sourceFiles) {
   if (!sw.includes(`'./${rel}'`)) fail(`shared asset is not available offline: ${rel}`);
 }
 
-for (const rel of ['pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'clock-behavior-v2.js', 'analytics.js', 'manifest.webmanifest', 'yaAGC.wasm', 'Comanche055.bin']) {
+for (const rel of ['pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'clock-behavior-v2.js', 'manifest.webmanifest', 'yaAGC.wasm', 'Comanche055.bin']) {
   if (!sw.includes(`'./${rel}'`)) fail(`PWA-only runtime asset is not available offline: ${rel}`);
 }
+if (sw.includes("'./analytics.js'")) fail('legacy custom analytics client is still cached');
 
 console.log('PWA parity smoke: PASS');
 console.log(`  ${sourceFiles.length} shared Android frontend assets present in PWA`);
