@@ -4,68 +4,8 @@
   const api = window.AGCDSKY;
   if (!api) return;
 
-  // Clock mode is intentionally synthetic.  In AGC mode COMP ACTY remains
-  // exclusively channel-011 driven by app.js; this helper never touches it.
-  const comp = document.querySelector('[data-lamp="comp"]');
-  let compTimer = 0;
-
-  const randomBetween = (min, max) => min + Math.random() * (max - min);
-  const clockMode = () => {
-    try { return api.appStatus().mode === 'clock'; }
-    catch (_) { return false; }
-  };
-
-  function setClockComp(on) {
-    if (!comp || !clockMode()) return;
-    comp.classList.toggle('on', !!on);
-  }
-
-  function scheduleClockCompIdle() {
-    clearTimeout(compTimer);
-    const longPause = Math.random() < 0.14;
-    const delay = longPause ? randomBetween(2200, 5200) : randomBetween(260, 1450);
-    compTimer = setTimeout(startClockCompBurst, delay);
-  }
-
-  function startClockCompBurst() {
-    if (!clockMode()) {
-      // Do not clear or otherwise drive COMP ACTY outside clock mode.  The
-      // real AGC/channel decoder owns the lamp there.
-      compTimer = setTimeout(startClockCompBurst, 500);
-      return;
-    }
-
-    let pulses = 1 + Math.floor(Math.random() * 5);
-    const pulse = () => {
-      if (!clockMode()) {
-        compTimer = setTimeout(startClockCompBurst, 500);
-        return;
-      }
-
-      setClockComp(true);
-      const held = Math.random() < 0.12
-        ? randomBetween(260, 620)
-        : randomBetween(45, 165);
-      compTimer = setTimeout(() => {
-        if (!clockMode()) {
-          compTimer = setTimeout(startClockCompBurst, 500);
-          return;
-        }
-        setClockComp(false);
-        pulses--;
-        if (pulses <= 0) {
-          scheduleClockCompIdle();
-          return;
-        }
-        compTimer = setTimeout(pulse, randomBetween(28, 135));
-      }, held);
-    };
-    pulse();
-  }
-
-  // The clock is a passive display.  The first DSKY keypad entry hands the
-  // panel to the real AGC and forwards that same key once Comanche is ready.
-  // Keys arriving while the WASM/rope load is in progress are queued in order.
+  // Clock mode remains visually passive. COMP ACTY is not synthesized here;
+  // once the real AGC is active, app.js owns that lamp from channel 011.
   const AGC_KEY = Object.freeze({
     '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
     V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
@@ -77,10 +17,6 @@
     pendingKeys.push(key);
     if (promoting) return;
     promoting = true;
-
-    // Prevent a synthetic clock COMP pulse from visually leaking into the
-    // AGC handoff. app.js takes ownership from this point forward.
-    if (comp && clockMode()) comp.classList.remove('on');
 
     try {
       await api.enterAgc();
@@ -125,6 +61,4 @@
     isPromoting: () => promoting,
     pendingCount: () => pendingKeys.length
   };
-
-  scheduleClockCompIdle();
 })();
