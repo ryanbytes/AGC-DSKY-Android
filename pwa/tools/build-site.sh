@@ -28,6 +28,7 @@ cp "$WEBAGC/src/yaAGC.wasm" "$DEST/yaAGC.wasm"
 cp "$WEBAGC/demo/agc/Comanche055.bin" "$DEST/Comanche055.bin"
 cp "$PWA/manifest.webmanifest" "$DEST/manifest.webmanifest"
 cp "$PWA/static/pwa-bootstrap.js" "$DEST/pwa-bootstrap.js"
+cp "$PWA/static/pwa-sensor-parity.js" "$DEST/pwa-sensor-parity.js"
 cp "$PWA/static/analytics.js" "$DEST/analytics.js"
 cp "$PWA/static/sw.js" "$DEST/sw.js"
 cp "$PWA/PRIVACY_POLICY.txt" "$DEST/PRIVACY_POLICY.txt"
@@ -70,10 +71,10 @@ import sys
 path = Path(sys.argv[1])
 text = path.read_text(encoding='utf-8')
 head = '''\n<link rel="manifest" href="manifest.webmanifest">\n<meta name="theme-color" content="#6f7571">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n<meta name="apple-mobile-web-app-title" content="AGC DSKY">\n<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">\n'''
-boot = '\n<script src="pwa-bootstrap.js"></script>\n<script src="analytics.js"></script>\n'
+boot = '\n<script src="pwa-sensor-parity.js"></script>\n<script src="pwa-bootstrap.js"></script>\n<script src="analytics.js"></script>\n'
 if '</head>' not in text or '</body>' not in text:
     raise SystemExit('shared index.html is missing head/body closing tags')
-if 'manifest.webmanifest' in text or 'pwa-bootstrap.js' in text or 'analytics.js' in text:
+if any(marker in text for marker in ('manifest.webmanifest', 'pwa-sensor-parity.js', 'pwa-bootstrap.js', 'analytics.js')):
     raise SystemExit('shared index.html already contains PWA injection markers')
 text = text.replace('</head>', head + '</head>', 1)
 text = text.replace('</body>', boot + '</body>', 1)
