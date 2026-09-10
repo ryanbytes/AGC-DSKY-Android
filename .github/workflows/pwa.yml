@@ -39,6 +39,9 @@ jobs:
       - name: PWA smoke test
         run: node pwa/tools/pwa-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
 
+      - name: Android frontend parity test
+        run: node pwa/tools/pwa-parity-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
+
       - name: Analytics backend static checks
         run: |
           node --check analytics/cloudflare/worker.js
