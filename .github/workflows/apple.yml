@@ -33,8 +33,20 @@ jobs:
             -target AGCDSKYmacOS \
             -configuration Debug \
             -sdk macosx \
+            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/mac-build" \
             CODE_SIGNING_ALLOWED=NO \
             build
+          codesign --force --deep --sign - "$RUNNER_TEMP/mac-build/AGC DSKY.app"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/mac-build/AGC DSKY.app" \
+            "$RUNNER_TEMP/AGC-DSKY-macOS.zip"
+
+      - name: Upload macOS app
+        uses: actions/upload-artifact@v4
+        with:
+          name: AGC-DSKY-macOS
+          path: ${{ runner.temp }}/AGC-DSKY-macOS.zip
+          if-no-files-found: error
 
       - name: Build iOS simulator app
         run: |
@@ -43,5 +55,16 @@ jobs:
             -target AGCDSKYiOS \
             -configuration Debug \
             -sdk iphonesimulator \
+            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/ios-simulator-build" \
             CODE_SIGNING_ALLOWED=NO \
             build
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/ios-simulator-build/AGC DSKY.app" \
+            "$RUNNER_TEMP/AGC-DSKY-iOS-Simulator.zip"
+
+      - name: Upload iOS simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: AGC-DSKY-iOS-Simulator
+          path: ${{ runner.temp }}/AGC-DSKY-iOS-Simulator.zip
+          if-no-files-found: error
