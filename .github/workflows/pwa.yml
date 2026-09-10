@@ -1,10 +1,12 @@
 name: PWA build
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, apple-port]
     paths:
       - 'pwa/**'
+      - 'analytics/cloudflare/**'
       - 'app/src/main/assets/**'
       - 'vendor/webAGC'
       - 'apple/tools/verify-pinned-assets.sh'
@@ -12,6 +14,7 @@ on:
   pull_request:
     paths:
       - 'pwa/**'
+      - 'analytics/cloudflare/**'
       - 'app/src/main/assets/**'
       - 'vendor/webAGC'
       - 'apple/tools/verify-pinned-assets.sh'
@@ -23,6 +26,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      AGC_ANALYTICS_ENDPOINT: ${{ vars.AGC_ANALYTICS_ENDPOINT }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,6 +38,23 @@ jobs:
 
       - name: PWA smoke test
         run: node pwa/tools/pwa-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
+
+      - name: Analytics backend static checks
+        run: |
+          node --check analytics/cloudflare/worker.js
+          bash -n analytics/cloudflare/deploy.sh
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          sql = Path('analytics/cloudflare/migrations/0001_init.sql').read_text(encoding='utf-8')
+          db = sqlite3.connect(':memory:')
+          db.executescript(sql)
+          for table in ('clients', 'daily_usage'):
+              row = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
+              if not row:
+                  raise SystemExit(f'missing migration table: {table}')
+          print('Analytics schema: PASS')
+          PY
 
       - name: Shared AGC smoke tests
         run: |
@@ -49,13 +71,13 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ runner.temp }}/agc-dsky-pwa
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
