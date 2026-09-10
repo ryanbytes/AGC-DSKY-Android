@@ -57,9 +57,6 @@
     return q.map(v => v / n);
   }
 
-  // Match the Z-X'-Y'' convention used by the shared phone ICDU code, but keep
-  // this quaternion in the raw device frame. The shared web magnetic bridge
-  // applies the current display rotation exactly once.
   function rawQuaternionFromOrientation(alpha, beta, gamma) {
     return qNorm(qMul(qMul(qAxis('z', rad(alpha)), qAxis('x', rad(beta))), qAxis('y', rad(gamma))));
   }
@@ -68,8 +65,6 @@
     const direct = event.acceleration;
     if (direct && [direct.x, direct.y, direct.z].every(Number.isFinite)) return [direct.x, direct.y, direct.z];
 
-    // Some mobile browsers expose only accelerationIncludingGravity. Mirror the
-    // Android native fallback with a low-pass gravity estimate before PIPA input.
     const withGravity = event.accelerationIncludingGravity;
     if (!withGravity || ![withGravity.x, withGravity.y, withGravity.z].every(Number.isFinite)) return null;
     const v = [withGravity.x, withGravity.y, withGravity.z];
@@ -105,7 +100,7 @@
   function onAbsoluteOrientation(event) {
     if (![event.alpha, event.beta, event.gamma].every(Number.isFinite)) return;
     if (event.absolute !== true && !Number.isFinite(Number(event.webkitCompassHeading))) return;
-    if (typeof dsky.webMagneticQuaternion !== 'function') return;
+    if (typeof dsky.nativeMagneticQuaternion !== 'function') return;
 
     let alpha = Number(event.alpha);
     if (event.absolute !== true && Number.isFinite(Number(event.webkitCompassHeading))) alpha = 360 - Number(event.webkitCompassHeading);
@@ -117,7 +112,7 @@
       if (typeof dsky.nativeMagneticSensorStatus === 'function') dsky.nativeMagneticSensorStatus('web-absolute-orientation', true, true);
       publish();
     }
-    dsky.webMagneticQuaternion(q[0], q[1], q[2], q[3], screenAngle(), orientationAccuracy(event));
+    dsky.nativeMagneticQuaternion(q[0], q[1], q[2], q[3], screenAngle(), orientationAccuracy(event));
   }
 
   function addSensorListeners() {
