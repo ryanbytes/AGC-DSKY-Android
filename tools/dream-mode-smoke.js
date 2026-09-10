@@ -5,6 +5,8 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const dreamService = fs.readFileSync(path.join(root, 'app/src/main/java/org/apollo/agcdsky/AgcDreamService.java'), 'utf8');
+const manifest = fs.readFileSync(path.join(root, 'app/src/main/AndroidManifest.xml'), 'utf8');
+const metadata = fs.readFileSync(path.join(root, 'app/src/main/res/xml/agc_dream.xml'), 'utf8');
 const index = fs.readFileSync(path.join(root, 'app/src/main/assets/index.html'), 'utf8');
 const bootstrap = fs.readFileSync(path.join(root, 'app/src/main/assets/dream-agc.js'), 'utf8');
 
@@ -23,10 +25,19 @@ requireText(dreamService, 'if (window == null) return;', 'Android 17 pre-window 
 requireText(dreamService, 'current.requestLayout()', 'rotation relayout');
 requireText(dreamService, 'hideSystemBars()', 'immersive-mode restoration');
 
+// Register a distinct custom dream with Android instead of relying only on the
+// service intent filter. Explicitly reject Android's stock clock/complications
+// overlay so the selected dream remains the DSKY clock itself.
+requireText(manifest, 'android:label="AGC DSKY Clock"', 'distinct DreamService label');
+requireText(manifest, 'android:name="android.service.dream"', 'DreamService metadata declaration');
+requireText(manifest, 'android:resource="@xml/agc_dream"', 'DreamService metadata resource');
+requireText(metadata, '<dream', 'DreamService metadata root');
+requireText(metadata, 'android:showClockAndComplications="false"', 'stock clock/complications suppression');
+
 // dream-agc.js may remain packaged for development/PWA compatibility, but its
 // explicit gate must make it inert for the clock DreamService URL above.
 requireText(index, '<script src="dream-agc.js"></script>', 'shared dream bootstrap script');
 requireText(bootstrap, "params.get('dream') === '1' && params.get('agc') === '1'", 'AGC-only bootstrap gate');
 
 console.log('dream clock smoke: PASS');
-console.log('  Android DreamService is clock mode with full-sensor rotation and Android 17 startup guards');
+console.log('  Android DreamService is explicitly registered as the DSKY clock with stock clock/complications disabled');

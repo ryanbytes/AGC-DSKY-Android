@@ -12,7 +12,7 @@
         android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher_original"
         android:roundIcon="@mipmap/ic_launcher_original"
-        android:label="AGC DSKY v1.0.7"
+        android:label="AGC DSKY v1.0.8"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <meta-data
@@ -58,11 +58,16 @@
         <service
             android:name=".AgcDreamService"
             android:exported="true"
+            android:icon="@mipmap/ic_launcher_original"
+            android:label="AGC DSKY Clock"
             android:permission="android.permission.BIND_DREAM_SERVICE">
             <intent-filter>
                 <action android:name="android.service.dreams.DreamService" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <meta-data
+                android:name="android.service.dream"
+                android:resource="@xml/agc_dream" />
         </service>
     </application>
 </manifest>
