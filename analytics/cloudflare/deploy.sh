@@ -18,9 +18,14 @@ command -v npx >/dev/null 2>&1 || fail "Node.js/npm is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 WRANGLER=(npx --yes wrangler@latest)
 
-if ! "${WRANGLER[@]}" whoami >/dev/null 2>&1; then
-  printf 'Opening Cloudflare login...\n'
-  "${WRANGLER[@]}" login
+if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+  [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]] || fail "CLOUDFLARE_ACCOUNT_ID is required with CLOUDFLARE_API_TOKEN"
+  printf 'Using Cloudflare API token for non-interactive deployment.\n'
+else
+  if ! "${WRANGLER[@]}" whoami >/dev/null 2>&1; then
+    printf 'Opening Cloudflare login...\n'
+    "${WRANGLER[@]}" login
+  fi
 fi
 
 find_db_id() {
