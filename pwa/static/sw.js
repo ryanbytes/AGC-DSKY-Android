@@ -10,6 +10,7 @@ const CORE_ASSETS = [
   './pwa-bootstrap.js',
   './pwa-sensor-parity.js',
   './pwa-auto-dim.js',
+  './pwa-clock-guard.js',
   './analytics.js',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',
@@ -67,6 +68,11 @@ self.addEventListener('activate', event => {
           .map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({type:'window', includeUncontrolled:true}))
+      .then(clients => Promise.all(clients.map(client => {
+        try { return client.navigate(client.url); }
+        catch (_) { return null; }
+      })))
   );
 });
 
@@ -88,6 +94,23 @@ self.addEventListener('fetch', event => {
           return response;
         })
         .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Clock behavior is safety-sensitive UI state. Always prefer the deployed
+  // network copy so an older cached flicker helper cannot survive an update.
+  if (url.pathname.endsWith('/clock-behavior.js') || url.pathname.endsWith('/pwa-clock-guard.js')) {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }
