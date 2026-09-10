@@ -48,7 +48,7 @@ for (let sec=0; sec<60; sec++) {
       if (lit.includes(name)) paths.push(poly(digitPoly(logical,ox)));
     });
   });
-  const body=paths.map(p=>`    <path android:fillColor="#C9F5BD" android:pathData="${p}" />`).join('\n');
+  const body=paths.map(p=>`    <path android:fillColor="#62D9E8" android:pathData="${p}" />`).join('\n');
   const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="100dp"\n    android:height="21dp"\n    android:viewportWidth="100"\n    android:viewportHeight="21">\n${body}\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
