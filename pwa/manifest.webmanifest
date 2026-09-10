@@ -1,0 +1,28 @@
+{
+  "id": "./",
+  "name": "Apollo AGC DSKY",
+  "short_name": "AGC DSKY",
+  "description": "Apollo Guidance Computer DSKY running the pinned VirtualAGC yaAGC WebAssembly core with the Apollo 11 Command Module Comanche 055 rope.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#6f7571",
+  "categories": ["education", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
