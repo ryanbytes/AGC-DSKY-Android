@@ -28,6 +28,7 @@ const CORE_ASSETS = [
   './spacecraft-default.js',
   './startup-defaults.js',
   './app.js',
+  './clock-behavior.js',
   './phone-icdu.js',
   './apollo-stars.js',
   './optics.js',
