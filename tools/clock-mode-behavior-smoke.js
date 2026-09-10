@@ -9,10 +9,6 @@ const source = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/c
 const fail = message => { console.error('CLOCK MODE BEHAVIOR FAIL: ' + message); process.exit(1); };
 
 for (const marker of [
-  "api.appStatus().mode === 'clock'",
-  "[data-lamp=\"comp\"]",
-  'randomBetween(45, 165)',
-  'randomBetween(260, 620)',
   "mode !== 'clock' && mode !== 'agc-loading'",
   'await api.enterAgc()',
   'core.keyPress(code)',
@@ -20,17 +16,21 @@ for (const marker of [
 ]) {
   if (!source.includes(marker)) fail('missing behavior marker: ' + marker);
 }
-if (/fetch\s*\(/.test(source) || /XMLHttpRequest/.test(source)) fail('COMP ACTY must not be tied to network activity');
+for (const forbidden of [
+  '[data-lamp="comp"]',
+  'Math.random',
+  'randomBetween',
+  'startClockCompBurst',
+  'scheduleClockCompIdle'
+]) {
+  if (source.includes(forbidden)) fail('clock COMP ACTY synthesis must remain disabled: ' + forbidden);
+}
+if (/fetch\s*\(/.test(source) || /XMLHttpRequest/.test(source)) fail('clock behavior must not be tied to network activity');
 
 let mode = 'clock';
 const keyPresses = [];
-const classes = new Set();
 const handlers = {};
 const timers = [];
-const comp = {classList:{
-  toggle(name,on){ if(on) classes.add(name); else classes.delete(name); },
-  remove(name){ classes.delete(name); }
-}};
 const key = {
   dataset:{key:'V'},
   classList:{add(){},remove(){}},
@@ -45,16 +45,12 @@ const AGCDSKY = {
 };
 const windowObject = {AGCDSKY};
 const documentObject = {
-  querySelector(selector){ return selector === '[data-lamp="comp"]' ? comp : null; },
   addEventListener(name,fn){ handlers[name] = fn; }
 };
-const mathObject = Object.create(Math);
-mathObject.random = () => 0.5;
 const context = {
   window:windowObject,
   document:documentObject,
   console,
-  Math:mathObject,
   setTimeout(fn,delay){ timers.push({fn,delay}); return timers.length; },
   clearTimeout(){},
   Promise
@@ -64,16 +60,8 @@ try { vm.runInNewContext(source, context, {filename:'clock-behavior.js'}); }
 catch (error) { fail('script execution failed: ' + error.stack); }
 
 (async () => {
-  if (!timers.length) fail('clock COMP ACTY scheduler did not start');
-  timers.shift().fn();
-  if (!classes.has('on')) fail('clock COMP ACTY burst did not light the lamp');
-  if (!timers.length) fail('clock COMP ACTY on-duration timer missing');
-  const onTimer = timers.shift();
-  if (onTimer.delay < 45 || onTimer.delay > 620) fail('clock COMP ACTY on duration outside intended range');
-  onTimer.fn();
-  if (classes.has('on')) fail('clock COMP ACTY burst did not extinguish the lamp');
+  if (timers.length) fail('clock mode started an unsolicited timer before keypad input');
 
-  mode = 'clock';
   let prevented = false, stopped = false;
   handlers.pointerdown({
     target:key,
@@ -87,13 +75,8 @@ catch (error) { fail('script execution failed: ' + error.stack); }
   if (mode !== 'agc') fail('clock keypad entry did not hand off to AGC mode');
   if (keyPresses.length !== 1 || keyPresses[0] !== 0o21) fail('original VERB key was not forwarded to the AGC');
   if (AGCDSKY.savedReason !== 'clock keypad handoff') fail('handoff did not schedule AGC autosave');
-
-  // A pending synthetic clock timer must not take ownership of COMP ACTY once
-  // real AGC mode is active.
-  classes.delete('on');
-  if (timers.length) timers.shift().fn();
-  if (classes.has('on')) fail('clock COMP ACTY touched lamp after AGC handoff');
+  if (timers.length !== 1 || timers[0].delay !== 90) fail('only keypad press animation timer should remain');
 
   console.log('Clock mode behavior: PASS');
-  console.log('  synthetic COMP ACTY timing and first-key AGC handoff verified');
+  console.log('  no synthetic COMP ACTY; first-key AGC handoff verified');
 })().catch(error => fail(error.stack || String(error)));
