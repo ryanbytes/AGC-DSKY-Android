@@ -32,10 +32,10 @@ body.screen-only .elpanel{
   position:absolute!important;
   left:50%!important;
   top:50%!important;
-  width:min(90vw,calc(90vh * 106 / 190))!important;
-  height:min(90vh,calc(90vw * 190 / 106))!important;
+  /* SCD 1006315G: 2.360 x 4.060 in face = 106 x 182.356 units. */
+  width:min(90vw,calc(90vh * 106 / 182.356))!important;
+  height:min(90vh,calc(90vw * 182.356 / 106))!important;
   transform:translate(-50%,-50%)!important;
   overflow:visible!important;
 }
 body.dream.screen-only .dsky{transition:left 1.6s ease,top 1.6s ease!important}
-
