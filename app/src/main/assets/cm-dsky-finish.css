@@ -8,6 +8,18 @@
   --el:#6decb4;
 }
 
+/* 1006315G sheet 2 specifies the upper display legends as .125-in-high
+   Futura Demibold.  Use Futura where the platform supplies it and geometric /
+   medium-weight fallbacks elsewhere.  On the 106 / 2.360 active-face scale,
+   7.42 SVG units produces approximately the specified .125-in cap height. */
+.el-label,
+.comp-el text{
+  font-family:Futura,"Century Gothic","Avenir Next","sans-serif-medium",Arial,sans-serif;
+  font-size:7.42px;
+  font-weight:600;
+  letter-spacing:0;
+}
+
 /* 1006315G active EL face is 2.360 x 4.060 in, represented by exactly
    106 x 182.356 drawing units.  On the 320-unit DSKY face, 106 / 320 gives
    the physical active-face width.  Do not add a UI-only glass gutter. */
