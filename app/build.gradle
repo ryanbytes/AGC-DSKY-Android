@@ -28,6 +28,15 @@ android {
         }
     }
 
+    // Debug builds are intentionally installable alongside a release build so
+    // hardware/UI work can be device-tested without replacing the user's HOME app.
+    buildTypes {
+        debug {
+            applicationIdSuffix '.eltest'
+            versionNameSuffix '-eltest'
+        }
+    }
+
     sourceSets {
         main {
             assets.srcDirs = ['src/main/assets', generatedAgcAssetsDir]
