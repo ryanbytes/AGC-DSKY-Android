@@ -2,6 +2,13 @@
 
 // Recreated DSKY relay click. The real-DSKY recording is used only as an
 // acoustic reference: no audio from the recording is embedded or copied.
+//
+// Block II display channel 010 selects one of 12 banks of 11 bistable relays.
+// The 11 relay bits in the selected bank are commanded together; they are not
+// electrically stepped one-at-a-time.  app.js passes the Hamming distance of
+// the old/new low-11 latch states, so this layer emits one mechanical transient
+// for every armature that actually changes state.  The tiny time offsets below
+// represent mechanical pull-in scatter only, not serialized relay drive.
 (() => {
   if (typeof emitTick !== 'function' || typeof ensureAudio !== 'function') return;
 
@@ -77,12 +84,21 @@
   };
 
   if (typeof playRelayBurst === 'function') {
-    playRelayBurst = function recreatedRelayWordClick(count) {
+    playRelayBurst = function recreatedRelayBankClicks(count) {
       const ctx = ensureAudio();
+      count = Math.max(0, Math.min(11, Math.trunc(Number(count) || 0)));
       if (!ctx || count < 1) return;
       const go = () => {
-        const strength = Math.min(1.06, 0.88 + Math.min(count, 6) * 0.03);
-        emitTick(ctx, ctx.currentTime + 0.002, strength);
+        const base = ctx.currentTime + 0.002;
+        const spreadMs = typeof RELAY_CLICK_SPREAD_MS === 'number'
+          ? Math.max(0, RELAY_CLICK_SPREAD_MS)
+          : 2.5;
+        const rnd = xorshift32(0x44534b59 ^ (++clickSerial * 0x45d9f3b));
+        const offsets = [];
+        for (let i = 0; i < count; i++) offsets.push((rnd() + 1) * 0.5 * spreadMs / 1000);
+        offsets.sort((a, b) => a - b);
+        const strength = Math.min(1.02, 0.82 + Math.min(count, 11) * 0.018);
+        for (let i = 0; i < count; i++) emitTick(ctx, base + offsets[i], strength);
       };
       if (ctx.state === 'running') go();
       else ctx.resume().then(go).catch(() => {});
