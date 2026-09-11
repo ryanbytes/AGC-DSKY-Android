@@ -308,19 +308,71 @@
     return record;
   }
 
-  function settleContact(state, row, bit, delayMs) {
-    const record = driveRecord(state, row);
+  function settleContact(record, bit, delayMs) {
     if (!record) return;
     const mask = 1 << bit;
     setTimeout(() => {
-      if (latestDriveStamp.get(row) !== record.stamp) return;
+      if (latestDriveStamp.get(record.row) !== record.stamp) return;
       if (record.target & mask) record.word |= mask;
       else record.word &= ~mask;
       record.word &= 0o3777;
-      try { agcRelayWords[row] = record.word; } catch (_) {}
-      try { applyRelayVisual(row, record.word); } catch (_) {}
+      try { agcRelayWords[record.row] = record.word; } catch (_) {}
+      try { applyRelayVisual(record.row, record.word); } catch (_) {}
     }, Math.max(0, delayMs));
   }
+
+  function scheduleDriveSettles(state) {
+    const last = state && state.lastWrite;
+    const row = last ? Number(last.relay) : 0;
+    if (row < 1 || row > 12) return;
+    const record = driveRecord(state, row);
+    if (!record) return;
+    const diff = (record.word ^ record.target) & 0o3777;
+    const elapsed = Math.max(0, performance.now() - record.stamp);
+    const motions = [];
+    for (let bit = 0; bit < 11; bit++) {
+      if (!(diff & (1 << bit))) continue;
+      const settleMs = settleMsForOrdinal(relayOrdinal(row, bit));
+      motions.push({bit, settleMs});
+    }
+    motions.sort((a, b) => a.settleMs - b.settleMs || a.bit - b.bit);
+    for (const motion of motions) {
+      settleContact(record, motion.bit, Math.max(0, motion.settleMs - elapsed));
+    }
+  }
+
+  // Real AGC channel-010 writes pass here synchronously, so start the
+  // individual contact timers immediately after hardware-fidelity.js records
+  // the new 20-ms bank drive.  This remains active even with relay sound off.
+  const baseDecodeChannel10 = decodeChannel10;
+  decodeChannel10 = function individualRelaySettleDecodeChannel10(value) {
+    const result = baseDecodeChannel10.call(this, value);
+    const word = value & 0o77777;
+    const row = (word >> 11) & 0o17;
+    if (result && row >= 1 && row <= 12) scheduleDriveSettles(snapshot());
+    return result;
+  };
+
+  // Synthetic PHONE CLOCK/V35 rows call the private beginRelayDrive() directly
+  // and therefore do not pass decodeChannel10.  Watch only while in clock mode
+  // for a newly recorded drive and schedule it from the original performance
+  // timestamp, preserving the same per-relay settle times without depending on
+  // audio being enabled.
+  let lastClockWriteStamp = firstSnapshot && firstSnapshot.lastWrite
+    ? Number(firstSnapshot.lastWrite.at)
+    : NaN;
+  setInterval(() => {
+    try {
+      if (typeof mode === 'undefined' || mode !== 'clock') return;
+      const state = snapshot();
+      const last = state && state.lastWrite;
+      const row = last ? Number(last.relay) : 0;
+      const stamp = last ? Number(last.at) : NaN;
+      if (row < 1 || row > 12 || !Number.isFinite(stamp) || stamp === lastClockWriteStamp) return;
+      lastClockWriteStamp = stamp;
+      scheduleDriveSettles(state);
+    } catch (_) {}
+  }, 4);
 
   function changedAux(current) {
     const changes = [];
@@ -380,7 +432,6 @@
         const ordinal = relayOrdinal(row, bit);
         const p = profileFor(id, ordinal);
         const settleWhen = ctx.currentTime + p.settleMs / 1000;
-        settleContact(state, row, bit, p.settleMs);
         playIdentity(ctx, settleWhen, strength, id, ordinal, engaging);
         return;
       }
