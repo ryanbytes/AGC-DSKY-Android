@@ -53,12 +53,12 @@ jobs:
       - name: Build unsigned release APK
         run: bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleRelease
 
-      - name: Verify unsigned APK exists
-        run: test -f app/build/outputs/apk/release/app-release-unsigned.apk
+      - name: Verify Fire unsigned APK exists
+        run: test -f app/build/outputs/apk/fire/release/app-fire-release-unsigned.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AGC-DSKY-Android-unsigned-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          name: AGC-DSKY-Fire-unsigned-release
+          path: app/build/outputs/apk/fire/release/app-fire-release-unsigned.apk
           if-no-files-found: error
           retention-days: 30
