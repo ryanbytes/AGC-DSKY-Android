@@ -22,6 +22,7 @@ const item = read('app/src/main/res/layout/el_second_frame.xml');
 const info = read('app/src/main/res/xml/el_widget_info.xml');
 const provider = read('app/src/main/java/org/apollo/agcdsky/ElWidgetProvider.java');
 const geometry = read('app/src/main/assets/dsky-geometry.js');
+const finish = read('app/src/main/assets/cm-dsky-finish.css');
 const gradle = read('app/build.gradle');
 const generator = read('tools/generate-el-second-frames.js');
 
@@ -55,7 +56,15 @@ requireText(provider, 'alarm.setExactAndAllowWhileIdle', 'minute refresh');
 requireText(provider, 'alarm.setAndAllowWhileIdle', 'minute refresh fallback');
 forbid(provider, 'R.id.el_clock_', 'widget renderer');
 
-requireText(provider, 'CORE=Color.rgb(98,217,232),RULE=CORE', 'widget EL color');
+// SCD 1006315 production revisions specify nominal 5300-A / 530-nm EL output.
+// Keep all three render paths locked to one display-space approximation.
+requireText(finish, '--el:#79ef4f', 'WebView production EL color');
+requireText(provider, 'CORE=Color.rgb(121,239,79),RULE=CORE', 'native widget production EL color');
+requireText(generator, "const EL_COLOR='#79EF4F'", 'generated widget frame production EL color');
+forbid(finish, '--el:#62d9e8', 'WebView old early-panel cyan color');
+forbid(provider, 'Color.rgb(98,217,232)', 'widget old early-panel cyan color');
+forbid(generator, '#62D9E8', 'generated old early-panel cyan frame color');
+
 requireText(provider, 'PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5)', 'widget Block II glass colors');
 requireText(provider, 'c.drawColor(PANEL)', 'widget gray glass render');
 requireText(provider, 'box(2.119f,2.350f,101.763f,185.299f)', 'widget glass border geometry');
@@ -66,7 +75,6 @@ requireText(provider, 'section(c,65.505f,46.165f,37.945f,11.866f,LEGEND_BG_P)', 
 requireText(provider, 'section(c,2.550f,2.807f,37.945f,40.163f,COMP_BG_P)', 'widget COMP ACTY EL section');
 requireText(provider, 'digits(c,"00",66.75f,14)', 'widget corrected PROG clearance');
 requireText(provider, 'digits(c,"65",66.75f,59)', 'widget corrected NOUN clearance');
-requireText(generator, 'android:fillColor="#62D9E8"', 'generated widget frame color');
 forbid(provider, 'setShadowLayer', 'widget EL no-glow renderer');
 forbid(provider, 'drawRect(', 'widget renderer');
 forbid(provider, 'drawRoundRect(', 'widget renderer');
@@ -96,4 +104,4 @@ requireText(generator, 'for (let sec=0; sec<60; sec++)', 'seconds generator');
 requireText(generator, 'android:pathData', 'seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  gray Block II glass, hardware dots/border, black-on-EL legends, no-glow cyan-blue phosphor, generated register frames, and Apollo sign geometry verified');
+console.log('  gray Block II glass, hardware dots/border, black-on-EL legends, no-glow 530-nm production EL color, generated register frames, and Apollo sign geometry verified');
