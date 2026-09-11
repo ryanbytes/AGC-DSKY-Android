@@ -1,6 +1,6 @@
 /* Borderless EL readout mode. Normal mode uses the DSKY display well as the
    hardware surround. Screen-only mode fills unused handset space with the same
-   EL glass gray while preserving the 1006315G active-face aspect ratio. */
+   EL glass gray while preserving the corrected EL viewport aspect ratio. */
 body.screen-only,
 body.screen-only #app{
   padding:0!important;
@@ -37,8 +37,8 @@ body.screen-only .elpanel{
   position:absolute!important;
   left:50%!important;
   top:50%!important;
-  width:min(100vw,calc(100vh * 106 / 182.356))!important;
-  height:min(100vh,calc(100vw * 182.356 / 106))!important;
+  width:min(100vw,calc(100vh * 107.5 / 182.356))!important;
+  height:min(100vh,calc(100vw * 182.356 / 107.5))!important;
   max-width:none!important;
   max-height:none!important;
   transform:translate(-50%,-50%)!important;
