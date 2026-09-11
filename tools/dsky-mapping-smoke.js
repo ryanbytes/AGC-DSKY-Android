@@ -7,6 +7,7 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/app.js'), 'utf8');
+const relayAudio = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/relay-audio-refine.js'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -83,6 +84,25 @@ for (const group of groups) {
     `clock relay ${group.relay} encoding changed`);
 }
 
+// Block II display circuitry is 12 selectable banks of 11 bistable relays.
+// Bits 12-15 of channel 010 select the bank; only the low 11 bits are the
+// bank's latching relay state.  A row transition therefore produces exactly
+// the Hamming distance of the old/new low-11 words in mechanical operations.
+assert(app.includes('const relay=(value>>11)&0o17,b=(value>>10)&1,c=(value>>5)&0o37,d=value&0o37,low11=value&0o3777;'),
+  'channel 010 must retain 4-bit bank selector + low-11 relay split');
+assert(app.includes('if(relay>=1&&relay<=12)'),
+  'channel 010 must retain all 12 relay banks');
+assert(app.includes('popcount11(prior^low11)'),
+  'AGC relay sounds must be derived from changed low-11 bistable relays');
+assert(app.includes('CLOCK_SETTLE_MS=20'),
+  'Block II relay pull-in/settle interval must remain 20 ms');
+assert(relayAudio.includes('count = Math.max(0, Math.min(11'),
+  'relay audio must cap a bank transition to its 11 physical relays');
+assert(relayAudio.includes('for (let i = 0; i < count; i++) emitTick'),
+  'relay audio must emit one transient per changed bistable relay');
+assert(relayAudio.includes('mechanical pull-in scatter only, not serialized relay drive'),
+  'relay audio must document parallel electrical drive vs mechanical scatter');
+
 const decodeStart = app.indexOf('function decodeChannel10(value)');
 const decodeEnd = app.indexOf('function updateAgcCompActy()', decodeStart);
 assert(decodeStart >= 0 && decodeEnd > decodeStart,
@@ -124,4 +144,4 @@ for (const snippet of [
 }
 
 console.log('DSKY mapping smoke: PASS');
-console.log('  Block II relay codes, Pinball keys, phone-clock relay groups, channel 010/011/013/0163 mappings verified');
+console.log('  Block II 12x11 relay bank, individual armature clicks, digit codes, Pinball keys, and channel mappings verified');
