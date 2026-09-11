@@ -44,6 +44,20 @@
   const firstSnapshot = snapshot();
   let lastAux = Object.assign({}, firstSnapshot && firstSnapshot.auxRelays || {});
 
+  function syncAuxSnapshot() {
+    const state = snapshot();
+    if (state && state.auxRelays) lastAux = Object.assign({}, state.auxRelays);
+  }
+
+  // If sound was disabled while hardware state changed, resynchronize before
+  // the next audible event so a later numeric relay is never mistaken for an
+  // old silent annunciator transition.
+  const soundButton = document.getElementById('sound');
+  if (soundButton) soundButton.addEventListener('click', () => setTimeout(syncAuxSnapshot, 0));
+  setInterval(() => {
+    try { if (typeof tickSound === 'boolean' && !tickSound) syncAuxSnapshot(); } catch (_) {}
+  }, 250);
+
   function hash32(text) {
     let h = 0x811c9dc5;
     const s = String(text);
