@@ -21,7 +21,6 @@ html,body,#app{background:#000!important}
 #mode{display:none!important}
 #app{padding:2px!important}
 .dsky{z-index:3!important}
-/* Block II EL glass: gray face with the source-art ITO/contact hardware visible. */
 .el-glass-background{fill:#696d67}
 .el-hardware-border{fill:none;stroke:#a2a69f;stroke-width:.48;opacity:.72}
 .el-ito-dot{fill:#a2a69f;opacity:.88}
@@ -43,8 +42,10 @@ html,body,#app{background:#000!important}
       <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
     </div>
 
-    <!-- MIT/IL SCD 1006315G sheet 2 gives a 2.360 x 4.060 in nominal
-         EL front face.  106 units therefore maps to 182.356 units high. -->
+    <!-- MIT/IL SCD 1006315G sheet 2: 2.360 x 4.060 in EL face.
+         The three register bars are at 2.280, 1.520 and .760 in from the
+         bottom datum. Their nominal thickness is .060 in; the following
+         register digits start .070 in below each bar. -->
     <svg id="elpanel" class="elpanel" viewBox="0 0 106 182.356" preserveAspectRatio="none" aria-label="DSKY electroluminescent display">
       <defs>
         <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
@@ -61,37 +62,37 @@ html,body,#app{background:#000!important}
       <rect class="el-hardware-border" x="2.119" y="2.350" width="101.763" height="177.656" aria-hidden="true"/>
       <g class="el-ito-dots" aria-hidden="true">
         <ellipse class="el-ito-dot" cx="53.000" cy="6.914" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="53.000" cy="28.160" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="53.000" cy="55.120" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="100.863" cy="64.242" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="100.863" cy="98.378" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="100.863" cy="132.514" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="8.286" cy="132.514" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="8.286" cy="98.378" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="8.286" cy="64.242" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="53.000" cy="43.427" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="53.000" cy="79.939" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="81.297" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="115.432" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="149.568" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="149.568" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="115.432" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="81.297" rx="1.294" ry="1.369"/>
       </g>
       <g class="el-static" aria-hidden="true">
         <rect class="el-legend-bg" x="65.505" y="2.807" width="37.945" height="11.866"/>
         <text class="el-label" x="84.478" y="10.856" text-anchor="middle">PROG</text>
-        <rect class="el-legend-bg" x="2.550" y="30.898" width="37.945" height="11.866"/>
-        <text class="el-label" x="21.523" y="38.896" text-anchor="middle">VERB</text>
-        <rect class="el-legend-bg" x="65.505" y="30.898" width="37.945" height="11.866"/>
-        <text class="el-label" x="84.478" y="38.950" text-anchor="middle">NOUN</text>
-        <line class="el-rule" x1="12.770" y1="62.881" x2="97.670" y2="62.881"/>
-        <line class="el-rule" x1="12.770" y1="97.017" x2="97.670" y2="97.017"/>
-        <line class="el-rule" x1="12.770" y1="131.153" x2="97.670" y2="131.153"/>
+        <rect class="el-legend-bg" x="2.550" y="46.165" width="37.945" height="11.866"/>
+        <text class="el-label" x="21.523" y="54.163" text-anchor="middle">VERB</text>
+        <rect class="el-legend-bg" x="65.505" y="46.165" width="37.945" height="11.866"/>
+        <text class="el-label" x="84.478" y="54.217" text-anchor="middle">NOUN</text>
+        <line class="el-rule" x1="12.770" y1="81.297" x2="97.670" y2="81.297"/>
+        <line class="el-rule" x1="12.770" y1="115.432" x2="97.670" y2="115.432"/>
+        <line class="el-rule" x1="12.770" y1="149.568" x2="97.670" y2="149.568"/>
       </g>
       <g id="comp" class="comp-el" data-lamp="comp" aria-label="COMP ACTY">
-        <rect class="el-comp-bg" x="2.550" y="2.807" width="37.945" height="25.500"/>
-        <text x="21.523" y="13.800" text-anchor="middle">COMP</text>
-        <text x="21.523" y="20.480" text-anchor="middle">ACTY</text>
+        <rect class="el-comp-bg" x="2.550" y="2.807" width="37.945" height="40.163"/>
+        <text x="21.523" y="21.820" text-anchor="middle">COMP</text>
+        <text x="21.523" y="28.500" text-anchor="middle">ACTY</text>
       </g>
       <g id="prog" class="el-field" transform="translate(66.75 14)"></g>
-      <g id="verb" class="el-field" transform="translate(3 43.664)"></g>
-      <g id="noun" class="el-field" transform="translate(66.75 43.664)"></g>
-      <g id="r1" class="el-field" transform="translate(3 69.916)"></g>
-      <g id="r2" class="el-field" transform="translate(3 104.052)"></g>
-      <g id="r3" class="el-field" transform="translate(3 138.187)"></g>
+      <g id="verb" class="el-field" transform="translate(3 59)"></g>
+      <g id="noun" class="el-field" transform="translate(66.75 59)"></g>
+      <g id="r1" class="el-field" transform="translate(3 85.788)"></g>
+      <g id="r2" class="el-field" transform="translate(3 119.924)"></g>
+      <g id="r3" class="el-field" transform="translate(3 154.059)"></g>
     </svg>
 
     <button class="key k-r1c1 fn" data-key="V">VERB</button>
