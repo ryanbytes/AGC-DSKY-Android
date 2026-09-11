@@ -85,31 +85,39 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
 /* Keep unlit segment ghosts outside the SVG glow pass.  Fire OS 7's WebView
    compositor can repeat a low-alpha segment when the filter is applied to a
    whole multi-glyph field, producing a detached horizontal phantom after
-   PROG 00.  Filtering only energized sections preserves the halo and the
-   restrained off outlines without feeding those outlines into the blur. */
+   PROG 00.  Filtering only energized sections preserves the restrained off
+   outlines without feeding them into the blur. */
 .el-field .el-seg.on{filter:url(#elGlow)}
-/* Labels, rules, COMP ACTY and numeric strokes are all phosphor features on
-   the same EL panel, so illuminated elements share the same 530-nm hue. */
+/* PROG, VERB and NOUN are continuously energized EL sections with the legend
+   screen-printed in black. COMP ACTY uses the same construction but is driven
+   by its real activity discrete. */
+.el-legend-bg{fill:var(--el);opacity:.92}
 .el-label{
-  fill:var(--el);opacity:.78;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
+  fill:#050605;opacity:.96;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
   font-size:5.1px;font-weight:700;letter-spacing:.22px;
 }
-.el-rule{stroke:var(--el);stroke-width:2.05;stroke-linecap:round;opacity:.76}
+.el-rule{stroke:var(--el);stroke-width:2.05;stroke-linecap:round;opacity:.88}
+.el-comp-bg{fill:var(--el);opacity:.08}
+.comp-el.on .el-comp-bg{opacity:.92}
 .comp-el text{
-  fill:var(--el);opacity:.10;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
+  fill:#050605;opacity:.92;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
   font-size:5.2px;font-weight:700;letter-spacing:.05px;
 }
-.comp-el.on text{fill:var(--el);opacity:.92}
+.comp-el.on text{fill:#050605;opacity:.98}
 .el-seg{fill:var(--el);stroke:none}
 .el-seg.off{opacity:.014}
 .el-seg.on{fill:var(--el);opacity:.92}
 /* Lower EL voltage reduces light output while preserving the phosphor hue. */
-.dim .el-seg.on,.dim .el-label,.dim .el-rule,.dim .comp-el.on text{opacity:.62}
+.dim .el-seg.on,.dim .el-legend-bg,.dim .el-rule,.dim .comp-el.on .el-comp-bg{opacity:.62}
 
 /* Illuminated black keycaps with deep mechanical bevel. */
 .key{position:absolute;width:13.125%;height:11.2903%;z-index:6;border:.12vmin solid #090a09;border-radius:4.2%;background:linear-gradient(145deg,#353633 0%,#262724 36%,#181917 78%,#111210 100%);color:#eef2e8;font:800 clamp(12px,3.25vmin,24px)/1 Arial,Helvetica,sans-serif;letter-spacing:-.02em;text-shadow:0 0 .12vmin rgba(241,255,227,.34),0 .09em #000;box-shadow:inset .20vmin .18vmin .22vmin rgba(255,255,255,.16),inset -.22vmin -.25vmin .26vmin rgba(0,0,0,.76),0 .15vmin .1vmin #66665f;-webkit-tap-highlight-color:transparent;padding:0}
 .key.fn{font-size:clamp(8px,2.2vmin,17px)}.key.keyrel{line-height:.86}.key:active,.key.pressed{transform:translateY(.30vmin);background:linear-gradient(#191a18,#111210);box-shadow:inset .08vmin .12vmin .12vmin rgba(255,255,255,.08),inset 0 0 .35vmin #000}
 .k-r1c1,.k-r2c1{left:1.25%}.k-r1c2,.k-r2c2,.k-r3c2{left:15.3125%}.k-r1c3,.k-r2c3,.k-r3c3{left:29.375%}.k-r1c4,.k-r2c4,.k-r3c4{left:43.4375%}.k-r1c5,.k-r2c5,.k-r3c5{left:57.5%}.k-r1c6,.k-r2c6,.k-r3c6{left:71.5625%}.k-r1c7,.k-r2c7{left:85.625%}[class*="k-r1"]{top:63.1720%}[class*="k-r2"]{top:75.2688%}[class*="k-r3"]{top:87.3656%}
+/* The four outer function keys are half-row staggered on the Block II keyboard,
+   rather than sharing the three center-row baselines. */
+.k-r1c1,.k-r1c7{top:69.2204%}
+.k-r2c1,.k-r2c7{top:81.3172%}
 
 .fastener{position:absolute;z-index:7;width:2.55%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 37% 32%,#4a4b47 0 18%,#242522 44%,#121311 75%);border:.11vmin solid #a5a59e;box-shadow:0 .08vmin .12vmin rgba(0,0,0,.6)}.fastener:after{content:"";position:absolute;left:15%;right:15%;top:46%;height:9%;background:#8b8c86;transform:rotate(-14deg);box-shadow:0 -.04vmin #151515}.f1{left:.9%;top:.9%}.f2{right:.9%;top:.9%}.f3{left:.9%;bottom:.9%}.f4{right:.9%;bottom:.9%}
 
