@@ -75,14 +75,25 @@
   const FIRST_DIGIT_X=.400*U;
   renderReg=function apolloRenderReg(el,text){text=String(text);let out=signGlyph(text[0]);text.slice(1).split('').forEach((ch,i)=>{out+=glyph(ch,FIRST_DIGIT_X+i*REGISTER_ADVANCE);});el.innerHTML=out;};
 
-  // Sheet 2 nominal .880-in left and right upper zones.  Detail B gives a
-  // .740-in datum-to-final-edge two-digit field.  That places the first digit
-  // datums at .140 and 1.620 inches respectively.
-  const LEFT_FIELD_X=.140*U,RIGHT_FIELD_X=1.620*U;
+  // 1006315G sheet 2 / the drawing-derived exact CAD preserve two distinct
+  // relationships that the old hand-tuned transforms lost: VERB is 1.470 in
+  // left of NOUN, and the VERB/NOUN digit row is .960 in below the PROG digit
+  // row.  Detail C's slanted digit trace puts the first right-hand datum at
+  // 1.620 in; applying the 1.470-in group offset puts VERB at .150 in.
+  // The digit tops are .315 in (PROG) and 1.275 in (VERB/NOUN) from the active
+  // face top.  These values also agree with the 1006315G-exact CAD placement.
+  const RIGHT_FIELD_X_IN=1.620;
+  const UPPER_GROUP_X_OFFSET_IN=1.470;
+  const LEFT_FIELD_X_IN=RIGHT_FIELD_X_IN-UPPER_GROUP_X_OFFSET_IN;
+  const PROG_TOP_IN=.315;
+  const UPPER_ROW_Y_OFFSET_IN=.960;
+  const VERB_NOUN_TOP_IN=PROG_TOP_IN+UPPER_ROW_Y_OFFSET_IN;
+  const LEFT_FIELD_X=LEFT_FIELD_X_IN*U,RIGHT_FIELD_X=RIGHT_FIELD_X_IN*U;
+  const PROG_Y=PROG_TOP_IN*U,VERB_NOUN_Y=VERB_NOUN_TOP_IN*U;
   const transforms=Object.freeze({
-    prog:`translate(${RIGHT_FIELD_X.toFixed(3)} 14)`,
-    verb:`translate(${LEFT_FIELD_X.toFixed(3)} 55.5)`,
-    noun:`translate(${RIGHT_FIELD_X.toFixed(3)} 55.5)`,
+    prog:`translate(${RIGHT_FIELD_X.toFixed(3)} ${PROG_Y.toFixed(3)})`,
+    verb:`translate(${LEFT_FIELD_X.toFixed(3)} ${VERB_NOUN_Y.toFixed(3)})`,
+    noun:`translate(${RIGHT_FIELD_X.toFixed(3)} ${VERB_NOUN_Y.toFixed(3)})`,
     r1:`translate(0 ${REGISTER_Y[0].toFixed(3)})`,
     r2:`translate(0 ${REGISTER_Y[1].toFixed(3)})`,
     r3:`translate(0 ${REGISTER_Y[2].toFixed(3)})`
@@ -110,8 +121,12 @@
     registerPitchIn:.410,
     mmToPanel:MM_TO_U,
     firstRegisterDigitDatumIn:.400,
-    leftUpperDatumIn:.140,
-    rightUpperDatumIn:1.620,
+    leftUpperDatumIn:LEFT_FIELD_X_IN,
+    rightUpperDatumIn:RIGHT_FIELD_X_IN,
+    upperGroupHorizontalSeparationIn:UPPER_GROUP_X_OFFSET_IN,
+    progTopIn:PROG_TOP_IN,
+    verbNounTopIn:VERB_NOUN_TOP_IN,
+    upperRowVerticalSeparationIn:UPPER_ROW_Y_OFFSET_IN,
     signWidthIn:.265,
     signHeightIn:.338,
     signThicknessIn:.065,
