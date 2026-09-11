@@ -1,16 +1,13 @@
 'use strict';
 
 /*
- * Apollo Block II DSKY EL segment geometry.
+ * Apollo Block II DSKY EL geometry.
  *
- * Dimensional source of truth is the original MIT Instrumentation Laboratory
- * SCD 1006315 (rev G), INDICATOR, DIGITAL, ELECTROLUMINESCENT.  The flown CM
- * 2003994-121 assembly calls out 1006315-001 directly.  In particular the
- * 2.360-in front-face width, 4.060-in nominal height and .760-in register
- * center pitch come from sheet 2 of that drawing.
- *
- * Ben Krasnow's DSKY V2 SVG is retained only as a transcription of the
- * individual segment contours.  It is not the spacing or panel-aspect source.
+ * Vertical spacing comes directly from MIT/IL SCD 1006315G sheet 2.
+ * The 2.360 x 4.060 inch face, .760 inch register pitch, .060 inch
+ * continuously-lit separator thickness, and .070 inch separator-to-digit
+ * clearance are used as physical dimensions, not eyeballed screen spacing.
+ * Segment contours remain the traced physical EL artwork from DSKY V2.svg.
  */
 (() => {
   const SOURCE = Object.freeze({
@@ -23,105 +20,73 @@
     g: 'M 96.005094,90.891059 l 0.44238,1.651 h -4.41906 l -0.44239,-1.651 z'
   });
 
-  const SRC_X = 88.116524;
-  const SRC_Y = 85.303059;
-  const SRC_W = 11.685430;
-  const SRC_H = 12.700000;
-  const SRC_PITCH = 10.668000;
-  const SCALE = 1.58;
-  const MIRROR_X = 2 * SRC_X + SRC_W;
-  const SOURCE_FOR_LOGICAL = Object.freeze({a:'a', b:'f', c:'e', d:'d', e:'c', f:'b', g:'g'});
-  const ADVANCE = SRC_PITCH * SCALE;
-  const DIGIT_W = SRC_W * SCALE;
-  const DIGIT_H = SRC_H * SCALE;
+  const SRC_X=88.116524,SRC_Y=85.303059,SRC_W=11.685430,SRC_H=12.700000,SRC_PITCH=10.668000;
+  const SCALE=1.58,MIRROR_X=2*SRC_X+SRC_W;
+  const SOURCE_FOR_LOGICAL=Object.freeze({a:'a',b:'f',c:'e',d:'d',e:'c',f:'b',g:'g'});
+  const ADVANCE=SRC_PITCH*SCALE,DIGIT_W=SRC_W*SCALE,DIGIT_H=SRC_H*SCALE;
 
-  // Sheet-2 face dimensions mapped into the established 106-unit panel width.
-  const DRAWING_FACE_W_IN = 2.360;
-  const DRAWING_FACE_H_IN = 4.060;
-  const U = 106 / DRAWING_FACE_W_IN;
-  const PANEL_H = DRAWING_FACE_H_IN * U; // 182.356, not the old guessed 190.
+  // SCD 1006315G sheet 2 front-face datums, in inches.
+  const FACE_W_IN=2.360,FACE_H_IN=4.060,U=106/FACE_W_IN;
+  const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);
+  const BAR_H_IN=.060;                 // .065/.055 TYP
+  const REGISTER_TOP_GAP_IN=.070;      // .075/.065 TYP
+  const REGISTER_Y=BAR_FROM_BOTTOM_IN.map(v=>(FACE_H_IN-v+BAR_H_IN+REGISTER_TOP_GAP_IN)*U);
 
-  function segment(name, on) {
-    const sourceName = SOURCE_FOR_LOGICAL[name];
-    return `<path class="el-seg ${on ? 'on' : 'off'}" data-seg="${name}" d="${SOURCE[sourceName]}"/>`;
+  function segment(name,on){
+    const sourceName=SOURCE_FOR_LOGICAL[name];
+    return `<path class="el-seg ${on?'on':'off'}" data-seg="${name}" d="${SOURCE[sourceName]}"/>`;
   }
 
-  glyph = function apolloGlyph(ch, x) {
-    const lit = SEG[ch] || '';
-    const paths = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
-      .map(name => segment(name, lit.includes(name))).join('');
+  glyph=function apolloGlyph(ch,x){
+    const lit=SEG[ch]||'';
+    const paths=['a','b','c','d','e','f','g'].map(name=>segment(name,lit.includes(name))).join('');
     return `<g class="el-glyph" transform="translate(${Number(x).toFixed(3)} 0) scale(${SCALE}) translate(${-SRC_X} ${-SRC_Y})"><g transform="matrix(-1 0 0 1 ${MIRROR_X.toFixed(6)} 0)">${paths}</g></g>`;
   };
 
-  const SIGN_W = 6.731 * SCALE;
-  const SIGN_T = 1.524 * SCALE;
-  const SIGN_ARM = 3.175 * SCALE;
-  const SIGN_GAP = 0.381 * SCALE;
-  const SIGN_H = 2 * SIGN_ARM + SIGN_T + 2 * SIGN_GAP;
-  const SIGN_TOP = (DIGIT_H - SIGN_H) * 0.5;
-  const SIGN_X = 0.40;
-  const SIGN_VX = SIGN_X + (SIGN_W - SIGN_T) * 0.5;
-  const SIGN_HY = SIGN_TOP + SIGN_ARM + SIGN_GAP;
-  function signH(on) {
-    return `<path class="el-seg ${on ? 'on' : 'off'}" d="M ${SIGN_X.toFixed(3)},${SIGN_HY.toFixed(3)} h ${SIGN_W.toFixed(3)} v ${SIGN_T.toFixed(3)} h ${(-SIGN_W).toFixed(3)} z"/>`;
-  }
-  function signV(part, on) {
-    const y0 = part === 'upper' ? SIGN_TOP : SIGN_HY + SIGN_T + SIGN_GAP;
-    return `<path class="el-seg ${on ? 'on' : 'off'}" d="M ${SIGN_VX.toFixed(3)},${y0.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_ARM.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
-  }
-  signGlyph = function apolloSignGlyph(sign) {
-    const plus = sign === '+';
-    const bar = plus || sign === '-';
-    return `<g class="el-sign">${signH(bar)}${signV('upper', plus)}${signV('lower', plus)}</g>`;
-  };
+  const SIGN_W=6.731*SCALE,SIGN_T=1.524*SCALE,SIGN_ARM=3.175*SCALE,SIGN_GAP=.381*SCALE;
+  const SIGN_H=2*SIGN_ARM+SIGN_T+2*SIGN_GAP,SIGN_TOP=(DIGIT_H-SIGN_H)*.5,SIGN_X=.4,SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5,SIGN_HY=SIGN_TOP+SIGN_ARM+SIGN_GAP;
+  function signH(on){return `<path class="el-seg ${on?'on':'off'}" d="M ${SIGN_X.toFixed(3)},${SIGN_HY.toFixed(3)} h ${SIGN_W.toFixed(3)} v ${SIGN_T.toFixed(3)} h ${(-SIGN_W).toFixed(3)} z"/>`;}
+  function signV(part,on){const y0=part==='upper'?SIGN_TOP:SIGN_HY+SIGN_T+SIGN_GAP;return `<path class="el-seg ${on?'on':'off'}" d="M ${SIGN_VX.toFixed(3)},${y0.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_ARM.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;}
+  signGlyph=function apolloSignGlyph(sign){const plus=sign==='+',bar=plus||sign==='-';return `<g class="el-sign">${signH(bar)}${signV('upper',plus)}${signV('lower',plus)}</g>`;};
 
-  renderDigits = function apolloRenderDigits(el, text) {
-    let out = '';
-    String(text).split('').forEach((ch, i) => { out += glyph(ch, i * ADVANCE); });
-    el.innerHTML = out;
-  };
+  renderDigits=function apolloRenderDigits(el,text){let out='';String(text).split('').forEach((ch,i)=>{out+=glyph(ch,i*ADVANCE);});el.innerHTML=out;};
+  const FIRST_DIGIT_X=12.0;
+  renderReg=function apolloRenderReg(el,text){text=String(text);let out=signGlyph(text[0]);text.slice(1).split('').forEach((ch,i)=>{out+=glyph(ch,FIRST_DIGIT_X+i*ADVANCE);});el.innerHTML=out;};
 
-  const FIRST_DIGIT_X = 12.0;
-  renderReg = function apolloRenderReg(el, text) {
-    text = String(text);
-    let out = signGlyph(text[0]);
-    text.slice(1).split('').forEach((ch, i) => { out += glyph(ch, FIRST_DIGIT_X + i * ADVANCE); });
-    el.innerHTML = out;
-  };
-
-  // 1006315G sheet 2 dimensions: register centers are 2.280, 1.520 and
-  // 0.760 inches above the bottom face datum.  Position glyphs by those
-  // physical centers instead of spreading three rows through a 190-unit box.
-  const regTop = centerFromBottomIn => (DRAWING_FACE_H_IN - centerFromBottomIn) * U - DIGIT_H / 2;
-  const transforms = Object.freeze({
-    prog: 'translate(66.75 14)',
-    verb: 'translate(3 43.664)',
-    noun: 'translate(66.75 43.664)',
-    r1: `translate(3 ${regTop(2.280).toFixed(3)})`,
-    r2: `translate(3 ${regTop(1.520).toFixed(3)})`,
-    r3: `translate(3 ${regTop(0.760).toFixed(3)})`
+  // The upper fields retain their source-art origins.  The three register rows
+  // are calculated from the SCD dimension chain: bar top at 1.780/2.540/3.300
+  // inches from the top, then .060 bar + .070 clearance before the digits.
+  const transforms=Object.freeze({
+    prog:'translate(66.75 14)',
+    verb:'translate(3 59)',
+    noun:'translate(66.75 59)',
+    r1:`translate(3 ${REGISTER_Y[0].toFixed(3)})`,
+    r2:`translate(3 ${REGISTER_Y[1].toFixed(3)})`,
+    r3:`translate(3 ${REGISTER_Y[2].toFixed(3)})`
   });
-  for (const [id, transform] of Object.entries(transforms)) {
-    const node = document.getElementById(id);
-    if (node) node.setAttribute('transform', transform);
+  for(const [id,transform] of Object.entries(transforms)){
+    const node=document.getElementById(id);
+    if(node)node.setAttribute('transform',transform);
   }
 
-  if (typeof mode !== 'undefined' && mode === 'agc' && typeof renderAgcField === 'function') {
-    ['prog', 'verb', 'noun', 'r1', 'r2', 'r3'].forEach(renderAgcField);
-  } else {
-    if (typeof set2 === 'function') set2('prog', '00');
-    if (typeof show === 'function') show(verb, noun);
-    if (typeof renderClockReg === 'function') ['r1', 'r2', 'r3'].forEach(renderClockReg);
+  if(typeof mode!=='undefined'&&mode==='agc'&&typeof renderAgcField==='function'){
+    ['prog','verb','noun','r1','r2','r3'].forEach(renderAgcField);
+  }else{
+    if(typeof set2==='function')set2('prog','00');
+    if(typeof show==='function')show(verb,noun);
+    if(typeof renderClockReg==='function')['r1','r2','r3'].forEach(renderClockReg);
   }
 
-  window.DSKY_DRAWING_GEOMETRY = Object.freeze({
-    source: 'MIT/IL SCD 1006315G sheet 2; segment contours only from DSKY V2.svg',
-    panelWidthIn: DRAWING_FACE_W_IN,
-    panelHeightIn: DRAWING_FACE_H_IN,
-    panelHeight: PANEL_H,
-    registerCentersFromBottomIn: [2.280, 1.520, 0.760],
-    digitWidth: DIGIT_W,
-    digitHeight: DIGIT_H,
-    digitAdvance: ADVANCE
+  window.DSKY_DRAWING_GEOMETRY=Object.freeze({
+    source:'MIT/IL SCD 1006315G sheet 2; DSKY V2.svg segment contours only',
+    faceWidthIn:FACE_W_IN,
+    faceHeightIn:FACE_H_IN,
+    barFromBottomIn:BAR_FROM_BOTTOM_IN,
+    barHeightIn:BAR_H_IN,
+    registerTopGapIn:REGISTER_TOP_GAP_IN,
+    digitWidth:DIGIT_W,
+    digitHeight:DIGIT_H,
+    digitAdvance:ADVANCE,
+    registerY:REGISTER_Y
   });
 })();
