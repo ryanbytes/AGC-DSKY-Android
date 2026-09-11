@@ -26,10 +26,13 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final long MINUTE_MS=60_000L;
     private static final int TICK_REQUEST_CODE=21;
 
-    // MIT/IL SCD 1006315G: 2.360 x 4.060 in EL face. Register bars use
-    // the sheet-2 .760-in dimension chain; row glyphs start after the
-    // nominal .060-in bar and .070-in clearance.
-    private static final float PANEL_W=106f,PANEL_H=182.356f;
+    // MIT/IL SCD 1006315G sheet 2: the active EL face is 2.360 x 4.060 in
+    // inside a 2.620 x 4.420-in hardware frame.  Nominal frame insets are
+    // .130 in per side and .180 in top/bottom.
+    private static final float U=106f/2.360f;
+    private static final float ACTIVE_W=106f,ACTIVE_H=4.060f*U;
+    private static final float ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U;
+    private static final float PANEL_W=2.620f*U,PANEL_H=4.420f*U;
     private static final float R1_Y=84.441f,R2_Y=118.576f,R3_Y=152.712f;
     private static final float FRAME_H=23f;
 
@@ -55,8 +58,8 @@ public final class ElWidgetProvider extends AppWidgetProvider {
 
     private static void updateOne(Context context,AppWidgetManager manager,int appWidgetId){
       Bundle options=manager.getAppWidgetOptions(appWidgetId);
-      int widthDp=Math.max(80,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,110));
-      int heightDp=Math.max(96,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,183));
+      int widthDp=Math.max(80,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,118));
+      int heightDp=Math.max(96,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,199));
       float scaleDp=Math.min(widthDp/PANEL_W,heightDp/PANEL_H);
       float panelWidthDp=PANEL_W*scaleDp,panelHeightDp=PANEL_H*scaleDp;
       float density=context.getResources().getDisplayMetrics().density;
@@ -78,9 +81,9 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         int[] flippers={R.id.el_hour_flipper,R.id.el_minute_flipper,R.id.el_seconds_flipper};
         float[] y={R1_Y,R2_Y,R3_Y};
         for(int i=0;i<flippers.length;i++){
-          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_START,0f,TypedValue.COMPLEX_UNIT_DIP);
-          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_TOP,y[i]*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
-          views.setViewLayoutWidth(flippers[i],PANEL_W*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_START,ACTIVE_X*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_TOP,(ACTIVE_Y+y[i])*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutWidth(flippers[i],ACTIVE_W*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
           views.setViewLayoutHeight(flippers[i],FRAME_H*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
         }
       }
@@ -102,7 +105,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         @Override protected int sizeOf(String key,Bitmap value){return Math.max(1,value.getAllocationByteCount()/1024);}
       };
       private static final int CORE=Color.rgb(109,236,180),RULE=CORE;
-      private static final int PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5);
+      private static final int FRAME=Color.rgb(86,90,86),PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5);
 
       // 1006315G Detail C is datum-dimensioned. The metric segment trace
       // already matches those physical dimensions; do not affine-squeeze it.
@@ -121,9 +124,10 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         {{96.005094f,90.891059f},{96.447474f,92.542059f},{92.028414f,92.542059f},{91.586024f,90.891059f}}};
       private static final int[] MAP={0,1,2,3,5,4,6};
       private static final String[] SEG={"abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc","abcdefg","abcdfg"};
-      private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG);
+      private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),PANEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG);
       static{
         ON.setStyle(Paint.Style.FILL);ON.setColor(CORE);
+        PANEL_P.setStyle(Paint.Style.FILL);PANEL_P.setColor(PANEL);
         Typeface tf=Typeface.create("sans-serif-condensed",Typeface.BOLD);
         LABEL_P.setTypeface(tf);LABEL_P.setTextAlign(Paint.Align.CENTER);LABEL_P.setTextSize(5.1f);LABEL_P.setColor(INK);LABEL_P.setAlpha(245);
         RULE_P.setStyle(Paint.Style.FILL);RULE_P.setColor(RULE);RULE_P.setAlpha(224);
@@ -137,14 +141,14 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         width=Math.max(1,width);height=Math.max(1,height);
         String key=width+"x"+height+(drawRegisters?((":dyn:"+now.get(Calendar.HOUR_OF_DAY)+":"+now.get(Calendar.MINUTE)+":"+now.get(Calendar.SECOND))):":static");
         synchronized(BITMAP_CACHE){Bitmap cached=BITMAP_CACHE.get(key);if(cached!=null&&!cached.isRecycled())return cached;}
-        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(PANEL);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,now,drawRegisters);
+        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(FRAME);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,now,drawRegisters);
         synchronized(BITMAP_CACHE){BITMAP_CACHE.put(key,b);}return b;
       }
       private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){
-        // Detail-A/B luminous geometry reaches close to the 2.360-in physical
-        // face edge.  Keep the cosmetic outline on the face perimeter instead
-        // of drawing it through the segments.
-        c.drawPath(box(-.24f,-.24f,106.48f,182.836f),HARDWARE_STROKE_P);
+        c.drawPath(box(.24f,.24f,PANEL_W-.48f,PANEL_H-.48f),HARDWARE_STROKE_P);
+        c.drawPath(box(ACTIVE_X,ACTIVE_Y,ACTIVE_W,ACTIVE_H),PANEL_P);
+        c.save();
+        c.translate(ACTIVE_X,ACTIVE_Y);
         dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.949f,1.294f,1.369f);
         dot(c,100.863f,79.949f,1.294f,1.369f);dot(c,100.863f,114.085f,1.294f,1.369f);dot(c,100.863f,148.220f,1.294f,1.369f);
         dot(c,8.286f,148.220f,1.294f,1.369f);dot(c,8.286f,114.085f,1.294f,1.369f);dot(c,8.286f,79.949f,1.294f,1.369f);
@@ -155,6 +159,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         rule(c,12.770f,78.602f,84.900f,2.695f);rule(c,12.770f,112.737f,84.900f,2.695f);rule(c,12.770f,146.873f,84.900f,2.695f);
         digits(c,"00",RIGHT_FIELD_X,14f);digits(c,"16",LEFT_FIELD_X,55.5f);digits(c,"65",RIGHT_FIELD_X,55.5f);
         if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),0,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),0,R3_Y);}
+        c.restore();
       }
       private static String five(int v){return String.format(Locale.US,"%05d",v);}
       private static void section(Canvas c,float x,float y,float w,float h,Paint p){c.drawPath(box(x,y,w,h),p);}
