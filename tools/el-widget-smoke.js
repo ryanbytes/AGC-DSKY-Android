@@ -36,7 +36,6 @@ req(provider,'pairFrames=buildFrames(context,60)','60-frame adapter');
 req(provider,'hourFrames=buildFrames(context,24)','24-frame adapter');
 req(provider,'alarm.setExactAndAllowWhileIdle','minute refresh');
 
-// User-requested green with a visible blue component, identical in all paths.
 req(finish,'--el:#6decb4','WebView EL color');
 req(provider,'CORE=Color.rgb(109,236,180),RULE=CORE','native EL color');
 req(generator,"const EL_COLOR='#6DECB4'",'generated EL color');
@@ -45,8 +44,7 @@ no(provider,'Color.rgb(121,239,79)','obsolete native lime color');
 no(generator,'#79EF4F','obsolete generated lime color');
 no(provider,'setShadowLayer','no-glow renderer');
 
-// SCD 1006315G sheet 2: 2.620 x 4.420 outer hardware frame containing the
-// 2.360 x 4.060 active EL face at .130/.180 nominal insets.
+// 1006315G sheet 2 outer frame and active face.
 req(layout,'android:layout_width="117.678dp"','outer widget width');
 req(layout,'android:layout_height="198.525dp"','outer widget height');
 req(layout,'android:background="#565A56"','outer frame color');
@@ -56,7 +54,6 @@ req(layout,'android:layout_marginTop="92.526dp"','register 1 outer position');
 req(layout,'android:layout_marginTop="126.661dp"','register 2 outer position');
 req(layout,'android:layout_marginTop="160.797dp"','register 3 outer position');
 req(layout,'android:layout_height="23dp"','register frame height');
-
 req(provider,'ACTIVE_W=106f,ACTIVE_H=4.060f*U','native active face size');
 req(provider,'ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U','native active face inset');
 req(provider,'PANEL_W=2.620f*U,PANEL_H=4.420f*U','native outer frame size');
@@ -67,7 +64,6 @@ req(provider,'c.drawColor(FRAME)','native outer frame fill');
 req(provider,'box(ACTIVE_X,ACTIVE_Y,ACTIVE_W,ACTIVE_H)','native active face fill');
 req(provider,'c.translate(ACTIVE_X,ACTIVE_Y)','native active geometry translation');
 no(provider,'box(-.24f,-.24f,106.48f,182.836f)','old perimeter-border shortcut');
-
 req(html,'viewBox="0 0 117.678 198.525"','outer WebView frame');
 req(html,'class="el-frame-background" x="0" y="0" width="117.678" height="198.525"','outer WebView frame fill');
 req(html,'transform="translate(5.839 8.085)"','WebView active face inset');
@@ -78,8 +74,7 @@ req(finish,'top:2.9342%','outer DSKY frame Y');
 req(finish,'width:36.7744%','outer DSKY frame width');
 req(finish,'height:53.3670%','outer DSKY frame height');
 
-// EL-only mode intentionally fills every pixel of the display. This may
-// stretch the physical aspect ratio; that is deliberate for this mode.
+// EL-only mode fills every display pixel.
 req(screenOnly,'width:100vw!important','screen-only full width');
 req(screenOnly,'height:100vh!important','screen-only full height');
 req(screenOnly,'left:0!important','screen-only edge X');
@@ -88,7 +83,7 @@ req(screenOnly,'transform:none!important','screen-only no centering transform');
 no(screenOnly,'width:min(90vw','obsolete fitted screen-only width');
 no(screenOnly,'height:min(90vh','obsolete fitted screen-only height');
 
-// Active-face-local SCD geometry remains unchanged.
+// Active-face-local SCD geometry.
 req(finish,'stroke-width:2.695','separator thickness');
 req(geometry,'const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);','bar center datums');
 req(geometry,'const BAR_H_IN=.060;','bar thickness');
@@ -97,7 +92,7 @@ req(html,'y1="79.949"','bar 1 center');
 req(html,'y1="114.085"','bar 2 center');
 req(html,'y1="148.220"','bar 3 center');
 
-// Detail C's .320 REF is datum-to-edge, not the full slanted glyph bbox.
+// Detail C digit geometry.
 req(geometry,'const MM_TO_U=U/25.4;','uniform metric conversion');
 req(geometry,'const DATUM_X=MIRROR_X-96.244524;','Detail-C datum');
 req(geometry,'scale(${MM_TO_U.toFixed(6)})','uniform WebView glyph scale');
@@ -110,17 +105,32 @@ no(geometry,'DIGIT_SY','affine-squeezed WebView geometry');
 no(provider,'DIGIT_SX','affine-squeezed native geometry');
 no(provider,'DIGIT_SY','affine-squeezed native geometry');
 
+// Detail A position 6: three physical sign islands.  A is split into upper and
+// lower vertical pieces, B is the center horizontal piece; minimum gap .010 in.
+req(geometry,'SIGN_GAP=.010*U','WebView sign gap');
+req(geometry,'const SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)*.5;','WebView A-segment height');
+req(geometry,'data-sign-seg="A"','WebView split A segments');
+req(geometry,'data-sign-seg="B"','WebView B segment');
+no(geometry,'v ${SIGN_H.toFixed(3)}','old continuous WebView stem');
+req(provider,'SIGN_GAP=.010f*U','native sign gap');
+req(provider,'SIGN_A_H=(SIGN_H-SIGN_T-2f*SIGN_GAP)*.5f','native A-segment height');
+req(provider,'box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_A_H)','native upper A segment');
+req(provider,'box(ox+SIGN_VX,oy+SIGN_LOWER_Y,SIGN_T,SIGN_A_H)','native lower A segment');
+no(provider,'box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_H)','old continuous native stem');
+req(generator,'SIGN_GAP=.010*U','generated sign gap');
+req(generator,'SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)/2','generated A-segment height');
+req(generator,'rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_A_H)','generated upper A segment');
+req(generator,'rect(SIGN_VX,SIGN_LOWER_Y,SIGN_T,SIGN_A_H)','generated lower A segment');
+no(generator,'rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_H)','old continuous generated stem');
+
 // Detail B/A datum chains.
 req(geometry,'const UPPER_ADVANCE=.420*U;','upper pitch');
 req(geometry,'const REGISTER_ADVANCE=.410*U;','register pitch');
 req(geometry,'const FIRST_DIGIT_X=.400*U;','first register digit datum');
-req(geometry,'const SIGN_W=.265*U,SIGN_H=.338*U,SIGN_T=.065*U,SIGN_X=.025*U;','WebView sign geometry');
 req(geometry,'const LEFT_FIELD_X=.140*U,RIGHT_FIELD_X=1.620*U;','upper field datums');
 req(provider,'FIRST_DIGIT_X=.400f*U','native first register datum');
 req(provider,'LEFT_FIELD_X=.140f*U,RIGHT_FIELD_X=1.620f*U','native upper datums');
-req(provider,'SIGN_W=.265f*U,SIGN_H=.338f*U,SIGN_T=.065f*U,SIGN_X=.025f*U','native sign geometry');
 req(generator,'REG_ADV=.410*U, FIRST_DIGIT_X=.400*U','generated register datums');
-req(generator,'SIGN_W=.265*U, SIGN_H=.338*U, SIGN_T=.065*U, SIGN_X=.025*U','generated sign geometry');
 req(html,'transform="translate(72.763 14)"','PROG datum');
 req(html,'transform="translate(6.288 55.5)"','VERB datum');
 req(html,'transform="translate(72.763 55.5)"','NOUN datum');
@@ -138,4 +148,4 @@ req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  1006315G geometry retained; EL-only mode fills the full display edge-to-edge');
+console.log('  1006315G Detail A three-island sign geometry, full-screen mode, and DSKY dimensions verified');
