@@ -44,7 +44,9 @@ html,body,#app{background:#000!important}
     <!-- MIT/IL SCD 1006315G active EL geometry remains 106 x 182.356 units.
          The SVG viewport extends 1.5 units farther right as blank glass so the
          drawing-derived rightmost segment edge remains fully visible instead
-         of being covered by a mask or riding the UI edge. -->
+         of being covered by a mask or riding the UI edge. Sheet 2 dimensions
+         the left/right upper EL zones at .880 in; 106/2.360 scale converts
+         that width to 39.525 panel units. -->
     <svg id="elpanel" class="elpanel" viewBox="0 0 107.5 182.356" preserveAspectRatio="xMidYMid meet" aria-label="DSKY electroluminescent display">
       <defs>
         <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
@@ -70,18 +72,18 @@ html,body,#app{background:#000!important}
         <ellipse class="el-ito-dot" cx="8.286" cy="79.949" rx="1.294" ry="1.369"/>
       </g>
       <g class="el-static" aria-hidden="true">
-        <rect class="el-legend-bg" x="65.553" y="0.554" width="34.868" height="11.678"/>
+        <rect class="el-legend-bg" x="63.224" y="0.554" width="39.525" height="11.678"/>
         <text class="el-label" x="82.987" y="8.600" text-anchor="middle">PROG</text>
-        <rect class="el-legend-bg" x="6.019" y="42.721" width="35.162" height="11.678"/>
+        <rect class="el-legend-bg" x="3.837" y="42.721" width="39.525" height="11.678"/>
         <text class="el-label" x="23.600" y="50.770" text-anchor="middle">VERB</text>
-        <rect class="el-legend-bg" x="65.920" y="42.721" width="34.501" height="11.678"/>
+        <rect class="el-legend-bg" x="63.408" y="42.721" width="39.525" height="11.678"/>
         <text class="el-label" x="83.171" y="50.770" text-anchor="middle">NOUN</text>
         <line class="el-rule" x1="12.770" y1="79.949" x2="97.670" y2="79.949"/>
         <line class="el-rule" x1="12.770" y1="114.085" x2="97.670" y2="114.085"/>
         <line class="el-rule" x1="12.770" y1="148.220" x2="97.670" y2="148.220"/>
       </g>
       <g id="comp" class="comp-el" data-lamp="comp" aria-label="COMP ACTY">
-        <rect class="el-comp-bg" x="5.726" y="0.633" width="34.795" height="35.838"/>
+        <rect class="el-comp-bg" x="3.361" y="0.633" width="39.525" height="35.838"/>
         <text x="23.124" y="17.900" text-anchor="middle">COMP</text>
         <text x="23.124" y="25.000" text-anchor="middle">ACTY</text>
       </g>
