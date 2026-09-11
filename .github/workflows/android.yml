@@ -59,6 +59,32 @@ jobs:
           test -f app/build/outputs/apk/fire/release/app-fire-release-unsigned.apk
           test -f app/build/outputs/apk/regular/debug/app-regular-debug.apk
 
+      - name: Sign installable regular and Fire APKs
+        run: |
+          BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
+          KS="$HOME/.android/debug.keystore"
+          test -f "$KS"
+          "$BT/apksigner" sign \
+            --ks "$KS" \
+            --ks-key-alias androiddebugkey \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --out app/build/outputs/apk/regular/release/AGC-DSKY-regular.apk \
+            app/build/outputs/apk/regular/release/app-regular-release-unsigned.apk
+          "$BT/apksigner" sign \
+            --ks "$KS" \
+            --ks-key-alias androiddebugkey \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --out app/build/outputs/apk/fire/release/AGC-DSKY-fire.apk \
+            app/build/outputs/apk/fire/release/app-fire-release-unsigned.apk
+          "$BT/apksigner" verify --verbose --print-certs app/build/outputs/apk/regular/release/AGC-DSKY-regular.apk
+          "$BT/apksigner" verify --verbose --print-certs app/build/outputs/apk/fire/release/AGC-DSKY-fire.apk
+          "$BT/aapt" dump badging app/build/outputs/apk/regular/release/AGC-DSKY-regular.apk | tee /tmp/regular-badging.txt
+          "$BT/aapt" dump badging app/build/outputs/apk/fire/release/AGC-DSKY-fire.apk | tee /tmp/fire-badging.txt
+          grep -F "package: name='org.apollo.agcdsky'" /tmp/regular-badging.txt
+          grep -F "package: name='org.apollo.agcdsky'" /tmp/fire-badging.txt
+
       - name: Verify EL test APK signature, package, and icon
         run: |
           APK=app/build/outputs/apk/regular/debug/app-regular-debug.apk
@@ -71,6 +97,15 @@ jobs:
           unzip -p "$APK" assets/index.html | grep -F 'el-glass-background'
           unzip -p "$APK" assets/index.html | grep -F 'el-ito-dot'
           unzip -p "$APK" assets/index.html | grep -F 'fill:#696d67'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AGC-DSKY-Android-installable
+          path: |
+            app/build/outputs/apk/regular/release/AGC-DSKY-regular.apk
+            app/build/outputs/apk/fire/release/AGC-DSKY-fire.apk
+          if-no-files-found: error
+          retention-days: 30
 
       - uses: actions/upload-artifact@v4
         with:
