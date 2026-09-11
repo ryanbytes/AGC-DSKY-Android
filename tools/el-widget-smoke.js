@@ -61,19 +61,21 @@ req(provider,'ACTIVE_X*scaleDp','live register X inset');
 req(provider,'(ACTIVE_Y+y[i])*scaleDp','live register Y inset');
 req(provider,'ACTIVE_W*scaleDp','live register active width');
 
-// In-app drawing geometry stays at 106 x 182.356. The viewport/background add
-// 1.5 blank units to the right; no mask is allowed to cover segment geometry.
-req(html,'viewBox="0 0 107.5 182.356"','extended WebView viewport');
+// In-app drawing geometry is the physical 106 x 182.356 active EL face.
+// No UI-only gutter is allowed to alter its aspect ratio or field placement.
+req(html,'viewBox="0 0 106 182.356"','physical WebView viewport');
 req(html,'preserveAspectRatio="xMidYMid meet"','WebView aspect preservation');
-req(html,'class="el-glass-background" x="0" y="0" width="107.5" height="182.356"','extended WebView glass');
+req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','physical WebView glass');
+no(html,'viewBox="0 0 107.5 182.356"','obsolete extended WebView viewport');
 no(html,'el-right-safety-gutter','segment-covering safety mask');
 no(html,'el-frame-background','duplicate WebView outer frame');
 no(html,'el-hardware-border','duplicate WebView border');
 no(html,'transform="translate(5.839 8.085)"','obsolete WebView active inset');
 req(finish,'left:57.5000%','active DSKY face X');
 req(finish,'top:5.1075%','active DSKY face Y');
-req(finish,'width:33.59375%','extended DSKY EL width');
+req(finish,'width:33.125%','physical DSKY EL width');
 req(finish,'height:49.0204%','active DSKY face height');
+no(finish,'width:33.59375%','obsolete extended DSKY EL width');
 req(finish,'.display-well{','rebuilt display well');
 req(finish,'left:55.6753%','display-well hardware X');
 req(finish,'top:2.9342%','display-well hardware Y');
@@ -82,14 +84,15 @@ req(finish,'height:53.3670%','display-well hardware height');
 no(finish,'width:38.27%','legacy oversized display-well width');
 no(finish,'height:54.9%','legacy oversized display-well height');
 
-// Screen-only mode uses the extended viewport ratio without distorting content.
+// Screen-only mode uses the same physical active-face ratio without distortion.
 req(screenOnly,'background:#696d67!important','screen-only gray field');
 req(screenOnly,'left:50%!important','screen-only centered X');
 req(screenOnly,'top:50%!important','screen-only centered Y');
-req(screenOnly,'width:min(100vw,calc(100vh * 107.5 / 182.356))!important','screen-only aspect width');
-req(screenOnly,'height:min(100vh,calc(100vw * 182.356 / 107.5))!important','screen-only aspect height');
+req(screenOnly,'width:min(100vw,calc(100vh * 106 / 182.356))!important','screen-only aspect width');
+req(screenOnly,'height:min(100vh,calc(100vw * 182.356 / 106))!important','screen-only aspect height');
 req(screenOnly,'transform:translate(-50%,-50%)!important','screen-only centering');
-no(screenOnly,'width:min(100vw,calc(100vh * 106 / 182.356))!important','obsolete 106-wide screen-only ratio');
+no(screenOnly,'107.5 / 182.356','obsolete extended screen-only ratio');
+no(screenOnly,'182.356 / 107.5','obsolete extended screen-only ratio');
 
 // Active-face-local SCD geometry.
 req(finish,'stroke-width:2.695','separator thickness');
@@ -130,17 +133,23 @@ req(generator,'rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_A_H)','generated upper A segmen
 req(generator,'rect(SIGN_VX,SIGN_LOWER_Y,SIGN_T,SIGN_A_H)','generated lower A segment');
 no(generator,'rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_H)','old continuous generated stem');
 
-// Detail B/A datum chains.
+// Detail B/A datum chains.  The exact 1006315G CAD repeats the upper two-digit
+// assembly at a 1.470-in horizontal offset and a .960-in vertical offset.
 req(geometry,'const UPPER_ADVANCE=.420*U;','upper pitch');
 req(geometry,'const REGISTER_ADVANCE=.410*U;','register pitch');
 req(geometry,'const FIRST_DIGIT_X=.400*U;','first register digit datum');
-req(geometry,'const LEFT_FIELD_X=.140*U,RIGHT_FIELD_X=1.620*U;','upper field datums');
+req(geometry,'const RIGHT_FIELD_X_IN=1.620;','right upper datum');
+req(geometry,'const UPPER_GROUP_X_OFFSET_IN=1.470;','VERB/NOUN horizontal separation');
+req(geometry,'const LEFT_FIELD_X_IN=RIGHT_FIELD_X_IN-UPPER_GROUP_X_OFFSET_IN;','left upper datum derivation');
+req(geometry,'const PROG_TOP_IN=.315;','PROG vertical datum');
+req(geometry,'const UPPER_ROW_Y_OFFSET_IN=.960;','upper-row vertical separation');
+req(geometry,'const VERB_NOUN_TOP_IN=PROG_TOP_IN+UPPER_ROW_Y_OFFSET_IN;','VERB/NOUN vertical datum derivation');
 req(provider,'FIRST_DIGIT_X=.400f*U','native first register datum');
 req(provider,'LEFT_FIELD_X=.140f*U,RIGHT_FIELD_X=1.620f*U','native upper datums');
 req(generator,'REG_ADV=.410*U, FIRST_DIGIT_X=.400*U','generated register datums');
-req(html,'transform="translate(72.763 14)"','PROG datum');
-req(html,'transform="translate(6.288 55.5)"','VERB datum');
-req(html,'transform="translate(72.763 55.5)"','NOUN datum');
+req(html,'transform="translate(72.763 14.148)"','PROG datum');
+req(html,'transform="translate(6.737 57.267)"','VERB datum');
+req(html,'transform="translate(72.763 57.267)"','NOUN datum');
 req(html,'transform="translate(0 84.441)"','register origin');
 req(provider,'digits(c,"00",RIGHT_FIELD_X,14f)','native PROG datum');
 req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y)",'native register datum');
@@ -155,4 +164,4 @@ req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  drawing geometry unchanged; 1.5-unit right margin is outside the segment field');
+console.log('  1006315G active-face ratio and upper digit datums verified');
