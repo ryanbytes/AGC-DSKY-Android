@@ -22,7 +22,6 @@ html,body,#app{background:#000!important}
 #app{padding:2px!important}
 .dsky{z-index:3!important}
 .el-glass-background{fill:#696d67}
-.el-right-safety-gutter{fill:#696d67}
 .el-ito-dot{fill:#a2a69f;opacity:.88}
 </style>
 </head>
@@ -42,10 +41,11 @@ html,body,#app{background:#000!important}
       <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
     </div>
 
-    <!-- MIT/IL SCD 1006315G active EL face only: 2.360 x 4.060 in.
-         The surrounding DSKY display well supplies the hardware framing in
-         normal mode.  No duplicate frame is drawn inside the EL artwork. -->
-    <svg id="elpanel" class="elpanel" viewBox="0 0 106 182.356" preserveAspectRatio="xMidYMid meet" aria-label="DSKY electroluminescent display">
+    <!-- MIT/IL SCD 1006315G active EL geometry remains 106 x 182.356 units.
+         The SVG viewport extends 1.5 units farther right as blank glass so the
+         drawing-derived rightmost segment edge remains fully visible instead
+         of being covered by a mask or riding the UI edge. -->
+    <svg id="elpanel" class="elpanel" viewBox="0 0 107.5 182.356" preserveAspectRatio="xMidYMid meet" aria-label="DSKY electroluminescent display">
       <defs>
         <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
           <feGaussianBlur stdDeviation="0.24" result="b"/>
@@ -57,7 +57,7 @@ html,body,#app{background:#000!important}
           <feMerge><feMergeNode in="halo"/><feMergeNode in="near"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
-      <rect class="el-glass-background" x="0" y="0" width="106" height="182.356" aria-hidden="true"/>
+      <rect class="el-glass-background" x="0" y="0" width="107.5" height="182.356" aria-hidden="true"/>
       <g class="el-ito-dots" aria-hidden="true">
         <ellipse class="el-ito-dot" cx="53.000" cy="6.914" rx="1.294" ry="1.369"/>
         <ellipse class="el-ito-dot" cx="53.000" cy="43.427" rx="1.294" ry="1.369"/>
@@ -91,10 +91,6 @@ html,body,#app{background:#000!important}
       <g id="r1" class="el-field" transform="translate(0 84.441)"></g>
       <g id="r2" class="el-field" transform="translate(0 118.576)"></g>
       <g id="r3" class="el-field" transform="translate(0 152.712)"></g>
-      <!-- Visual safety gutter only: preserves every drawing-derived coordinate
-           while masking the final 1.5 units so energized segments never ride
-           the exact right edge in either full-DSKY or screen-only mode. -->
-      <rect class="el-right-safety-gutter" x="104.5" y="0" width="1.5" height="182.356" aria-hidden="true"/>
     </svg>
 
     <button class="key k-r1c1 fn" data-key="V">VERB</button>
