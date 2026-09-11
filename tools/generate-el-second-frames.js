@@ -52,7 +52,10 @@ for (let sec=0; sec<60; sec++) {
     });
   });
   const body=paths.map(p=>`    <path android:fillColor="${EL_COLOR}" android:pathData="${p}" />`).join('\n');
-  const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="100dp"\n    android:height="21dp"\n    android:viewportWidth="100"\n    android:viewportHeight="21">\n${body}\n</vector>\n`;
+  // The frame now uses the same 106-unit panel width as the static renderer.
+  // Previously the paths were squeezed into a 100-unit viewport and then the
+  // ImageView stretched that viewport again, visibly corrupting horizontal spacing.
+  const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="106dp"\n    android:height="21dp"\n    android:viewportWidth="106"\n    android:viewportHeight="21">\n${body}\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
 console.log(`generated 60 Apollo EL second frames in ${drawable}`);
