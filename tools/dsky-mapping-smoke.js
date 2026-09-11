@@ -8,6 +8,8 @@ const vm = require('vm');
 const ROOT = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/app.js'), 'utf8');
 const relayAudio = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/relay-audio-refine.js'), 'utf8');
+const relayMatrix = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/dsky-relay-matrix.js'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/index.html'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -103,6 +105,35 @@ assert(relayAudio.includes('for (let i = 0; i < count; i++) emitTick'),
 assert(relayAudio.includes('mechanical pull-in scatter only, not serialized relay drive'),
   'relay audio must document parallel electrical drive vs mechanical scatter');
 
+// The five character relays are a contact matrix, not an enum.  Verify the
+// schematic-derived K1..K5 logic reproduces all supported decimal patterns and
+// remains capable of displaying the other 21 electrically possible states.
+const matrixStart = relayMatrix.indexOf('function segmentsForRelayCode(value)');
+const matrixEnd = relayMatrix.indexOf('function relayGlyph', matrixStart);
+assert(matrixStart >= 0 && matrixEnd > matrixStart,
+  'could not isolate schematic relay-contact matrix');
+const matrixContext = {};
+vm.createContext(matrixContext);
+vm.runInContext(relayMatrix.slice(matrixStart, matrixEnd) + '\nthis.segmentsForRelayCode=segmentsForRelayCode;', matrixContext);
+const expectedSegments = {
+  ' ':'', '0':'abcdef', '1':'bc', '2':'abdeg', '3':'abcdg',
+  '4':'bcfg', '5':'acdfg', '6':'acdefg', '7':'abc', '8':'abcdefg', '9':'abcdfg'
+};
+for (const [digit, code] of Object.entries(expectedDigitRelay)) {
+  assert(matrixContext.segmentsForRelayCode(code) === expectedSegments[digit],
+    `schematic relay contacts no longer render ${JSON.stringify(digit)} correctly`);
+}
+const allContactPatterns = new Set();
+for (let code = 0; code < 32; code++) allContactPatterns.add(matrixContext.segmentsForRelayCode(code));
+assert(allContactPatterns.size > 11,
+  'relay contact renderer collapsed the 32 physical K1-K5 states to the normal decimal enum');
+assert(relayMatrix.includes('baseDecodeChannel10(value);'),
+  'schematic renderer must retain the base channel-010 latch/condition logic');
+const geometryPos = indexHtml.indexOf('<script src="dsky-geometry.js"></script>');
+const matrixPos = indexHtml.indexOf('<script src="dsky-relay-matrix.js"></script>');
+assert(geometryPos >= 0 && matrixPos > geometryPos,
+  'schematic relay renderer must load after the Apollo segment geometry');
+
 const decodeStart = app.indexOf('function decodeChannel10(value)');
 const decodeEnd = app.indexOf('function updateAgcCompActy()', decodeStart);
 assert(decodeStart >= 0 && decodeEnd > decodeStart,
@@ -144,4 +175,4 @@ for (const snippet of [
 }
 
 console.log('DSKY mapping smoke: PASS');
-console.log('  Block II 12x11 relay bank, individual armature clicks, digit codes, Pinball keys, and channel mappings verified');
+console.log('  Block II 12x11 relay banks, K1-K5 contact matrix, individual armature clicks, digit codes, Pinball keys, and channel mappings verified');
