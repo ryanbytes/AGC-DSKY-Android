@@ -86,6 +86,21 @@ for (const group of groups) {
     `clock relay ${group.relay} encoding changed`);
 }
 
+// CM annunciator face: VirtualAGC yaDSKY2/CM.ini maps 11-15 and 21-25
+// to these ten legends and leaves positions 16/17/26/27 blank. ALT and VEL
+// are LM indicators and must not be added to this Comanche-only face.
+const cmLampOrder = ['uplink','temp','noatt','gimbal','stby','prog','keyrel','restart','oprerr','tracker'];
+let priorLampPos = -1;
+for (const lamp of cmLampOrder) {
+  const pos = indexHtml.indexOf(`data-lamp="${lamp}"`);
+  assert(pos > priorLampPos, `CM annunciator ${lamp} is missing or out of physical row order`);
+  priorLampPos = pos;
+}
+const blankLampCount = (indexHtml.match(/class="lamp (?:white|yellow) blank"/g) || []).length;
+assert(blankLampCount === 4, `CM annunciator bank must keep exactly four blank positions; found ${blankLampCount}`);
+assert(!indexHtml.includes('data-lamp="alt"'), 'CM DSKY face must not expose LM ALT annunciator');
+assert(!indexHtml.includes('data-lamp="vel"'), 'CM DSKY face must not expose LM VEL annunciator');
+
 // Block II display circuitry is 12 selectable banks of 11 bistable relays.
 // Bits 12-15 of channel 010 select the bank; only the low 11 bits are the
 // bank's latching relay state. A row transition therefore produces exactly
@@ -178,4 +193,4 @@ for (const snippet of [
 }
 
 console.log('DSKY mapping smoke: PASS');
-console.log('  Block II 12x11 relay banks, K1-K5 contact matrix, individual armature clicks, digit codes, Pinball keys, and channel mappings verified');
+console.log('  CM annunciator face, Block II 12x11 relay banks, K1-K5 contact matrix, individual armature clicks, digit codes, Pinball keys, and channel mappings verified');
