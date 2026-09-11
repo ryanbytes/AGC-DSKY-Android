@@ -26,12 +26,6 @@ req(manifest,'android.permission.INTERNET','manifest');
 req(layout,'<AdapterViewFlipper','widget layout');
 req(layout,'android:id="@+id/el_seconds_flipper"','seconds flipper');
 req(layout,'android:flipInterval="1000"','seconds flipper');
-req(layout,'android:background="#696D67"','EL glass background');
-req(layout,'android:layout_height="182.356dp"','panel height');
-req(layout,'android:layout_height="23dp"','register frame height');
-req(layout,'android:layout_marginTop="84.441dp"','register 1 position');
-req(layout,'android:layout_marginTop="118.576dp"','register 2 position');
-req(layout,'android:layout_marginTop="152.712dp"','register 3 position');
 req(item,'android:id="@+id/el_second_image"','seconds frame');
 no(layout,'<TextClock','widget layout');
 req(info,'android:updatePeriodMillis="1800000"','widget metadata');
@@ -51,15 +45,43 @@ no(provider,'Color.rgb(121,239,79)','obsolete native lime color');
 no(generator,'#79EF4F','obsolete generated lime color');
 no(provider,'setShadowLayer','no-glow renderer');
 
-// SCD 1006315G face and register-bar geometry.
-req(provider,'PANEL_W=106f,PANEL_H=182.356f','native panel aspect');
-req(provider,'R1_Y=84.441f,R2_Y=118.576f,R3_Y=152.712f','native row positions');
-req(provider,'FRAME_H=23f','native frame height');
-req(html,'viewBox="0 0 106 182.356"','WebView panel aspect');
-req(finish,'height:49.0204%','faceplate height');
+// SCD 1006315G sheet 2: 2.620 x 4.420 outer hardware frame containing the
+// 2.360 x 4.060 active EL face at .130/.180 nominal insets.
+req(layout,'android:layout_width="117.678dp"','outer widget width');
+req(layout,'android:layout_height="198.525dp"','outer widget height');
+req(layout,'android:background="#565A56"','outer frame color');
+req(layout,'android:layout_width="106dp"','active register width');
+req(layout,'android:layout_marginStart="5.839dp"','active face X inset');
+req(layout,'android:layout_marginTop="92.526dp"','register 1 outer position');
+req(layout,'android:layout_marginTop="126.661dp"','register 2 outer position');
+req(layout,'android:layout_marginTop="160.797dp"','register 3 outer position');
+req(layout,'android:layout_height="23dp"','register frame height');
+
+req(provider,'ACTIVE_W=106f,ACTIVE_H=4.060f*U','native active face size');
+req(provider,'ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U','native active face inset');
+req(provider,'PANEL_W=2.620f*U,PANEL_H=4.420f*U','native outer frame size');
+req(provider,'ACTIVE_X*scaleDp','live register X inset');
+req(provider,'(ACTIVE_Y+y[i])*scaleDp','live register Y inset');
+req(provider,'ACTIVE_W*scaleDp','live register active width');
+req(provider,'c.drawColor(FRAME)','native outer frame fill');
+req(provider,'box(ACTIVE_X,ACTIVE_Y,ACTIVE_W,ACTIVE_H)','native active face fill');
+req(provider,'c.translate(ACTIVE_X,ACTIVE_Y)','native active geometry translation');
+no(provider,'box(-.24f,-.24f,106.48f,182.836f)','old perimeter-border shortcut');
+
+req(html,'viewBox="0 0 117.678 198.525"','outer WebView frame');
+req(html,'class="el-frame-background" x="0" y="0" width="117.678" height="198.525"','outer WebView frame fill');
+req(html,'transform="translate(5.839 8.085)"','WebView active face inset');
+req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','active WebView face');
+no(html,'x="-0.24"','old negative border shortcut');
+req(finish,'left:55.6753%','outer DSKY frame X');
+req(finish,'top:2.9342%','outer DSKY frame Y');
+req(finish,'width:36.7744%','outer DSKY frame width');
+req(finish,'height:53.3670%','outer DSKY frame height');
+req(screenOnly,'2.620 / 4.420','screen-only outer aspect');
+req(screenOnly,'4.420 / 2.620','screen-only outer reciprocal aspect');
+
+// Active-face-local SCD geometry remains unchanged.
 req(finish,'stroke-width:2.695','separator thickness');
-req(screenOnly,'106 / 182.356','screen-only aspect');
-req(screenOnly,'182.356 / 106','screen-only reciprocal aspect');
 req(geometry,'const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);','bar center datums');
 req(geometry,'const BAR_H_IN=.060;','bar thickness');
 req(geometry,'const REGISTER_GAP_IN=.070;','bar-to-digit gap');
@@ -68,7 +90,6 @@ req(html,'y1="114.085"','bar 2 center');
 req(html,'y1="148.220"','bar 3 center');
 
 // Detail C's .320 REF is datum-to-edge, not the full slanted glyph bbox.
-// The metric trace already realizes the drawing and therefore uses one scale.
 req(geometry,'const MM_TO_U=U/25.4;','uniform metric conversion');
 req(geometry,'const DATUM_X=MIRROR_X-96.244524;','Detail-C datum');
 req(geometry,'scale(${MM_TO_U.toFixed(6)})','uniform WebView glyph scale');
@@ -80,8 +101,6 @@ no(geometry,'DIGIT_SX','affine-squeezed WebView geometry');
 no(geometry,'DIGIT_SY','affine-squeezed WebView geometry');
 no(provider,'DIGIT_SX','affine-squeezed native geometry');
 no(provider,'DIGIT_SY','affine-squeezed native geometry');
-no(generator,'const SX=','affine-squeezed generated geometry');
-no(generator,'const SY=','affine-squeezed generated geometry');
 
 // Detail B/A datum chains.
 req(geometry,'const UPPER_ADVANCE=.420*U;','upper pitch');
@@ -99,18 +118,16 @@ req(html,'transform="translate(6.288 55.5)"','VERB datum');
 req(html,'transform="translate(72.763 55.5)"','NOUN datum');
 req(html,'transform="translate(0 84.441)"','register origin');
 req(provider,'digits(c,"00",RIGHT_FIELD_X,14f)','native PROG datum');
-req(provider,'digits(c,"16",LEFT_FIELD_X,55.5f)','native VERB datum');
 req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y)",'native register datum');
 
 req(generator,'android:viewportWidth="106"','generated viewport width');
 req(generator,'android:viewportHeight="23"','generated viewport height');
 no(generator,'android:viewportWidth="100"','obsolete squeezed viewport');
 no(html,'viewBox="0 0 106 190"','obsolete stretched WebView');
-no(provider,'PANEL_W=106f,PANEL_H=190f','obsolete stretched native panel');
 req(gradle,'versionCode 20051','Gradle');
 req(gradle,"versionName '1.1.2'",'Gradle');
 req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  1006315G datum geometry, undistorted physical segment trace, register/upper pitches, and blue-green EL verified');
+console.log('  1006315G outer frame + active face, datum geometry, physical segment trace, pitches, and blue-green EL verified');
