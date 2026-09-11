@@ -26,11 +26,11 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final long MINUTE_MS=60_000L;
     private static final int TICK_REQUEST_CODE=21;
 
-    // MIT/IL SCD 1006315G sheet 2: 2.360 x 4.060 in nominal front face.
-    // Keep 106 as the width unit used by the WebView; the corresponding height
-    // is 182.356.  The old 106 x 190 widget stretched every vertical spacing.
+    // MIT/IL SCD 1006315G sheet 2: 2.360 x 4.060 in face.  The register
+    // bar datums are 2.280, 1.520 and .760 in from the bottom.  Each register
+    // starts after the nominal .060-in bar and .070-in clearance.
     private static final float PANEL_W=106f,PANEL_H=182.356f;
-    private static final float R1_Y=69.916f,R2_Y=104.052f,R3_Y=138.187f;
+    private static final float R1_Y=85.788f,R2_Y=119.924f,R3_Y=154.059f;
 
     private static final int[] SECOND_DRAWABLES={
       R.drawable.el_sec_00,R.drawable.el_sec_01,R.drawable.el_sec_02,R.drawable.el_sec_03,R.drawable.el_sec_04,
@@ -135,15 +135,15 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       }
       private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){
         c.drawPath(box(2.119f,2.350f,101.763f,177.656f),HARDWARE_STROKE_P);
-        dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,28.160f,1.294f,1.369f);dot(c,53.000f,55.120f,1.294f,1.369f);
-        dot(c,100.863f,64.242f,1.294f,1.369f);dot(c,100.863f,98.378f,1.294f,1.369f);dot(c,100.863f,132.514f,1.294f,1.369f);
-        dot(c,8.286f,132.514f,1.294f,1.369f);dot(c,8.286f,98.378f,1.294f,1.369f);dot(c,8.286f,64.242f,1.294f,1.369f);
+        dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.939f,1.294f,1.369f);
+        dot(c,100.863f,81.297f,1.294f,1.369f);dot(c,100.863f,115.432f,1.294f,1.369f);dot(c,100.863f,149.568f,1.294f,1.369f);
+        dot(c,8.286f,149.568f,1.294f,1.369f);dot(c,8.286f,115.432f,1.294f,1.369f);dot(c,8.286f,81.297f,1.294f,1.369f);
         section(c,65.505f,2.807f,37.945f,11.866f,LEGEND_BG_P);c.drawText("PROG",84.478f,10.856f,LABEL_P);
-        section(c,2.550f,30.898f,37.945f,11.866f,LEGEND_BG_P);c.drawText("VERB",21.523f,38.896f,LABEL_P);
-        section(c,65.505f,30.898f,37.945f,11.866f,LEGEND_BG_P);c.drawText("NOUN",84.478f,38.950f,LABEL_P);
-        section(c,2.550f,2.807f,37.945f,25.500f,COMP_BG_P);c.drawText("COMP",21.523f,13.800f,COMP_P);c.drawText("ACTY",21.523f,20.480f,COMP_P);
-        rule(c,12.770f,62.119f,84.900f,1.524f);rule(c,12.770f,96.255f,84.900f,1.524f);rule(c,12.770f,130.391f,84.900f,1.524f);
-        digits(c,"00",66.75f,14);digits(c,"16",3,43.664f);digits(c,"65",66.75f,43.664f);
+        section(c,2.550f,46.165f,37.945f,11.866f,LEGEND_BG_P);c.drawText("VERB",21.523f,54.163f,LABEL_P);
+        section(c,65.505f,46.165f,37.945f,11.866f,LEGEND_BG_P);c.drawText("NOUN",84.478f,54.217f,LABEL_P);
+        section(c,2.550f,2.807f,37.945f,40.163f,COMP_BG_P);c.drawText("COMP",21.523f,21.820f,COMP_P);c.drawText("ACTY",21.523f,28.500f,COMP_P);
+        rule(c,12.770f,79.949f,84.900f,2.695f);rule(c,12.770f,114.085f,84.900f,2.695f);rule(c,12.770f,148.220f,84.900f,2.695f);
+        digits(c,"00",66.75f,14);digits(c,"16",3,59);digits(c,"65",66.75f,59);
         if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),3,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),3,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),3,R3_Y);}
       }
       private static String five(int v){return String.format(Locale.US,"%05d",v);}
