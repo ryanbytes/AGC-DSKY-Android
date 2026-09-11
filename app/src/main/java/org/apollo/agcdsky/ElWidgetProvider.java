@@ -26,7 +26,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final long MINUTE_MS=60_000L;
     private static final int TICK_REQUEST_CODE=21;
 
-    // MIT/IL SCD 1006315G: 2.360 x 4.060 in EL face.  Register bars use
+    // MIT/IL SCD 1006315G: 2.360 x 4.060 in EL face. Register bars use
     // the sheet-2 .760-in dimension chain; row glyphs start after the
     // nominal .060-in bar and .070-in clearance.
     private static final float PANEL_W=106f,PANEL_H=182.356f;
@@ -101,16 +101,16 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final LruCache<String,Bitmap> BITMAP_CACHE=new LruCache<String,Bitmap>(CACHE_KIB){
         @Override protected int sizeOf(String key,Bitmap value){return Math.max(1,value.getAllocationByteCount()/1024);}
       };
-      private static final int CORE=Color.rgb(121,239,79),RULE=CORE;
+      private static final int CORE=Color.rgb(109,236,180),RULE=CORE;
       private static final int PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5);
 
-      // SCD 1006315G sheet 1 details A/B/C.  The segment trace is fitted
-      // independently in X and Y to the true .320 x .500 digit envelope.
-      private static final float U=106f/2.360f;
-      private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,SRC_H=12.7f,MIRROR_X=2f*SRC_X+SRC_W;
-      private static final float DIGIT_W=.320f*U,DIGIT_H=.500f*U,DIGIT_SX=DIGIT_W/SRC_W,DIGIT_SY=DIGIT_H/SRC_H;
-      private static final float UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=12f;
-      private static final float SIGN_W=.265f*U,SIGN_H=.338f*U,SIGN_T=.065f*U,SIGN_X=.4f,SIGN_TOP=(DIGIT_H-SIGN_H)*.5f,SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5f,SIGN_HY=SIGN_TOP+(SIGN_H-SIGN_T)*.5f;
+      // 1006315G Detail C is datum-dimensioned. The metric segment trace
+      // already matches those physical dimensions; do not affine-squeeze it.
+      private static final float U=106f/2.360f,MM_TO_U=U/25.4f;
+      private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,MIRROR_X=2f*SRC_X+SRC_W,DATUM_X=MIRROR_X-96.244524f;
+      private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.400f*U;
+      private static final float LEFT_FIELD_X=.140f*U,RIGHT_FIELD_X=1.620f*U;
+      private static final float SIGN_W=.265f*U,SIGN_H=.338f*U,SIGN_T=.065f*U,SIGN_X=.025f*U,SIGN_TOP=(DIGIT_H-SIGN_H)*.5f,SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5f,SIGN_HY=SIGN_TOP+(SIGN_H-SIGN_T)*.5f;
       private static final float[][][] SOURCE={
         {{95.137274f,86.827056f},{96.244524f,85.303059f},{90.088724f,85.303059f},{90.497084f,86.827056f}},
         {{91.361734f,91.526056f},{89.694284f,85.303059f},{88.116524f,85.303059f},{89.783974f,91.526056f}},
@@ -150,8 +150,8 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         section(c,65.920f,42.721f,34.501f,11.678f,LEGEND_BG_P);c.drawText("NOUN",83.171f,50.770f,LABEL_P);
         section(c,5.726f,.633f,34.795f,35.838f,COMP_BG_P);c.drawText("COMP",23.124f,17.900f,COMP_P);c.drawText("ACTY",23.124f,25.000f,COMP_P);
         rule(c,12.770f,78.602f,84.900f,2.695f);rule(c,12.770f,112.737f,84.900f,2.695f);rule(c,12.770f,146.873f,84.900f,2.695f);
-        digits(c,"00",66.4f,14f);digits(c,"16",7f,55.5f);digits(c,"65",66.6f,55.5f);
-        if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),3,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),3,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),3,R3_Y);}
+        digits(c,"00",RIGHT_FIELD_X,14f);digits(c,"16",LEFT_FIELD_X,55.5f);digits(c,"65",RIGHT_FIELD_X,55.5f);
+        if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),0,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),0,R3_Y);}
       }
       private static String five(int v){return String.format(Locale.US,"%05d",v);}
       private static void section(Canvas c,float x,float y,float w,float h,Paint p){c.drawPath(box(x,y,w,h),p);}
@@ -160,7 +160,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static void digits(Canvas c,String s,float x,float y){for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+i*UPPER_ADV,y);}
       private static void register(Canvas c,char sign,String s,float x,float y){sign(c,sign,x,y);for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+FIRST_DIGIT_X+i*REG_ADV,y);}
       private static void digit(Canvas c,char ch,float ox,float oy){String lit=SEG[ch-'0'];for(int l=0;l<7;l++)if(lit.indexOf((char)('a'+l))>=0)segment(c,l,ox,oy);}
-      private static void segment(Canvas c,int logical,float ox,float oy){float[][] pts=SOURCE[MAP[logical]];Path p=new Path();for(int i=0;i<pts.length;i++){float x=ox+(MIRROR_X-pts[i][0]-SRC_X)*DIGIT_SX,y=oy+(pts[i][1]-SRC_Y)*DIGIT_SY;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,ON);}
+      private static void segment(Canvas c,int logical,float ox,float oy){float[][] pts=SOURCE[MAP[logical]];Path p=new Path();for(int i=0;i<pts.length;i++){float x=ox+(MIRROR_X-pts[i][0]-DATUM_X)*MM_TO_U,y=oy+(pts[i][1]-SRC_Y)*MM_TO_U;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,ON);}
       private static void sign(Canvas c,char s,float ox,float oy){if(s!='+'&&s!='-')return;c.drawPath(box(ox+SIGN_X,oy+SIGN_HY,SIGN_W,SIGN_T),ON);if(s=='+')c.drawPath(box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_H),ON);}
       private static Path box(float x,float y,float w,float h){Path p=new Path();p.moveTo(x,y);p.lineTo(x+w,y);p.lineTo(x+w,y+h);p.lineTo(x,y+h);p.close();return p;}
     }
