@@ -1,6 +1,6 @@
-/* Borderless EL readout mode. Normal mode keeps the physical DSKY hardware.
-   Screen-only mode fills the handset with the active-panel gray while the SVG
-   keeps its real 1006315G aspect ratio; no geometric stretching is allowed. */
+/* Borderless EL readout mode. Normal mode uses the DSKY display well as the
+   hardware surround. Screen-only mode fills unused handset space with the same
+   EL glass gray while preserving the 1006315G active-face aspect ratio. */
 body.screen-only,
 body.screen-only #app{
   padding:0!important;
@@ -35,17 +35,14 @@ body.screen-only .dsky::after{display:none!important}
 body.screen-only .elpanel{
   display:block!important;
   position:absolute!important;
-  left:0!important;
-  top:0!important;
-  width:100vw!important;
-  height:100vh!important;
+  left:50%!important;
+  top:50%!important;
+  width:min(100vw,calc(100vh * 106 / 182.356))!important;
+  height:min(100vh,calc(100vw * 182.356 / 106))!important;
   max-width:none!important;
   max-height:none!important;
-  transform:none!important;
+  transform:translate(-50%,-50%)!important;
   overflow:hidden!important;
   background:#696d67!important;
 }
-/* The outer hardware frame is not part of the requested display-only view. */
-body.screen-only .el-frame-background,
-body.screen-only .el-hardware-border{display:none!important}
 body.dream.screen-only .dsky{transition:left 1.6s ease,top 1.6s ease!important}
