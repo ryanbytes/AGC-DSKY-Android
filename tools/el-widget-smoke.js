@@ -61,18 +61,18 @@ req(provider,'ACTIVE_X*scaleDp','live register X inset');
 req(provider,'(ACTIVE_Y+y[i])*scaleDp','live register Y inset');
 req(provider,'ACTIVE_W*scaleDp','live register active width');
 
-// In-app EL artwork is the active face only.  The right-side DSKY display well
-// is rebuilt to the 2.620 x 4.420-in indicator hardware envelope, exactly
-// centered around the 2.360 x 4.060-in active face.
-req(html,'viewBox="0 0 106 182.356"','active WebView face');
+// In-app drawing geometry stays at 106 x 182.356. The viewport/background add
+// 1.5 blank units to the right; no mask is allowed to cover segment geometry.
+req(html,'viewBox="0 0 107.5 182.356"','extended WebView viewport');
 req(html,'preserveAspectRatio="xMidYMid meet"','WebView aspect preservation');
-req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','active WebView face fill');
+req(html,'class="el-glass-background" x="0" y="0" width="107.5" height="182.356"','extended WebView glass');
+no(html,'el-right-safety-gutter','segment-covering safety mask');
 no(html,'el-frame-background','duplicate WebView outer frame');
 no(html,'el-hardware-border','duplicate WebView border');
 no(html,'transform="translate(5.839 8.085)"','obsolete WebView active inset');
 req(finish,'left:57.5000%','active DSKY face X');
 req(finish,'top:5.1075%','active DSKY face Y');
-req(finish,'width:33.1250%','active DSKY face width');
+req(finish,'width:33.59375%','extended DSKY EL width');
 req(finish,'height:49.0204%','active DSKY face height');
 req(finish,'.display-well{','rebuilt display well');
 req(finish,'left:55.6753%','display-well hardware X');
@@ -82,14 +82,14 @@ req(finish,'height:53.3670%','display-well hardware height');
 no(finish,'width:38.27%','legacy oversized display-well width');
 no(finish,'height:54.9%','legacy oversized display-well height');
 
-// Screen-only mode fills unused pixels with EL gray but never distorts the SVG.
+// Screen-only mode uses the extended viewport ratio without distorting content.
 req(screenOnly,'background:#696d67!important','screen-only gray field');
 req(screenOnly,'left:50%!important','screen-only centered X');
 req(screenOnly,'top:50%!important','screen-only centered Y');
-req(screenOnly,'width:min(100vw,calc(100vh * 106 / 182.356))!important','screen-only aspect width');
-req(screenOnly,'height:min(100vh,calc(100vw * 182.356 / 106))!important','screen-only aspect height');
+req(screenOnly,'width:min(100vw,calc(100vh * 107.5 / 182.356))!important','screen-only aspect width');
+req(screenOnly,'height:min(100vh,calc(100vw * 182.356 / 107.5))!important','screen-only aspect height');
 req(screenOnly,'transform:translate(-50%,-50%)!important','screen-only centering');
-no(screenOnly,'width:100vw!important;\n  height:100vh!important;\n  max-width:none!important;\n  max-height:none!important;\n  transform:none!important','stretched screen-only panel');
+no(screenOnly,'width:min(100vw,calc(100vh * 106 / 182.356))!important','obsolete 106-wide screen-only ratio');
 
 // Active-face-local SCD geometry.
 req(finish,'stroke-width:2.695','separator thickness');
@@ -155,4 +155,4 @@ req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  active face and right-side hardware well share the same 1006315G dimensions');
+console.log('  drawing geometry unchanged; 1.5-unit right margin is outside the segment field');
