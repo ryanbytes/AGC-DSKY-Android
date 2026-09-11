@@ -1,6 +1,6 @@
 /* Borderless EL readout mode. The physical DSKY faceplate remains untouched
-   in normal mode; this presentation isolates only the electroluminescent
-   display artwork on a black field. */
+   in normal mode; this presentation isolates the electroluminescent
+   display assembly on a black field. */
 body.screen-only #app{padding:0!important;overflow:hidden!important;background:#000!important}
 body.screen-only .app-controls,
 body.screen-only .hint,
@@ -32,9 +32,9 @@ body.screen-only .elpanel{
   position:absolute!important;
   left:50%!important;
   top:50%!important;
-  /* SCD 1006315G: 2.360 x 4.060 in face = 106 x 182.356 units. */
-  width:min(90vw,calc(90vh * 106 / 182.356))!important;
-  height:min(90vh,calc(90vw * 182.356 / 106))!important;
+  /* SCD 1006315G outer hardware frame: 2.620 x 4.420 in. */
+  width:min(90vw,calc(90vh * 2.620 / 4.420))!important;
+  height:min(90vh,calc(90vw * 4.420 / 2.620))!important;
   transform:translate(-50%,-50%)!important;
   overflow:visible!important;
 }
