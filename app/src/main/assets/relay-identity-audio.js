@@ -111,8 +111,8 @@
     const rnd = xorshift32(hash32(id));
     const centered = () => rnd() * 2 - 1;
 
-    // Give every physical relay one guaranteed-unique center offset, then add
-    // smaller deterministic tolerances to individual resonances and damping.
+    // Serial position plus deterministic tolerance gives each physical relay a
+    // persistent acoustic fingerprint while keeping the family resemblance.
     const serialOffset = (ordinal - 69.5) * 0.00034; // about +/-2.4%
     const bodyScale = 1 + serialOffset + centered() * 0.0035;
     return Object.freeze({
@@ -251,7 +251,11 @@
       auxChanges.forEach((change, i) => {
         const id = `AUX:${AUX_LABEL[change.name] || change.name.toUpperCase()}`;
         const ordinal = auxOrdinal(change.name);
-        playIdentity(ctx, when + i * 0.00016, strength, id, ordinal, change.on);
+        // The old composite caller scales strength by how many relays changed.
+        // Once expanded, restore a single-relay level so simultaneous lamps do
+        // not become artificially louder merely because they share an edge.
+        const individualStrength = change.on ? 0.66 : 0.58;
+        playIdentity(ctx, when + i * 0.00016, individualStrength, id, ordinal, change.on);
       });
       return;
     }
