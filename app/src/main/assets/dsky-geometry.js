@@ -117,6 +117,22 @@
     if(typeof renderClockReg==='function')['r1','r2','r3'].forEach(renderClockReg);
   }
 
+  // app.js paints the synthetic clock face before the drawing renderer is
+  // installed, while the later hardware-fidelity layers seed their retained
+  // relay state after it.  Reassert only the clock-mode PROG field after the
+  // complete startup script stack has settled so row 11 cannot leave it blank.
+  // Real AGC/Comanche mode is never touched here: its PROG digits remain driven
+  // exclusively by channel 010 relay row 11.
+  function restoreClockProg(){
+    if(typeof mode==='undefined'||mode!=='clock')return;
+    if(typeof lampTestActive!=='undefined'&&lampTestActive)return;
+    const prog=document.getElementById('prog');
+    if(prog)renderDigits(prog,'00');
+  }
+  setTimeout(restoreClockProg,0);
+  window.addEventListener('load',restoreClockProg,{once:true});
+  window.addEventListener('pageshow',restoreClockProg,{passive:true});
+
   window.DSKY_DRAWING_GEOMETRY=Object.freeze({
     source:'MIT/IL SCD 1006315G plus metric DSKY V2 segment trace; uniform physical scale',
     faceWidthIn:FACE_W_IN,
