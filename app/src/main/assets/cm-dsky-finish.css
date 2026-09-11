@@ -1,13 +1,11 @@
 /* CM-mounted Apollo Block II DSKY finish.
    The photographic spacecraft-panel compositor is intentionally absent. */
 
-/* MIT/NASA SCD 1006315 production revisions specify nominal EL output at
-   5300 angstroms (530 nm).  Use the production drawing as the color source of
-   truth rather than the cooler appearance of an early surviving/prototype
-   panel.  This is a restrained display-space approximation of that green EL
-   phosphor; no synthetic neon halo is added. */
+/* MIT/NASA SCD 1006315 specifies nominal 5300-A EL output.  The requested
+   display-space treatment keeps green dominant while adding a restrained blue
+   component, rather than the previous lime approximation. */
 :root{
-  --el:#79ef4f;
+  --el:#6decb4;
 }
 
 /* 1006315G sheet 2: 2.360-in face width x 4.060-in nominal face height.
