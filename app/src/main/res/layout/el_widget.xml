@@ -10,7 +10,7 @@
         android:layout_width="106dp"
         android:layout_height="190dp"
         android:layout_gravity="center"
-        android:background="#000000">
+        android:background="#696D67">
 
         <ImageView
             android:id="@+id/el_widget_image"
