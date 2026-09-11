@@ -6,7 +6,7 @@ SOURCE_ASSETS="$ROOT/app/src/main/assets"
 WEBAGC="$ROOT/vendor/webAGC"
 PWA="$ROOT/pwa"
 DEST="${1:-$PWA/dist}"
-ANALYTICS_ENDPOINT="${AGC_ANALYTICS_ENDPOINT:-}"
+CLOUDFLARE_WEB_ANALYTICS_TOKEN="${CLOUDFLARE_WEB_ANALYTICS_TOKEN:-}"
 
 fail() {
   printf 'PWA BUILD FAIL: %s\n' "$*" >&2
@@ -32,7 +32,6 @@ cp "$PWA/static/pwa-bootstrap.js" "$DEST/pwa-bootstrap.js"
 cp "$PWA/static/pwa-sensor-parity.js" "$DEST/pwa-sensor-parity.js"
 cp "$PWA/static/pwa-auto-dim.js" "$DEST/pwa-auto-dim.js"
 cp "$PWA/static/pwa-clock-guard.js" "$DEST/pwa-clock-guard.js"
-cp "$PWA/static/analytics.js" "$DEST/analytics.js"
 cp "$PWA/static/sw.js" "$DEST/sw.js"
 cp "$PWA/PRIVACY_POLICY.txt" "$DEST/PRIVACY_POLICY.txt"
 cp "$PWA/icons/apple-touch-icon.png" "$DEST/icons/apple-touch-icon.png"
@@ -52,47 +51,50 @@ if '__CACHE_VERSION__' not in text:
 path.write_text(text.replace('__CACHE_VERSION__', version), encoding='utf-8')
 PY
 
-python3 - "$DEST/analytics.js" "$CACHE_VERSION" "$ANALYTICS_ENDPOINT" <<'PY'
+python3 - "$DEST/index.html" "$CLOUDFLARE_WEB_ANALYTICS_TOKEN" <<'PY'
 from pathlib import Path
-import json, sys
-path = Path(sys.argv[1])
-version = sys.argv[2]
-endpoint = sys.argv[3]
-text = path.read_text(encoding='utf-8')
-for token in ('__ANALYTICS_ENDPOINT_JSON__', '__APP_VERSION_JSON__'):
-    if token not in text:
-        raise SystemExit(f'analytics token missing: {token}')
-text = text.replace('__ANALYTICS_ENDPOINT_JSON__', json.dumps(endpoint))
-text = text.replace('__APP_VERSION_JSON__', json.dumps(version))
-path.write_text(text, encoding='utf-8')
-PY
-
-python3 - "$DEST/index.html" <<'PY'
-from pathlib import Path
+import json
+import re
 import sys
 
 path = Path(sys.argv[1])
+token = sys.argv[2].strip()
 text = path.read_text(encoding='utf-8')
 head = '''\n<link rel="manifest" href="manifest.webmanifest">\n<meta name="theme-color" content="#6f7571">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n<meta name="apple-mobile-web-app-title" content="AGC DSKY">\n<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">\n'''
-boot = '\n<script src="pwa-sensor-parity.js"></script>\n<script src="pwa-auto-dim.js"></script>\n<script src="pwa-clock-guard.js"></script>\n<script src="pwa-bootstrap.js"></script>\n<script src="analytics.js"></script>\n'
+boot = '\n<script src="pwa-sensor-parity.js"></script>\n<script src="pwa-auto-dim.js"></script>\n<script src="pwa-clock-guard.js"></script>\n<script src="pwa-bootstrap.js"></script>\n'
+beacon = ''
+if token:
+    if not re.fullmatch(r'[A-Za-z0-9_-]{16,128}', token):
+        raise SystemExit('Cloudflare Web Analytics token has an unexpected format')
+    config = json.dumps({'token': token}, separators=(',', ':'))
+    beacon = (
+        '\n<!-- Cloudflare Web Analytics -->\n'
+        '<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" '
+        f"data-cf-beacon='{config}'></script>\n"
+        '<!-- End Cloudflare Web Analytics -->\n'
+    )
 if '</head>' not in text or '</body>' not in text:
     raise SystemExit('shared index.html is missing head/body closing tags')
 if '<script src="clock-behavior.js"></script>' not in text:
     raise SystemExit('shared index.html is missing clock behavior script')
-if any(marker in text for marker in ('manifest.webmanifest', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'pwa-bootstrap.js', 'analytics.js')):
+if any(marker in text for marker in (
+    'manifest.webmanifest', 'pwa-sensor-parity.js', 'pwa-auto-dim.js',
+    'pwa-clock-guard.js', 'pwa-bootstrap.js', 'analytics.js',
+    'static.cloudflareinsights.com/beacon.min.js'
+)):
     raise SystemExit('shared index.html already contains PWA injection markers')
 # One-time filename change intentionally defeats any old service worker cache
 # containing the experimental clock COMP ACTY helper.
 text = text.replace('<script src="clock-behavior.js"></script>', '<script src="clock-behavior-v2.js"></script>', 1)
 text = text.replace('</head>', head + '</head>', 1)
-text = text.replace('</body>', boot + '</body>', 1)
+text = text.replace('</body>', boot + beacon + '</body>', 1)
 path.write_text(text, encoding='utf-8')
 PY
 
 printf 'PWA site staged: %s\n' "$DEST"
 printf 'Cache version: %s\n' "$CACHE_VERSION"
-if [[ -n "$ANALYTICS_ENDPOINT" ]]; then
-  printf 'Analytics endpoint: %s\n' "$ANALYTICS_ENDPOINT"
+if [[ -n "$CLOUDFLARE_WEB_ANALYTICS_TOKEN" ]]; then
+  printf 'Cloudflare Web Analytics: enabled\n'
 else
-  printf 'Analytics endpoint: disabled\n'
+  printf 'Cloudflare Web Analytics: disabled for this build\n'
 fi

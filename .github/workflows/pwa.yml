@@ -6,7 +6,6 @@ on:
     branches: [main, apple-port]
     paths:
       - 'pwa/**'
-      - 'analytics/cloudflare/**'
       - 'app/src/main/assets/**'
       - 'vendor/webAGC'
       - 'apple/tools/verify-pinned-assets.sh'
@@ -14,7 +13,6 @@ on:
   pull_request:
     paths:
       - 'pwa/**'
-      - 'analytics/cloudflare/**'
       - 'app/src/main/assets/**'
       - 'vendor/webAGC'
       - 'apple/tools/verify-pinned-assets.sh'
@@ -27,7 +25,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      AGC_ANALYTICS_ENDPOINT: ${{ vars.AGC_ANALYTICS_ENDPOINT }}
+      CLOUDFLARE_WEB_ANALYTICS_TOKEN: ${{ vars.CLOUDFLARE_WEB_ANALYTICS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,23 +48,6 @@ jobs:
 
       - name: Android frontend parity test
         run: node pwa/tools/pwa-parity-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
-
-      - name: Analytics backend static checks
-        run: |
-          node --check analytics/cloudflare/worker.js
-          bash -n analytics/cloudflare/deploy.sh
-          python3 - <<'PY'
-          import sqlite3
-          from pathlib import Path
-          sql = Path('analytics/cloudflare/migrations/0001_init.sql').read_text(encoding='utf-8')
-          db = sqlite3.connect(':memory:')
-          db.executescript(sql)
-          for table in ('clients', 'daily_usage'):
-              row = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
-              if not row:
-                  raise SystemExit(f'missing migration table: {table}')
-          print('Analytics schema: PASS')
-          PY
 
       - name: Shared AGC smoke tests
         run: |
