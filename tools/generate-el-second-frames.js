@@ -29,10 +29,14 @@ const SOURCE=[
 const MAP=[0,1,2,3,5,4,6];
 const SEG=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
 
-// Detail A sign envelope and nominal left-face datum.
-const SIGN_W=.265*U, SIGN_H=.338*U, SIGN_T=.065*U, SIGN_X=.025*U;
+// 1006315G Detail A, position 6: three luminous islands.  Top and bottom are
+// both segment A; the center horizontal is segment B.  A plus lights A+B.
+const SIGN_W=.265*U, SIGN_H=.338*U, SIGN_T=.065*U, SIGN_X=.025*U, SIGN_GAP=.010*U;
 const SIGN_TOP=(DIGIT_H-SIGN_H)/2;
-const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)/2, SIGN_HY=SIGN_TOP+(SIGN_H-SIGN_T)/2;
+const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)/2;
+const SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)/2;
+const SIGN_HY=SIGN_TOP+SIGN_A_H+SIGN_GAP;
+const SIGN_LOWER_Y=SIGN_HY+SIGN_T+SIGN_GAP;
 
 const n=v=>Number(v).toFixed(3).replace(/\.000$/,'');
 const poly=pts=>'M'+pts.map(([x,y])=>`${n(x)},${n(y)}`).join(' L')+' Z';
@@ -47,8 +51,9 @@ const EL_COLOR='#6DECB4';
 
 for (let sec=0; sec<60; sec++) {
   const paths=[
+    rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_A_H),
     rect(SIGN_X,SIGN_HY,SIGN_W,SIGN_T),
-    rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_H),
+    rect(SIGN_VX,SIGN_LOWER_Y,SIGN_T,SIGN_A_H),
   ];
   const text=`000${String(sec).padStart(2,'0')}`;
   [...text].forEach((ch,i)=>{
