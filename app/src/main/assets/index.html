@@ -43,7 +43,9 @@ html,body,#app{background:#000!important}
       <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
     </div>
 
-    <svg id="elpanel" class="elpanel" viewBox="0 0 106 190" preserveAspectRatio="none" aria-label="DSKY electroluminescent display">
+    <!-- MIT/IL SCD 1006315G sheet 2 gives a 2.360 x 4.060 in nominal
+         EL front face.  106 units therefore maps to 182.356 units high. -->
+    <svg id="elpanel" class="elpanel" viewBox="0 0 106 182.356" preserveAspectRatio="none" aria-label="DSKY electroluminescent display">
       <defs>
         <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
           <feGaussianBlur stdDeviation="0.24" result="b"/>
@@ -55,47 +57,41 @@ html,body,#app{background:#000!important}
           <feMerge><feMergeNode in="halo"/><feMergeNode in="near"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
-      <!--
-        Source-backed Block II glass hardware, mapped from Ben Krasnow's
-        DSKY V2.svg glass outline / Display border / ITO connection-dot layers
-        into this app's existing 106 x 190 EL coordinate system.
-      -->
-      <rect class="el-glass-background" x="0" y="0" width="106" height="190" aria-hidden="true"/>
-      <rect class="el-hardware-border" x="2.119" y="2.350" width="101.763" height="185.299" aria-hidden="true"/>
+      <rect class="el-glass-background" x="0" y="0" width="106" height="182.356" aria-hidden="true"/>
+      <rect class="el-hardware-border" x="2.119" y="2.350" width="101.763" height="177.656" aria-hidden="true"/>
       <g class="el-ito-dots" aria-hidden="true">
         <ellipse class="el-ito-dot" cx="53.000" cy="6.914" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="53.000" cy="43.427" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="53.000" cy="79.939" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="100.863" cy="89.061" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="100.863" cy="123.753" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="100.863" cy="158.598" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="8.286" cy="158.574" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="8.286" cy="123.548" rx="1.294" ry="1.369"/>
-        <ellipse class="el-ito-dot" cx="8.286" cy="89.067" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="53.000" cy="28.160" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="53.000" cy="55.120" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="64.242" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="98.378" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="132.514" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="132.514" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="98.378" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="64.242" rx="1.294" ry="1.369"/>
       </g>
       <g class="el-static" aria-hidden="true">
-        <!-- Source-art special EL sections: energized phosphor behind black legends. -->
         <rect class="el-legend-bg" x="65.505" y="2.807" width="37.945" height="11.866"/>
         <text class="el-label" x="84.478" y="10.856" text-anchor="middle">PROG</text>
-        <rect class="el-legend-bg" x="2.550" y="46.165" width="37.945" height="11.866"/>
-        <text class="el-label" x="21.523" y="54.163" text-anchor="middle">VERB</text>
-        <rect class="el-legend-bg" x="65.505" y="46.165" width="37.945" height="11.866"/>
-        <text class="el-label" x="84.478" y="54.217" text-anchor="middle">NOUN</text>
-        <line class="el-rule" x1="12.770" y1="87.700" x2="97.670" y2="87.700"/>
-        <line class="el-rule" x1="12.770" y1="122.380" x2="97.670" y2="122.380"/>
-        <line class="el-rule" x1="12.770" y1="157.050" x2="97.670" y2="157.050"/>
+        <rect class="el-legend-bg" x="2.550" y="30.898" width="37.945" height="11.866"/>
+        <text class="el-label" x="21.523" y="38.896" text-anchor="middle">VERB</text>
+        <rect class="el-legend-bg" x="65.505" y="30.898" width="37.945" height="11.866"/>
+        <text class="el-label" x="84.478" y="38.950" text-anchor="middle">NOUN</text>
+        <line class="el-rule" x1="12.770" y1="62.881" x2="97.670" y2="62.881"/>
+        <line class="el-rule" x1="12.770" y1="97.017" x2="97.670" y2="97.017"/>
+        <line class="el-rule" x1="12.770" y1="131.153" x2="97.670" y2="131.153"/>
       </g>
       <g id="comp" class="comp-el" data-lamp="comp" aria-label="COMP ACTY">
-        <rect class="el-comp-bg" x="2.550" y="2.807" width="37.945" height="40.163"/>
-        <text x="21.523" y="21.820" text-anchor="middle">COMP</text>
-        <text x="21.523" y="28.500" text-anchor="middle">ACTY</text>
+        <rect class="el-comp-bg" x="2.550" y="2.807" width="37.945" height="25.500"/>
+        <text x="21.523" y="13.800" text-anchor="middle">COMP</text>
+        <text x="21.523" y="20.480" text-anchor="middle">ACTY</text>
       </g>
-      <g id="prog" class="el-field" transform="translate(73 13)"></g>
-      <g id="verb" class="el-field" transform="translate(6 58)"></g>
-      <g id="noun" class="el-field" transform="translate(73 58)"></g>
-      <g id="r1" class="el-field" transform="translate(3 97)"></g>
-      <g id="r2" class="el-field" transform="translate(3 131)"></g>
-      <g id="r3" class="el-field" transform="translate(3 165)"></g>
+      <g id="prog" class="el-field" transform="translate(66.75 14)"></g>
+      <g id="verb" class="el-field" transform="translate(3 43.664)"></g>
+      <g id="noun" class="el-field" transform="translate(66.75 43.664)"></g>
+      <g id="r1" class="el-field" transform="translate(3 69.916)"></g>
+      <g id="r2" class="el-field" transform="translate(3 104.052)"></g>
+      <g id="r3" class="el-field" transform="translate(3 138.187)"></g>
     </svg>
 
     <button class="key k-r1c1 fn" data-key="V">VERB</button>
