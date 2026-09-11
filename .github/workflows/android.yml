@@ -31,12 +31,12 @@ jobs:
       - name: Build and verify local debug APKs
         run: bash tools/build-local.sh
 
-      - name: Verify Fire debug APK exists
-        run: test -f app/build/outputs/apk/fire/debug/app-fire-debug.apk
+      - name: Verify regular debug APK exists
+        run: test -f app/build/outputs/apk/regular/debug/app-regular-debug.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AGC-DSKY-Fire-debug
-          path: app/build/outputs/apk/fire/debug/app-fire-debug.apk
+          name: AGC-DSKY-Regular-debug
+          path: app/build/outputs/apk/regular/debug/app-regular-debug.apk
           if-no-files-found: error
           retention-days: 30
