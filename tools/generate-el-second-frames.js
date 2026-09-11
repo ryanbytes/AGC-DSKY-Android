@@ -9,8 +9,13 @@ const drawable = path.join(outRoot, 'drawable');
 fs.rmSync(outRoot, {recursive: true, force: true});
 fs.mkdirSync(drawable, {recursive: true});
 
-const SRC_X=88.116524, SRC_Y=85.303059, SRC_W=11.685430, SRC_PITCH=10.668;
-const SCALE=1.58, MIRROR_X=2*SRC_X+SRC_W, ADV=SRC_PITCH*SCALE, FIRST_DIGIT_X=12.0;
+// MIT/IL SCD 1006315G, sheet 1 details A/C.
+const FACE_W_IN=2.360, U=106/FACE_W_IN;
+const SRC_X=88.116524, SRC_Y=85.303059, SRC_W=11.685430, SRC_H=12.700000;
+const MIRROR_X=2*SRC_X+SRC_W;
+const DIGIT_W=.320*U, DIGIT_H=.500*U;
+const SX=DIGIT_W/SRC_W, SY=DIGIT_H/SRC_H;
+const REG_ADV=.410*U, FIRST_DIGIT_X=12.0;
 const SOURCE=[
  [[95.137274,86.827056],[96.244524,85.303059],[90.088724,85.303059],[90.497084,86.827056]],
  [[91.361734,91.526056],[89.694284,85.303059],[88.116524,85.303059],[89.783974,91.526056]],
@@ -22,16 +27,18 @@ const SOURCE=[
 ];
 const MAP=[0,1,2,3,5,4,6];
 const SEG=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
-const DIGIT_H=12.7*SCALE;
-const SIGN_W=6.731*SCALE, SIGN_T=1.524*SCALE, SIGN_ARM=3.175*SCALE, SIGN_GAP=.381*SCALE;
-const SIGN_H=2*SIGN_ARM+SIGN_T+2*SIGN_GAP, SIGN_TOP=(DIGIT_H-SIGN_H)/2;
-const SIGN_X=.4, SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)/2, SIGN_HY=SIGN_TOP+SIGN_ARM+SIGN_GAP;
+
+// Detail A sign envelope: .270/.260 x .343/.333; segment thickness .070/.060.
+const SIGN_W=.265*U, SIGN_H=.338*U, SIGN_T=.065*U;
+const SIGN_X=.4, SIGN_TOP=(DIGIT_H-SIGN_H)/2;
+const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)/2, SIGN_HY=SIGN_TOP+(SIGN_H-SIGN_T)/2;
+
 const n=v=>Number(v).toFixed(3).replace(/\.000$/,'');
 const poly=pts=>'M'+pts.map(([x,y])=>`${n(x)},${n(y)}`).join(' L')+' Z';
 const rect=(x,y,w,h)=>poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]]);
 const digitPoly=(logical,ox)=>SOURCE[MAP[logical]].map(([x,y])=>[
-  ox+(MIRROR_X-x-SRC_X)*SCALE,
-  (y-SRC_Y)*SCALE,
+  ox+(MIRROR_X-x-SRC_X)*SX,
+  (y-SRC_Y)*SY,
 ]);
 
 // 1006315 production revisions specify nominal 5300-A (530 nm) EL output.
@@ -40,22 +47,18 @@ const EL_COLOR='#79EF4F';
 for (let sec=0; sec<60; sec++) {
   const paths=[
     rect(SIGN_X,SIGN_HY,SIGN_W,SIGN_T),
-    rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_ARM),
-    rect(SIGN_VX,SIGN_HY+SIGN_T+SIGN_GAP,SIGN_T,SIGN_ARM),
+    rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_H),
   ];
   const text=`000${String(sec).padStart(2,'0')}`;
   [...text].forEach((ch,i)=>{
     const lit=SEG[Number(ch)];
-    const ox=FIRST_DIGIT_X+i*ADV;
+    const ox=FIRST_DIGIT_X+i*REG_ADV;
     [...'abcdefg'].forEach((name,logical)=>{
       if (lit.includes(name)) paths.push(poly(digitPoly(logical,ox)));
     });
   });
   const body=paths.map(p=>`    <path android:fillColor="${EL_COLOR}" android:pathData="${p}" />`).join('\n');
-  // The frame now uses the same 106-unit panel width as the static renderer.
-  // Previously the paths were squeezed into a 100-unit viewport and then the
-  // ImageView stretched that viewport again, visibly corrupting horizontal spacing.
-  const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="106dp"\n    android:height="21dp"\n    android:viewportWidth="106"\n    android:viewportHeight="21">\n${body}\n</vector>\n`;
+  const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="106dp"\n    android:height="23dp"\n    android:viewportWidth="106"\n    android:viewportHeight="23">\n${body}\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
-console.log(`generated 60 Apollo EL second frames in ${drawable}`);
+console.log(`generated 60 drawing-dimensioned Apollo EL second frames in ${drawable}`);
