@@ -8,13 +8,14 @@
   --el:#6decb4;
 }
 
-/* 1006315G active EL face: 2.360 x 4.060 in.  The DSKY faceplate coordinate
-   system is 320 x 372, so 106 x 182.356 drawing units map directly to these
-   percentages. */
+/* 1006315G active EL geometry remains 106 x 182.356 drawing units.  The SVG
+   viewport extends 1.5 units farther right as blank glass, outside the segment
+   geometry, so the rightmost segment is fully visible instead of being masked.
+   107.5 / 320 = 33.59375%; height remains the drawing-derived 182.356 / 372. */
 .elpanel{
   left:57.5000%;
   top:5.1075%;
-  width:33.1250%;
+  width:33.59375%;
   height:49.0204%;
 }
 
@@ -22,7 +23,7 @@
    dimensions instead of the legacy hand-sized well.  The hardware frame is
    2.620 x 4.420 in around the 2.360 x 4.060 active EL face, which gives
    .130-in symmetric side margins and .180-in symmetric top/bottom margins.
-   In the 320 x 372 DSKY coordinate system this is exactly the box below. */
+   The small UI-only right glass extension remains inside this opening. */
 .display-well{
   left:55.6753%;
   top:2.9342%;
