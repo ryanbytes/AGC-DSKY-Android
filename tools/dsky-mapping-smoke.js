@@ -88,7 +88,7 @@ for (const group of groups) {
 
 // Block II display circuitry is 12 selectable banks of 11 bistable relays.
 // Bits 12-15 of channel 010 select the bank; only the low 11 bits are the
-// bank's latching relay state.  A row transition therefore produces exactly
+// bank's latching relay state. A row transition therefore produces exactly
 // the Hamming distance of the old/new low-11 words in mechanical operations.
 assert(app.includes('const relay=(value>>11)&0o17,b=(value>>10)&1,c=(value>>5)&0o37,d=value&0o37,low11=value&0o3777;'),
   'channel 010 must retain 4-bit bank selector + low-11 relay split');
@@ -105,11 +105,11 @@ assert(relayAudio.includes('for (let i = 0; i < count; i++) emitTick'),
 assert(relayAudio.includes('mechanical pull-in scatter only, not serialized relay drive'),
   'relay audio must document parallel electrical drive vs mechanical scatter');
 
-// The five character relays are a contact matrix, not an enum.  Verify the
+// The five character relays are a contact matrix, not an enum. Verify the
 // schematic-derived K1..K5 logic reproduces all supported decimal patterns and
 // remains capable of displaying the other 21 electrically possible states.
 const matrixStart = relayMatrix.indexOf('function segmentsForRelayCode(value)');
-const matrixEnd = relayMatrix.indexOf('function relayGlyph', matrixStart);
+const matrixEnd = relayMatrix.indexOf('// Keep normal codes human-readable', matrixStart);
 assert(matrixStart >= 0 && matrixEnd > matrixStart,
   'could not isolate schematic relay-contact matrix');
 const matrixContext = {};
@@ -127,12 +127,15 @@ const allContactPatterns = new Set();
 for (let code = 0; code < 32; code++) allContactPatterns.add(matrixContext.segmentsForRelayCode(code));
 assert(allContactPatterns.size > 11,
   'relay contact renderer collapsed the 32 physical K1-K5 states to the normal decimal enum');
-assert(relayMatrix.includes('baseDecodeChannel10(value);'),
-  'schematic renderer must retain the base channel-010 latch/condition logic');
+assert(relayMatrix.includes('SEG[ch] = segmentsForRelayCode(code);'),
+  'non-decimal K1-K5 states must be wired into the segment renderer');
+assert(relayMatrix.includes('relayDigit = function schematicRelayDigit(code)'),
+  'hardware relay decoder must use the schematic contact matrix for unsupported states');
 const geometryPos = indexHtml.indexOf('<script src="dsky-geometry.js"></script>');
 const matrixPos = indexHtml.indexOf('<script src="dsky-relay-matrix.js"></script>');
-assert(geometryPos >= 0 && matrixPos > geometryPos,
-  'schematic relay renderer must load after the Apollo segment geometry');
+const hardwarePos = indexHtml.indexOf('<script src="hardware-fidelity.js"></script>');
+assert(geometryPos >= 0 && matrixPos > geometryPos && hardwarePos > matrixPos,
+  'schematic contact matrix must load after glyph geometry and before hardware-fidelity timing');
 
 const decodeStart = app.indexOf('function decodeChannel10(value)');
 const decodeEnd = app.indexOf('function updateAgcCompActy()', decodeStart);
