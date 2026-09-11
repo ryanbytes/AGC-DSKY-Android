@@ -141,7 +141,10 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         synchronized(BITMAP_CACHE){BITMAP_CACHE.put(key,b);}return b;
       }
       private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){
-        c.drawPath(box(2.119f,2.350f,101.763f,177.656f),HARDWARE_STROKE_P);
+        // Detail-A/B luminous geometry reaches close to the 2.360-in physical
+        // face edge.  Keep the cosmetic outline on the face perimeter instead
+        // of drawing it through the segments.
+        c.drawPath(box(-.24f,-.24f,106.48f,182.836f),HARDWARE_STROKE_P);
         dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.949f,1.294f,1.369f);
         dot(c,100.863f,79.949f,1.294f,1.369f);dot(c,100.863f,114.085f,1.294f,1.369f);dot(c,100.863f,148.220f,1.294f,1.369f);
         dot(c,8.286f,148.220f,1.294f,1.369f);dot(c,8.286f,114.085f,1.294f,1.369f);dot(c,8.286f,79.949f,1.294f,1.369f);
