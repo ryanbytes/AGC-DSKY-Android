@@ -13,9 +13,9 @@
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:icon="@mipmap/ic_launcher_original"
-        android:roundIcon="@mipmap/ic_launcher_original"
-        android:label="AGC DSKY v1.1.2"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="AGC DSKY"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <meta-data
@@ -30,11 +30,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
@@ -61,7 +56,7 @@
         <service
             android:name=".AgcDreamService"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_original"
+            android:icon="@mipmap/ic_launcher"
             android:label="AGC DSKY Clock"
             android:permission="android.permission.BIND_DREAM_SERVICE">
             <intent-filter>
