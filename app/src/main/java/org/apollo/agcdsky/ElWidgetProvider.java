@@ -113,7 +113,13 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,MIRROR_X=2f*SRC_X+SRC_W,DATUM_X=MIRROR_X-96.244524f;
       private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.400f*U;
       private static final float LEFT_FIELD_X=.140f*U,RIGHT_FIELD_X=1.620f*U;
-      private static final float SIGN_W=.265f*U,SIGN_H=.338f*U,SIGN_T=.065f*U,SIGN_X=.025f*U,SIGN_TOP=(DIGIT_H-SIGN_H)*.5f,SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5f,SIGN_HY=SIGN_TOP+(SIGN_H-SIGN_T)*.5f;
+
+      // 1006315G Detail A, position 6: three separate luminous islands.
+      // Segment A is the pair of vertical islands; segment B is horizontal.
+      private static final float SIGN_W=.265f*U,SIGN_H=.338f*U,SIGN_T=.065f*U,SIGN_X=.025f*U,SIGN_GAP=.010f*U;
+      private static final float SIGN_TOP=(DIGIT_H-SIGN_H)*.5f,SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5f;
+      private static final float SIGN_A_H=(SIGN_H-SIGN_T-2f*SIGN_GAP)*.5f,SIGN_HY=SIGN_TOP+SIGN_A_H+SIGN_GAP,SIGN_LOWER_Y=SIGN_HY+SIGN_T+SIGN_GAP;
+
       private static final float[][][] SOURCE={
         {{95.137274f,86.827056f},{96.244524f,85.303059f},{90.088724f,85.303059f},{90.497084f,86.827056f}},
         {{91.361734f,91.526056f},{89.694284f,85.303059f},{88.116524f,85.303059f},{89.783974f,91.526056f}},
@@ -169,7 +175,14 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static void register(Canvas c,char sign,String s,float x,float y){sign(c,sign,x,y);for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+FIRST_DIGIT_X+i*REG_ADV,y);}
       private static void digit(Canvas c,char ch,float ox,float oy){String lit=SEG[ch-'0'];for(int l=0;l<7;l++)if(lit.indexOf((char)('a'+l))>=0)segment(c,l,ox,oy);}
       private static void segment(Canvas c,int logical,float ox,float oy){float[][] pts=SOURCE[MAP[logical]];Path p=new Path();for(int i=0;i<pts.length;i++){float x=ox+(MIRROR_X-pts[i][0]-DATUM_X)*MM_TO_U,y=oy+(pts[i][1]-SRC_Y)*MM_TO_U;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,ON);}
-      private static void sign(Canvas c,char s,float ox,float oy){if(s!='+'&&s!='-')return;c.drawPath(box(ox+SIGN_X,oy+SIGN_HY,SIGN_W,SIGN_T),ON);if(s=='+')c.drawPath(box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_H),ON);}
+      private static void sign(Canvas c,char s,float ox,float oy){
+        if(s!='+'&&s!='-')return;
+        c.drawPath(box(ox+SIGN_X,oy+SIGN_HY,SIGN_W,SIGN_T),ON);
+        if(s=='+'){
+          c.drawPath(box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_A_H),ON);
+          c.drawPath(box(ox+SIGN_VX,oy+SIGN_LOWER_Y,SIGN_T,SIGN_A_H),ON);
+        }
+      }
       private static Path box(float x,float y,float w,float h){Path p=new Path();p.moveTo(x,y);p.lineTo(x+w,y);p.lineTo(x+w,y+h);p.lineTo(x,y+h);p.close();return p;}
     }
 }
