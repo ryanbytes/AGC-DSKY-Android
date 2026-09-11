@@ -1,25 +1,33 @@
 'use strict';
 
 /*
- * Stable per-relay acoustic fingerprints for the Block II DSKY.
+ * Stable per-relay mechanical fingerprints for the Block II DSKY.
  *
- * The electrical model remains authoritative in hardware-fidelity.js.  This
- * layer changes sound only.  Every one of the 12 x 11 latching relays and each
- * non-latching annunciator/flash relay gets a deterministic, slightly different
- * mechanical click.  The differences are intentionally small: they represent
- * unit-to-unit manufacturing tolerance, not different relay types.
+ * hardware-fidelity.js owns the 20-ms bank-drive envelope.  This layer gives
+ * every one of the 12 x 11 latching relays its own deterministic mechanical
+ * settle time inside that envelope and applies the contact state when that
+ * individual armature finishes moving.  The associated click starts at the
+ * same instant as the contact transition, so a changing row can visibly and
+ * audibly resolve as a short relay rattle instead of one 20-ms snap.
  *
- * The same physical relay always gets the same base timbre for the life of the
- * app.  Pull-in and release share that fingerprint, with only the expected
- * make/break strength/decay difference.  No per-click random timbre is used for
- * identified DSKY relays.
+ * The settle spread and acoustic tolerances are modeled manufacturing
+ * variation, not measured values from the flown Apollo 11 DSKY.  No identified
+ * relay uses per-click randomness: a physical relay keeps the same settle time
+ * and timbre for the life of the app.
  */
 (() => {
   if (typeof emitTick !== 'function' || typeof ensureAudio !== 'function') return;
   if (!window.AGCDSKY || typeof window.AGCDSKY.hardware !== 'function') return;
 
   const fallbackEmitTick = emitTick;
+  const baseHardware = window.AGCDSKY.hardware.bind(window.AGCDSKY);
   const bufferCache = new Map();
+  const driveVisuals = new Map();
+  const latestDriveStamp = new Map();
+
+  const LATCHING_RELAY_COUNT = 132;
+  const SETTLE_MIN_MS = 5.2;
+  const SETTLE_MAX_MS = 19.4;
 
   const AUX_ORDER = Object.freeze([
     'comp', 'uplink', 'temp', 'keyrel',
@@ -38,7 +46,7 @@
   });
 
   function snapshot() {
-    try { return window.AGCDSKY.hardware(); } catch (_) { return null; }
+    try { return baseHardware(); } catch (_) { return null; }
   }
 
   const firstSnapshot = snapshot();
@@ -104,7 +112,15 @@
 
   function auxOrdinal(name) {
     const i = AUX_ORDER.indexOf(name);
-    return 132 + Math.max(0, i);
+    return LATCHING_RELAY_COUNT + Math.max(0, i);
+  }
+
+  // Use a full-period permutation of the 132 physical latching-relay ordinals.
+  // Every relay therefore gets a unique, stable travel time while all contacts
+  // still complete before the documented 20-ms bank-settle boundary.
+  function settleMsForOrdinal(ordinal) {
+    const slot = ((ordinal * 73) + 17) % LATCHING_RELAY_COUNT;
+    return SETTLE_MIN_MS + slot * (SETTLE_MAX_MS - SETTLE_MIN_MS) / (LATCHING_RELAY_COUNT - 1);
   }
 
   function profile(id, ordinal) {
@@ -118,6 +134,7 @@
     return Object.freeze({
       id,
       ordinal,
+      settleMs: ordinal < LATCHING_RELAY_COUNT ? settleMsForOrdinal(ordinal) : null,
       f1: 5600 * bodyScale * (1 + centered() * 0.0040),
       f2: 8300 * bodyScale * (1 + centered() * 0.0045),
       f3: 11600 * bodyScale * (1 + centered() * 0.0050),
@@ -130,9 +147,6 @@
       strikeMix: 0.14 * (1 + centered() * 0.10),
       ringMix: 1 + centered() * 0.045,
       level: 1 + centered() * 0.050,
-      // Purely acoustic placement scatter. Electrical settling remains the
-      // 20-ms model in hardware-fidelity.js.
-      acousticSkewMs: centered() * 0.22,
       phaseSeed: hash32(`${id}:phase`)
     });
   }
@@ -204,7 +218,7 @@
     const p = profileFor(id, ordinal);
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
-    const start = Math.max(ctx.currentTime + 0.00005, when + p.acousticSkewMs / 1000);
+    const start = Math.max(ctx.currentTime + 0.00005, when);
     const level = (typeof tickLevel === 'number' ? tickLevel : 1);
     const makeBreak = engaging ? 1.035 : 0.915;
 
@@ -216,6 +230,96 @@
     gain.connect(ctx.destination);
     source.start(start);
     source.stop(start + 0.0115);
+  }
+
+  function applyRelayVisual(relay, low11) {
+    const b = (low11 >> 10) & 1;
+    const c = (low11 >> 5) & 0o37;
+    const d = low11 & 0o37;
+    switch (relay) {
+      case 12:
+        setLamp('vel', !!(low11 & 0o00004));
+        setLamp('noatt', !!(low11 & 0o00010));
+        setLamp('alt', !!(low11 & 0o00020));
+        setLamp('gimbal', !!(low11 & 0o00040));
+        setLamp('tracker', !!(low11 & 0o00200));
+        setLamp('prog', !!(low11 & 0o00400));
+        break;
+      case 11:
+        agcDisplay.prog[0] = relayDigit(c); agcDisplay.prog[1] = relayDigit(d);
+        set2('prog', agcDisplay.prog.join(''));
+        break;
+      case 10:
+        agcDisplay.verb[0] = relayDigit(c); agcDisplay.verb[1] = relayDigit(d);
+        set2('verb', agcDisplay.verb.join(''));
+        break;
+      case 9:
+        agcDisplay.noun[0] = relayDigit(c); agcDisplay.noun[1] = relayDigit(d);
+        set2('noun', agcDisplay.noun.join(''));
+        break;
+      case 8:
+        agcDisplay.r1.digits[0] = relayDigit(d); renderAgcReg('r1');
+        break;
+      case 7:
+        agcDisplay.r1.plus = !!b; agcDisplay.r1.digits[1] = relayDigit(c); agcDisplay.r1.digits[2] = relayDigit(d); renderAgcReg('r1');
+        break;
+      case 6:
+        agcDisplay.r1.minus = !!b; agcDisplay.r1.digits[3] = relayDigit(c); agcDisplay.r1.digits[4] = relayDigit(d); renderAgcReg('r1');
+        break;
+      case 5:
+        agcDisplay.r2.plus = !!b; agcDisplay.r2.digits[0] = relayDigit(c); agcDisplay.r2.digits[1] = relayDigit(d); renderAgcReg('r2');
+        break;
+      case 4:
+        agcDisplay.r2.minus = !!b; agcDisplay.r2.digits[2] = relayDigit(c); agcDisplay.r2.digits[3] = relayDigit(d); renderAgcReg('r2');
+        break;
+      case 3:
+        agcDisplay.r2.digits[4] = relayDigit(c); agcDisplay.r3.digits[0] = relayDigit(d); renderAgcReg('r2'); renderAgcReg('r3');
+        break;
+      case 2:
+        agcDisplay.r3.plus = !!b; agcDisplay.r3.digits[1] = relayDigit(c); agcDisplay.r3.digits[2] = relayDigit(d); renderAgcReg('r3');
+        break;
+      case 1:
+        agcDisplay.r3.minus = !!b; agcDisplay.r3.digits[3] = relayDigit(c); agcDisplay.r3.digits[4] = relayDigit(d); renderAgcReg('r3');
+        break;
+    }
+  }
+
+  function driveRecord(state, row) {
+    const last = state && state.lastWrite;
+    if (!last || Number(last.relay) !== row) return null;
+    const stamp = Number(last.at);
+    const key = `${row}:${stamp}`;
+    let record = driveVisuals.get(key);
+    if (!record) {
+      const prior = state.latches && Object.prototype.hasOwnProperty.call(state.latches, row)
+        ? Number(state.latches[row]) & 0o3777
+        : 0;
+      record = {
+        key,
+        row,
+        stamp,
+        word: prior,
+        target: Number(last.low11) & 0o3777
+      };
+      driveVisuals.set(key, record);
+      latestDriveStamp.set(row, stamp);
+      setTimeout(() => driveVisuals.delete(key), 40);
+    }
+    return record;
+  }
+
+  function settleContact(state, row, bit, delayMs) {
+    const record = driveRecord(state, row);
+    if (!record) return;
+    const mask = 1 << bit;
+    setTimeout(() => {
+      if (latestDriveStamp.get(row) !== record.stamp) return;
+      if (record.target & mask) record.word |= mask;
+      else record.word &= ~mask;
+      record.word &= 0o3777;
+      try { agcRelayWords[row] = record.word; } catch (_) {}
+      try { applyRelayVisual(row, record.word); } catch (_) {}
+    }, Math.max(0, delayMs));
   }
 
   function changedAux(current) {
@@ -261,14 +365,23 @@
     }
 
     const row = Number(state.activeDrive) || 0;
-    const settle = Array.isArray(state.armatureSettleMs) ? state.armatureSettleMs : [];
-    if (row >= 1 && row <= 12 && settle.length === 11) {
+    const baseSettle = Array.isArray(state.armatureSettleMs) ? state.armatureSettleMs : [];
+    if (row >= 1 && row <= 12 && baseSettle.length === 11) {
+      // hardware-fidelity.js still calls emitTick at its legacy per-bit marker.
+      // Use that marker only to identify which physical armature is moving;
+      // then reschedule the actual contact and sound to this relay's own stable
+      // travel time inside the same 20-ms bank envelope.
       const deltaMs = Math.max(0, (when - ctx.currentTime) * 1000);
-      const bit = closestBit(deltaMs, settle);
+      const bit = closestBit(deltaMs, baseSettle);
       if (bit >= 0) {
         const target = state.lastWrite ? Number(state.lastWrite.low11) & 0o3777 : 0;
         const engaging = !!(target & (1 << bit));
-        playIdentity(ctx, when, strength, relayIdentity(row, bit), relayOrdinal(row, bit), engaging);
+        const id = relayIdentity(row, bit);
+        const ordinal = relayOrdinal(row, bit);
+        const p = profileFor(id, ordinal);
+        const settleWhen = ctx.currentTime + p.settleMs / 1000;
+        settleContact(state, row, bit, p.settleMs);
+        playIdentity(ctx, settleWhen, strength, id, ordinal, engaging);
         return;
       }
     }
@@ -278,11 +391,29 @@
     fallbackEmitTick(ctx, when, strength);
   };
 
+  const RELAY_SETTLE_MS = Object.freeze(Array.from({length: 12}, (_, rowIndex) =>
+    Object.freeze(Array.from({length: 11}, (_, bit) =>
+      settleMsForOrdinal(relayOrdinal(rowIndex + 1, bit))
+    ))
+  ));
+
+  // Keep the original hardware snapshot fields intact for compatibility, while
+  // exposing the effective 12 x 11 individual-contact timing used by this
+  // physical-settle layer for diagnostics and field verification.
+  window.AGCDSKY.hardware = () => {
+    const state = baseHardware();
+    state.relaySettleMs = RELAY_SETTLE_MS.map(row => row.slice());
+    state.relaySettleMinMs = SETTLE_MIN_MS;
+    state.relaySettleMaxMs = SETTLE_MAX_MS;
+    return state;
+  };
+
   window.DSKY_RELAY_AUDIO = Object.freeze({
-    latchingRelayCount: 132,
+    latchingRelayCount: LATCHING_RELAY_COUNT,
     auxiliaryRelayCount: AUX_ORDER.length,
-    totalIndividualRelays: 132 + AUX_ORDER.length,
+    totalIndividualRelays: LATCHING_RELAY_COUNT + AUX_ORDER.length,
     relayIdentity,
+    settleMsFor: (row, bit) => settleMsForOrdinal(relayOrdinal(row, bit)),
     profileFor: (row, bit) => profileFor(relayIdentity(row, bit), relayOrdinal(row, bit)),
     auxiliaryProfileFor: name => profileFor(`AUX:${AUX_LABEL[name] || String(name).toUpperCase()}`, auxOrdinal(name))
   });
