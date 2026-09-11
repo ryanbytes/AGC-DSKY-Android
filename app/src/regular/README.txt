@@ -1,0 +1,1 @@
+Regular Android flavor keeps LAUNCHER + HOME behavior and uses the .phone application ID suffix so it can install without colliding with older AGC DSKY signatures. Fire flavor remains org.apollo.agcdsky.
