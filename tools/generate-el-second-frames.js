@@ -34,6 +34,9 @@ const digitPoly=(logical,ox)=>SOURCE[MAP[logical]].map(([x,y])=>[
   (y-SRC_Y)*SCALE,
 ]);
 
+// 1006315 production revisions specify nominal 5300-A (530 nm) EL output.
+const EL_COLOR='#79EF4F';
+
 for (let sec=0; sec<60; sec++) {
   const paths=[
     rect(SIGN_X,SIGN_HY,SIGN_W,SIGN_T),
@@ -48,7 +51,7 @@ for (let sec=0; sec<60; sec++) {
       if (lit.includes(name)) paths.push(poly(digitPoly(logical,ox)));
     });
   });
-  const body=paths.map(p=>`    <path android:fillColor="#62D9E8" android:pathData="${p}" />`).join('\n');
+  const body=paths.map(p=>`    <path android:fillColor="${EL_COLOR}" android:pathData="${p}" />`).join('\n');
   const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="100dp"\n    android:height="21dp"\n    android:viewportWidth="100"\n    android:viewportHeight="21">\n${body}\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
