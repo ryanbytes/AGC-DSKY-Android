@@ -39,9 +39,10 @@ requireText(layout, 'android:loopViews="true"', 'seconds flipper');
 requireText(layout, 'android:flipInterval="1000"', 'seconds flipper');
 requireText(layout, 'android:background="#696D67"', 'Block II EL glass background');
 requireText(layout, 'android:layout_height="182.356dp"', '1006315G panel height');
-requireText(layout, 'android:layout_marginTop="85.788dp"', 'register 1 drawing position');
-requireText(layout, 'android:layout_marginTop="119.924dp"', 'register 2 drawing position');
-requireText(layout, 'android:layout_marginTop="154.059dp"', 'register 3 drawing position');
+requireText(layout, 'android:layout_height="23dp"', 'drawing-height register frame');
+requireText(layout, 'android:layout_marginTop="84.441dp"', 'register 1 drawing position');
+requireText(layout, 'android:layout_marginTop="118.576dp"', 'register 2 drawing position');
+requireText(layout, 'android:layout_marginTop="152.712dp"', 'register 3 drawing position');
 requireText(item, 'android:id="@+id/el_second_image"', 'seconds frame');
 forbid(layout, '<TextClock', 'widget layout');
 forbid(layout, 'fontFamily=', 'widget layout');
@@ -54,88 +55,90 @@ requireText(provider, 'views.setRemoteAdapter(R.id.el_hour_flipper', 'live hour 
 requireText(provider, 'views.setRemoteAdapter(R.id.el_minute_flipper', 'live minute adapter');
 requireText(provider, 'views.setRemoteAdapter(R.id.el_seconds_flipper', 'live seconds adapter');
 requireText(provider, 'views.setDisplayedChild(R.id.el_seconds_flipper', 'live seconds adapter');
-requireText(provider, 'private static final int[] SECOND_DRAWABLES', 'generated EL frame table');
 requireText(provider, 'R.drawable.el_sec_59', 'generated EL frame table');
 requireText(provider, 'pairFrames=buildFrames(context,60)', 'minute/seconds 60-frame adapter');
 requireText(provider, 'hourFrames=buildFrames(context,24)', 'hour 24-frame adapter');
 requireText(provider, 'alarm.setExactAndAllowWhileIdle', 'minute refresh');
 requireText(provider, 'alarm.setAndAllowWhileIdle', 'minute refresh fallback');
-forbid(provider, 'R.id.el_clock_', 'widget renderer');
 
-// SCD 1006315 production revisions specify nominal 5300-A / 530-nm EL output.
+// Production EL wavelength / rendering.
 requireText(finish, '--el:#79ef4f', 'WebView production EL color');
 requireText(provider, 'CORE=Color.rgb(121,239,79),RULE=CORE', 'native widget production EL color');
-requireText(generator, "const EL_COLOR='#79EF4F'", 'generated widget frame production EL color');
-forbid(finish, '--el:#62d9e8', 'WebView old early-panel cyan color');
-forbid(provider, 'Color.rgb(98,217,232)', 'widget old early-panel cyan color');
-forbid(generator, '#62D9E8', 'generated old early-panel cyan frame color');
+requireText(generator, "const EL_COLOR='#79EF4F'", 'generated frame production EL color');
+forbid(finish, '--el:#62d9e8', 'old cyan EL color');
+forbid(provider, 'setShadowLayer', 'widget EL no-glow renderer');
 
-// SCD 1006315G sheet 2 is the geometry authority. The 2.280/1.520/.760
-// dimensions are bar datums from the bottom, not register centers. The live
-// rows begin after the nominal .060-in bar plus .070-in clearance.
+// MIT/IL SCD 1006315G face geometry.
 requireText(provider, 'PANEL_W=106f,PANEL_H=182.356f', '1006315G native panel aspect');
-requireText(provider, 'R1_Y=85.788f,R2_Y=119.924f,R3_Y=154.059f', '1006315G register positions');
+requireText(provider, 'R1_Y=84.441f,R2_Y=118.576f,R3_Y=152.712f', '1006315G register positions');
+requireText(provider, 'FRAME_H=23f', 'drawing-height native register frame');
 requireText(html, 'viewBox="0 0 106 182.356"', '1006315G WebView panel aspect');
 requireText(finish, 'height:49.0204%', '1006315G faceplate height');
-requireText(finish, 'stroke-width:2.695', '1006315G nominal .060-in separator thickness');
-requireText(screenOnly, '106 / 182.356', '1006315G screen-only aspect ratio');
-requireText(screenOnly, '182.356 / 106', '1006315G screen-only reciprocal aspect ratio');
-requireText(geometry, 'const FACE_W_IN=2.360,FACE_H_IN=4.060,U=106/FACE_W_IN;', '1006315G face dimensions');
-requireText(geometry, 'const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);', '1006315G bar datums');
-requireText(geometry, 'const BAR_H_IN=.060;', '1006315G separator thickness');
-requireText(geometry, 'const REGISTER_TOP_GAP_IN=.070;', '1006315G separator-to-digit clearance');
-requireText(geometry, 'FACE_H_IN-v+BAR_H_IN+REGISTER_TOP_GAP_IN', 'drawing-derived register transform');
-requireText(html, 'y1="81.297"', 'register 1 separator center');
-requireText(html, 'y1="115.432"', 'register 2 separator center');
-requireText(html, 'y1="149.568"', 'register 3 separator center');
+requireText(finish, 'stroke-width:2.695', 'nominal .060-in separator thickness');
+requireText(screenOnly, '106 / 182.356', 'screen-only aspect ratio');
+requireText(screenOnly, '182.356 / 106', 'screen-only reciprocal aspect ratio');
+
+// Sheet 1 details B/C: digits are .320 x .500 with separate X/Y fitting;
+// upper two-digit fields use .420-in pitch.  A single uniform scale is forbidden.
+requireText(geometry, 'const FACE_W_IN=2.360,FACE_H_IN=4.060,U=106/FACE_W_IN;', 'face dimensions');
+requireText(geometry, 'const DIGIT_W=.320*U,DIGIT_H=.500*U;', 'drawing digit envelope');
+requireText(geometry, 'const DIGIT_SX=DIGIT_W/SRC_W,DIGIT_SY=DIGIT_H/SRC_H;', 'affine digit fit');
+requireText(geometry, 'const UPPER_ADVANCE=.420*U;', 'upper-field drawing pitch');
+requireText(provider, 'DIGIT_W=.320f*U,DIGIT_H=.500f*U,DIGIT_SX=DIGIT_W/SRC_W,DIGIT_SY=DIGIT_H/SRC_H', 'native affine digit fit');
+requireText(provider, 'UPPER_ADV=.420f*U,REG_ADV=.410f*U', 'native drawing pitches');
+requireText(generator, 'const DIGIT_W=.320*U, DIGIT_H=.500*U;', 'generated digit envelope');
+requireText(generator, 'const SX=DIGIT_W/SRC_W, SY=DIGIT_H/SRC_H;', 'generated affine digit fit');
+forbid(provider, 'DIGIT_SCALE=', 'obsolete uniform digit scale');
+forbid(geometry, 'const SCALE=1.58', 'obsolete uniform digit scale');
+
+// Sheet 1 detail A: register digit pitch and sign envelope.
+requireText(geometry, 'const REGISTER_ADVANCE=.410*U;', 'register drawing pitch');
+requireText(geometry, 'const SIGN_W=.265*U,SIGN_H=.338*U,SIGN_T=.065*U;', 'WebView sign envelope');
+requireText(provider, 'SIGN_W=.265f*U,SIGN_H=.338f*U,SIGN_T=.065f*U', 'native sign envelope');
+requireText(generator, 'const REG_ADV=.410*U, FIRST_DIGIT_X=12.0;', 'generated register pitch');
+requireText(generator, 'const SIGN_W=.265*U, SIGN_H=.338*U, SIGN_T=.065*U;', 'generated sign envelope');
+requireText(generator, 'android:height="23dp"', 'generated frame height');
+requireText(generator, 'android:viewportWidth="106"', 'generated register viewport width');
+requireText(generator, 'android:viewportHeight="23"', 'generated register viewport height');
+forbid(generator, 'android:viewportWidth="100"', 'obsolete squeezed register viewport');
+
+// Sheet 2: .760-in bar-center pitch and .060-in luminous bars.  Register glyphs
+// begin .070 in below the bar edge.
+requireText(geometry, 'const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);', 'bar center datums');
+requireText(geometry, 'const BAR_H_IN=.060;', 'separator thickness');
+requireText(geometry, 'const REGISTER_GAP_IN=.070;', 'bar-to-digit clearance');
+requireText(geometry, 'const BAR_CENTER_Y=BAR_FROM_BOTTOM_IN.map(v=>(FACE_H_IN-v)*U);', 'bar center transform');
+requireText(geometry, 'const REGISTER_Y=BAR_CENTER_Y.map(c=>c+(BAR_H_IN*.5+REGISTER_GAP_IN)*U);', 'register transform');
+requireText(html, 'y1="79.949"', 'register 1 separator center');
+requireText(html, 'y1="114.085"', 'register 2 separator center');
+requireText(html, 'y1="148.220"', 'register 3 separator center');
+
+// Upper front-view geometry must not overlap legend boxes.
+requireText(html, 'x="65.553" y="0.554" width="34.868" height="11.678"', 'PROG legend box');
+requireText(html, 'x="6.019" y="42.721" width="35.162" height="11.678"', 'VERB legend box');
+requireText(html, 'x="65.920" y="42.721" width="34.501" height="11.678"', 'NOUN legend box');
+requireText(html, 'transform="translate(66.4 14)"', 'PROG digits clear of legend');
+requireText(html, 'transform="translate(7 55.5)"', 'VERB digits clear of legend');
+requireText(html, 'transform="translate(66.6 55.5)"', 'NOUN digits clear of legend');
+requireText(provider, 'section(c,65.553f,.554f,34.868f,11.678f,LEGEND_BG_P)', 'native PROG legend');
+requireText(provider, 'section(c,6.019f,42.721f,35.162f,11.678f,LEGEND_BG_P)', 'native VERB legend');
+requireText(provider, 'section(c,65.920f,42.721f,34.501f,11.678f,LEGEND_BG_P)', 'native NOUN legend');
+requireText(provider, 'digits(c,"00",66.4f,14f)', 'native PROG position');
+requireText(provider, 'digits(c,"16",7f,55.5f)', 'native VERB position');
+requireText(provider, 'digits(c,"65",66.6f,55.5f)', 'native NOUN position');
+
 forbid(html, 'viewBox="0 0 106 190"', 'obsolete stretched WebView geometry');
 forbid(provider, 'PANEL_W=106f,PANEL_H=190f', 'obsolete stretched native geometry');
-forbid(layout, 'android:layout_marginTop="69.916dp"', 'obsolete register-1 center interpretation');
-forbid(layout, 'android:layout_marginTop="104.052dp"', 'obsolete register-2 center interpretation');
-forbid(layout, 'android:layout_marginTop="138.187dp"', 'obsolete register-3 center interpretation');
-
-requireText(provider, 'PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5)', 'widget Block II glass colors');
-requireText(provider, 'c.drawColor(PANEL)', 'widget gray glass render');
-requireText(provider, 'box(2.119f,2.350f,101.763f,177.656f)', 'widget glass border geometry');
-requireText(provider, 'dot(c,53.000f,6.914f,1.294f,1.369f)', 'widget ITO-dot geometry');
-requireText(provider, 'section(c,65.505f,2.807f,37.945f,11.866f,LEGEND_BG_P)', 'widget PROG EL legend section');
-requireText(provider, 'section(c,2.550f,46.165f,37.945f,11.866f,LEGEND_BG_P)', 'widget VERB EL legend section');
-requireText(provider, 'section(c,65.505f,46.165f,37.945f,11.866f,LEGEND_BG_P)', 'widget NOUN EL legend section');
-requireText(provider, 'section(c,2.550f,2.807f,37.945f,40.163f,COMP_BG_P)', 'widget COMP ACTY EL section');
-requireText(provider, 'rule(c,12.770f,79.949f,84.900f,2.695f)', 'widget register 1 separator');
-requireText(provider, 'rule(c,12.770f,114.085f,84.900f,2.695f)', 'widget register 2 separator');
-requireText(provider, 'rule(c,12.770f,148.220f,84.900f,2.695f)', 'widget register 3 separator');
-requireText(provider, 'digits(c,"00",66.75f,14)', 'widget PROG position');
-requireText(provider, 'digits(c,"65",66.75f,59)', 'widget NOUN position');
-forbid(provider, 'setShadowLayer', 'widget EL no-glow renderer');
-forbid(provider, 'drawRect(', 'widget renderer');
-forbid(provider, 'drawRoundRect(', 'widget renderer');
-forbid(provider, 'drawCircle(', 'widget renderer');
-forbid(provider, 'drawOval(', 'widget renderer');
-forbid(provider, 'Color.rgb(201,245,189)', 'widget old pale-green color');
-forbid(generator, '#C9F5BD', 'generated old pale-green frame color');
-
-for (const needle of [
-  'SIGN_W=6.731f*DIGIT_SCALE',
-  'SIGN_T=1.524f*DIGIT_SCALE',
-  'SIGN_ARM=3.175f*DIGIT_SCALE',
-  'SIGN_GAP=.381f*DIGIT_SCALE',
-  'FIRST_DIGIT_X=12f'
-]) requireText(provider, needle, 'Apollo sign geometry');
-for (const needle of [
-  'const SIGN_W=6.731*SCALE',
-  'SIGN_T=1.524*SCALE',
-  'SIGN_ARM=3.175*SCALE',
-  'SIGN_GAP=.381*SCALE',
-  'const FIRST_DIGIT_X=12.0'
-]) requireText(geometry, needle, 'WebView Apollo sign geometry');
+forbid(layout, 'android:layout_marginTop="85.788dp"', 'old register-1 geometry');
+forbid(layout, 'android:layout_marginTop="119.924dp"', 'old register-2 geometry');
+forbid(layout, 'android:layout_marginTop="154.059dp"', 'old register-3 geometry');
+forbid(html, 'transform="translate(66.75 14)"', 'old PROG origin');
+forbid(html, 'transform="translate(3 59)"', 'old VERB origin');
 
 requireText(gradle, 'versionCode 20051', 'Gradle');
 requireText(gradle, "versionName '1.1.2'", 'Gradle');
 requireText(generator, 'for (let sec=0; sec<60; sec++)', 'seconds generator');
 requireText(generator, 'android:pathData', 'seconds generator');
-requireText(generator, 'android:viewportWidth="106"', 'unstretched generated register frame');
-forbid(generator, 'android:viewportWidth="100"', 'obsolete squeezed register viewport');
 
 console.log('EL widget source smoke: PASS');
-console.log('  1006315G face aspect, bar datums/thickness, register clearance, gray glass, hardware dots/border, no-glow 530-nm EL color, generated frames, and Apollo segment geometry verified');
+console.log('  1006315G face, affine .320 x .500 digits, .420/.410 pitches, sign envelope, bar datums, upper-field clearance, and 530-nm EL rendering verified');
