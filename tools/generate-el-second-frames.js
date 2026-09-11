@@ -9,13 +9,14 @@ const drawable = path.join(outRoot, 'drawable');
 fs.rmSync(outRoot, {recursive: true, force: true});
 fs.mkdirSync(drawable, {recursive: true});
 
-// MIT/IL SCD 1006315G, sheet 1 details A/C.
-const FACE_W_IN=2.360, U=106/FACE_W_IN;
-const SRC_X=88.116524, SRC_Y=85.303059, SRC_W=11.685430, SRC_H=12.700000;
+// MIT/IL SCD 1006315G plus the metric DSKY V2 segment trace.  The trace is
+// already dimensionally faithful to Detail C; use one physical mm->panel scale.
+const FACE_W_IN=2.360, U=106/FACE_W_IN, MM_TO_U=U/25.4;
+const SRC_X=88.116524, SRC_Y=85.303059, SRC_W=11.685430;
 const MIRROR_X=2*SRC_X+SRC_W;
-const DIGIT_W=.320*U, DIGIT_H=.500*U;
-const SX=DIGIT_W/SRC_W, SY=DIGIT_H/SRC_H;
-const REG_ADV=.410*U, FIRST_DIGIT_X=12.0;
+const DATUM_X=MIRROR_X-96.244524;
+const DIGIT_H=.500*U;
+const REG_ADV=.410*U, FIRST_DIGIT_X=.400*U;
 const SOURCE=[
  [[95.137274,86.827056],[96.244524,85.303059],[90.088724,85.303059],[90.497084,86.827056]],
  [[91.361734,91.526056],[89.694284,85.303059],[88.116524,85.303059],[89.783974,91.526056]],
@@ -28,21 +29,21 @@ const SOURCE=[
 const MAP=[0,1,2,3,5,4,6];
 const SEG=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
 
-// Detail A sign envelope: .270/.260 x .343/.333; segment thickness .070/.060.
-const SIGN_W=.265*U, SIGN_H=.338*U, SIGN_T=.065*U;
-const SIGN_X=.4, SIGN_TOP=(DIGIT_H-SIGN_H)/2;
+// Detail A sign envelope and nominal left-face datum.
+const SIGN_W=.265*U, SIGN_H=.338*U, SIGN_T=.065*U, SIGN_X=.025*U;
+const SIGN_TOP=(DIGIT_H-SIGN_H)/2;
 const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)/2, SIGN_HY=SIGN_TOP+(SIGN_H-SIGN_T)/2;
 
 const n=v=>Number(v).toFixed(3).replace(/\.000$/,'');
 const poly=pts=>'M'+pts.map(([x,y])=>`${n(x)},${n(y)}`).join(' L')+' Z';
 const rect=(x,y,w,h)=>poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]]);
 const digitPoly=(logical,ox)=>SOURCE[MAP[logical]].map(([x,y])=>[
-  ox+(MIRROR_X-x-SRC_X)*SX,
-  (y-SRC_Y)*SY,
+  ox+(MIRROR_X-x-DATUM_X)*MM_TO_U,
+  (y-SRC_Y)*MM_TO_U,
 ]);
 
-// 1006315 production revisions specify nominal 5300-A (530 nm) EL output.
-const EL_COLOR='#79EF4F';
+// User-tuned blue-green EL while retaining the green-dominant 530-nm look.
+const EL_COLOR='#6DECB4';
 
 for (let sec=0; sec<60; sec++) {
   const paths=[
@@ -61,4 +62,4 @@ for (let sec=0; sec<60; sec++) {
   const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="106dp"\n    android:height="23dp"\n    android:viewportWidth="106"\n    android:viewportHeight="23">\n${body}\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
-console.log(`generated 60 drawing-dimensioned Apollo EL second frames in ${drawable}`);
+console.log(`generated 60 physical-datum Apollo EL second frames in ${drawable}`);
