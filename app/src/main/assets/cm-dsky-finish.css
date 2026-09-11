@@ -8,22 +8,20 @@
   --el:#6decb4;
 }
 
-/* 1006315G active EL geometry remains 106 x 182.356 drawing units.  The SVG
-   viewport extends 1.5 units farther right as blank glass, outside the segment
-   geometry, so the rightmost segment is fully visible instead of being masked.
-   107.5 / 320 = 33.59375%; height remains the drawing-derived 182.356 / 372. */
+/* 1006315G active EL face is 2.360 x 4.060 in, represented by exactly
+   106 x 182.356 drawing units.  On the 320-unit DSKY face, 106 / 320 gives
+   the physical active-face width.  Do not add a UI-only glass gutter. */
 .elpanel{
   left:57.5000%;
   top:5.1075%;
-  width:33.59375%;
+  width:33.125%;
   height:49.0204%;
 }
 
 /* Rebuild the surrounding right-hand display opening from the same SCD
    dimensions instead of the legacy hand-sized well.  The hardware frame is
    2.620 x 4.420 in around the 2.360 x 4.060 active EL face, which gives
-   .130-in symmetric side margins and .180-in symmetric top/bottom margins.
-   The small UI-only right glass extension remains inside this opening. */
+   .130-in symmetric side margins and .180-in symmetric top/bottom margins. */
 .display-well{
   left:55.6753%;
   top:2.9342%;
