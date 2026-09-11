@@ -57,9 +57,9 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final LruCache<String,Bitmap> BITMAP_CACHE=new LruCache<String,Bitmap>(CACHE_KIB){
         @Override protected int sizeOf(String key,Bitmap value){return Math.max(1,value.getAllocationByteCount()/1024);}
       };
-      // Match the corrected WebView Block II EL: park-gray glass, gray ITO/
-      // border hardware, cyan-blue phosphor, and no synthetic glow halo.
-      private static final int CORE=Color.rgb(98,217,232),RULE=CORE;
+      // Match the production Block II EL specification: gray glass/hardware,
+      // nominal 5300-A (530 nm) phosphor, black legends, and no glow halo.
+      private static final int CORE=Color.rgb(121,239,79),RULE=CORE;
       private static final int PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5);
       private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,SRC_H=12.7f,SRC_PITCH=10.668f,DIGIT_SCALE=1.58f,MIRROR_X=2f*SRC_X+SRC_W,ADVANCE=SRC_PITCH*DIGIT_SCALE,DIGIT_H=SRC_H*DIGIT_SCALE,FIRST_DIGIT_X=12f;
       private static final float[][][] SOURCE={
