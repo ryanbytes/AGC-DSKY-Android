@@ -44,7 +44,7 @@ no(provider,'Color.rgb(121,239,79)','obsolete native lime color');
 no(generator,'#79EF4F','obsolete generated lime color');
 no(provider,'setShadowLayer','no-glow renderer');
 
-// 1006315G sheet 2 outer frame and active face.
+// Android home widget keeps its own outer-frame representation.
 req(layout,'android:layout_width="117.678dp"','outer widget width');
 req(layout,'android:layout_height="198.525dp"','outer widget height');
 req(layout,'android:background="#565A56"','outer frame color');
@@ -60,28 +60,30 @@ req(provider,'PANEL_W=2.620f*U,PANEL_H=4.420f*U','native outer frame size');
 req(provider,'ACTIVE_X*scaleDp','live register X inset');
 req(provider,'(ACTIVE_Y+y[i])*scaleDp','live register Y inset');
 req(provider,'ACTIVE_W*scaleDp','live register active width');
-req(provider,'c.drawColor(FRAME)','native outer frame fill');
-req(provider,'box(ACTIVE_X,ACTIVE_Y,ACTIVE_W,ACTIVE_H)','native active face fill');
-req(provider,'c.translate(ACTIVE_X,ACTIVE_Y)','native active geometry translation');
-no(provider,'box(-.24f,-.24f,106.48f,182.836f)','old perimeter-border shortcut');
-req(html,'viewBox="0 0 117.678 198.525"','outer WebView frame');
-req(html,'class="el-frame-background" x="0" y="0" width="117.678" height="198.525"','outer WebView frame fill');
-req(html,'transform="translate(5.839 8.085)"','WebView active face inset');
-req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','active WebView face');
-no(html,'x="-0.24"','old negative border shortcut');
-req(finish,'left:55.6753%','outer DSKY frame X');
-req(finish,'top:2.9342%','outer DSKY frame Y');
-req(finish,'width:36.7744%','outer DSKY frame width');
-req(finish,'height:53.3670%','outer DSKY frame height');
 
-// EL-only mode fills every display pixel.
-req(screenOnly,'width:100vw!important','screen-only full width');
-req(screenOnly,'height:100vh!important','screen-only full height');
-req(screenOnly,'left:0!important','screen-only edge X');
-req(screenOnly,'top:0!important','screen-only edge Y');
-req(screenOnly,'transform:none!important','screen-only no centering transform');
-no(screenOnly,'width:min(90vw','obsolete fitted screen-only width');
-no(screenOnly,'height:min(90vh','obsolete fitted screen-only height');
+// In-app EL artwork is the active face only; the DSKY display well is already
+// the physical surround.  Do not duplicate a frame inside the opening.
+req(html,'viewBox="0 0 106 182.356"','active WebView face');
+req(html,'preserveAspectRatio="xMidYMid meet"','WebView aspect preservation');
+req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','active WebView face fill');
+no(html,'el-frame-background','duplicate WebView outer frame');
+no(html,'el-hardware-border','duplicate WebView border');
+no(html,'transform="translate(5.839 8.085)"','obsolete WebView active inset');
+req(finish,'left:57.5000%','active DSKY face X');
+req(finish,'top:5.1075%','active DSKY face Y');
+req(finish,'width:33.1250%','active DSKY face width');
+req(finish,'height:49.0204%','active DSKY face height');
+no(finish,'left:55.6753%','obsolete outer-frame X');
+no(finish,'width:36.7744%','obsolete outer-frame width');
+
+// Screen-only mode fills unused pixels with EL gray but never distorts the SVG.
+req(screenOnly,'background:#696d67!important','screen-only gray field');
+req(screenOnly,'left:50%!important','screen-only centered X');
+req(screenOnly,'top:50%!important','screen-only centered Y');
+req(screenOnly,'width:min(100vw,calc(100vh * 106 / 182.356))!important','screen-only aspect width');
+req(screenOnly,'height:min(100vh,calc(100vw * 182.356 / 106))!important','screen-only aspect height');
+req(screenOnly,'transform:translate(-50%,-50%)!important','screen-only centering');
+no(screenOnly,'width:100vw!important;\n  height:100vh!important;\n  max-width:none!important;\n  max-height:none!important;\n  transform:none!important','stretched screen-only panel');
 
 // Active-face-local SCD geometry.
 req(finish,'stroke-width:2.695','separator thickness');
@@ -105,8 +107,7 @@ no(geometry,'DIGIT_SY','affine-squeezed WebView geometry');
 no(provider,'DIGIT_SX','affine-squeezed native geometry');
 no(provider,'DIGIT_SY','affine-squeezed native geometry');
 
-// Detail A position 6: three physical sign islands.  A is split into upper and
-// lower vertical pieces, B is the center horizontal piece; minimum gap .010 in.
+// Detail A position 6: three physical sign islands.
 req(geometry,'SIGN_GAP=.010*U','WebView sign gap');
 req(geometry,'const SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)*.5;','WebView A-segment height');
 req(geometry,'data-sign-seg="A"','WebView split A segments');
@@ -148,4 +149,4 @@ req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  1006315G Detail A three-island sign geometry, full-screen mode, and DSKY dimensions verified');
+console.log('  active face fits DSKY opening, no duplicate border, screen-only aspect preserved');
