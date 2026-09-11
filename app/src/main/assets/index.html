@@ -42,10 +42,9 @@ html,body,#app{background:#000!important}
       <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
     </div>
 
-    <!-- MIT/IL SCD 1006315G.  Sheet 1 details A/B/C define the .320 x .500
-         digit envelope and .410/.420 pitches.  Sheet 2 defines the 2.360 x
-         4.060 EL face.  Upper legend boxes below are traced against the sheet-2
-         front view rather than inherited from replica artwork. -->
+    <!-- MIT/IL SCD 1006315G. Detail C's .320 REF dimension is datum-to-edge,
+         not the full slanted digit bounding width. The metric segment trace
+         already realizes the drawing and is uniformly scaled into this face. -->
     <svg id="elpanel" class="elpanel" viewBox="0 0 106 182.356" preserveAspectRatio="none" aria-label="DSKY electroluminescent display">
       <defs>
         <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
@@ -87,12 +86,12 @@ html,body,#app{background:#000!important}
         <text x="23.124" y="17.900" text-anchor="middle">COMP</text>
         <text x="23.124" y="25.000" text-anchor="middle">ACTY</text>
       </g>
-      <g id="prog" class="el-field" transform="translate(66.4 14)"></g>
-      <g id="verb" class="el-field" transform="translate(7 55.5)"></g>
-      <g id="noun" class="el-field" transform="translate(66.6 55.5)"></g>
-      <g id="r1" class="el-field" transform="translate(3 84.441)"></g>
-      <g id="r2" class="el-field" transform="translate(3 118.576)"></g>
-      <g id="r3" class="el-field" transform="translate(3 152.712)"></g>
+      <g id="prog" class="el-field" transform="translate(72.763 14)"></g>
+      <g id="verb" class="el-field" transform="translate(6.288 55.5)"></g>
+      <g id="noun" class="el-field" transform="translate(72.763 55.5)"></g>
+      <g id="r1" class="el-field" transform="translate(0 84.441)"></g>
+      <g id="r2" class="el-field" transform="translate(0 118.576)"></g>
+      <g id="r3" class="el-field" transform="translate(0 152.712)"></g>
     </svg>
 
     <button class="key k-r1c1 fn" data-key="V">VERB</button>
