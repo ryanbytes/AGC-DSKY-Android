@@ -8,15 +8,19 @@
   --el:#6decb4;
 }
 
-/* 1006315G sheet 2: 2.360-in face width x 4.060-in nominal face height.
-   The DSKY faceplate coordinate width is 320, so the EL's 106-unit width maps
-   to 182.356 units high. */
+/* 1006315G sheet 2 separates the 2.620 x 4.420-in outer hardware frame from
+   the 2.360 x 4.060-in active EL face.  Keep the active face in its established
+   DSKY location and expand the SVG outward by the drawing's .130-in side and
+   .180-in top/bottom frame insets. */
 .elpanel{
-  height:49.0204%;
+  left:55.6753%;
+  top:2.9342%;
+  width:36.7744%;
+  height:53.3670%;
 }
 
 /* 1006315G sheet 2 gives .065/.055 TYP for the continuously-lit separator
-   thickness.  Nominal .060 in on a 106/2.360 coordinate scale is 2.695. */
+   thickness.  Nominal .060 in on a 106/2.360 active-face scale is 2.695. */
 .el-rule{
   stroke-width:2.695;
 }
