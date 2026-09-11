@@ -52,14 +52,24 @@
     return `<g class="el-glyph" transform="translate(${Number(x).toFixed(3)} 0) scale(${MM_TO_U.toFixed(6)}) translate(${-DATUM_X.toFixed(6)} ${-SRC_Y})"><g transform="matrix(-1 0 0 1 ${MIRROR_X.toFixed(6)} 0)">${paths}</g></g>`;
   };
 
-  // Detail A sign envelope and location.  The register digit datums are
-  // .400, .810, 1.220, 1.630 and 2.040 inches from the left face datum.
-  const SIGN_W=.265*U,SIGN_H=.338*U,SIGN_T=.065*U,SIGN_X=.025*U;
+  // 1006315G Detail A, position 6: the sign is THREE physical EL islands,
+  // not one continuous cross.  The two vertical islands are both segment A;
+  // the horizontal island is segment B.  A plus energizes A+B, a minus only B.
+  // Detail A gives a .338-in nominal overall envelope, .265-in nominal B width,
+  // .065-in nominal segment thickness, and .010 MIN TYP separation.
+  const SIGN_W=.265*U,SIGN_H=.338*U,SIGN_T=.065*U,SIGN_X=.025*U,SIGN_GAP=.010*U;
   const SIGN_TOP=(DIGIT_H-SIGN_H)*.5;
-  const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5,SIGN_HY=SIGN_TOP+(SIGN_H-SIGN_T)*.5;
-  function signH(on){return `<path class="el-seg ${on?'on':'off'}" d="M ${SIGN_X.toFixed(3)},${SIGN_HY.toFixed(3)} h ${SIGN_W.toFixed(3)} v ${SIGN_T.toFixed(3)} h ${(-SIGN_W).toFixed(3)} z"/>`;}
-  function signV(on){return `<path class="el-seg ${on?'on':'off'}" d="M ${SIGN_VX.toFixed(3)},${SIGN_TOP.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;}
-  signGlyph=function apolloSignGlyph(sign){const plus=sign==='+',bar=plus||sign==='-';return `<g class="el-sign">${signH(bar)}${signV(plus)}</g>`;};
+  const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5;
+  const SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)*.5;
+  const SIGN_HY=SIGN_TOP+SIGN_A_H+SIGN_GAP;
+  const SIGN_LOWER_Y=SIGN_HY+SIGN_T+SIGN_GAP;
+  function signB(on){return `<path class="el-seg ${on?'on':'off'}" data-sign-seg="B" d="M ${SIGN_X.toFixed(3)},${SIGN_HY.toFixed(3)} h ${SIGN_W.toFixed(3)} v ${SIGN_T.toFixed(3)} h ${(-SIGN_W).toFixed(3)} z"/>`;}
+  function signA(on){
+    const top=`<path class="el-seg ${on?'on':'off'}" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_TOP.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
+    const bottom=`<path class="el-seg ${on?'on':'off'}" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_LOWER_Y.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
+    return top+bottom;
+  }
+  signGlyph=function apolloSignGlyph(sign){const a=sign==='+',b=a||sign==='-';return `<g class="el-sign">${signA(a)}${signB(b)}</g>`;};
 
   renderDigits=function apolloRenderDigits(el,text){let out='';String(text).split('').forEach((ch,i)=>{out+=glyph(ch,i*UPPER_ADVANCE);});el.innerHTML=out;};
   const FIRST_DIGIT_X=.400*U;
@@ -102,6 +112,10 @@
     firstRegisterDigitDatumIn:.400,
     leftUpperDatumIn:.140,
     rightUpperDatumIn:1.620,
+    signWidthIn:.265,
+    signHeightIn:.338,
+    signThicknessIn:.065,
+    signSegmentGapIn:.010,
     upperAdvance:UPPER_ADVANCE,
     registerAdvance:REGISTER_ADVANCE,
     barFromBottomIn:BAR_FROM_BOTTOM_IN,
