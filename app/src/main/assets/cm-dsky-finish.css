@@ -9,6 +9,15 @@
   --el:#62d9e8;
 }
 
+/* The EL phosphor itself emits the visible stroke. Do not add a neon-style
+   spatial halo around the energized areas; browser antialiasing supplies the
+   small amount of edge softness needed for the glass display rendering. */
+.el-static,
+.comp-el,
+.el-field .el-seg.on{
+  filter:none;
+}
+
 body:not(.dream):not(.screen-only):not(.display-only) .dsky{
   z-index:3;
   filter:drop-shadow(0 5px 7px rgba(0,0,0,.72));
