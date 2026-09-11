@@ -34,7 +34,8 @@
   const UPPER_ADVANCE=.420*U;
   const REGISTER_ADVANCE=.410*U;
 
-  // Sheet 2 register-bar dimension chain.
+  // Sheet 2 register-bar dimension chain.  The three continuously lit bars
+  // are dimensioned from the bottom edge of the 4.060-in active face.
   const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);
   const BAR_H_IN=.060;
   const REGISTER_GAP_IN=.070;
@@ -75,19 +76,24 @@
   const FIRST_DIGIT_X=.400*U;
   renderReg=function apolloRenderReg(el,text){text=String(text);let out=signGlyph(text[0]);text.slice(1).split('').forEach((ch,i)=>{out+=glyph(ch,FIRST_DIGIT_X+i*REGISTER_ADVANCE);});el.innerHTML=out;};
 
-  // 1006315G sheet 2 / the drawing-derived exact CAD preserve two distinct
-  // relationships that the old hand-tuned transforms lost: VERB is 1.470 in
-  // left of NOUN, and the VERB/NOUN digit row is .960 in below the PROG digit
-  // row.  Detail C's slanted digit trace puts the first right-hand datum at
-  // 1.620 in; applying the 1.470-in group offset puts VERB at .150 in.
-  // The digit tops are .315 in (PROG) and 1.275 in (VERB/NOUN) from the active
-  // face top.  These values also agree with the 1006315G-exact CAD placement.
+  // 1006315G sheet 2 is the authority for the upper-row electrode datums.
+  // The first continuously-lit separator is 2.280 in above the bottom of the
+  // 4.060-in active face, so its center is 1.780 in below the top.  The drawing
+  // dimensions the VERB/NOUN digit datum to that separator center at
+  // .555/.565 in (.560 nominal).  Therefore the digit top datum is 1.220 in,
+  // not 1.275 in.  With .500-in-high digits and a .060-in separator this leaves
+  // the drawing-correct .030-in clearance instead of a .025-in overlap.
+  // Horizontally, Detail C puts the first right-hand datum at 1.620 in and the
+  // exact upper-group separation is 1.470 in, placing VERB at .150 in.
   const RIGHT_FIELD_X_IN=1.620;
   const UPPER_GROUP_X_OFFSET_IN=1.470;
   const LEFT_FIELD_X_IN=RIGHT_FIELD_X_IN-UPPER_GROUP_X_OFFSET_IN;
   const PROG_TOP_IN=.315;
-  const UPPER_ROW_Y_OFFSET_IN=.960;
-  const VERB_NOUN_TOP_IN=PROG_TOP_IN+UPPER_ROW_Y_OFFSET_IN;
+  const FIRST_BAR_CENTER_FROM_TOP_IN=FACE_H_IN-BAR_FROM_BOTTOM_IN[0];
+  const VERB_NOUN_TO_FIRST_BAR_CENTER_IN=.560;
+  const VERB_NOUN_TOP_IN=FIRST_BAR_CENTER_FROM_TOP_IN-VERB_NOUN_TO_FIRST_BAR_CENTER_IN;
+  const UPPER_ROW_Y_OFFSET_IN=VERB_NOUN_TOP_IN-PROG_TOP_IN;
+  const UPPER_CLEARANCE_IN=FIRST_BAR_CENTER_FROM_TOP_IN-(BAR_H_IN*.5)-(VERB_NOUN_TOP_IN+.500);
   const LEFT_FIELD_X=LEFT_FIELD_X_IN*U,RIGHT_FIELD_X=RIGHT_FIELD_X_IN*U;
   const PROG_Y=PROG_TOP_IN*U,VERB_NOUN_Y=VERB_NOUN_TOP_IN*U;
   const transforms=Object.freeze({
@@ -125,8 +131,11 @@
     rightUpperDatumIn:RIGHT_FIELD_X_IN,
     upperGroupHorizontalSeparationIn:UPPER_GROUP_X_OFFSET_IN,
     progTopIn:PROG_TOP_IN,
+    firstBarCenterFromTopIn:FIRST_BAR_CENTER_FROM_TOP_IN,
+    verbNounToFirstBarCenterIn:VERB_NOUN_TO_FIRST_BAR_CENTER_IN,
     verbNounTopIn:VERB_NOUN_TOP_IN,
     upperRowVerticalSeparationIn:UPPER_ROW_Y_OFFSET_IN,
+    upperDigitToSeparatorClearanceIn:UPPER_CLEARANCE_IN,
     signWidthIn:.265,
     signHeightIn:.338,
     signThicknessIn:.065,
