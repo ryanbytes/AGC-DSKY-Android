@@ -51,9 +51,14 @@
 
   // If sound was disabled while hardware state changed, resynchronize before
   // the next audible event so a later numeric relay is never mistaken for an
-  // old silent annunciator transition.
+  // old silent annunciator transition. Capture runs before app.js toggles sound
+  // and plays its one confirmation click; the zero-delay sync catches the new
+  // state after the app's click handler completes.
   const soundButton = document.getElementById('sound');
-  if (soundButton) soundButton.addEventListener('click', () => setTimeout(syncAuxSnapshot, 0));
+  if (soundButton) {
+    soundButton.addEventListener('click', syncAuxSnapshot, true);
+    soundButton.addEventListener('click', () => setTimeout(syncAuxSnapshot, 0));
+  }
   setInterval(() => {
     try { if (typeof tickSound === 'boolean' && !tickSound) syncAuxSnapshot(); } catch (_) {}
   }, 250);
@@ -125,7 +130,7 @@
       strikeMix: 0.14 * (1 + centered() * 0.10),
       ringMix: 1 + centered() * 0.045,
       level: 1 + centered() * 0.050,
-      // Purely acoustic placement scatter.  Electrical settling remains the
+      // Purely acoustic placement scatter. Electrical settling remains the
       // 20-ms model in hardware-fidelity.js.
       acousticSkewMs: centered() * 0.22,
       phaseSeed: hash32(`${id}:phase`)
@@ -239,7 +244,7 @@
     if (!state) return fallbackEmitTick(ctx, when, strength);
 
     // Auxiliary relays used to be collapsed into one composite sound when
-    // several changed on the same edge.  Expand that transition back into the
+    // several changed on the same edge. Expand that transition back into the
     // individual physical relays, each with its own permanent fingerprint.
     const auxChanges = changedAux(state);
     if (auxChanges.length) {
