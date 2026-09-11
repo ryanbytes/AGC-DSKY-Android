@@ -77,8 +77,16 @@ req(finish,'left:55.6753%','outer DSKY frame X');
 req(finish,'top:2.9342%','outer DSKY frame Y');
 req(finish,'width:36.7744%','outer DSKY frame width');
 req(finish,'height:53.3670%','outer DSKY frame height');
-req(screenOnly,'2.620 / 4.420','screen-only outer aspect');
-req(screenOnly,'4.420 / 2.620','screen-only outer reciprocal aspect');
+
+// EL-only mode intentionally fills every pixel of the display. This may
+// stretch the physical aspect ratio; that is deliberate for this mode.
+req(screenOnly,'width:100vw!important','screen-only full width');
+req(screenOnly,'height:100vh!important','screen-only full height');
+req(screenOnly,'left:0!important','screen-only edge X');
+req(screenOnly,'top:0!important','screen-only edge Y');
+req(screenOnly,'transform:none!important','screen-only no centering transform');
+no(screenOnly,'width:min(90vw','obsolete fitted screen-only width');
+no(screenOnly,'height:min(90vh','obsolete fitted screen-only height');
 
 // Active-face-local SCD geometry remains unchanged.
 req(finish,'stroke-width:2.695','separator thickness');
@@ -130,4 +138,4 @@ req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  1006315G outer frame + active face, datum geometry, physical segment trace, pitches, and blue-green EL verified');
+console.log('  1006315G geometry retained; EL-only mode fills the full display edge-to-edge');
