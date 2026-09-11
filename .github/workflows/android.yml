@@ -1,8 +1,6 @@
 name: Android build
 
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -28,10 +26,12 @@ jobs:
       - name: Install Android build tools
         run: sdkmanager 'build-tools;36.0.0' 'platform-tools'
 
-      - name: Source smoke tests
+      - name: Source and NTP smoke tests
         run: |
           node tools/branding-smoke.js
           node tools/manifest-policy-smoke.js
+          bash tools/ntp-time-smoke.sh
+          node tools/ntp-policy-smoke.js
           node tools/csp-smoke.js
           node tools/frontend-smoke.js
           node tools/clock-mode-behavior-smoke.js
@@ -50,15 +50,28 @@ jobs:
           node tools/asset-reference-smoke.js
           node tools/wasm-runtime-smoke.js
 
-      - name: Build unsigned release APK
-        run: bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleRelease
+      - name: Build regular phone debug APK
+        run: bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleRegularDebug
 
-      - name: Verify unsigned APK exists
-        run: test -f app/build/outputs/apk/release/app-release-unsigned.apk
+      - name: Verify installable phone APK, icon, package and HOME capability
+        run: |
+          APK=app/build/outputs/apk/regular/debug/app-regular-debug.apk
+          test -f "$APK"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose "$APK"
+          BADGING="$($ANDROID_SDK_ROOT/build-tools/36.0.0/aapt2 dump badging "$APK")"
+          echo "$BADGING"
+          grep -F "package: name='org.apollo.agcdsky.phone'" <<<"$BADGING"
+          grep -F "application-label:'AGC DSKY v1.1.2'" <<<"$BADGING"
+          grep -F "application-icon-" <<<"$BADGING"
+          MANIFEST="$($ANDROID_SDK_ROOT/build-tools/36.0.0/aapt2 dump xmltree --file AndroidManifest.xml "$APK")"
+          grep -F 'android.intent.category.LAUNCHER' <<<"$MANIFEST"
+          grep -F 'android.intent.category.HOME' <<<"$MANIFEST"
+          grep -F 'android.intent.category.DEFAULT' <<<"$MANIFEST"
+          ! grep -Fq 'FireRedirectAccessibilityService' <<<"$MANIFEST"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AGC-DSKY-Android-unsigned-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          name: AGC-DSKY-Regular-Phone-installfix
+          path: app/build/outputs/apk/regular/debug/app-regular-debug.apk
           if-no-files-found: error
           retention-days: 30
