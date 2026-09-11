@@ -79,6 +79,22 @@ self.addEventListener('activate', event => {
   );
 });
 
+function cacheResponse(request, response) {
+  if (!response || !response.ok) return response;
+  const copy = response.clone();
+  caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+  return response;
+}
+
+function networkFirst(request, fallbackRequest = request) {
+  return fetch(request)
+    .then(response => {
+      if (!response || !response.ok) throw new Error('HTTP ' + (response ? response.status : 'no response'));
+      return cacheResponse(request, response);
+    })
+    .catch(() => caches.match(fallbackRequest).then(cached => cached || caches.match(request)));
+}
+
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
@@ -86,46 +102,29 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // HTML, JavaScript and CSS are always network-first. This prevents an old
+  // installed PWA worker from mixing stale geometry/runtime files with a newly
+  // deployed index.html. Offline use still falls back to the versioned cache.
+  const isCodeAsset = request.mode === 'navigate'
+    || url.pathname.endsWith('.js')
+    || url.pathname.endsWith('.css')
+    || url.pathname.endsWith('.html');
+
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match('./index.html'))
-    );
+    event.respondWith(networkFirst(request, './index.html'));
     return;
   }
 
-  if (url.pathname.endsWith('/clock-behavior.js') || url.pathname.endsWith('/clock-behavior-v2.js') || url.pathname.endsWith('/pwa-clock-guard.js')) {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
+  if (isCodeAsset) {
+    event.respondWith(networkFirst(request));
     return;
   }
 
+  // Large immutable payloads and images remain cache-first for fast startup.
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;
-      return fetch(request).then(response => {
-        if (response && response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        }
-        return response;
-      });
+      return fetch(request).then(response => cacheResponse(request, response));
     })
   );
 });
