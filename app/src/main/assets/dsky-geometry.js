@@ -106,13 +106,15 @@
     el.innerHTML = out;
   };
 
-  // Correct the field origins for the source-art proportions.  Two-character
+  // Correct the field origins for the source-art proportions. Two-character
   // fields are centered under their physical labels; registers are vertically
-  // centered in their three ruled apertures.
+  // centered in their three ruled apertures. The right-hand fields retain a
+  // deliberate visible clearance from the crew-facing glass border instead of
+  // crowding the border stroke.
   const transforms = Object.freeze({
-    prog: 'translate(68 14)',
+    prog: 'translate(66.75 14)',
     verb: 'translate(3 59)',
-    noun: 'translate(68 59)',
+    noun: 'translate(66.75 59)',
     r1: 'translate(3 97)',
     r2: 'translate(3 131)',
     r3: 'translate(3 165)'
