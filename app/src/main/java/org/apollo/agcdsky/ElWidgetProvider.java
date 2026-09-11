@@ -57,9 +57,10 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final LruCache<String,Bitmap> BITMAP_CACHE=new LruCache<String,Bitmap>(CACHE_KIB){
         @Override protected int sizeOf(String key,Bitmap value){return Math.max(1,value.getAllocationByteCount()/1024);}
       };
-      // Match the shared CuriousMarc/Carl Claunch early-panel cyan-blue EL target (#62D9E8).
-      // Labels and rules are the same phosphor hue at lower alpha, not separate green paints.
-      private static final int CORE=Color.rgb(98,217,232),LABEL=CORE,RULE=CORE,OFF=Color.rgb(17,34,37);
+      // Match the corrected WebView Block II EL: park-gray glass, gray ITO/
+      // border hardware, cyan-blue phosphor, and no synthetic glow halo.
+      private static final int CORE=Color.rgb(98,217,232),RULE=CORE;
+      private static final int PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5);
       private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,SRC_H=12.7f,SRC_PITCH=10.668f,DIGIT_SCALE=1.58f,MIRROR_X=2f*SRC_X+SRC_W,ADVANCE=SRC_PITCH*DIGIT_SCALE,DIGIT_H=SRC_H*DIGIT_SCALE,FIRST_DIGIT_X=12f;
       private static final float[][][] SOURCE={
         {{95.137274f,86.827056f},{96.244524f,85.303059f},{90.088724f,85.303059f},{90.497084f,86.827056f}},
@@ -72,16 +73,47 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final int[] MAP={0,1,2,3,5,4,6};
       private static final String[] SEG={"abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc","abcdefg","abcdfg"};
       private static final float SIGN_W=6.731f*DIGIT_SCALE,SIGN_T=1.524f*DIGIT_SCALE,SIGN_ARM=3.175f*DIGIT_SCALE,SIGN_GAP=.381f*DIGIT_SCALE,SIGN_H=2f*SIGN_ARM+SIGN_T+2f*SIGN_GAP,SIGN_TOP=(DIGIT_H-SIGN_H)*.5f,SIGN_X=.4f,SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5f,SIGN_HY=SIGN_TOP+SIGN_ARM+SIGN_GAP;
-      private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG);
-      static{ON.setStyle(Paint.Style.FILL);ON.setColor(CORE);ON.setShadowLayer(.75f,0,0,CORE);Typeface tf=Typeface.create("sans-serif-condensed",Typeface.BOLD);LABEL_P.setTypeface(tf);LABEL_P.setTextAlign(Paint.Align.CENTER);LABEL_P.setTextSize(5.1f);LABEL_P.setColor(LABEL);LABEL_P.setAlpha(220);RULE_P.setStyle(Paint.Style.FILL);RULE_P.setColor(RULE);RULE_P.setAlpha(212);COMP_P.setTypeface(tf);COMP_P.setTextAlign(Paint.Align.CENTER);COMP_P.setTextSize(4.9f);COMP_P.setColor(OFF);COMP_P.setAlpha(150);}
+      private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG);
+      static{
+        ON.setStyle(Paint.Style.FILL);ON.setColor(CORE);
+        Typeface tf=Typeface.create("sans-serif-condensed",Typeface.BOLD);
+        LABEL_P.setTypeface(tf);LABEL_P.setTextAlign(Paint.Align.CENTER);LABEL_P.setTextSize(5.1f);LABEL_P.setColor(INK);LABEL_P.setAlpha(245);
+        RULE_P.setStyle(Paint.Style.FILL);RULE_P.setColor(RULE);RULE_P.setAlpha(224);
+        COMP_P.setTypeface(tf);COMP_P.setTextAlign(Paint.Align.CENTER);COMP_P.setTextSize(4.9f);COMP_P.setColor(INK);COMP_P.setAlpha(235);
+        LEGEND_BG_P.setStyle(Paint.Style.FILL);LEGEND_BG_P.setColor(CORE);LEGEND_BG_P.setAlpha(235);
+        COMP_BG_P.setStyle(Paint.Style.FILL);COMP_BG_P.setColor(CORE);COMP_BG_P.setAlpha(24);
+        HARDWARE_STROKE_P.setStyle(Paint.Style.STROKE);HARDWARE_STROKE_P.setStrokeWidth(.48f);HARDWARE_STROKE_P.setColor(HARDWARE);HARDWARE_STROKE_P.setAlpha(184);
+        HARDWARE_FILL_P.setStyle(Paint.Style.FILL);HARDWARE_FILL_P.setColor(HARDWARE);HARDWARE_FILL_P.setAlpha(224);
+      }
       static Bitmap render(int width,int height,Calendar now,boolean drawRegisters){
         width=Math.max(1,width);height=Math.max(1,height);
         String key=width+"x"+height+(drawRegisters?((":dyn:"+now.get(Calendar.HOUR_OF_DAY)+":"+now.get(Calendar.MINUTE)+":"+now.get(Calendar.SECOND))):":static");
         synchronized(BITMAP_CACHE){Bitmap cached=BITMAP_CACHE.get(key);if(cached!=null&&!cached.isRecycled())return cached;}
-        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(Color.BLACK);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,now,drawRegisters);
+        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(PANEL);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,now,drawRegisters);
         synchronized(BITMAP_CACHE){BITMAP_CACHE.put(key,b);}return b;
       }
-      private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){c.drawText("PROG",87,9,LABEL_P);c.drawText("VERB",20,54,LABEL_P);c.drawText("NOUN",87,54,LABEL_P);rule(c,12,89,82,1.524f);rule(c,12,125,82,1.524f);rule(c,12,159,82,1.524f);c.drawText("COMP",19,14,COMP_P);c.drawText("ACTY",19,22,COMP_P);digits(c,"00",68,14);digits(c,"16",3,59);digits(c,"65",68,59);if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),3,97);register(c,'+',five(now.get(Calendar.MINUTE)),3,131);register(c,'+',five(now.get(Calendar.SECOND)),3,165);}}
-      private static String five(int v){return String.format(Locale.US,"%05d",v);}private static void rule(Canvas c,float x,float y,float w,float h){Path p=box(x,y,w,h);c.drawPath(p,RULE_P);}private static void digits(Canvas c,String s,float x,float y){for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+i*ADVANCE,y);}private static void register(Canvas c,char sign,String s,float x,float y){sign(c,sign,x,y);for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+FIRST_DIGIT_X+i*ADVANCE,y);}private static void digit(Canvas c,char ch,float ox,float oy){String lit=SEG[ch-'0'];for(int l=0;l<7;l++)if(lit.indexOf((char)('a'+l))>=0)segment(c,l,ox,oy);}private static void segment(Canvas c,int logical,float ox,float oy){float[][] pts=SOURCE[MAP[logical]];Path p=new Path();for(int i=0;i<pts.length;i++){float x=ox+(MIRROR_X-pts[i][0]-SRC_X)*DIGIT_SCALE,y=oy+(pts[i][1]-SRC_Y)*DIGIT_SCALE;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,ON);}private static void sign(Canvas c,char s,float ox,float oy){if(s!='+'&&s!='-')return;c.drawPath(box(ox+SIGN_X,oy+SIGN_HY,SIGN_W,SIGN_T),ON);if(s=='+'){c.drawPath(box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_ARM),ON);c.drawPath(box(ox+SIGN_VX,oy+SIGN_HY+SIGN_T+SIGN_GAP,SIGN_T,SIGN_ARM),ON);}}private static Path box(float x,float y,float w,float h){Path p=new Path();p.moveTo(x,y);p.lineTo(x+w,y);p.lineTo(x+w,y+h);p.lineTo(x,y+h);p.close();return p;}
+      private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){
+        c.drawPath(box(2.119f,2.350f,101.763f,185.299f),HARDWARE_STROKE_P);
+        dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.939f,1.294f,1.369f);
+        dot(c,100.863f,89.061f,1.294f,1.369f);dot(c,100.863f,123.753f,1.294f,1.369f);dot(c,100.863f,158.598f,1.294f,1.369f);
+        dot(c,8.286f,158.574f,1.294f,1.369f);dot(c,8.286f,123.548f,1.294f,1.369f);dot(c,8.286f,89.067f,1.294f,1.369f);
+        section(c,65.505f,2.807f,37.945f,11.866f,LEGEND_BG_P);c.drawText("PROG",84.478f,10.856f,LABEL_P);
+        section(c,2.550f,46.165f,37.945f,11.866f,LEGEND_BG_P);c.drawText("VERB",21.523f,54.163f,LABEL_P);
+        section(c,65.505f,46.165f,37.945f,11.866f,LEGEND_BG_P);c.drawText("NOUN",84.478f,54.217f,LABEL_P);
+        section(c,2.550f,2.807f,37.945f,40.163f,COMP_BG_P);c.drawText("COMP",21.523f,21.820f,COMP_P);c.drawText("ACTY",21.523f,28.500f,COMP_P);
+        rule(c,12.770f,86.938f,84.900f,1.524f);rule(c,12.770f,121.618f,84.900f,1.524f);rule(c,12.770f,156.288f,84.900f,1.524f);
+        digits(c,"00",66.75f,14);digits(c,"16",3,59);digits(c,"65",66.75f,59);
+        if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),3,97);register(c,'+',five(now.get(Calendar.MINUTE)),3,131);register(c,'+',five(now.get(Calendar.SECOND)),3,165);}
+      }
+      private static String five(int v){return String.format(Locale.US,"%05d",v);}
+      private static void section(Canvas c,float x,float y,float w,float h,Paint p){c.drawPath(box(x,y,w,h),p);}
+      private static void rule(Canvas c,float x,float y,float w,float h){c.drawPath(box(x,y,w,h),RULE_P);}
+      private static void dot(Canvas c,float cx,float cy,float rx,float ry){Path p=new Path();for(int i=0;i<12;i++){double a=Math.PI*2d*i/12d;float x=cx+(float)Math.cos(a)*rx,y=cy+(float)Math.sin(a)*ry;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,HARDWARE_FILL_P);}
+      private static void digits(Canvas c,String s,float x,float y){for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+i*ADVANCE,y);}
+      private static void register(Canvas c,char sign,String s,float x,float y){sign(c,sign,x,y);for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+FIRST_DIGIT_X+i*ADVANCE,y);}
+      private static void digit(Canvas c,char ch,float ox,float oy){String lit=SEG[ch-'0'];for(int l=0;l<7;l++)if(lit.indexOf((char)('a'+l))>=0)segment(c,l,ox,oy);}
+      private static void segment(Canvas c,int logical,float ox,float oy){float[][] pts=SOURCE[MAP[logical]];Path p=new Path();for(int i=0;i<pts.length;i++){float x=ox+(MIRROR_X-pts[i][0]-SRC_X)*DIGIT_SCALE,y=oy+(pts[i][1]-SRC_Y)*DIGIT_SCALE;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,ON);}
+      private static void sign(Canvas c,char s,float ox,float oy){if(s!='+'&&s!='-')return;c.drawPath(box(ox+SIGN_X,oy+SIGN_HY,SIGN_W,SIGN_T),ON);if(s=='+'){c.drawPath(box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_ARM),ON);c.drawPath(box(ox+SIGN_VX,oy+SIGN_HY+SIGN_T+SIGN_GAP,SIGN_T,SIGN_ARM),ON);}}
+      private static Path box(float x,float y,float w,float h){Path p=new Path();p.moveTo(x,y);p.lineTo(x+w,y);p.lineTo(x+w,y+h);p.lineTo(x,y+h);p.close();return p;}
     }
 }
