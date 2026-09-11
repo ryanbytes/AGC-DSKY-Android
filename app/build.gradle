@@ -22,6 +22,8 @@ android {
     productFlavors {
         regular {
             dimension 'target'
+            // Keep normal-phone installs isolated from the dedicated Fire/home build.
+            applicationIdSuffix '.phone'
         }
         fire {
             dimension 'target'
