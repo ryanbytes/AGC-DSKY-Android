@@ -41,13 +41,13 @@ html,body,#app{background:#000!important}
       <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
     </div>
 
-    <!-- MIT/IL SCD 1006315G active EL geometry remains 106 x 182.356 units.
-         The SVG viewport extends 1.5 units farther right as blank glass so the
-         drawing-derived rightmost segment edge remains fully visible instead
-         of being covered by a mask or riding the UI edge. Sheet 2 dimensions
-         the left/right upper EL zones at .880 in; 106/2.360 scale converts
-         that width to 39.525 panel units. -->
-    <svg id="elpanel" class="elpanel" viewBox="0 0 107.5 182.356" preserveAspectRatio="xMidYMid meet" aria-label="DSKY electroluminescent display">
+    <!-- MIT/IL SCD 1006315G sheet 2 active EL face: 2.360 x 4.060 in.
+         The left and right upper EL zones are .885/.875 in wide (.880 nominal)
+         with .445/.435 TYP half-width (.440 nominal).  In the 106-unit face
+         this is 39.525 units wide, with centers at .440 and 1.920 in.  Keep the
+         viewport on the physical 106-unit active face; overflow provides any
+         rendering safety margin without shrinking the drawing geometry. -->
+    <svg id="elpanel" class="elpanel" viewBox="0 0 106 182.356" preserveAspectRatio="xMidYMid meet" aria-label="DSKY electroluminescent display">
       <defs>
         <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
           <feGaussianBlur stdDeviation="0.24" result="b"/>
@@ -59,7 +59,7 @@ html,body,#app{background:#000!important}
           <feMerge><feMergeNode in="halo"/><feMergeNode in="near"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
-      <rect class="el-glass-background" x="0" y="0" width="107.5" height="182.356" aria-hidden="true"/>
+      <rect class="el-glass-background" x="0" y="0" width="106" height="182.356" aria-hidden="true"/>
       <g class="el-ito-dots" aria-hidden="true">
         <ellipse class="el-ito-dot" cx="53.000" cy="6.914" rx="1.294" ry="1.369"/>
         <ellipse class="el-ito-dot" cx="53.000" cy="43.427" rx="1.294" ry="1.369"/>
@@ -72,20 +72,20 @@ html,body,#app{background:#000!important}
         <ellipse class="el-ito-dot" cx="8.286" cy="79.949" rx="1.294" ry="1.369"/>
       </g>
       <g class="el-static" aria-hidden="true">
-        <rect class="el-legend-bg" x="63.224" y="0.554" width="39.525" height="11.678"/>
-        <text class="el-label" x="82.987" y="8.600" text-anchor="middle">PROG</text>
-        <rect class="el-legend-bg" x="3.837" y="42.721" width="39.525" height="11.678"/>
-        <text class="el-label" x="23.600" y="50.770" text-anchor="middle">VERB</text>
-        <rect class="el-legend-bg" x="63.408" y="42.721" width="39.525" height="11.678"/>
-        <text class="el-label" x="83.171" y="50.770" text-anchor="middle">NOUN</text>
+        <rect class="el-legend-bg" x="66.441" y="0.554" width="39.525" height="11.678"/>
+        <text class="el-label" x="86.237" y="8.600" text-anchor="middle">PROG</text>
+        <rect class="el-legend-bg" x="0" y="42.721" width="39.525" height="11.678"/>
+        <text class="el-label" x="19.763" y="50.770" text-anchor="middle">VERB</text>
+        <rect class="el-legend-bg" x="66.441" y="42.721" width="39.525" height="11.678"/>
+        <text class="el-label" x="86.237" y="50.770" text-anchor="middle">NOUN</text>
         <line class="el-rule" x1="12.770" y1="79.949" x2="97.670" y2="79.949"/>
         <line class="el-rule" x1="12.770" y1="114.085" x2="97.670" y2="114.085"/>
         <line class="el-rule" x1="12.770" y1="148.220" x2="97.670" y2="148.220"/>
       </g>
       <g id="comp" class="comp-el" data-lamp="comp" aria-label="COMP ACTY">
-        <rect class="el-comp-bg" x="3.361" y="0.633" width="39.525" height="35.838"/>
-        <text x="23.124" y="17.900" text-anchor="middle">COMP</text>
-        <text x="23.124" y="25.000" text-anchor="middle">ACTY</text>
+        <rect class="el-comp-bg" x="0" y="0.633" width="39.525" height="35.838"/>
+        <text x="19.763" y="17.900" text-anchor="middle">COMP</text>
+        <text x="19.763" y="25.000" text-anchor="middle">ACTY</text>
       </g>
       <g id="prog" class="el-field" transform="translate(72.763 14)"></g>
       <g id="verb" class="el-field" transform="translate(6.288 55.5)"></g>
