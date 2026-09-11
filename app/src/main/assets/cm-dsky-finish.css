@@ -1,12 +1,13 @@
 /* CM-mounted Apollo Block II DSKY finish.
    The photographic spacecraft-panel compositor is intentionally absent. */
 
-/* CuriousMarc/Carl Claunch's relit original panel is an early 1006315 unit.
-   The unrevised drawing called out 5100 A (510 nm), and the surviving panel is
-   visibly bluer/cooler than the later 5300-A production revisions.  Use a
-   cyan-blue display-space match to that powered panel/video appearance. */
+/* MIT/NASA SCD 1006315 production revisions specify nominal EL output at
+   5300 angstroms (530 nm).  Use the production drawing as the color source of
+   truth rather than the cooler appearance of an early surviving/prototype
+   panel.  This is a restrained display-space approximation of that green EL
+   phosphor; no synthetic neon halo is added. */
 :root{
-  --el:#62d9e8;
+  --el:#79ef4f;
 }
 
 /* The EL phosphor itself emits the visible stroke. Do not add a neon-style
