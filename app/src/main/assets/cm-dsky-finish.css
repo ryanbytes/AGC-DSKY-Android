@@ -10,12 +10,24 @@
 
 /* 1006315G active EL face: 2.360 x 4.060 in.  The DSKY faceplate coordinate
    system is 320 x 372, so 106 x 182.356 drawing units map directly to these
-   percentages.  The surrounding display-well is the hardware frame. */
+   percentages. */
 .elpanel{
   left:57.5000%;
   top:5.1075%;
   width:33.1250%;
   height:49.0204%;
+}
+
+/* Rebuild the surrounding right-hand display opening from the same SCD
+   dimensions instead of the legacy hand-sized well.  The hardware frame is
+   2.620 x 4.420 in around the 2.360 x 4.060 active EL face, which gives
+   .130-in symmetric side margins and .180-in symmetric top/bottom margins.
+   In the 320 x 372 DSKY coordinate system this is exactly the box below. */
+.display-well{
+  left:55.6753%;
+  top:2.9342%;
+  width:36.7744%;
+  height:53.3670%;
 }
 
 /* 1006315G sheet 2 gives .065/.055 TYP for the continuously-lit separator
