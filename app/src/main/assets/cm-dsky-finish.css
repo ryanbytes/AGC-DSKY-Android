@@ -10,6 +10,13 @@
   --el:#79ef4f;
 }
 
+/* 1006315G sheet 2: 2.360-in face width x 4.060-in nominal face height.
+   The DSKY faceplate coordinate width is 320, so the EL's 106-unit width maps
+   to 182.356 units high, not the old hand-normalized 190. */
+.elpanel{
+  height:49.0204%;
+}
+
 /* The EL phosphor itself emits the visible stroke. Do not add a neon-style
    spatial halo around the energized areas; browser antialiasing supplies the
    small amount of edge softness needed for the glass display rendering. */
