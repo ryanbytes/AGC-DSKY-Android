@@ -1,6 +1,6 @@
 /* Borderless EL readout mode. The physical DSKY faceplate remains untouched
    in normal mode; this presentation isolates the electroluminescent
-   display assembly on a black field. */
+   display assembly and intentionally stretches it edge-to-edge. */
 body.screen-only #app{padding:0!important;overflow:hidden!important;background:#000!important}
 body.screen-only .app-controls,
 body.screen-only .hint,
@@ -17,7 +17,7 @@ body.screen-only .dsky{
   height:100vh!important;
   max-width:none!important;
   aspect-ratio:auto!important;
-  overflow:visible!important;
+  overflow:hidden!important;
   background:none!important;
   border:0!important;
   border-radius:0!important;
@@ -30,12 +30,13 @@ body.screen-only .dsky::after{display:none!important}
 body.screen-only .elpanel{
   display:block!important;
   position:absolute!important;
-  left:50%!important;
-  top:50%!important;
-  /* SCD 1006315G outer hardware frame: 2.620 x 4.420 in. */
-  width:min(90vw,calc(90vh * 2.620 / 4.420))!important;
-  height:min(90vh,calc(90vw * 4.420 / 2.620))!important;
-  transform:translate(-50%,-50%)!important;
-  overflow:visible!important;
+  left:0!important;
+  top:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  max-width:none!important;
+  max-height:none!important;
+  transform:none!important;
+  overflow:hidden!important;
 }
 body.dream.screen-only .dsky{transition:left 1.6s ease,top 1.6s ease!important}
