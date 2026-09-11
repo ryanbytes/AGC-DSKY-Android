@@ -44,7 +44,9 @@ html,body,#app{background:#000!important}
 
     <!-- MIT/IL SCD 1006315G. Detail C's .320 REF dimension is datum-to-edge,
          not the full slanted digit bounding width. The metric segment trace
-         already realizes the drawing and is uniformly scaled into this face. -->
+         already realizes the drawing and is uniformly scaled into this face.
+         Detail A/B elements run almost to the 2.360-in face perimeter, so the
+         cosmetic edge stroke belongs on that perimeter, not through the EL. -->
     <svg id="elpanel" class="elpanel" viewBox="0 0 106 182.356" preserveAspectRatio="none" aria-label="DSKY electroluminescent display">
       <defs>
         <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
@@ -58,7 +60,7 @@ html,body,#app{background:#000!important}
         </filter>
       </defs>
       <rect class="el-glass-background" x="0" y="0" width="106" height="182.356" aria-hidden="true"/>
-      <rect class="el-hardware-border" x="2.119" y="2.350" width="101.763" height="177.656" aria-hidden="true"/>
+      <rect class="el-hardware-border" x="-0.24" y="-0.24" width="106.48" height="182.836" aria-hidden="true"/>
       <g class="el-ito-dots" aria-hidden="true">
         <ellipse class="el-ito-dot" cx="53.000" cy="6.914" rx="1.294" ry="1.369"/>
         <ellipse class="el-ito-dot" cx="53.000" cy="43.427" rx="1.294" ry="1.369"/>
