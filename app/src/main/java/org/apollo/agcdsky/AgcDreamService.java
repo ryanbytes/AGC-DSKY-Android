@@ -22,11 +22,14 @@ import android.webkit.WebView;
 public final class AgcDreamService extends DreamService {
     private WebView webView;
     private final Handler webViewHandler = new Handler(Looper.getMainLooper());
+    private final NtpTime.Listener ntpListener = this::pushNtpStatus;
 
     @Override
     public void onAttachedToWindow() {
         super.onAttachedToWindow();
         DebugReporter.install(this);
+        NtpTime.start(this);
+        NtpTime.addListener(ntpListener);
         setInteractive(true);
         setFullscreen(true);
         setScreenBright(true);
@@ -47,6 +50,7 @@ public final class AgcDreamService extends DreamService {
             settings.setAllowFileAccess(false);
             settings.setAllowContentAccess(false);
             webView.addJavascriptInterface(new DreamBridge(), "DreamBridge");
+            webView.addJavascriptInterface(new TimeBridge(), "TimeBridge");
             webView.addJavascriptInterface(new DebugReporter.JsBridge(this), "DebugBridge");
             webView.setWebViewClient(new NetClient(this));
             webView.setWebChromeClient(new WebChromeClient() {
@@ -163,10 +167,20 @@ public final class AgcDreamService extends DreamService {
         }
     }
 
+    private final class TimeBridge {
+        @JavascriptInterface public String getStatus() { return NtpTime.status(AgcDreamService.this).toJson(); }
+    }
+
+    private void pushNtpStatus(NtpTime.Status status) {
+        String json = org.json.JSONObject.quote(status.toJson());
+        webViewHandler.post(() -> { if (webView != null) webView.evaluateJavascript(
+                "if(window.AGCDSKY&&AGCDSKY.nativeNtpStatus){AGCDSKY.nativeNtpStatus(" + json + ")}", null); });
+    }
+
     private void destroyWebView() {
         WebView doomed = webView;
         webView = null;
-        WebViewTeardown.destroy(doomed, "DreamBridge", "DebugBridge");
+        WebViewTeardown.destroy(doomed, "DreamBridge", "DebugBridge", "TimeBridge");
     }
 
     private void cleanupWebView() {
@@ -180,6 +194,7 @@ public final class AgcDreamService extends DreamService {
     }
 
     @Override public void onDestroy() {
+        NtpTime.removeListener(ntpListener);
         cleanupWebView();
         super.onDestroy();
     }

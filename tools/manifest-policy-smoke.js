@@ -13,8 +13,10 @@ function assert(condition, message) {
     if (!condition) throw new Error(message);
 }
 
-assert(!manifest.includes('android.permission.INTERNET'),
-    'manifest must not request INTERNET');
+assert(manifest.includes('android.permission.INTERNET'),
+    'manifest must request INTERNET for native SNTP');
+assert(manifest.includes('android.permission.ACCESS_NETWORK_STATE'),
+    'manifest must request ACCESS_NETWORK_STATE for SNTP recovery after connectivity returns');
 assert(manifest.includes('android.permission.ACCESS_COARSE_LOCATION'),
     'coarse location permission missing for DREAM SOLAR');
 assert(manifest.includes('android.permission.ACCESS_FINE_LOCATION'),
@@ -69,8 +71,8 @@ assert(!manifest.includes('android.permission.RECEIVE_BOOT_COMPLETED'),
     'regular/main manifest must not contain Fire boot permission');
 assert(!manifest.includes('FireRedirectAccessibilityService'),
     'regular/main manifest must not contain Fire redirect service');
-assert(!fireManifest.includes('android.permission.INTERNET'),
-    'Fire manifest must not request INTERNET');
+assert(!fireManifest.includes('android.permission.SET_TIME'),
+    'Fire manifest must not request privileged SET_TIME');
 assert(fireManifest.includes('android.permission.RECEIVE_BOOT_COMPLETED'),
     'Fire manifest boot permission missing');
 assert(fireManifest.includes('FireRedirectAccessibilityService'),

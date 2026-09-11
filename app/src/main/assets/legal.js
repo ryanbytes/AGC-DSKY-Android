@@ -19,7 +19,7 @@
           <h2>AGC DSKY Android 1.0</h2>
           <p class="legal-note">Independent historical simulator. Not affiliated with, sponsored by, or endorsed by NASA or the United States Government.</p>
           <h3>Privacy</h3>
-          <p>The app processes camera, location, and motion-sensor inputs locally for simulator features. It does not declare the Android INTERNET permission and does not intentionally transmit user data to the developer or third parties.</p>
+          <p>The app processes camera, location, and motion-sensor inputs locally for simulator features. Android INTERNET is used only by the native SNTP client to query time.cloudflare.com; WebView loads remain local and the app does not intentionally transmit user data to the developer or third parties.</p>
           <p>Public privacy policy: <code>${PRIVACY_URL}</code></p>
           <details><summary>PRIVACY POLICY</summary><pre id="legal-privacy">Loading packaged privacy policy…</pre></details>
           <h3>Corresponding source</h3>

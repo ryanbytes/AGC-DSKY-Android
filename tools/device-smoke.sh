@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE=org.apollo.agcdsky
-ACTIVITY="$PACKAGE/.MainActivity"
+ACTIVITY="$PACKAGE/.SensorMainActivity"
 APK="${1:-$ROOT/app/build/outputs/apk/regular/debug/app-regular-debug.apk}"
 LOG_DIR="$ROOT/app/build/device-smoke"
 
@@ -40,7 +40,7 @@ sha256_file() {
 
 capture_private_report() {
   local report
-  report="$($ADB exec-out run-as "$PACKAGE" cat files/debug-last.txt 2>/dev/null || true)"
+  report="$($ADB exec-out run-as "$PACKAGE" sh -c '[ -f files/debug-last.txt ] && cat files/debug-last.txt' 2>/dev/null || true)"
   if [[ -n "$report" ]]; then
     printf '%s\n' "$report" > "$LOG_DIR/debug-last.txt"
   fi

@@ -29,6 +29,8 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
+import org.json.JSONObject;
+
 import java.util.Locale;
 
 public final class SensorMainActivity extends Activity implements SensorEventListener {
@@ -68,6 +70,11 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     private volatile double skyLatitudeDeg = Double.NaN;
     private volatile double skyLongitudeDeg = Double.NaN;
     private volatile double skyAltitudeM;
+    private final NtpTime.Listener ntpListener = status -> pushNtpStatus(status);
+
+    private final class TimeBridge {
+        @JavascriptInterface public String getStatus() { return NtpTime.status(SensorMainActivity.this).toJson(); }
+    }
 
     private final class SkyBridge {
         @JavascriptInterface public void setLocation(double latitudeDeg,double longitudeDeg,double altitudeM) {
@@ -83,6 +90,7 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     @Override protected void onCreate(Bundle state){
         DebugReporter.install(this);requestWindowFeature(Window.FEATURE_NO_TITLE);super.onCreate(state);
         pendingWebViewState=state;configureWindow();configureSensors();
+        NtpTime.start(this);NtpTime.addListener(ntpListener);
         if(!DebugReporter.showPendingReport(this,this::startDsky))startDsky();
     }
 
@@ -115,7 +123,7 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     void startDsky(){
         if(webView!=null)return;if((getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0)WebView.setWebContentsDebuggingEnabled(true);
         webView=new WebView(this);webView.setBackgroundColor(CM_PANEL_COLOR);WebSettings settings=webView.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setGeolocationEnabled(true);settings.setMediaPlaybackRequiresUserGesture(false);settings.setBlockNetworkLoads(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);
-        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.addJavascriptInterface(new SkyBridge(),"SkyBridge");webView.setWebViewClient(new NetClient(this));
+        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.addJavascriptInterface(new SkyBridge(),"SkyBridge");webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient(){
             @Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){if(!isLocalAssetOrigin(origin)){callback.invoke(origin,false,false);return;}if(hasLocationPermission()){callback.invoke(origin,true,false);return;}pendingGeoOrigin=origin;pendingGeoCallback=callback;requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},GEO_PERMISSION_REQUEST);}
             @Override public void onPermissionRequest(PermissionRequest request){if(request==null||request.getOrigin()==null||!isLocalAssetOrigin(request.getOrigin().toString())){if(request!=null)request.deny();return;}boolean asksForVideo=false;for(String resource:request.getResources()){if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)){asksForVideo=true;break;}}if(!asksForVideo){request.deny();return;}if(hasCameraPermission()){request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});return;}if(pendingCameraRequest!=null)pendingCameraRequest.deny();pendingCameraRequest=request;requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION_REQUEST);}
@@ -125,6 +133,7 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     }
 
     private void pushSensorAvailability(){if(webView==null)return;webViewHandler.postDelayed(()->{if(webView==null)return;String safeAttitude=sensorName.replace("'","");String safeMagnetic=magneticSensorName.replace("'","");String safeAcceleration=accelerationSensorName.replace("'","");String js=String.format(Locale.US,"if(window.AGCDSKY){if(AGCDSKY.nativePhoneSensorStatus){AGCDSKY.nativePhoneSensorStatus('%s',%s)}if(AGCDSKY.nativeMagneticSensorStatus){AGCDSKY.nativeMagneticSensorStatus('%s',%s,%s)}if(AGCDSKY.nativePipaSensorStatus){AGCDSKY.nativePipaSensorStatus('%s',%s)}}",safeAttitude,attitudeSensor!=null,safeMagnetic,magneticAttitudeSensor!=null,magneticAttitudeSensor!=null&&magneticAttitudeSensor!=attitudeSensor,safeAcceleration,linearAccelerationSensor!=null||accelerometerSensor!=null);webView.evaluateJavascript(js,null);},350L);}
+    private void pushNtpStatus(NtpTime.Status status){String json=JSONObject.quote(status.toJson());webViewHandler.post(()->{if(webView!=null)webView.evaluateJavascript("if(window.AGCDSKY&&AGCDSKY.nativeNtpStatus){AGCDSKY.nativeNtpStatus("+json+")}",null);});}
     private void registerSensors(){if(sensorManager==null||sensorRegistered)return;boolean registered=false;if(attitudeSensor!=null)registered|=sensorManager.registerListener(this,attitudeSensor,SensorManager.SENSOR_DELAY_GAME);if(magneticAttitudeSensor!=null&&magneticAttitudeSensor!=attitudeSensor)registered|=sensorManager.registerListener(this,magneticAttitudeSensor,SensorManager.SENSOR_DELAY_UI);if(linearAccelerationSensor!=null)registered|=sensorManager.registerListener(this,linearAccelerationSensor,SensorManager.SENSOR_DELAY_GAME);else{if(gravitySensor!=null)registered|=sensorManager.registerListener(this,gravitySensor,SensorManager.SENSOR_DELAY_GAME);if(accelerometerSensor!=null)registered|=sensorManager.registerListener(this,accelerometerSensor,SensorManager.SENSOR_DELAY_GAME);}sensorRegistered=registered;}
     private void unregisterSensors(){if(sensorManager!=null&&sensorRegistered)sensorManager.unregisterListener(this);sensorRegistered=false;gravityValid=false;lastSensorPushNs=0L;lastMagneticPushNs=0L;lastAccelerationPushNs=0L;}
 
@@ -144,6 +153,6 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     @Override protected void onResume(){super.onResume();configureWindow();registerSensors();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);pushSensorAvailability();}}
     @Override protected void onPause(){unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge");}
-    @Override protected void onDestroy(){DebugReporter.dismissPendingReport(this);unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;if(pendingCameraRequest!=null){pendingCameraRequest.deny();pendingCameraRequest=null;}destroyWebView();sensorManager=null;attitudeSensor=null;magneticAttitudeSensor=null;linearAccelerationSensor=null;accelerometerSensor=null;gravitySensor=null;super.onDestroy();}
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge");}
+    @Override protected void onDestroy(){DebugReporter.dismissPendingReport(this);NtpTime.removeListener(ntpListener);unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;if(pendingCameraRequest!=null){pendingCameraRequest.deny();pendingCameraRequest=null;}destroyWebView();sensorManager=null;attitudeSensor=null;magneticAttitudeSensor=null;linearAccelerationSensor=null;accelerometerSensor=null;gravitySensor=null;super.onDestroy();}
 }

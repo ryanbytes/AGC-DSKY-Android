@@ -145,8 +145,12 @@ grep -Fq "application-debuggable" <<<"$badging" \
   || fail "test APK is not debuggable; device-smoke run-as diagnostics would not work"
 
 permissions="$($AAPT2 dump permissions "$APK")"
-if grep -Fq 'android.permission.INTERNET' <<<"$permissions"; then
-  fail "merged APK requests android.permission.INTERNET"
+grep -Fq 'android.permission.INTERNET' <<<"$permissions" \
+  || fail "merged APK is missing INTERNET required for native SNTP"
+grep -Fq 'android.permission.ACCESS_NETWORK_STATE' <<<"$permissions" \
+  || fail "merged APK is missing ACCESS_NETWORK_STATE required for SNTP network recovery"
+if grep -Fq 'android.permission.SET_TIME' <<<"$permissions"; then
+  fail "merged APK must not request privileged SET_TIME"
 fi
 
 grep -Fq 'android.permission.CAMERA' <<<"$permissions" \
@@ -276,6 +280,6 @@ else
   printf '  regular APK excludes Fire-only boot/accessibility components\n'
 fi
 printf '  LM rope, raster panel images, and unused upstream vendor assets are absent\n'
-printf '  merged manifest has camera/location permissions and no INTERNET permission\n'
+printf '  merged manifest has camera/location/INTERNET permissions and no privileged SET_TIME permission\n'
 printf '  verifier Build Tools: %s\n' "$PINNED_BUILD_TOOLS"
 printf '  APK signature verifies\n'

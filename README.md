@@ -1,6 +1,6 @@
 # AGC DSKY Android
 
-Independent Apollo Guidance Computer / DSKY simulator for Android. It runs the real `yaAGC` WebAssembly core with the Apollo 11 Command Module **Comanche 055** rope and keeps the normal runtime offline.
+Independent Apollo Guidance Computer / DSKY simulator for Android. It runs the real `yaAGC` WebAssembly core with the Apollo 11 Command Module **Comanche 055** rope and uses native SNTP only to correct phone-clock presentation time.
 
 > Not affiliated with, sponsored by, or endorsed by NASA or the United States Government. NASA names and mission references are used descriptively for historical identification.
 
@@ -25,7 +25,7 @@ The sextant screenshot shows the real app UI with a static demonstration pointin
 - Resizable **EL-only** home-screen widget.
 - Optional Android **Home app** mode for dedicated boot-to-DSKY phones/tablets.
 - Separate Fire APK with the restored opt-in same-package boot/Home redirect.
-- No Android `INTERNET` permission in the packaged app.
+- `INTERNET` is used only by the native UDP SNTP client for `time.cloudflare.com`; WebView navigation remains restricted to packaged assets.
 
 ## Dedicated Home mode
 

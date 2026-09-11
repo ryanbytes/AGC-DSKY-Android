@@ -27,7 +27,7 @@ const generator = read('tools/generate-el-second-frames.js');
 
 requireText(manifest, 'android:name=".ElWidgetProvider"', 'manifest');
 requireText(manifest, 'android:resource="@xml/el_widget_info"', 'manifest');
-forbid(manifest, 'android.permission.INTERNET', 'manifest');
+requireText(manifest, 'android.permission.INTERNET', 'manifest');
 
 requireText(layout, '<AdapterViewFlipper', 'widget layout');
 requireText(layout, 'android:id="@+id/el_seconds_flipper"', 'seconds flipper');

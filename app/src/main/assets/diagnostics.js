@@ -31,6 +31,7 @@
   function update(){
     const t=document.getElementById('diag-table');if(!t)return;
     const app=typeof api.appStatus==='function'?api.appStatus():{};
+    const ntp=typeof api.ntpStatus==='function'?api.ntpStatus():null;
     const core=typeof api.getCore==='function'?api.getCore():null;
     const phone=typeof api.phoneIcduStatus==='function'?api.phoneIcduStatus():null;
     const sxt=typeof api.sextantStatus==='function'?api.sextantStatus():null;
@@ -79,6 +80,7 @@
     h+=row('Snapshot fingerprint',`saved ${meta?.fingerprint||'---'} · current ${snap.currentFingerprint||'---'}`);
     const sv=snap.lastVerify;h+=row('Snapshot round-trip self-test',sv?`${sv.ok?'PASS':'FAIL'} · ${sv.before||'---'} → ${sv.after||'---'}${sv.error?' · '+sv.error:''}`:'NOT RUN');
     h+=row('Autosave this session',snap.lastAutosaveAt?`${ageText(Date.now()-snap.lastAutosaveAt)} ago`:'NOT YET');
+    if(ntp){const synced=ntp.lastSyncUtcMs?new Date(ntp.lastSyncUtcMs).toLocaleString():'NEVER';const rtt=Number(ntp.roundTripMs)>=0?`${Math.round(ntp.roundTripMs)} ms`:'---';h+=row('Network time',`${ntp.state||'unavailable'} · ${ntp.server||'time.cloudflare.com'} · offset ${Math.round(ntp.offsetMs||0)} ms · RTT ${rtt} · last ${synced}${Number(ntp.ageMs)>=0?' · '+ageText(ntp.ageMs)+' ago':''}`)}
     h+=row('Snapshot action',`${snap.lastAction||'none'}${snap.error?' · '+snap.error:''}`);
     t.innerHTML=h;
     const saveBtn=document.getElementById('diag-save'),verifyBtn=document.getElementById('diag-verify');

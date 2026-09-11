@@ -126,6 +126,8 @@ printf 'webAGC checkout: %s\n' "$WEBAGC_HEAD"
 
 node tools/branding-smoke.js
 node tools/manifest-policy-smoke.js
+ bash tools/ntp-time-smoke.sh
+node tools/ntp-policy-smoke.js
 node tools/fire-home-setup-smoke.js
 node tools/csp-smoke.js
 node tools/frontend-smoke.js

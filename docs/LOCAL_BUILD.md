@@ -98,7 +98,7 @@ The source gate requires:
 - the native renderer's `106 x 190` EL coordinate system;
 - `PROG`, `VERB`, `NOUN`, signed registers, and EL separator rules;
 - horizontally and vertically resizable AppWidget metadata;
-- no INTERNET permission;
+- native SNTP permissions (`INTERNET` and `ACCESS_NETWORK_STATE`) only; WebView loads remain blocked;
 - a non-wakeup `AlarmManager.RTC` minute scheduler rather than an exact/wakeup alarm;
 - no `drawRect`, `drawRoundRect`, `drawCircle`, or `drawOval` primitives in the widget renderer, preventing a bezel/faceplate/fastener layer from being quietly reintroduced.
 
@@ -177,7 +177,7 @@ It verifies:
 - package `org.apollo.agcdsky`, with versionCode/versionName parsed from the current `app/build.gradle`, minSdk `26`, targetSdk `37`
 - debuggable status required by the ADB `run-as`/WebView inspection path
 - required coarse/fine location permissions for SOLAR
-- no INTERNET permission
+- no privileged clock-setting permission (`SET_TIME`)
 - exact size/Git blob of packaged `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin`
 - packaged `index.html` matches source
 - **every local `src=`/`href=` asset referenced by current `index.html` is discovered dynamically and byte-compared against the checkout**; this prevents a new required script such as `app-refine.js` from being silently omitted from the verifier's file list
@@ -201,7 +201,7 @@ The first layer, `tools/device-smoke.sh`:
 1. Refuses ambiguous multiple-device setups.
 2. Installs with `adb install -r` without auto-uninstalling on signature mismatch.
 3. Preserves app state and clears only stale private debug evidence.
-4. Launches `MainActivity`, captures logcat/private diagnostics, and confirms the process remains alive.
+4. Launches exported `SensorMainActivity`, captures logcat/private diagnostics, and confirms the process remains alive.
 5. Requires debug-only `FRONTEND READY app` **after the full script stack, including relay diagnostic refinement, has initialized**. A blank/partial/base-only frontend does not pass.
 
 The subsequent WebView/AGC layers use the real app process and real `AgcCore`; no mock core is injected. Current checks include:

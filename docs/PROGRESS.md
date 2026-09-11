@@ -9,7 +9,7 @@ Ship a self-contained Android Apollo Block II DSKY with two deliberately separat
 1. A synthetic phone clock / charging DreamService presentation.
 2. A real AGC mode driven by the pinned VirtualAGC `yaAGC` WebAssembly core and authentic AGC I/O.
 
-AGC mode must not substitute phone traffic, random animation, or other synthetic state for real computer output. The APK remains offline with no `android.permission.INTERNET`. Device location is the only intended external runtime input and is used only for DREAM SOLAR.
+AGC mode must not substitute phone traffic, random animation, or other synthetic state for real computer output. The sole normal network path is a native UDP SNTP query to `time.cloudflare.com`; WebView navigation remains local-only. Device location is used only for DREAM SOLAR.
 
 ## Pinned runtime
 
@@ -40,7 +40,7 @@ Normal keys use channel `015`. PRO uses channel `032` bit `020000` and remains p
 ## Current Android/frontend state
 
 - Packaged assets are served from the app's synthetic local HTTPS origin.
-- WebView network, file, and content loads remain restricted; the manifest has no INTERNET permission.
+- WebView network, file, and content loads remain restricted. `INTERNET` is granted only so the native SNTP client can query `time.cloudflare.com`; no privileged clock-setting permission is requested.
 - MainActivity/DreamService retain strict offline/CSP behavior and local runtime diagnostics.
 - Selected mission and requested AGC/CLOCK mode persist locally.
 - Same-WebView hide/show pauses and resumes the same in-memory core.
@@ -48,6 +48,8 @@ Normal keys use channel `015`. PRO uses channel `032` bit `020000` and remains p
 - DreamService remains a synthetic display-only clock path and must not run yaAGC.
 - DREAM DIM / BRIGHT / SOLAR and polar day/night handling remain implemented.
 - `FRONTEND READY` now requires `snapshotRelays()`, `snapshotChannels()`, and `snapshotDsky()` in addition to rendered EL/mission UI, so a partial post-load refinement cannot pass immediate device smoke.
+- Native `NtpTime` queries `time.cloudflare.com` at startup, roughly hourly, and when Android reports a network becoming available. It takes up to three UDP SNTP samples, rejects offset outliers, persists the last valid offset/sync instant/RTT, and never attempts to set Android's system clock. The phone clock, DREAM SOLAR time input, optics star calculations, and widget use the persisted corrected wall clock; AGC stepping, relay cadence, input timing, and sensor elapsed-time calculations retain monotonic clocks.
+- Diagnostics expose server, state (`synced`/`stale`/`unavailable`), corrected offset, RTT, successful-sync UTC instant, and age. A no-network startup or later failure retains the last valid offset; with no valid result it is a clean system-time fallback.
 
 ## Amazon Fire HOME startup
 
@@ -92,7 +94,7 @@ The numeric strokes are not a generic seven-segment font. `ElWidgetProvider.ElRe
 
 The widget is horizontally/vertically resizable, re-renders when launcher size options change, opens `MainActivity` when tapped, and requests minute-level refreshes with a non-wakeup `AlarmManager.RTC` repeating alarm. Android may batch inexact alarms, so the widget must not be described as a guaranteed second-accurate clock. System `TIME_SET` and `TIMEZONE_CHANGED` broadcasts also cause a redraw/reschedule.
 
-The widget adds no network permission and no exact-alarm permission. `tools/el-widget-smoke.js` is a source gate that requires the one-`ImageView` layout, 106:190 renderer, EL labels/register path, offline manifest, resizable metadata, non-wakeup scheduling, and forbids rectangle/rounded-rectangle/circle/oval drawing primitives that would normally reintroduce a bezel or fastener into the widget renderer.
+The widget adds no exact-alarm permission. It reads the same stored SNTP offset as the phone clock; `tools/el-widget-smoke.js` is a source gate that requires the one-`ImageView` layout, 106:190 renderer, EL labels/register path, manifest permission, resizable metadata, non-wakeup scheduling, and forbids rectangle/rounded-rectangle/circle/oval drawing primitives that would normally reintroduce a bezel or fastener into the widget renderer.
 
 ## Channel-010 relay checkpoint
 

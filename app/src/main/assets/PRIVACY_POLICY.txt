@@ -10,14 +10,14 @@ DATA ACCESSED
 - App state and preferences: simulator state, settings, and related configuration may be stored locally so the app can restore its state.
 
 COLLECTION, TRANSMISSION, AND SHARING
-AGC DSKY Android does not declare the Android INTERNET permission. The app does not intentionally transmit camera imagery, location, sensor readings, simulator state, or other user data to the developer or to third parties.
+AGC DSKY Android declares Android INTERNET solely for a native UDP SNTP query to time.cloudflare.com. The app does not intentionally transmit camera imagery, location, sensor readings, simulator state, or other user data to the developer or to third parties.
 
 The app contains no advertising SDK, analytics SDK, user account system, cloud synchronization service, or developer-operated backend. The developer does not sell or share personal data obtained through the app.
 
 For Google Play Data safety purposes, information that is accessed and processed only on the device and is not transmitted off the device is not treated as collected by the developer.
 
 DATA SECURITY
-Sensitive inputs are processed locally within the Android application sandbox. Because the app has no Android Internet permission, it does not provide a direct network path for transmitting those inputs.
+Sensitive inputs are processed locally within the Android application sandbox. WebView loads remain limited to packaged app assets; the native SNTP client sends no sensitive app data and is used only to calculate a clock offset.
 
 RETENTION AND DELETION
 Camera, location, and motion data used by live features are processed locally. App preferences and saved simulator state may remain in the app's private local storage until overwritten, cleared through Android app-storage controls, or removed when the app is uninstalled.

@@ -42,7 +42,7 @@ Play Console privacy-policy URL:
 
 https://github.com/ryanbytes/AGC-DSKY-Android/blob/release/1.0-commercial-1/PRIVACY.md
 
-The same policy is packaged offline in the app under **LEGAL / SOURCE**.
+The same local-processing policy is packaged in the app under **LEGAL / SOURCE**; native SNTP is limited to `time.cloudflare.com` for phone-clock correction.
 
 ## Data safety
 
@@ -55,7 +55,7 @@ Based on version 1.0 as packaged:
 - User accounts: **None**.
 - Cloud/backend service: **None**.
 
-The app accesses camera, location, and motion/orientation sensors for on-device functionality. These inputs are processed locally and are not intentionally transmitted off the device. The Android manifest does not declare `INTERNET`.
+The app accesses camera, location, and motion/orientation sensors for on-device functionality. These inputs are processed locally and are not intentionally transmitted off the device. Android INTERNET is used only by native UDP SNTP to calculate a phone-clock offset from `time.cloudflare.com`.
 
 When Play Console asks about individual data types, do not mark locally processed data as collected unless the final Play build is changed to transmit it off-device.
 

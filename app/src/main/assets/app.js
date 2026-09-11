@@ -49,6 +49,12 @@ function set2(id,text){renderDigits($(id),String(text).padEnd(2,' ').slice(0,2))
 function setReg(id,sign,digits){renderReg($(id),(sign||' ')+String(digits).padEnd(5,' ').slice(0,5))}
 function pad(n,len){return String(n).padStart(len,'0').slice(-len)}
 function show(v,n){verb=v;noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
+let ntpStatus={server:'time.cloudflare.com',offsetMs:0,lastSyncUtcMs:0,roundTripMs:-1,ageMs:-1,state:'unavailable'};
+function accurateTime(){return Date.now()+(Number(ntpStatus.offsetMs)||0)}
+function accurateDate(){return new Date(accurateTime())}
+function clockTimeLabel(){return ntpStatus.state==='synced'?'PHONE CLOCK · NTP TIME':ntpStatus.state==='stale'?'PHONE CLOCK · NTP OFFSET STALE':'PHONE CLOCK · ANDROID WALL TIME'}
+function updateNtpStatus(value){try{const parsed=typeof value==='string'?JSON.parse(value):value;if(parsed&&typeof parsed==='object'){ntpStatus={...ntpStatus,...parsed};if(mode==='clock')$('mode').textContent=clockTimeLabel()}}catch(_){/* malformed bridge data must not affect the DSKY */}}
+function loadNativeNtpStatus(){try{if(window.TimeBridge&&typeof TimeBridge.getStatus==='function')updateNtpStatus(TimeBridge.getStatus())}catch(_){/* bridge is unavailable outside Android */}}
 
 // Block II uses five latching relays per character; the contact matrix decodes
 // the 5-bit relay state into the seven EL strokes.
@@ -60,7 +66,7 @@ const CLOCK_GROUPS=[
   {relay:3,cells:[['r2',4],['r3',0]],b:0},
   {relay:2,cells:[['r3',1],['r3',2]],b:1},{relay:1,cells:[['r3',3],['r3',4]],b:0}
 ];
-function desiredClockDigits(){const d=new Date();return {r1:pad(d.getHours(),5).split(''),r2:pad(d.getMinutes(),5).split(''),r3:pad(d.getSeconds(),5).split('')}}
+function desiredClockDigits(){const d=accurateDate();return {r1:pad(d.getHours(),5).split(''),r2:pad(d.getMinutes(),5).split(''),r3:pad(d.getSeconds(),5).split('')}}
 function renderClockReg(name){setReg(name,'+',clockDigits[name].join(''))}
 function clockWord(group,want){
   let c=0,d=0;
@@ -148,12 +154,12 @@ function lampTest(){
     lampTestActive=false;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
   },V35_TEST_MS);
 }
-function executeClock(){if(verb==='35'){$('mode').textContent='V35 · REAL AGC MODE REQUIRED';return}if(verb==='16'&&noun==='65'){mode='clock';$('mode').textContent='PHONE CLOCK · LOCAL WALL TIME';stopClockQueue();syncClockFace();return}$('mode').textContent=`V${verb} N${noun} · PHONE CLOCK INPUT`}
+function executeClock(){if(verb==='35'){$('mode').textContent='V35 · REAL AGC MODE REQUIRED';return}if(verb==='16'&&noun==='65'){mode='clock';$('mode').textContent=clockTimeLabel();stopClockQueue();syncClockFace();return}$('mode').textContent=`V${verb} N${noun} · PHONE CLOCK INPUT`}
 
 function missionSpec(){return MISSIONS[selectedMission]}
 function applyMissionButton(){const b=$('mission');if(b)b.textContent=missionSpec().short}
 function rememberRunMode(next){if(!dream)store.set('runMode',next)}
-function enterClock(status='PHONE CLOCK · LOCAL WALL TIME',preserveAgc=false){
+function enterClock(status=clockTimeLabel(),preserveAgc=false){
   cancelLampTest();
   const canResume=preserveAgc&&mode==='agc'&&agcCore&&agcLoadedMission===selectedMission;
   if(agcCore)agcCore.stop();
@@ -375,7 +381,7 @@ function smoothstep(a,b,x){const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*
 function currentSolarFactor(){
   const lat=parseFloat(store.get('solarLat')),lon=parseFloat(store.get('solarLon'));
   if(!Number.isFinite(lat)||!Number.isFinite(lon))return 0;
-  const now=new Date(),times=solarTimes(now,lat,lon);
+  const now=typeof accurateDate==='function'?accurateDate():new Date(),times=solarTimes(now,lat,lon);
   if(!times)return 0;
   const half=SOLAR_FADE_HALF_MS,t=now.getTime(),rise=times.sunrise.getTime(),set=times.sunset.getTime();
   if(t<rise-half||t>set+half)return 0;
@@ -457,12 +463,12 @@ $('dreambright').addEventListener('click',()=>{cycleDreamMode();showControls()})
 $('sound').addEventListener('click',()=>{ensureAudio();tickSound=!tickSound;applyTickSound();if(tickSound)playRelayBurst(1);showControls()});
 $('display').addEventListener('click',()=>{displayOnly=true;applyDisplayOnly()});
 $('agc').addEventListener('click',()=>{enterAgc();showControls()});
-$('clock').addEventListener('click',()=>{enterClock('PHONE CLOCK · LOCAL WALL TIME',true);showControls()});
+$('clock').addEventListener('click',()=>{enterClock(clockTimeLabel(),true);showControls()});
 document.addEventListener('pointerdown',()=>{if(tickSound)ensureAudio()},{passive:true});
-window.AGCDSKY={agcChannel:onAgcChannel,getCore:()=>agcCore,setAppVisible,getMission:()=>selectedMission,enterClock:()=>enterClock('PHONE CLOCK · LOCAL WALL TIME',true),enterAgc,appStatus:agcAppStatus,saveAgcState,clearSavedAgcState,savedSnapshotInfo,verifySnapshotRoundTrip,scheduleAgcAutosave};
+window.AGCDSKY={agcChannel:onAgcChannel,getCore:()=>agcCore,setAppVisible,getMission:()=>selectedMission,enterClock:()=>enterClock(clockTimeLabel(),true),enterAgc,appStatus:agcAppStatus,saveAgcState,clearSavedAgcState,savedSnapshotInfo,verifySnapshotRoundTrip,scheduleAgcAutosave,accurateTime,accurateDate,ntpStatus:()=>({...ntpStatus}),nativeNtpStatus:updateNtpStatus};
 document.body.classList.toggle('dream',dream);
 if(!dream&&!displayOnly&&store.get('hinted')!=='1'){document.body.classList.add('first-run');setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200)}
-applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(verb,noun);syncClockFace();setInterval(tick,20);setInterval(()=>{if(mode==='agc'&&agcCore&&agcCore.running&&appVisible&&Date.now()-lastAutosaveAt>15000)saveAgcState('periodic autosave')},5000);
+loadNativeNtpStatus();applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(verb,noun);syncClockFace();setInterval(tick,20);setInterval(loadNativeNtpStatus,60000);setInterval(()=>{if(mode==='agc'&&agcCore&&agcCore.running&&appVisible&&Date.now()-lastAutosaveAt>15000)saveAgcState('periodic autosave')},5000);
 if(!dream&&!restoreAgcOnLoad)rememberRunMode('clock');
 if(restoreAgcOnLoad)setTimeout(()=>enterAgc(),0);
 if(dream){

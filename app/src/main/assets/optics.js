@@ -309,10 +309,10 @@
     const cat=window.AGCDSKY_APOLLO_STARS;if(!cat||!skyLocation)return null;
     const now=Date.now();
     if(selectedPair&&now-pairComputedAt<5000)return selectedPair;
-    pairMeta=typeof cat.candidatePairs==='function'?cat.candidatePairs(skyLocation.lat,skyLocation.lon,new Date(),12,6):null;
+    pairMeta=typeof cat.candidatePairs==='function'?cat.candidatePairs(skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date(),12,6):null;
     pairCandidates=pairMeta?.pairs||[];
     if(pairIndex>=pairCandidates.length)pairIndex=0;
-    selectedPair=pairCandidates[pairIndex]||cat.bestPair(skyLocation.lat,skyLocation.lon,new Date(),12);pairComputedAt=now;
+    selectedPair=pairCandidates[pairIndex]||cat.bestPair(skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date(),12);pairComputedAt=now;
     if(selectedPair&&(!selectedStar||![selectedPair.a.star,selectedPair.b.star].includes(selectedStar)))selectedStar=selectedPair.a.star;
     return selectedPair;
   }
@@ -324,7 +324,7 @@
 
   function currentTargetPosition(){
     const cat=window.AGCDSKY_APOLLO_STARS;if(!cat||!skyLocation||!selectedStar)return null;
-    return cat.horizontal(selectedStar,skyLocation.lat,skyLocation.lon,new Date());
+    return cat.horizontal(selectedStar,skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date());
   }
 
   function calibratePointing(){
@@ -365,7 +365,7 @@
     for(const x of [pair.a,pair.b]){const b=document.createElement('button');b.type='button';b.textContent=`${x.star.code} ${x.star.name}`;b.className=selectedStar===x.star?'selected':'';b.onclick=()=>chooseStar(x.star);buttons.appendChild(b)}
     if(pairCandidates.length>1){const nb=document.createElement('button');nb.type='button';nb.textContent='NEXT STAR PAIR';nb.onclick=cyclePair;buttons.appendChild(nb)}
     if(!selectedStar)selectedStar=pair.a.star;
-    const targetPos=cat.horizontal(selectedStar,skyLocation.lat,skyLocation.lon,new Date());
+    const targetPos=cat.horizontal(selectedStar,skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date());
     targ.textContent=`TARGET ${selectedStar.code} ${selectedStar.name} · MAG ${selectedStar.mag.toFixed(2)} · AZ ${targetPos.az.toFixed(1)}° · ALT ${targetPos.alt.toFixed(1)}°`;
     cmd.textContent=`AFTER MARK: V21 N71 E 000${selectedStar.code} E`;
     const cue=document.getElementById('sxt-star-cue');

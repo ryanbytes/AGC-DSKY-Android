@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE=org.apollo.agcdsky
-ACTIVITY="$PACKAGE/.MainActivity"
+ACTIVITY="$PACKAGE/.SensorMainActivity"
 
 fail() {
   printf 'DEVICE AGC SMOKE FAIL: %s\n' "$*" >&2

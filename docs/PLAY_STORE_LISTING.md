@@ -10,7 +10,7 @@ Apollo AGC/DSKY simulator with real yaAGC, Comanche 055 and sextant tools.
 
 ## Full description
 
-AGC DSKY is an offline historical Apollo Guidance Computer / DSKY simulator for Android.
+AGC DSKY is a historical Apollo Guidance Computer / DSKY simulator for Android with optional native network-time correction for its phone-clock presentation.
 
 The app runs the real yaAGC WebAssembly core with the Apollo 11 Command Module Comanche 055 guidance rope and presents a Block II-style DSKY interface driven by AGC channels and relays.
 
@@ -26,7 +26,7 @@ Features include:
 - Synthetic relay-click audio.
 - Android DreamService clock/screensaver.
 - Resizable EL-only home-screen widget.
-- No Android INTERNET permission.
+- Native UDP SNTP uses `time.cloudflare.com` only to calculate a display-time offset; no Google Play Services are required.
 
 Camera, location, and motion-sensor inputs are processed locally for simulator features. The app does not include advertising, analytics, user accounts, cloud synchronization, or a developer-operated backend.
 
