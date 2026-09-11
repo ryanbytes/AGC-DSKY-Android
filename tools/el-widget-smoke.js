@@ -61,8 +61,9 @@ req(provider,'ACTIVE_X*scaleDp','live register X inset');
 req(provider,'(ACTIVE_Y+y[i])*scaleDp','live register Y inset');
 req(provider,'ACTIVE_W*scaleDp','live register active width');
 
-// In-app EL artwork is the active face only; the DSKY display well is already
-// the physical surround.  Do not duplicate a frame inside the opening.
+// In-app EL artwork is the active face only.  The right-side DSKY display well
+// is rebuilt to the 2.620 x 4.420-in indicator hardware envelope, exactly
+// centered around the 2.360 x 4.060-in active face.
 req(html,'viewBox="0 0 106 182.356"','active WebView face');
 req(html,'preserveAspectRatio="xMidYMid meet"','WebView aspect preservation');
 req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','active WebView face fill');
@@ -73,8 +74,13 @@ req(finish,'left:57.5000%','active DSKY face X');
 req(finish,'top:5.1075%','active DSKY face Y');
 req(finish,'width:33.1250%','active DSKY face width');
 req(finish,'height:49.0204%','active DSKY face height');
-no(finish,'left:55.6753%','obsolete outer-frame X');
-no(finish,'width:36.7744%','obsolete outer-frame width');
+req(finish,'.display-well{','rebuilt display well');
+req(finish,'left:55.6753%','display-well hardware X');
+req(finish,'top:2.9342%','display-well hardware Y');
+req(finish,'width:36.7744%','display-well hardware width');
+req(finish,'height:53.3670%','display-well hardware height');
+no(finish,'width:38.27%','legacy oversized display-well width');
+no(finish,'height:54.9%','legacy oversized display-well height');
 
 // Screen-only mode fills unused pixels with EL gray but never distorts the SVG.
 req(screenOnly,'background:#696d67!important','screen-only gray field');
@@ -149,4 +155,4 @@ req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  active face fits DSKY opening, no duplicate border, screen-only aspect preserved');
+console.log('  active face and right-side hardware well share the same 1006315G dimensions');
