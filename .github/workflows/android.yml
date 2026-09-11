@@ -50,13 +50,14 @@ jobs:
           node tools/asset-reference-smoke.js
           node tools/wasm-runtime-smoke.js
 
-      - name: Build unsigned release APKs
-        run: bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleRelease
+      - name: Build release APKs and install-safe EL test APK
+        run: bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleRelease :app:assembleRegularDebug
 
-      - name: Verify flavor APKs exist
+      - name: Verify APK outputs exist
         run: |
           test -f app/build/outputs/apk/regular/release/app-regular-release-unsigned.apk
           test -f app/build/outputs/apk/fire/release/app-fire-release-unsigned.apk
+          test -f app/build/outputs/apk/regular/debug/app-regular-debug.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -64,5 +65,12 @@ jobs:
           path: |
             app/build/outputs/apk/regular/release/app-regular-release-unsigned.apk
             app/build/outputs/apk/fire/release/app-fire-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AGC-DSKY-ELTEST-regular-debug
+          path: app/build/outputs/apk/regular/debug/app-regular-debug.apk
           if-no-files-found: error
           retention-days: 30
