@@ -8,7 +8,7 @@
     <FrameLayout
         android:id="@+id/el_widget_panel"
         android:layout_width="106dp"
-        android:layout_height="190dp"
+        android:layout_height="182.356dp"
         android:layout_gravity="center"
         android:background="#696D67">
 
@@ -22,11 +22,11 @@
 
         <AdapterViewFlipper
             android:id="@+id/el_hour_flipper"
-            android:layout_width="100dp"
+            android:layout_width="106dp"
             android:layout_height="21dp"
             android:layout_gravity="start|top"
-            android:layout_marginStart="3dp"
-            android:layout_marginTop="97dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginTop="69.916dp"
             android:autoStart="true"
             android:animateFirstView="false"
             android:loopViews="true"
@@ -34,11 +34,11 @@
 
         <AdapterViewFlipper
             android:id="@+id/el_minute_flipper"
-            android:layout_width="100dp"
+            android:layout_width="106dp"
             android:layout_height="21dp"
             android:layout_gravity="start|top"
-            android:layout_marginStart="3dp"
-            android:layout_marginTop="131dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginTop="104.052dp"
             android:autoStart="true"
             android:animateFirstView="false"
             android:loopViews="true"
@@ -46,11 +46,11 @@
 
         <AdapterViewFlipper
             android:id="@+id/el_seconds_flipper"
-            android:layout_width="100dp"
+            android:layout_width="106dp"
             android:layout_height="21dp"
             android:layout_gravity="start|top"
-            android:layout_marginStart="3dp"
-            android:layout_marginTop="165dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginTop="138.187dp"
             android:autoStart="true"
             android:animateFirstView="false"
             android:loopViews="true"
