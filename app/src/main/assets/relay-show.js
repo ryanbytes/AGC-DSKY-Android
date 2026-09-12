@@ -22,12 +22,16 @@
   const DISPLAY_ROWS_UP = Object.freeze([1,2,3,4,5,6,7,8,9,10,11]);
   const NON_DECIMAL_CODES = Object.freeze([1,2,4,5,6,7,8,9,10,11,12,13,14,16,17,18,20,22,23,24,26]);
   const V35_PLUS_ROWS = new Set([7,5,2]);
+  const SHOW_TEMPO = 2.0;
 
   let active = false;
   let stopRequested = false;
   let saved = null;
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, Math.max(0, ms)));
+  // Slow only the presentation choreography. Hardware settle/preflight and
+  // task-restoration timing stay at their physical/safety values.
+  const showSleep = ms => sleep(ms * SHOW_TEMPO);
   const status = text => { const el = document.getElementById('mode'); if (el) el.textContent = text; };
   const pair = (c, d, plus = false) => ((plus ? 1 : 0) << 10) | ((c & 0x1f) << 5) | (d & 0x1f);
   const v35Word = digit => pair(DIGIT_RELAY[String(digit)] || 0, DIGIT_RELAY[String(digit)] || 0, false);
@@ -44,7 +48,7 @@
     for (const row of order) {
       ensureRunningDemo();
       drive(row, state[row] || 0);
-      await sleep(gapMs);
+      await showSleep(gapMs);
     }
   }
 
@@ -138,16 +142,16 @@
     decodeChannel11(0);
     decodeChannel163(0);
     await driveState(blankState(), ROWS_DOWN, 32);
-    await sleep(120);
+    await showSleep(120);
 
     const target = fullState();
     for (const row of ROWS_DOWN) {
       ensureRunningDemo();
       drive(row, target[row]);
       status(`RELAY SHOW · BANK ${row}`);
-      await sleep(52);
+      await showSleep(52);
     }
-    await sleep(180);
+    await showSleep(180);
   }
 
   async function digitChase() {
@@ -158,9 +162,9 @@
         ensureRunningDemo();
         drive(row, target[row]);
         status(`RELAY SHOW · DIGIT ${digit} · BANK ${row}`);
-        await sleep(28);
+        await showSleep(28);
       }
-      await sleep(65);
+      await showSleep(65);
     }
   }
 
@@ -171,9 +175,9 @@
       for (const row of DISPLAY_ROWS_DOWN) {
         ensureRunningDemo();
         drive(row, target[row]);
-        await sleep(26);
+        await showSleep(26);
       }
-      await sleep(70);
+      await showSleep(70);
     }
   }
 
@@ -182,7 +186,7 @@
     decodeChannel11(0);
     decodeChannel163(0);
     await driveState(blankState(), ROWS_DOWN, 30);
-    await sleep(90);
+    await showSleep(90);
 
     const target = fullState();
     // Build upward through the numeric banks so the face fills in a visible
@@ -190,14 +194,14 @@
     for (const row of DISPLAY_ROWS_UP) {
       ensureRunningDemo();
       drive(row, target[row]);
-      await sleep(54);
+      await showSleep(54);
     }
     drive(12, target[12]);
-    await sleep(70);
+    await showSleep(70);
     decodeChannel11(0o46); // COMP ACTY, UPLINK ACTY, FLASH relay.
-    await sleep(80);
+    await showSleep(80);
     decodeChannel163(0o730); // TEMP, KEY REL, OPR ERR, RESTART, STBY.
-    await sleep(1000);
+    await showSleep(1000);
   }
 
   async function restorePreviousTask() {
