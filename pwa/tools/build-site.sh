@@ -41,15 +41,32 @@ cp "$PWA/icons/icon-512.png" "$DEST/icons/icon-512.png"
 touch "$DEST/.nojekyll"
 
 CACHE_VERSION="$(git -C "$ROOT" rev-parse --short=12 HEAD)"
-python3 - "$DEST/sw.js" "$CACHE_VERSION" <<'PY'
+python3 - "$DEST/sw.js" "$CACHE_VERSION" "$SOURCE_ASSETS" <<'PY'
 from pathlib import Path
 import sys
+
 path = Path(sys.argv[1])
 version = sys.argv[2]
+source_assets = Path(sys.argv[3])
 text = path.read_text(encoding='utf-8')
-if '__CACHE_VERSION__' not in text:
+version_token = '__CACHE_VERSION__'
+asset_token = '/*__SHARED_ASSET_PRECACHE__*/'
+if version_token not in text:
     raise SystemExit('service worker cache-version token missing')
-path.write_text(text.replace('__CACHE_VERSION__', version), encoding='utf-8')
+if asset_token not in text:
+    raise SystemExit('service worker shared-asset cache token missing')
+
+shared = []
+for file in sorted(p for p in source_assets.rglob('*') if p.is_file() and p.name != '.DS_Store'):
+    rel = file.relative_to(source_assets).as_posix()
+    # PRIVACY_POLICY.txt is intentionally replaced by the PWA policy at the
+    # same URL; caching that URL still makes the web policy available offline.
+    escaped = rel.replace('\\', '\\\\').replace("'", "\\'")
+    shared.append(f"  './{escaped}',")
+
+text = text.replace(version_token, version)
+text = text.replace(asset_token, '\n'.join(shared))
+path.write_text(text, encoding='utf-8')
 PY
 
 python3 - "$DEST/analytics.js" "$CACHE_VERSION" "$ANALYTICS_ENDPOINT" <<'PY'
