@@ -63,6 +63,18 @@ assert(first.keyMechanicalSpec.keyEl.minimumBrightnessFootLamberts === 2.0 &&
        first.keyMechanicalSpec.keyEl.testHz === 400,
   'key EL shaft-assembly acceptance requirement missing');
 
+const force = first.keyMechanicalSpec.springForceEnvelope;
+assert(force.forceIncreaseToActuationOzMin === 9 && force.forceIncreaseToActuationOzMax === 10.5,
+  'documented spring range should imply only a 9.0-10.5 oz force increase through the 3/16-in actuation stroke');
+assert(force.forceIncreaseToBottomOzMin === 12 && force.forceIncreaseToBottomOzMax === 14,
+  'documented spring range should imply only a 12-14 oz force increase through the 1/4-in full stroke');
+assert(force.totalFingerForceOzMin === null && force.totalFingerForceOzMax === null,
+  'total finger force must remain unresolved without source-backed spring preload/installed geometry');
+assert(force.excludedSecondaryEstimate.includes('21-26 oz'),
+  'replica total-force figure must remain explicitly excluded from Apollo-source requirements');
+assert(first.keyMechanicalSpec.forcePolicy.includes('Total finger force remains unresolved'),
+  'force limitation must be visible in exported mechanical metadata');
+
 const rates = [];
 for (const [key, p] of Object.entries(first.keys)) {
   assert(p.springRateLbPerIn >= 3.0 && p.springRateLbPerIn <= 3.5,
@@ -73,6 +85,12 @@ for (const [key, p] of Object.entries(first.keys)) {
     `${key}: return audio timing must remain an estimate, not a fake manufacturing tolerance`);
   assert(p.assembly.totalTravelIn === 0.25,
     `${key}: total physical stroke metadata drifted`);
+  assert(p.totalFingerForceOz === null,
+    `${key}: total finger force was invented from incomplete preload/lever data`);
+  assert(p.springIncrementAtActuationOz >= 9 && p.springIncrementAtActuationOz <= 10.5,
+    `${key}: actuation spring-force increment escaped source-derived envelope`);
+  assert(p.springIncrementAtBottomOz >= 12 && p.springIncrementAtBottomOz <= 14,
+    `${key}: bottom spring-force increment escaped source-derived envelope`);
   assert(p.estimateFields.includes('contactMs') && p.estimateFields.includes('travelVmin'),
     `${key}: estimated presentation fields are not labeled`);
   rates.push(p.springRateLbPerIn);
@@ -88,4 +106,4 @@ for (const b of buttons) {
 }
 
 console.log('key mechanical specification smoke: PASS');
-console.log('  3/16-in actuation, 1/4-in stroke, 3.0-3.5 lb/in spring personalities, switch envelope, and EL acceptance data verified');
+console.log('  stroke/switch data and source-derived spring-force increments verified; unsourced total finger force remains intentionally unset');
