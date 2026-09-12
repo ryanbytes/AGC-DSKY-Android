@@ -12,6 +12,16 @@
     const script = document.createElement('script');
     script.src = 'flight-hardware-ui.js';
     script.dataset.feature = 'flight-hardware-ui';
+    script.async = false;
+    document.body.appendChild(script);
+  }
+
+  function installKeyboardElectricalInterlock() {
+    if (document.querySelector('script[data-feature="keyboard-electrical-interlock"]')) return;
+    const script = document.createElement('script');
+    script.src = 'keyboard-electrical-interlock.js';
+    script.dataset.feature = 'keyboard-electrical-interlock';
+    script.async = false;
     document.body.appendChild(script);
   }
 
@@ -34,6 +44,7 @@
 
   function installCmFeatures() {
     installFlightHardwareUi();
+    installKeyboardElectricalInterlock();
     installRelayShow();
   }
 
