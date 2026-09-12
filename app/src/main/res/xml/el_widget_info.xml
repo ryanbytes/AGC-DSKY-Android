@@ -8,6 +8,6 @@
     android:initialLayout="@layout/el_widget"
     android:previewLayout="@layout/el_widget"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen|keyguard"
+    android:widgetCategory="home_screen"
     android:targetCellWidth="2"
     android:targetCellHeight="4" />

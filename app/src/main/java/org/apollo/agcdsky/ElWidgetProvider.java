@@ -7,7 +7,6 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -26,10 +25,6 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final String ACTION_TICK="org.apollo.agcdsky.EL_WIDGET_TICK";
     private static final long MINUTE_MS=60_000L;
     private static final int TICK_REQUEST_CODE=21;
-    private static final int STRETCHED_FRAME_MS=50;
-    private static final int STRETCHED_FRAMES_PER_SECOND=1000/STRETCHED_FRAME_MS;
-    private static final int STRETCHED_FRAME_COUNT=60*STRETCHED_FRAMES_PER_SECOND;
-    private static volatile RemoteViews.RemoteCollectionItems stretchedFramesCache;
 
     // MIT/IL SCD 1006315G sheet 2: the active EL face is 2.360 x 4.060 in
     // inside a 2.620 x 4.420-in hardware frame.  Nominal frame insets are
@@ -69,8 +64,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       float panelWidthDp=PANEL_W*scaleDp,panelHeightDp=PANEL_H*scaleDp;
       float density=context.getResources().getDisplayMetrics().density;
       int panelWidthPx=clamp(Math.round(panelWidthDp*density),1,1200),panelHeightPx=clamp(Math.round(panelHeightDp*density),1,1800);
-      long nowMs=NtpTime.accurateNow(context);
-      Calendar now=Calendar.getInstance();now.setTimeInMillis(nowMs);
+      Calendar now=Calendar.getInstance();now.setTimeInMillis(NtpTime.accurateNow(context));
       RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.el_widget);
       boolean staticFallbackRegisters=Build.VERSION.SDK_INT<31;
       views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.render(panelWidthPx,panelHeightPx,now,staticFallbackRegisters));
@@ -78,12 +72,10 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         RemoteViews.RemoteCollectionItems pairFrames=buildFrames(context,60),hourFrames=buildFrames(context,24);
         views.setRemoteAdapter(R.id.el_hour_flipper,hourFrames);
         views.setRemoteAdapter(R.id.el_minute_flipper,pairFrames);
-        views.setRemoteAdapter(R.id.el_seconds_flipper,buildStretchedFrames(context));
+        views.setRemoteAdapter(R.id.el_seconds_flipper,pairFrames);
         views.setDisplayedChild(R.id.el_hour_flipper,now.get(Calendar.HOUR_OF_DAY));
         views.setDisplayedChild(R.id.el_minute_flipper,now.get(Calendar.MINUTE));
-        int secondPhase=(int)Math.floorMod(nowMs,1000L)/STRETCHED_FRAME_MS;
-        views.setDisplayedChild(R.id.el_seconds_flipper,now.get(Calendar.SECOND)*STRETCHED_FRAMES_PER_SECOND+secondPhase);
-        views.setInt(R.id.el_seconds_flipper,"setFlipInterval",STRETCHED_FRAME_MS);
+        views.setDisplayedChild(R.id.el_seconds_flipper,now.get(Calendar.SECOND));
         views.setViewLayoutWidth(R.id.el_widget_panel,panelWidthDp,TypedValue.COMPLEX_UNIT_DIP);
         views.setViewLayoutHeight(R.id.el_widget_panel,panelHeightDp,TypedValue.COMPLEX_UNIT_DIP);
         int[] flippers={R.id.el_hour_flipper,R.id.el_minute_flipper,R.id.el_seconds_flipper};
@@ -102,26 +94,6 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     }
 
     private static RemoteViews.RemoteCollectionItems buildFrames(Context context,int count){RemoteViews.RemoteCollectionItems.Builder builder=new RemoteViews.RemoteCollectionItems.Builder();for(int i=0;i<count;i++){RemoteViews frame=new RemoteViews(context.getPackageName(),R.layout.el_second_frame);frame.setImageViewResource(R.id.el_second_image,SECOND_DRAWABLES[i]);builder.addItem(i,frame);}return builder.build();}
-    private static RemoteViews.RemoteCollectionItems buildStretchedFrames(Context context){
-      RemoteViews.RemoteCollectionItems cached=stretchedFramesCache;
-      if(cached!=null)return cached;
-      synchronized(ElWidgetProvider.class){
-        cached=stretchedFramesCache;if(cached!=null)return cached;
-        TypedArray ids=context.getResources().obtainTypedArray(R.array.el_stretched_frames);
-        try{
-          if(ids.length()!=STRETCHED_FRAME_COUNT)throw new IllegalStateException("stretched frame count "+ids.length()+" != "+STRETCHED_FRAME_COUNT);
-          RemoteViews.RemoteCollectionItems.Builder builder=new RemoteViews.RemoteCollectionItems.Builder();
-          for(int i=0;i<ids.length();i++){
-            int drawable=ids.getResourceId(i,0);
-            if(drawable==0)throw new IllegalStateException("missing stretched frame "+i);
-            RemoteViews frame=new RemoteViews(context.getPackageName(),R.layout.el_second_frame);
-            frame.setImageViewResource(R.id.el_second_image,drawable);
-            builder.addItem(i,frame);
-          }
-          cached=builder.build();stretchedFramesCache=cached;return cached;
-        }finally{ids.recycle();}
-      }
-    }
     private static PendingIntent tickIntent(Context context){Intent tick=new Intent(context,ElWidgetProvider.class).setAction(ACTION_TICK);return PendingIntent.getBroadcast(context,TICK_REQUEST_CODE,tick,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
     private static void scheduleNextMinute(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm==null)return;long now=System.currentTimeMillis(),next=now-(now%MINUTE_MS)+MINUTE_MS;PendingIntent pi=tickIntent(context);if(Build.VERSION.SDK_INT<31||alarm.canScheduleExactAlarms())alarm.setExactAndAllowWhileIdle(AlarmManager.RTC,next,pi);else alarm.setAndAllowWhileIdle(AlarmManager.RTC,next,pi);}
     private static void cancelTick(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm!=null)alarm.cancel(tickIntent(context));}
@@ -191,8 +163,8 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         dot(c,100.863f,79.949f,1.294f,1.369f);dot(c,100.863f,114.085f,1.294f,1.369f);dot(c,100.863f,148.220f,1.294f,1.369f);
         dot(c,8.286f,148.220f,1.294f,1.369f);dot(c,8.286f,114.085f,1.294f,1.369f);dot(c,8.286f,79.949f,1.294f,1.369f);
         section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P);c.drawText("PROG",86.237f,8.600f,LABEL_P);
-        section(c,0f,42.471f,39.525f,11.678f,LEGEND_BG_P);c.drawText("VERB",19.763f,50.520f,LABEL_P);
-        section(c,66.441f,42.471f,39.525f,11.678f,LEGEND_BG_P);c.drawText("NOUN",86.237f,50.520f,LABEL_P);
+        section(c,0f,42.721f,39.525f,11.678f,LEGEND_BG_P);c.drawText("VERB",19.763f,50.770f,LABEL_P);
+        section(c,66.441f,42.721f,39.525f,11.678f,LEGEND_BG_P);c.drawText("NOUN",86.237f,50.770f,LABEL_P);
         section(c,0f,.633f,39.525f,35.838f,COMP_BG_P);c.drawText("COMP",19.763f,17.900f,COMP_P);c.drawText("ACTY",19.763f,25.000f,COMP_P);
         rule(c,12.770f,78.602f,84.900f,2.695f);rule(c,12.770f,112.737f,84.900f,2.695f);rule(c,12.770f,146.873f,84.900f,2.695f);
         digits(c,"00",RIGHT_FIELD_X,PROG_Y);digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y);digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y);
