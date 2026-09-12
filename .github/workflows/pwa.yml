@@ -51,6 +51,9 @@ jobs:
       - name: Relay show behavior test
         run: node tools/relay-show-smoke.js
 
+      - name: Flight hardware UI test
+        run: node tools/flight-hardware-ui-smoke.js
+
       - name: Android frontend parity test
         run: node pwa/tools/pwa-parity-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
 
