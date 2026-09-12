@@ -65,8 +65,8 @@ assert(STYLE.includes('.el-field .el-seg.on{filter:url(#elGlow)}'),
 // SCD 1006387C alarm/status indicator: each active legend area is lit by three
 // incandescent lamps, the dark face is diffuse neutral gray with black text,
 // energized colors are aviation white/yellow, and light must not leak into the
-// neighboring legend.  The CM finish models the three sources as clipped radial
-// pools and therefore must not use an exterior annunciator glow.
+// neighboring legend.  The three source pools belong in the element background
+// so the bare legend text nodes are painted above the light in Android WebView.
 assert(CM.includes('Alarm/status indicator, SCD 1006387C'),
   'annunciator SCD fidelity block missing');
 assert(CM.includes('background:#74756f') && CM.includes('color:#11120f'),
@@ -75,9 +75,11 @@ assert(CM.includes('font-family:"Arial Narrow","Liberation Sans Narrow","Roboto 
   'Gorton-condensed fallback treatment missing');
 assert((CM.match(/radial-gradient\(ellipse at/g) || []).length >= 6,
   'three-source incandescent pools missing for white/yellow annunciators');
-assert(CM.includes('body.spacecraft-cm .lamp.on.white::before') &&
-       CM.includes('body.spacecraft-cm .lamp.on.yellow::before'),
-  'white/yellow incandescent source layers missing');
+assert(CM.includes('body.spacecraft-cm .lamp.on.white{') &&
+       CM.includes('body.spacecraft-cm .lamp.on.yellow{'),
+  'white/yellow incandescent backgrounds missing');
+assert(!CM.includes('.lamp.on.white::before') && !CM.includes('.lamp.on.yellow::before'),
+  'incandescent overlay must not paint over annunciator legend text');
 assert(CM.includes('overflow:hidden'),
   'annunciator light must be clipped to prevent inter-cell leakage');
 assert(!CM.includes('box-shadow:0 0 .62vmin') && !CM.includes('box-shadow:0 0 .7vmin'),
@@ -118,5 +120,5 @@ for (const marker of [
 console.log('display/layout geometry smoke: PASS');
 console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${expectedVisibleFraction.toFixed(6)})`);
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
-console.log('  incandescent annunciators: three-source white/yellow, isolated, black legends');
+console.log('  incandescent annunciators: three-source white/yellow, isolated, readable black legends');
 console.log('  flowing Series 2 control strip: bounded, wrapping, untruncated labels');
