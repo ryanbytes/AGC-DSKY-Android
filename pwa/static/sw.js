@@ -37,6 +37,7 @@ const CORE_ASSETS = [
   './cm-mode.js',
   './flight-hardware-ui.js',
   './keyboard-electrical-interlock.js',
+  './lighting-electrical-model.js',
   './relay-audio-refine.js',
   './dsky-geometry.js',
   './dsky-relay-matrix.js',
