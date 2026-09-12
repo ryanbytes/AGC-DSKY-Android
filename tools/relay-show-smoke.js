@@ -24,9 +24,11 @@ req(show,"saveAgcState('relay show checkpoint')",'durable pre-show checkpoint');
 req(show,'decodeChannel10','physical bank drive path');
 req(show,'NON_DECIMAL_CODES','contact-matrix burst');
 req(show,'for (let digit = 0; digit <= 9; digit++)','digit chase');
+req(show,'const SHOW_TEMPO = 2.0','slower presentation tempo');
+req(show,'const showSleep = ms => sleep(ms * SHOW_TEMPO)','presentation-only timing scale');
 req(show,"decodeChannel11(0o46)",'finale auxiliary relay drive');
 req(show,"decodeChannel163(0o730)",'finale annunciator relay drive');
-req(show,'await sleep(1000)','full-panel finale hold');
+req(show,'await showSleep(1000)','slowed full-panel finale hold');
 req(show,'saved.latches[row]','physical state restoration');
 req(show,'mode = saved.mode','previous mode restoration');
 req(show,'agcCore.start(1)','previous AGC task resume');
@@ -41,4 +43,4 @@ no(show,'filter:','CSS/filter flare');
 no(show,'classList.add(\'relay-flare\'','relay flare class');
 
 console.log('Relay show smoke: PASS');
-console.log('  bank sweep, digit chase, contact burst, finale, and previous-task restore verified');
+console.log('  slower bank sweep, digit chase, contact burst, finale, and previous-task restore verified');
