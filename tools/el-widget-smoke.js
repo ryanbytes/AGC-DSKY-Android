@@ -156,8 +156,14 @@ req(provider,'Typeface.create("sans-serif",Typeface.BOLD)','native legend face')
 req(provider,'LABEL_P.setTextSize(7.42f)','native legend drawing height');
 req(provider,'COMP_P.setTextSize(7.42f)','native COMP ACTY drawing height');
 req(provider,'section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P)','native PROG zone');
-req(provider,'section(c,0f,42.721f,39.525f,11.678f,LEGEND_BG_P)','native VERB zone');
-req(provider,'section(c,66.441f,42.721f,39.525f,11.678f,LEGEND_BG_P)','native NOUN zone');
+req(provider,'section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native VERB zone matched to PROG gap');
+req(provider,'section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native NOUN zone matched to PROG gap');
+req(provider,'c.drawText("VERB",19.763f,49.252f,LABEL_P)','native VERB legend baseline');
+req(provider,'c.drawText("NOUN",86.237f,49.252f,LABEL_P)','native NOUN legend baseline');
+req(html,'x="0" y="41.203" width="39.525" height="11.678"','WebView VERB zone matched to PROG gap');
+req(html,'x="66.441" y="41.203" width="39.525" height="11.678"','WebView NOUN zone matched to PROG gap');
+req(html,'x="19.763" y="49.252" text-anchor="middle">VERB</text>','WebView VERB legend baseline');
+req(html,'x="86.237" y="49.252" text-anchor="middle">NOUN</text>','WebView NOUN legend baseline');
 req(provider,'digits(c,"00",RIGHT_FIELD_X,PROG_Y)','native PROG datum');
 req(provider,'digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y)','native VERB datum');
 req(provider,'digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y)','native NOUN datum');
