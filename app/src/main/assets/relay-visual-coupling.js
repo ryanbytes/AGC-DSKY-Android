@@ -3,18 +3,23 @@
 /*
  * Couple the visible EL/contact output to the individual relay that drives it.
  *
- * hardware-fidelity.js remains authoritative for the 20-ms bank-drive/settle
- * envelope and final latched low-11 state. relay-identity-audio.js supplies the
- * deterministic per-relay set/reset mechanical profile. This layer observes
- * each channel-010 bank command and renders the electrically possible
- * intermediate contact-matrix state when each changed physical relay reaches
- * its armature/contact transition.
+ * AUTHENTIC mode uses each relay's deterministic physical set/reset travel time
+ * (normally about 5-14 ms) and leaves hardware-fidelity.js's 20-ms settled-bank
+ * render untouched.
+ *
+ * STRETCHED mode is explicitly a visual presentation aid for displays whose
+ * refresh cadence cannot expose sub-frame relay differences. The AGC, relay
+ * latches, relay audio, channel timing, and 20-ms physical settle boundary are
+ * NOT slowed. Only the rendered EL/contact sequence is expanded. Because the
+ * hardware layer still renders its true settled state at 20 ms, stretched mode
+ * restores the pre-drive visual state immediately afterward (20.5 ms, normally
+ * before the next screen paint) and then replays the changed relay contacts in
+ * their true mechanical order at a human-visible cadence.
  *
  * The five K-relays for each character are decoded by dsky-relay-matrix.js,
  * which follows the original DSKY relay schematic (E/F/H/J/K/M/N sections).
  * Contact bounce remains modeled for diagnostics/audio but is not flashed onto
- * the EL phosphor: its sub-millisecond reversals are below the fidelity we can
- * justify optically. The original 20-ms render still confirms the final state.
+ * the EL phosphor.
  */
 (() => {
   if (typeof decodeChannel10 !== 'function') return;
@@ -22,8 +27,34 @@
   if (!window.DSKY_RELAY_AUDIO || typeof window.DSKY_RELAY_AUDIO.profileFor !== 'function') return;
   if (!window.DSKY_RELAY_MATRIX || typeof window.DSKY_RELAY_MATRIX.segmentsForCode !== 'function') return;
 
+  const STORAGE_KEY = 'relayVisualTimingV1';
+  const MODE_AUTHENTIC = 'authentic';
+  const MODE_STRETCHED = 'stretched';
+  const FINAL_SETTLE_MS = 20;
+  const STRETCH_RESET_MS = 20.5;
+  const STRETCH_FIRST_MS = 38;
+  const STRETCH_STEP_MS = 22;
+
   const baseDecodeChannel10 = decodeChannel10;
   const generation = Object.create(null);
+
+  function getStoredMode() {
+    let value = null;
+    try {
+      if (typeof store !== 'undefined' && store && typeof store.get === 'function') value = store.get(STORAGE_KEY);
+      else if (typeof localStorage !== 'undefined') value = localStorage.getItem(STORAGE_KEY);
+    } catch (_) {}
+    return value === MODE_STRETCHED ? MODE_STRETCHED : MODE_AUTHENTIC;
+  }
+
+  function saveMode(value) {
+    try {
+      if (typeof store !== 'undefined' && store && typeof store.set === 'function') store.set(STORAGE_KEY, value);
+      else if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, value);
+    } catch (_) {}
+  }
+
+  let timingMode = getStoredMode();
 
   function currentSettledWord(row) {
     try {
@@ -125,59 +156,145 @@
       const value = engaging ? profile.setTravelMs : profile.resetTravelMs;
       if (Number.isFinite(value)) return Math.max(0, Math.min(19.5, value));
     } catch (_) {}
-    // Fallback mirrors the legacy mechanical fingerprint if the identity layer
-    // cannot provide a profile for some reason.
     const fallback = [6.2,11.7,8.4,13.6,7.1,15.0,9.5,12.5,5.6,14.3,10.5];
     return fallback[bit] || 10;
+  }
+
+  function collectMotions(row, prior, target) {
+    const motions = [];
+    const diff = (prior ^ target) & 0o3777;
+    for (let bit = 0; bit < 11; bit++) {
+      const mask = 1 << bit;
+      if (!(diff & mask)) continue;
+      const on = !!(target & mask);
+      motions.push({bit, mask, on, physicalMs:contactDelayMs(row, bit, on)});
+    }
+    motions.sort((a, b) => a.physicalMs - b.physicalMs || a.bit - b.bit);
+    return motions;
+  }
+
+  function stretchedDelayMs(index) {
+    return STRETCH_FIRST_MS + index * STRETCH_STEP_MS;
   }
 
   function scheduleContactVisuals(row, prior, target) {
     const token = (generation[row] || 0) + 1;
     generation[row] = token;
-    const motions = [];
-    const diff = (prior ^ target) & 0o3777;
-
-    for (let bit = 0; bit < 11; bit++) {
-      const mask = 1 << bit;
-      if (!(diff & mask)) continue;
-      const on = !!(target & mask);
-      motions.push({bit, mask, on, delayMs:contactDelayMs(row, bit, on)});
-    }
-    motions.sort((a, b) => a.delayMs - b.delayMs || a.bit - b.bit);
+    const motions = collectMotions(row, prior, target);
     if (!motions.length) return;
 
     let contactWord = prior & 0o3777;
+    if (timingMode === MODE_STRETCHED) {
+      // The real hardware path renders the final settled state at 20 ms. Put
+      // the visual-only presentation back at its pre-drive state immediately
+      // afterward, then reveal each relay in the same physical order slowly
+      // enough to cross phone-display refresh boundaries.
+      setTimeout(() => {
+        if (generation[row] !== token || timingMode !== MODE_STRETCHED) return;
+        contactWord = prior & 0o3777;
+        renderWord(row, contactWord);
+      }, STRETCH_RESET_MS);
+
+      motions.forEach((motion, index) => {
+        setTimeout(() => {
+          if (generation[row] !== token || timingMode !== MODE_STRETCHED) return;
+          if (motion.on) contactWord |= motion.mask;
+          else contactWord &= ~motion.mask;
+          renderWord(row, contactWord);
+        }, stretchedDelayMs(index));
+      });
+      return;
+    }
+
     for (const motion of motions) {
       setTimeout(() => {
-        if (generation[row] !== token) return;
+        if (generation[row] !== token || timingMode !== MODE_AUTHENTIC) return;
         if (motion.on) contactWord |= motion.mask;
         else contactWord &= ~motion.mask;
         renderWord(row, contactWord);
-      }, motion.delayMs);
+      }, motion.physicalMs);
     }
   }
+
+  function cancelPendingVisuals() {
+    for (let row = 1; row <= 12; row++) generation[row] = (generation[row] || 0) + 1;
+  }
+
+  function syncSettledVisuals() {
+    for (let row = 1; row <= 12; row++) renderWord(row, currentSettledWord(row));
+  }
+
+  function setTimingMode(next, persist = true) {
+    const normalized = next === MODE_STRETCHED ? MODE_STRETCHED : MODE_AUTHENTIC;
+    if (normalized === timingMode) {
+      updateButton();
+      return timingMode;
+    }
+    cancelPendingVisuals();
+    timingMode = normalized;
+    if (persist) saveMode(timingMode);
+    // Returning to authentic mode must immediately show the real settled relay
+    // state rather than leave a partially stretched presentation on screen.
+    if (timingMode === MODE_AUTHENTIC) syncSettledVisuals();
+    updateButton();
+    return timingMode;
+  }
+
+  function presentationDurationMs(changedCount) {
+    const count = Math.max(0, Number(changedCount) | 0);
+    if (!count) return 0;
+    return timingMode === MODE_STRETCHED
+      ? stretchedDelayMs(count - 1)
+      : FINAL_SETTLE_MS;
+  }
+
+  const button = document.getElementById('relay-timing');
+  function updateButton() {
+    if (!button) return;
+    const stretched = timingMode === MODE_STRETCHED;
+    button.textContent = stretched ? 'RELAY VISUAL STRETCHED' : 'RELAY VISUAL AUTHENTIC';
+    button.setAttribute('aria-pressed', stretched ? 'true' : 'false');
+    button.title = stretched
+      ? 'Visual-only stretched relay timing; AGC and physical relay timing remain authentic'
+      : 'Authentic modeled relay contact timing';
+  }
+
+  if (button) {
+    button.addEventListener('click', () => {
+      setTimingMode(timingMode === MODE_AUTHENTIC ? MODE_STRETCHED : MODE_AUTHENTIC, true);
+      try { if (typeof showControls === 'function') showControls(); } catch (_) {}
+    });
+  }
+  updateButton();
 
   decodeChannel10 = function relayContactVisualDecode(value) {
     const word = Number(value) & 0o77777;
     const row = (word >> 11) & 0o17;
     const target = word & 0o3777;
 
-    // Row 0 is the physical drive-off word. It carries no new contact target.
     if (row >= 1 && row <= 12) {
       const prior = currentSettledWord(row);
       scheduleContactVisuals(row, prior, target);
     }
 
     // Preserve the complete existing hardware path, including relay audio,
-    // latching state, 20-ms final settle, and yaAGC-visible behavior.
+    // latching state, the real 20-ms settle, and yaAGC-visible behavior.
     return baseDecodeChannel10(value);
   };
 
   window.DSKY_RELAY_VISUAL = Object.freeze({
     mode: 'individual-contact-coupled',
-    finalSettleMs: 20,
+    finalSettleMs: FINAL_SETTLE_MS,
     contactBounceVisible: false,
+    authenticTiming: true,
+    stretchedVisualOnly: true,
+    stretchResetMs: STRETCH_RESET_MS,
+    stretchFirstMs: STRETCH_FIRST_MS,
+    stretchStepMs: STRETCH_STEP_MS,
+    getTimingMode: () => timingMode,
+    setTimingMode,
     contactDelayMs,
+    presentationDurationMs,
     renderWord
   });
 })();
