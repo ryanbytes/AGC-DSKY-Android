@@ -44,7 +44,6 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     private static final Uri LOCAL_ASSET_ORIGIN = Uri.parse(NetClient.ASSET_ORIGIN);
 
     private WebView webView;
-    private RelayAudioBridge relayAudioBridge;
     private final Handler webViewHandler = new Handler(Looper.getMainLooper());
     private Bundle pendingWebViewState;
     private String pendingGeoOrigin;
@@ -90,7 +89,7 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
 
     @Override protected void onCreate(Bundle state){
         DebugReporter.install(this);requestWindowFeature(Window.FEATURE_NO_TITLE);super.onCreate(state);
-        pendingWebViewState=state;configureWindow();configureSensors();relayAudioBridge=new RelayAudioBridge(this);
+        pendingWebViewState=state;configureWindow();configureSensors();
         NtpTime.start(this);NtpTime.addListener(ntpListener);
         if(!DebugReporter.showPendingReport(this,this::startDsky))startDsky();
     }
@@ -124,7 +123,7 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     void startDsky(){
         if(webView!=null)return;if((getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0)WebView.setWebContentsDebuggingEnabled(true);
         webView=new WebView(this);webView.setBackgroundColor(CM_PANEL_COLOR);WebSettings settings=webView.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setGeolocationEnabled(true);settings.setMediaPlaybackRequiresUserGesture(false);settings.setBlockNetworkLoads(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);
-        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.addJavascriptInterface(new SkyBridge(),"SkyBridge");webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");if(relayAudioBridge!=null)webView.addJavascriptInterface(relayAudioBridge,"RelayAudioBridge");webView.setWebViewClient(new NetClient(this));
+        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.addJavascriptInterface(new SkyBridge(),"SkyBridge");webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient(){
             @Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){if(!isLocalAssetOrigin(origin)){callback.invoke(origin,false,false);return;}if(hasLocationPermission()){callback.invoke(origin,true,false);return;}pendingGeoOrigin=origin;pendingGeoCallback=callback;requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},GEO_PERMISSION_REQUEST);}
             @Override public void onPermissionRequest(PermissionRequest request){if(request==null||request.getOrigin()==null||!isLocalAssetOrigin(request.getOrigin().toString())){if(request!=null)request.deny();return;}boolean asksForVideo=false;for(String resource:request.getResources()){if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)){asksForVideo=true;break;}}if(!asksForVideo){request.deny();return;}if(hasCameraPermission()){request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});return;}if(pendingCameraRequest!=null)pendingCameraRequest.deny();pendingCameraRequest=request;requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION_REQUEST);}
@@ -154,6 +153,6 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     @Override protected void onResume(){super.onResume();configureWindow();registerSensors();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);pushSensorAvailability();}}
     @Override protected void onPause(){unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","RelayAudioBridge");}
-    @Override protected void onDestroy(){DebugReporter.dismissPendingReport(this);NtpTime.removeListener(ntpListener);unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;if(pendingCameraRequest!=null){pendingCameraRequest.deny();pendingCameraRequest=null;}destroyWebView();sensorManager=null;attitudeSensor=null;magneticAttitudeSensor=null;linearAccelerationSensor=null;accelerometerSensor=null;gravitySensor=null;if(relayAudioBridge!=null){relayAudioBridge.close();relayAudioBridge=null;}super.onDestroy();}
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge");}
+    @Override protected void onDestroy(){DebugReporter.dismissPendingReport(this);NtpTime.removeListener(ntpListener);unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;if(pendingCameraRequest!=null){pendingCameraRequest.deny();pendingCameraRequest=null;}destroyWebView();sensorManager=null;attitudeSensor=null;magneticAttitudeSensor=null;linearAccelerationSensor=null;accelerometerSensor=null;gravitySensor=null;super.onDestroy();}
 }
