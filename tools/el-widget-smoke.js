@@ -150,7 +150,19 @@ req(geometry,'const VERB_NOUN_TOP_IN=FIRST_BAR_CENTER_FROM_TOP_IN-VERB_NOUN_TO_F
 req(geometry,'const UPPER_CLEARANCE_IN=FIRST_BAR_CENTER_FROM_TOP_IN-(BAR_H_IN*.5)-(VERB_NOUN_TOP_IN+.500);','upper electrode clearance');
 no(geometry,'const UPPER_ROW_Y_OFFSET_IN=.960;','obsolete overlapping upper-row datum');
 req(provider,'FIRST_DIGIT_X=.400f*U','native first register datum');
-req(provider,'LEFT_FIELD_X=.140f*U,RIGHT_FIELD_X=1.620f*U','native upper datums');
+req(provider,'LEFT_FIELD_X=.150f*U,RIGHT_FIELD_X=1.620f*U','native upper datums');
+req(provider,'PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U','native upper vertical datums');
+req(provider,'Typeface.create("sans-serif",Typeface.BOLD)','native legend face');
+req(provider,'LABEL_P.setTextSize(7.42f)','native legend drawing height');
+req(provider,'COMP_P.setTextSize(7.42f)','native COMP ACTY drawing height');
+req(provider,'section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P)','native PROG zone');
+req(provider,'section(c,0f,42.721f,39.525f,11.678f,LEGEND_BG_P)','native VERB zone');
+req(provider,'section(c,66.441f,42.721f,39.525f,11.678f,LEGEND_BG_P)','native NOUN zone');
+req(provider,'digits(c,"00",RIGHT_FIELD_X,PROG_Y)','native PROG datum');
+req(provider,'digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y)','native VERB datum');
+req(provider,'digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y)','native NOUN datum');
+no(provider,'LEFT_FIELD_X=.140f*U','obsolete native left datum');
+no(provider,'digits(c,"16",LEFT_FIELD_X,55.5f)','obsolete native VERB Y');
 req(generator,'REG_ADV=.410*U, FIRST_DIGIT_X=.400*U','generated register datums');
 req(html,'transform="translate(72.763 14.148)"','PROG datum');
 req(html,'transform="translate(6.737 54.797)"','VERB datum');
@@ -158,7 +170,6 @@ req(html,'transform="translate(72.763 54.797)"','NOUN datum');
 no(html,'transform="translate(6.737 57.267)"','obsolete overlapping VERB datum');
 no(html,'transform="translate(72.763 57.267)"','obsolete overlapping NOUN datum');
 req(html,'transform="translate(0 84.441)"','register origin');
-req(provider,'digits(c,"00",RIGHT_FIELD_X,14f)','native PROG datum');
 req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y)",'native register datum');
 
 req(generator,'android:viewportWidth="106"','generated viewport width');
@@ -171,4 +182,4 @@ req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  1006315G active-face ratio and upper electrode clearance verified');
+console.log('  1006315G active-face ratio, upper electrodes, labels, and clearance verified');
