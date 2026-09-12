@@ -24,6 +24,7 @@ if (!index.includes('<button id="relay-timing">')) fail('relay timing switch mis
 const timers = [];
 const rendered = [];
 const baseCalls = [];
+const baseTicks = [];
 const raf = [];
 const storage = new Map();
 const buttonListeners = {};
@@ -32,7 +33,7 @@ const timingButton = {
   addEventListener(type, fn) { buttonListeners[type] = fn; },
   setAttribute(name, value) { this.attrs[name] = String(value); }
 };
-const hardware = {latches:{10:0}};
+const hardware = {latches:{10:0}, activeDrive:0};
 function profile(bit) {
   if (bit === 0) return {
     setTravelMs:5, resetTravelMs:6,
@@ -56,7 +57,7 @@ function profile(bit) {
 const context = {
   console,
   window: {
-    AGCDSKY: { hardware: () => ({latches:{...hardware.latches}}) },
+    AGCDSKY: { hardware: () => ({latches:{...hardware.latches}, activeDrive:hardware.activeDrive}) },
     DSKY_RELAY_AUDIO: { profileFor: (_row, bit) => profile(bit) },
     DSKY_RELAY_MATRIX: { segmentsForCode: () => '' }
   },
@@ -67,6 +68,8 @@ const context = {
   },
   showControls: () => {},
   decodeChannel10: value => { baseCalls.push(value); },
+  emitTick: (ctx, when, strength) => { baseTicks.push({ctx, when, strength}); },
+  tickSound: false,
   agcRelayWords: {10:0},
   agcDisplay: {
     prog:[' ',' '], verb:[' ',' '], noun:[' ',' '],
@@ -90,10 +93,20 @@ if (!api) fail('diagnostic API not exported');
 if (api.mode !== 'individual-contact-coupled') fail('wrong visual coupling mode');
 if (api.finalSettleMs !== 20) fail('20-ms final settle contract lost');
 if (api.contactBounceVisible !== false) fail('visual bounce must remain disabled');
+if (api.stretchedAudioFrameLocked !== true) fail('stretched audio is not frame locked');
+if (api.stretchedBounceAudio !== false) fail('stretched mode must not replay bounce audio');
 if (api.getTimingMode() !== 'authentic') fail('default timing mode must be authentic');
 if (timingButton.textContent !== 'RELAY VISUAL AUTHENTIC') fail('authentic button label missing');
 if (typeof buttonListeners.click !== 'function') fail('timing switch click handler missing');
 
+// Authentic mode keeps original physical audio timing.
+const fakeCtx = {currentTime:1};
+hardware.activeDrive = 10;
+context.emitTick(fakeCtx, 1.006, 0.66);
+if (baseTicks.length !== 1) fail('authentic mode suppressed physical relay click');
+hardware.activeDrive = 0;
+
+// Row 10 is VERB. D-K1 is bit 0 and C-K1 is bit 5.
 const command = (10 << 11) | (1 << 5) | 1;
 context.decodeChannel10(command);
 if (baseCalls.length !== 1 || baseCalls[0] !== command) fail('base channel-010 path not preserved');
@@ -114,6 +127,15 @@ if (api.getTimingMode() !== 'stretched') fail('switch did not enter stretched mo
 if (storage.get('relayVisualTimingV1') !== 'stretched') fail('stretched preference not persisted');
 if (timingButton.textContent !== 'RELAY VISUAL STRETCHED') fail('stretched button label missing');
 
+// Latching relay clicks at the authentic 5-15 ms markers are suppressed while
+// stretched; the ~1-ms auxiliary path is intentionally left alone.
+hardware.activeDrive = 10;
+context.emitTick(fakeCtx, 1.006, 0.66);
+if (baseTicks.length !== 1) fail('stretched mode did not suppress early latching click');
+context.emitTick(fakeCtx, 1.001, 0.66);
+if (baseTicks.length !== 2) fail('stretched mode incorrectly suppressed auxiliary-style click');
+hardware.activeDrive = 0;
+
 timers.length = 0;
 rendered.length = 0;
 raf.length = 0;
@@ -131,23 +153,41 @@ if (!initial || initial.id !== 'verb' || initial.text !== '  ') {
 
 timers.sort((a,b) => a.ms - b.ms);
 const stretchedTimes = timers.map(x => x.ms);
-if (stretchedTimes[0] !== 86.4 || stretchedTimes[1] !== 164.4) {
-  fail(`wrong relay-specific stretched timing: ${stretchedTimes.join(',')}`);
+if (stretchedTimes[0] !== 27.3 || stretchedTimes[1] !== 55.3) {
+  fail(`wrong brisk relay-specific stretched timing: ${stretchedTimes.join(',')}`);
 }
-if (stretchedTimes[1] - stretchedTimes[0] < 42) fail('stretched relay gap is not visibly separated');
+if (!(stretchedTimes[1] - stretchedTimes[0] >= 18 && stretchedTimes[1] - stretchedTimes[0] <= 28)) {
+  fail('stretched relay gap outside brisk screen-visible range');
+}
 
 const schedule = api.stretchedScheduleFor(10, 0, (1 << 5) | 1);
 if (schedule.length !== 2 || schedule[0].bit !== 0 || schedule[1].bit !== 5) fail('stretched order lost physical relay order');
 if (schedule[0].stretchedMs === schedule[1].stretchedMs) fail('relay identities collapsed to common stretched delay');
 
+// Timer changes the presentation contact state, but both the EL paint and the
+// clean click are committed together on the next animation frame.
 timers[0].fn();
 last = rendered[rendered.length - 1];
-if (!last || last.id !== 'verb' || last.text !== ' 1') fail(`bad first stretched state: ${JSON.stringify(last)}`);
+if (!last || last.text !== '  ') fail('stretched contact painted before its synchronized frame');
+if (api.lastPresentationClick() !== null) fail('stretched click fired before its visual frame');
+let frame = raf.shift();
+if (typeof frame !== 'function') fail('missing first synchronized animation frame');
+frame();
+last = rendered[rendered.length - 1];
+if (!last || last.id !== 'verb' || last.text !== ' 1') fail(`bad first stretched frame: ${JSON.stringify(last)}`);
+let click = api.lastPresentationClick();
+if (!click || click.row !== 10 || click.bit !== 0 || click.engaging !== true) fail(`first stretched click not tied to first EL relay: ${JSON.stringify(click)}`);
 
 timers[1].fn();
+frame = raf.shift();
+if (typeof frame !== 'function') fail('missing second synchronized animation frame');
+frame();
 last = rendered[rendered.length - 1];
-if (!last || last.id !== 'verb' || last.text !== '11') fail(`bad final stretched state: ${JSON.stringify(last)}`);
-if (timers.length !== 3 || timers[2].ms !== 38) fail('final presentation release hold missing');
+if (!last || last.id !== 'verb' || last.text !== '11') fail(`bad final stretched frame: ${JSON.stringify(last)}`);
+click = api.lastPresentationClick();
+if (!click || click.row !== 10 || click.bit !== 5 || click.engaging !== true) fail(`second stretched click not tied to second EL relay: ${JSON.stringify(click)}`);
+
+if (timers.length !== 3 || timers[2].ms !== 24) fail('final presentation release hold missing');
 timers[2].fn();
 
 const verbFrames = rendered.filter(x => x.id === 'verb').map(x => x.text);
@@ -161,4 +201,4 @@ if (api.getTimingMode() !== 'authentic') fail('switch did not return to authenti
 if (storage.get('relayVisualTimingV1') !== 'authentic') fail('authentic preference not persisted');
 
 console.log('Relay visual coupling smoke: PASS');
-console.log('  authentic timing preserved; stretched timing is slower, per-relay, frame-locked, and bounce-free visually');
+console.log('  authentic timing preserved; stretched EL and clean per-relay clicks share the same animation frame');
