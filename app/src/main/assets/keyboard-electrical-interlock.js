@@ -11,7 +11,9 @@
  *
  * This listener lives on window capture, ahead of the older document-level
  * mechanical handler.  It therefore owns the 18 keycoded switches without
- * changing PRO or the rest of flight-hardware-ui.js.
+ * changing PRO or the rest of flight-hardware-ui.js.  Because it owns the
+ * earliest normal-key event, it also owns CLOCK -> AGC handoff so the first
+ * physical contact is not swallowed before the older document listener sees it.
  */
 (() => {
   if (window.__DSKY_KEYBOARD_ELECTRICAL_INTERLOCK__) return;
@@ -38,6 +40,7 @@
   let electricalMade = false;
   let electricalMadeAt = 0;
   let keyResetTimer = 0;
+  let clockHandoffPending = false;
 
   function normalButton(event) {
     const button = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
@@ -86,6 +89,77 @@
     catch (_) { return null; }
   }
 
+  function currentMode() {
+    try {
+      if (window.AGCDSKY && typeof window.AGCDSKY.appStatus === 'function') {
+        return String(window.AGCDSKY.appStatus().mode || '');
+      }
+    } catch (_) {}
+    try { return typeof mode !== 'undefined' ? String(mode) : ''; }
+    catch (_) { return ''; }
+  }
+
+  function registerElectricalMake(core, code) {
+    const accepted = typeof core.keyPress === 'function'
+      ? core.keyPress(code)
+      : (typeof core.writeIo === 'function' ? core.writeIo(0o15, code) : 0);
+    if (!(accepted > 0)) return false;
+    electricalCore = core;
+    electricalKeyCode = code;
+    electricalMade = true;
+    electricalMadeAt = performance.now();
+    if (window.AGCDSKY && typeof window.AGCDSKY.scheduleAgcAutosave === 'function') {
+      window.AGCDSKY.scheduleAgcAutosave('DSKY key make');
+    }
+    return true;
+  }
+
+  function waitForAgcLoad(api) {
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        let status;
+        try { status = api.appStatus(); }
+        catch (error) { reject(error); return; }
+        if (status && status.mode === 'agc') { resolve(); return; }
+        if (!status || status.mode !== 'agc-loading') {
+          reject(new Error(`AGC handoff ended in ${status?.mode || 'unknown'} mode`));
+          return;
+        }
+        setTimeout(check, 10);
+      };
+      check();
+    });
+  }
+
+  async function promoteClockContact(state, code) {
+    const api = window.AGCDSKY;
+    try {
+      if (!api || typeof api.enterAgc !== 'function' || typeof api.appStatus !== 'function') {
+        throw new Error('AGC mode API unavailable');
+      }
+
+      // enterAgc() is the authoritative transition.  If another caller already
+      // has the core in agc-loading, enterAgc() intentionally returns early;
+      // wait for that in-flight load rather than dropping this physical key.
+      await api.enterAgc();
+      if (currentMode() === 'agc-loading') await waitForAgcLoad(api);
+
+      const core = currentCore();
+      if (!core || currentMode() !== 'agc') throw new Error('AGC core not ready after clock handoff');
+      if (!registerElectricalMake(core, code)) throw new Error('AGC rejected clock-handoff keycode');
+
+      clockHandoffPending = false;
+      // A touchscreen tap may have physically returned while the WASM/rope was
+      // loading.  In that case the make still happened, so assert its keycode
+      // first and then let the normal minimum-dwell/KEYRST path release it.
+      if (!state.down) assertKeyResetIfReady();
+    } catch (error) {
+      clockHandoffPending = false;
+      console.error('DSKY clock-to-AGC key handoff failed', error);
+      if (!state.down && allNormalKeysReleased()) clearElectricalCycle();
+    }
+  }
+
   function makeContact(state) {
     if (!state || !state.down || state.made) return;
     state.made = true;
@@ -98,22 +172,24 @@
     if (!state.accepted) return;
 
     const key = state.button.dataset.key;
+    const code = DSKY_KEY_CODE[key];
+    if (code === undefined) return;
     try {
-      const core = currentCore();
-      if (core && typeof mode !== 'undefined' && mode === 'agc') {
-        const code = DSKY_KEY_CODE[key];
-        if (code === undefined) return;
-        const accepted = typeof core.keyPress === 'function'
-          ? core.keyPress(code)
-          : (typeof core.writeIo === 'function' ? core.writeIo(0o15, code) : 0);
-        if (!(accepted > 0)) return;
-        electricalCore = core;
-        electricalKeyCode = code;
-        electricalMade = true;
-        electricalMadeAt = performance.now();
-        if (window.AGCDSKY && typeof window.AGCDSKY.scheduleAgcAutosave === 'function') {
-          window.AGCDSKY.scheduleAgcAutosave('DSKY key make');
+      const modeNow = currentMode();
+      if (modeNow === 'clock' || modeNow === 'agc-loading') {
+        // The window-capture electrical layer stops propagation before
+        // clock-behavior.js can see the pointer.  Promote here, at the real
+        // contact point, and preserve this same contact through AGC startup.
+        if (!clockHandoffPending) {
+          clockHandoffPending = true;
+          void promoteClockContact(state, code);
         }
+        return;
+      }
+
+      const core = currentCore();
+      if (core && modeNow === 'agc') {
+        registerElectricalMake(core, code);
         return;
       }
       if (typeof window.press === 'function') window.press(key);
@@ -132,11 +208,17 @@
     electricalKeyCode = 0;
     electricalMade = false;
     electricalMadeAt = 0;
+    clockHandoffPending = false;
     cycleLatched = false;
   }
 
   function assertKeyResetIfReady() {
     if (!allNormalKeysReleased()) return;
+    // While CLOCK -> AGC startup is in flight, retain ownership of this
+    // physical cycle.  Clearing it here would let the async handoff assert a
+    // keycode after KEYRST had already been declared, leaving channel 015 held.
+    if (clockHandoffPending && !electricalMade) return;
+
     // KEYRST exists only at the all-released state. If the accepted contact
     // was made only moments ago (possible on a touchscreen fast tap), retain
     // the keycode through a short D-input-filter dwell before restoring KEYRST.
@@ -240,6 +322,7 @@
       electricalKeyCode,
       electricalMadeAt,
       keyResetPending:!!keyResetTimer,
+      clockHandoffPending,
       minKeycodeHoldMs:MIN_KEYCODE_HOLD_MS,
       keys:Array.from(pointers.values()).map(s => ({key:s.button.dataset.key, accepted:s.accepted, made:s.made}))
     }),
