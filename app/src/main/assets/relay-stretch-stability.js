@@ -1,31 +1,21 @@
 'use strict';
 
 /*
- * Stretched-relay presentation stability shim.
+ * STRETCHED presentation stability layer.
  *
- * The physical relay model still latches at the real 20-ms boundary. In
- * STRETCHED presentation mode the crew-facing EL presentation is deliberately
- * slower. Two separate artifacts can otherwise appear:
+ * The real DSKY relay/latch model remains authoritative and still settles at
+ * 20 ms.  STRETCHED is only a deliberately slowed crew-facing presentation.
+ * This layer prevents the slowed presentation from manufacturing optical
+ * artifacts that are not useful representations of the hardware:
  *
- *   1. hardware-fidelity.js performs its normal settled-word paint at 20 ms;
- *      the browser can expose that hardware-ahead word before the stretched
- *      presentation catches up;
- *   2. relay-visual-coupling.js reasserts the current stretched word on every
- *      animation frame. Rebuilding identical SVG digits repeatedly can shimmer
- *      on Android WebView even though the electrical state did not change.
+ *   - the hidden 20-ms hardware settle may update the latch/model, but is not
+ *     allowed to paint or advance the stretched optical state;
+ *   - identical EL surfaces are not rebuilt on every animation frame;
+ *   - a segment that is changing from its displayed state toward the final
+ *     K1..K5 target may make that transition once, but later intermediate
+ *     K1..K5 states cannot reverse it (no artificial on-off-on flicker).
  *
- * This layer keeps the physical latch/AGC path untouched. In stretched mode:
- *   - the 20-ms settle paint is restored to the current presentation in the
- *     same JavaScript task;
- *   - identical crew-facing digit/register renders are suppressed, so DOM is
- *     changed only when the visible EL state actually changes;
- *   - slowed K1..K5 intermediate states are filtered per EL segment. A segment
- *     may move from the currently shown state toward the final target once, but
- *     later intermediate relay states cannot reverse it. This prevents
- *     artificial on-off-on/off-on-off flicker created only by stretching a
- *     normally sub-20-ms contact sequence.
- *
- * Authentic mode remains a complete pass-through.
+ * AUTHENTIC mode is a pass-through.
  */
 (() => {
   const visual = window.DSKY_RELAY_VISUAL;
@@ -35,10 +25,41 @@
 
   const MODE_STRETCHED = 'stretched';
   const FINAL_SETTLE_MS = Number(visual.finalSettleMs) || 20;
+  const SEGMENT_ORDER = 'abcdefg';
+  const SEGMENT_FULL_MASK = 0x7f;
   const baseDecodeChannel10 = decodeChannel10;
 
+  let suppressCrewFacingWrite = 0;
+  let lastObservedStretched = null;
+
   const codeForChar = new Map();
+  const pseudoCharForMask = new Map();
+  const shownMaskByPosition = new Map();
+  const guardByPosition = new Map();
+  const lastSurfaceSignature = new Map();
+
   for (let code = 0; code < 32; code++) codeForChar.set(relayDigit(code), code);
+
+  const pairPositions = Object.freeze({
+    prog: ['prog0', 'prog1'],
+    verb: ['verb0', 'verb1'],
+    noun: ['noun0', 'noun1']
+  });
+  const regPositions = Object.freeze({
+    r1: ['r1d0', 'r1d1', 'r1d2', 'r1d3', 'r1d4'],
+    r2: ['r2d0', 'r2d1', 'r2d2', 'r2d3', 'r2d4'],
+    r3: ['r3d0', 'r3d1', 'r3d2', 'r3d3', 'r3d4']
+  });
+
+  function isStretched() {
+    const stretched = visual.getTimingMode() === MODE_STRETCHED;
+    if (lastObservedStretched !== stretched) {
+      guardByPosition.clear();
+      lastSurfaceSignature.clear();
+      lastObservedStretched = stretched;
+    }
+    return stretched;
+  }
 
   function codeOf(ch) {
     return codeForChar.has(ch) ? codeForChar.get(ch) : 0;
@@ -47,10 +68,14 @@
   function hardwareLatch(row) {
     try {
       const state = window.AGCDSKY.hardware();
-      if (state && state.latches && state.latches[row] !== undefined) return Number(state.latches[row]) & 0o3777;
+      if (state && state.latches && state.latches[row] !== undefined) {
+        return Number(state.latches[row]) & 0o3777;
+      }
     } catch (_) {}
     try {
-      if (agcRelayWords && agcRelayWords[row] !== undefined) return Number(agcRelayWords[row]) & 0o3777;
+      if (agcRelayWords && agcRelayWords[row] !== undefined) {
+        return Number(agcRelayWords[row]) & 0o3777;
+      }
     } catch (_) {}
     return 0;
   }
@@ -75,7 +100,8 @@
     try {
       switch (row) {
         case 12: {
-          let mask = 0, visible = 0;
+          let mask = 0;
+          let visible = 0;
           const lamps = [
             [0o00004, 'vel'], [0o00010, 'noatt'], [0o00020, 'alt'],
             [0o00040, 'gimbal'], [0o00200, 'tracker'], [0o00400, 'prog']
@@ -88,14 +114,10 @@
           }
           return mergeVisible(base, mask, visible);
         }
-        case 11:
-          return mergeVisible(base, 0o1777, pairWord(agcDisplay.prog));
-        case 10:
-          return mergeVisible(base, 0o1777, pairWord(agcDisplay.verb));
-        case 9:
-          return mergeVisible(base, 0o1777, pairWord(agcDisplay.noun));
-        case 8:
-          return mergeVisible(base, 0o0037, codeOf(agcDisplay.r1.digits[0]));
+        case 11: return mergeVisible(base, 0o1777, pairWord(agcDisplay.prog));
+        case 10: return mergeVisible(base, 0o1777, pairWord(agcDisplay.verb));
+        case 9:  return mergeVisible(base, 0o1777, pairWord(agcDisplay.noun));
+        case 8:  return mergeVisible(base, 0o0037, codeOf(agcDisplay.r1.digits[0]));
         case 7:
           return ((agcDisplay.r1.plus ? 0o2000 : 0) |
             ((codeOf(agcDisplay.r1.digits[1]) & 0o37) << 5) |
@@ -124,9 +146,11 @@
           return ((agcDisplay.r3.minus ? 0o2000 : 0) |
             ((codeOf(agcDisplay.r3.digits[3]) & 0o37) << 5) |
             (codeOf(agcDisplay.r3.digits[4]) & 0o37)) & 0o3777;
+        default: return base;
       }
-    } catch (_) {}
-    return base;
+    } catch (_) {
+      return base;
+    }
   }
 
   function withPresentedLatch(row, presentedWord, fn) {
@@ -134,13 +158,13 @@
     window.AGCDSKY.hardware = function presentationAwareHardwareSnapshot() {
       const state = actualHardware.call(window.AGCDSKY);
       if (!state || !state.latches) return state;
-      return {
-        ...state,
-        latches: {...state.latches, [row]: presentedWord & 0o3777}
-      };
+      return {...state, latches: {...state.latches, [row]: presentedWord & 0o3777}};
     };
-    try { return fn(); }
-    finally { window.AGCDSKY.hardware = actualHardware; }
+    try {
+      return fn();
+    } finally {
+      window.AGCDSKY.hardware = actualHardware;
+    }
   }
 
   function withAtomicSettlePaint(row, fn) {
@@ -159,10 +183,17 @@
             return;
           }
 
+          // Snapshot the crew-facing state at execution time.  The physical
+          // callback is allowed to settle the real latch/model, but its normal
+          // renderer is hidden from the stretched optical state.  In
+          // particular, it must not make the monotonic guard believe the final
+          // K1..K5 contact has already occurred.
           const heldWord = capturePresentedWord(row);
+          suppressCrewFacingWrite++;
           try {
             callback(...args);
           } finally {
+            suppressCrewFacingWrite--;
             visual.renderWord(row, heldWord);
           }
         }, ms);
@@ -170,38 +201,11 @@
       return nativeSetTimeout.call(host, callback, delay, ...args);
     };
 
-    try { return fn(); }
-    finally { host.setTimeout = nativeSetTimeout; }
-  }
-
-  const SEGMENT_ORDER = 'abcdefg';
-  const SEGMENT_FULL_MASK = 0x7f;
-  const pseudoCharForMask = new Map();
-  const shownMaskByPosition = new Map();
-  const guardByPosition = new Map();
-  const guardGeneration = Object.create(null);
-  const lastSurfaceSignature = new Map();
-  let lastObservedStretched = null;
-
-  const pairPositions = Object.freeze({
-    prog: ['prog0', 'prog1'],
-    verb: ['verb0', 'verb1'],
-    noun: ['noun0', 'noun1']
-  });
-  const regPositions = Object.freeze({
-    r1: ['r1d0', 'r1d1', 'r1d2', 'r1d3', 'r1d4'],
-    r2: ['r2d0', 'r2d1', 'r2d2', 'r2d3', 'r2d4'],
-    r3: ['r3d0', 'r3d1', 'r3d2', 'r3d3', 'r3d4']
-  });
-
-  function isStretched() {
-    const stretched = visual.getTimingMode() === MODE_STRETCHED;
-    if (lastObservedStretched !== stretched) {
-      guardByPosition.clear();
-      lastSurfaceSignature.clear();
-      lastObservedStretched = stretched;
+    try {
+      return fn();
+    } finally {
+      host.setTimeout = nativeSetTimeout;
     }
-    return stretched;
   }
 
   function maskForSegments(segments) {
@@ -252,27 +256,23 @@
     switch (row) {
       case 11: return [['prog0', c], ['prog1', d]];
       case 10: return [['verb0', c], ['verb1', d]];
-      case 9: return [['noun0', c], ['noun1', d]];
-      case 8: return [['r1d0', d]];
-      case 7: return [['r1d1', c], ['r1d2', d]];
-      case 6: return [['r1d3', c], ['r1d4', d]];
-      case 5: return [['r2d0', c], ['r2d1', d]];
-      case 4: return [['r2d2', c], ['r2d3', d]];
-      case 3: return [['r2d4', c], ['r3d0', d]];
-      case 2: return [['r3d1', c], ['r3d2', d]];
-      case 1: return [['r3d3', c], ['r3d4', d]];
+      case 9:  return [['noun0', c], ['noun1', d]];
+      case 8:  return [['r1d0', d]];
+      case 7:  return [['r1d1', c], ['r1d2', d]];
+      case 6:  return [['r1d3', c], ['r1d4', d]];
+      case 5:  return [['r2d0', c], ['r2d1', d]];
+      case 4:  return [['r2d2', c], ['r2d3', d]];
+      case 3:  return [['r2d4', c], ['r3d0', d]];
+      case 2:  return [['r3d1', c], ['r3d2', d]];
+      case 1:  return [['r3d3', c], ['r3d4', d]];
       default: return [];
     }
   }
 
   function beginMonotonicTransition(row, priorWord, targetWord) {
     if (!isStretched() || row < 1 || row > 11) return;
-    const token = (guardGeneration[row] || 0) + 1;
-    guardGeneration[row] = token;
     const priorCodes = new Map(rowCharacterPositions(row, priorWord));
-    const targetEntries = rowCharacterPositions(row, targetWord);
-
-    for (const [position, targetCode] of targetEntries) {
+    for (const [position, targetCode] of rowCharacterPositions(row, targetWord)) {
       const fallbackPrior = maskForRelayCode(priorCodes.get(position) || 0);
       const priorMask = shownMaskByPosition.has(position)
         ? shownMaskByPosition.get(position)
@@ -280,8 +280,6 @@
       const targetMask = maskForRelayCode(targetCode);
       shownMaskByPosition.set(position, priorMask);
       guardByPosition.set(position, {
-        row,
-        token,
         targetCode: Number(targetCode) & 0x1f,
         targetMask,
         changedMask: (priorMask ^ targetMask) & SEGMENT_FULL_MASK
@@ -302,23 +300,17 @@
       return requested;
     }
 
-    let shown = shownMaskByPosition.has(position)
-      ? shownMaskByPosition.get(position)
-      : requested;
+    let shown = shownMaskByPosition.has(position) ? shownMaskByPosition.get(position) : requested;
     const pending = guard.changedMask & (shown ^ guard.targetMask);
     const atTarget = (~(requested ^ guard.targetMask)) & SEGMENT_FULL_MASK;
     const commit = pending & atTarget;
     shown = ((shown & ~commit) | (guard.targetMask & commit)) & SEGMENT_FULL_MASK;
     shownMaskByPosition.set(position, shown);
 
-    // Relay bits only move once from the prior word to the target word during a
-    // presentation. Once this character's exact K1..K5 target code appears,
-    // every changed relay in that character has made its legitimate contact;
-    // later stretched callbacks cannot alter it. End the guard without a
-    // housekeeping timer, keeping the renderer's physical timer contract clean.
-    if ((Number(requestedCode) & 0x1f) === guard.targetCode) {
-      guardByPosition.delete(position);
-    }
+    // Only the exact target K1..K5 code proves that every changed relay for
+    // this character has made its legitimate final contact.  Do not release
+    // the guard merely because an intermediate code is optically identical.
+    if ((Number(requestedCode) & 0x1f) === guard.targetCode) guardByPosition.delete(position);
     return shown;
   }
 
@@ -326,18 +318,15 @@
     const keys = pairPositions[id];
     if (!keys) return null;
     const chars = String(text || '').padEnd(2, ' ').slice(0, 2).split('');
-    const masks = chars.map((ch, index) => filteredMask(keys[index], maskForChar(ch), codeOf(ch)));
-    return {
-      text: masks.map(charForMask).join(''),
-      signature: `${id}:${masks.join(',')}`
-    };
+    const masks = chars.map((ch, i) => filteredMask(keys[i], maskForChar(ch), codeOf(ch)));
+    return {text: masks.map(charForMask).join(''), signature: `${id}:${masks.join(',')}`};
   }
 
   function stabilizeRegisterText(id, sign, digits) {
     const keys = regPositions[id];
     if (!keys) return null;
     const chars = String(digits || '').padEnd(5, ' ').slice(0, 5).split('');
-    const masks = chars.map((ch, index) => filteredMask(keys[index], maskForChar(ch), codeOf(ch)));
+    const masks = chars.map((ch, i) => filteredMask(keys[i], maskForChar(ch), codeOf(ch)));
     return {
       digits: masks.map(charForMask).join(''),
       signature: `${id}:${String(sign || ' ')}:${masks.join(',')}`
@@ -347,6 +336,7 @@
   if (typeof set2 === 'function') {
     const baseSet2 = set2;
     set2 = function stableStretchedSet2(id, text) {
+      if (suppressCrewFacingWrite > 0) return;
       if (!isStretched()) return baseSet2(id, text);
       const stable = stabilizePairText(id, text);
       if (!stable) return baseSet2(id, text);
@@ -359,6 +349,7 @@
   if (typeof setReg === 'function') {
     const baseSetReg = setReg;
     setReg = function stableStretchedSetReg(id, sign, digits) {
+      if (suppressCrewFacingWrite > 0) return;
       if (!isStretched()) return baseSetReg(id, sign, digits);
       const stable = stabilizeRegisterText(id, sign, digits);
       if (!stable) return baseSetReg(id, sign, digits);
@@ -390,6 +381,7 @@
     mode: 'same-task-settle-shield',
     settleShieldMs: FINAL_SETTLE_MS,
     settleRepaintSameTask: true,
+    settleCrewFacingWriteSuppressed: true,
     eventDrivenDomWrites: true,
     monotonicSegments: true,
     capturePresentedWord
