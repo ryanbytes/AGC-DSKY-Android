@@ -172,11 +172,17 @@ function testNavigationAndSnapshots() {
     assert(bytes[1024 + 92196 + 6] === 1,
         'navigation key must assert KEYRUPT2 request byte');
 
-    // A persisted AGC snapshot represents internal computer state, not a
-    // finger still holding a DSKY button. Establish the normal released levels
-    // before taking the round-trip fingerprint.
-    assert(core.releaseExternalDskyInputs() === true,
-        'could not establish released DSKY inputs for snapshot');
+    // Deliberately snapshot transient physical switch states. importSnapshot()
+    // must validate the saved bytes first, then restore the external keyboard
+    // and active-low PRO contact to their physically released states.
+    const inputWords = new Uint16Array(core.memory.buffer);
+    const keyWord = core.inputChannelWordIndex(0o15);
+    const proWord = core.inputChannelWordIndex(0o32);
+    assert(keyWord >= 0 && proWord >= 0,
+        'could not resolve DSKY input words for snapshot test');
+    inputWords[keyWord] = (inputWords[keyWord] & ~0o37) | 0o21;
+    inputWords[proWord] &= ~0o20000;
+    core.pendingNormalKeyCode = 0o21;
 
     bytes[10] = 0x12;
     bytes[11] = 0x34;
@@ -185,7 +191,7 @@ function testNavigationAndSnapshots() {
     assert(snapshot.schema === 1 && snapshot.byteLength === bytes.length,
         'snapshot metadata is invalid');
     assert(snapshot.fingerprint === before,
-        'snapshot fingerprint must match current memory');
+        'snapshot fingerprint must match current memory before physical normalization');
 
     bytes[10] = 0;
     bytes[11] = 0;
@@ -194,11 +200,10 @@ function testNavigationAndSnapshots() {
     assert(bytes[10] === 0x12 && bytes[11] === 0x34,
         'snapshot import did not restore WASM memory');
     assert(core.snapshotFingerprint() !== before,
-        'snapshot restore must normalize physical switch contacts after validating saved memory');
-    const inputWords = new Uint16Array(core.memory.buffer);
-    assert((inputWords[core.inputChannelWordIndex(0o15)] & 0o37) === 0,
+        'snapshot restore must normalize held physical switch contacts after validating saved memory');
+    assert((inputWords[keyWord] & 0o37) === 0,
         'snapshot restore left a normal DSKY key electrically held');
-    assert((inputWords[core.inputChannelWordIndex(0o32)] & 0o20000) === 0o20000,
+    assert((inputWords[proWord] & 0o20000) === 0o20000,
         'snapshot restore left active-low PRO electrically held');
     assert(core.pendingNormalKeyCode === 0,
         'snapshot restore retained transient key-make bookkeeping');
