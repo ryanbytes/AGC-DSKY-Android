@@ -142,6 +142,7 @@ node tools/native-diagnostic-smoke.js
 node tools/dsky-mapping-smoke.js
 node tools/flight-hardware-ui-smoke.js
 node tools/keyboard-electrical-interlock-smoke.js
+node tools/lighting-electrical-model-smoke.js
 node tools/v35-model-smoke.js
 node tools/asset-reference-smoke.js
 node tools/wasm-runtime-smoke.js
