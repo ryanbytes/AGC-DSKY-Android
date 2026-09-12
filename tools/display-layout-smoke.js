@@ -64,8 +64,8 @@ assert(STYLE.includes('.el-field .el-seg.on{filter:url(#elGlow)}'),
 
 // SCD 1006387C alarm/status indicator.  The first-paint fallback keeps the
 // three-source light in the element background.  After flight-hardware-ui.js
-// wraps the legend text, a separate thermal-fade lamp layer is allowed because
-// the foreground span is explicitly above it.
+// wraps the legend text, three separate bulb source elements carry stable
+// per-component brightness and rise/fall personalities behind the legend.
 assert(CM.includes('Alarm/status indicator, SCD 1006387C'),
   'annunciator SCD fidelity block missing');
 assert(CM.includes('background:#74756f') && CM.includes('color:#11120f'),
@@ -76,10 +76,14 @@ assert((CM.match(/radial-gradient\(ellipse at/g) || []).length >= 12,
   'fallback plus thermal three-source incandescent pools missing');
 assert(CM.includes('lamp-hardware-ready .lamp .lamp-legend'),
   'annunciator legend foreground layer missing');
-assert(CM.includes('lamp-hardware-ready .lamp::before'),
-  'thermal incandescent source layer missing');
-assert(CM.includes('transition:opacity 145ms') && CM.includes('transition-duration:85ms'),
-  'incandescent filament rise/decay timing missing');
+assert(CM.includes('lamp-hardware-ready .lamp .lamp-source') &&
+       CM.includes('.lamp-source-1') && CM.includes('.lamp-source-2') && CM.includes('.lamp-source-3'),
+  'three physical incandescent source layers missing');
+assert(CM.includes('transition-duration:var(--lamp-fall,52ms)') &&
+       CM.includes('transition-duration:var(--lamp-rise,36ms)'),
+  'per-bulb incandescent rise/decay timing missing');
+assert(CM.includes('opacity:calc(var(--integral-level) * var(--lamp-gain,1))'),
+  'per-bulb integral-light brightness personality missing');
 assert(CM.includes('overflow:hidden'),
   'annunciator light must be clipped to prevent inter-cell leakage');
 assert(!CM.includes('box-shadow:0 0 .62vmin') && !CM.includes('box-shadow:0 0 .7vmin'),
@@ -93,7 +97,7 @@ assert(CM.includes('.el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level
   'NUMERICS feed must scale energized EL segments only');
 assert(CM.includes('color:var(--key-el-color)') && CM.includes('text-shadow:var(--key-el-shadow)'),
   'white EL key legend illumination missing');
-assert(CM.includes('.key.pressed') && CM.includes('translateY(.42vmin)'),
+assert(CM.includes('.key.pressed') && CM.includes('translateY(var(--key-travel,.42vmin))'),
   'mechanical key travel rendering missing');
 
 // The controls remain a flowing bounded strip but intentionally borrow the
@@ -133,6 +137,6 @@ assert(!CONTROLS.includes('Series 2 barrier-mount operator indicators'),
 console.log('display/layout geometry smoke: PASS');
 console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${expectedVisibleFraction.toFixed(6)})`);
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
-console.log('  annunciators: three-source thermal fade with foreground black legends');
+console.log('  annunciators: three-source per-bulb thermal fade with foreground black legends');
 console.log('  lighting: independent NUMERICS/INTEGRAL with white EL key legends');
 console.log('  options: bounded DSKY-style illuminated key strip');
