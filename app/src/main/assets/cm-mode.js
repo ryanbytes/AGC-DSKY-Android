@@ -25,6 +25,15 @@
     document.body.appendChild(script);
   }
 
+  function installLightingElectricalModel() {
+    if (document.querySelector('script[data-feature="lighting-electrical-model"]')) return;
+    const script = document.createElement('script');
+    script.src = 'lighting-electrical-model.js';
+    script.dataset.feature = 'lighting-electrical-model';
+    script.async = false;
+    document.body.appendChild(script);
+  }
+
   function installRelayShow() {
     if (document.getElementById('relay-show')) return;
     const controls = document.getElementById('controls');
@@ -45,6 +54,7 @@
   function installCmFeatures() {
     installFlightHardwareUi();
     installKeyboardElectricalInterlock();
+    installLightingElectricalModel();
     installRelayShow();
   }
 
