@@ -14,8 +14,9 @@
  *   1. derive the relay word represented by the face that is actually visible;
  *   2. let relay-visual-coupling use that visible word as its presentation
  *      starting point, even if the private hardware latch is already ahead;
- *   3. repaint that held presentation immediately after the real 20-ms settle
- *      boundary, before the next stretched contact is due.
+ *   3. repaint that held presentation at the same 20-ms settle deadline. This
+ *      timer is registered after the real hardware path, so it follows the
+ *      settled hardware update without leaving a separate 1-ms paint window.
  *
  * Authentic mode is a complete pass-through.
  */
@@ -27,7 +28,7 @@
 
   const MODE_STRETCHED = 'stretched';
   const FINAL_SETTLE_MS = Number(visual.finalSettleMs) || 20;
-  const SETTLE_SHIELD_MS = FINAL_SETTLE_MS + 1;
+  const SETTLE_SHIELD_MS = FINAL_SETTLE_MS;
   const baseDecodeChannel10 = decodeChannel10;
   const generation = Object.create(null);
 
@@ -163,10 +164,11 @@
     // relay contact advances it.
     visual.renderWord(row, presentedWord);
 
-    // hardware-fidelity's real 20-ms settled render may briefly overwrite the
-    // stretched intermediate face. Reassert the held face just afterward. The
-    // current stretched profile's earliest visible contact is later than this
-    // shield, so this is not a fabricated extra relay transition.
+    // This timer is registered only after the base hardware decode has already
+    // registered its 20-ms settle timer. Equal-deadline FIFO ordering therefore
+    // restores the held presentation immediately after the real latch update,
+    // before the browser has a useful interval in which to present the hidden
+    // final state as a separate frame.
     setTimeout(() => {
       if (generation[row] !== token || visual.getTimingMode() !== MODE_STRETCHED) return;
       visual.renderWord(row, presentedWord);
