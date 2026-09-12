@@ -1,6 +1,6 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-11
+Last updated: 2026-09-12
 
 ## Current scope
 
@@ -21,6 +21,23 @@ The pinned `vendor/webAGC` gitlink remains:
 ```
 
 Normal DSKY keys use channel `015` with the Pinball codes. PRO remains a level-sensitive input on channel `032` bit `020000` and is not converted into an ordinary key event.
+
+## 2026-09-12 phone CLOCK -> AGC input regression
+
+The interactive phone Activity had regressed so normal DSKY commands entered while the display was in CLOCK mode no longer promoted the app into real AGC mode. The cause was the newer Block II series-key electrical interlock: it owns normal keys at **window capture** and stops propagation, while the older clock-handoff helper was listening later at **document capture**. The first physical key therefore never reached the handoff helper and fell through to the obsolete synthetic clock command-entry path instead.
+
+The electrical interlock now owns the transition at the actual key-contact point. For a normal key made in CLOCK mode it:
+
+- calls the authoritative `enterAgc()` transition;
+- waits through an already-running `agc-loading` transition rather than dropping the key;
+- forwards that same physical keycode to channel `015` once the Comanche core is ready;
+- retains the existing minimum electrical dwell and separate `keyRelease()` / KEYRST path if the touchscreen key was released while the core was loading;
+- keeps PRO separate on channel `032` exactly as before;
+- does not invoke the old synthetic clock command editor for the handoff key.
+
+`tools/keyboard-electrical-interlock-smoke.js`, already part of the canonical `tools/build-local.sh` gate, now contains a regression case that fast-taps VERB from CLOCK mode and requires exactly one AGC transition, Pinball keycode `021`, no legacy clock edit, and exactly one eventual KEYRST with no channel-015 latch left behind.
+
+The source and regression gate are committed. They are **not yet claimed as executed on the current revision** in this environment: the available shell cannot resolve GitHub for a fresh checkout and does not provide the Android build/device toolchain. The next acceptance step remains the canonical local source gate/build followed by the regular-phone device smoke.
 
 ## 2026-09-11 original-drawing correction pass
 
@@ -198,13 +215,15 @@ Shortest next experiment: run `bash tools/build-local.sh` on a machine/container
 
 Historical v1.1.2 regular/Fire source checkpoints have previously completed the canonical local build and Fire-device HOME verification. Those results do **not** automatically apply to the 2026-09-11 drawing/relay revision.
 
-For the current drawing/relay revision:
+For the current drawing/relay revision plus the 2026-09-12 CLOCK→AGC input repair:
 
 - [x] source changes are committed to `main`;
 - [x] K1-K5 contact matrix is source-gated by `tools/dsky-mapping-smoke.js`;
 - [x] individual low-11 relay-change accounting is source-gated;
 - [x] WebView/native/generated-widget production EL color agreement is source-gated;
-- [x] current host/source and real-Comanche WASM checks above passed;
+- [x] CLOCK→AGC first-key behavior is now encoded in the canonical keyboard-interlock regression gate;
+- [x] current host/source and real-Comanche WASM checks above passed for the earlier 2026-09-11 drawing/relay state;
+- [ ] the updated CLOCK→AGC keyboard-interlock smoke has been executed against the 2026-09-12 repair revision;
 - [ ] canonical `tools/build-local.sh` has been run successfully for this exact revision;
 - [ ] current regular APK has been installed/device-smoked;
 - [ ] current Fire APK has been installed/device-smoked;
