@@ -14,6 +14,7 @@ const ui = read('app/src/main/assets/flight-hardware-ui.js');
 const cm = read('app/src/main/assets/cm-mode.js');
 const finish = read('app/src/main/assets/cm-dsky-finish.css');
 const controls = read('app/src/main/assets/controls-layout.css');
+const hw = read('app/src/main/assets/hardware-fidelity.js');
 const sw = read('pwa/static/sw.js');
 
 try { new vm.Script(ui, {filename:'flight-hardware-ui.js'}); }
@@ -38,35 +39,58 @@ for (const marker of [
   "RELAY STATE RETAINED"
 ]) req(ui, marker, 'independent lighting model');
 
-// Lighting-bus demonstration must remain optical/electrical presentation only:
-// it cannot synthesize relay words or pause/reset the AGC task.
 for (const forbidden of ['decodeChannel10(', 'agcCore.stop(', 'agcCore.reset(', 'resetAgcFace('])
   no(ui, forbidden, 'lighting bus demo state isolation');
 
 for (const marker of [
-  'const KEY_CONTACT_MS = 36',
+  "const NORMAL_KEY_CHANNEL = 0o15",
+  "const KEY_CONTACT_BASE_MS = 36",
+  "const HARDWARE_SEED_KEY = 'dskyHardwareUnitSeedV1'",
   "document.addEventListener('pointerdown', onKeyDown, {capture:true, passive:false})",
-  'event.stopImmediatePropagation()',
-  "button.classList.add('pressed')",
-  "button.classList.remove('pressed')",
-  "typeof window.press === 'function'",
-  'keySound(false)',
-  'keySound(true)'
-]) req(ui, marker, 'mechanical key model');
+  "event.stopImmediatePropagation()",
+  "button.dataset.key === 'P'",
+  "core.keyPress(code)",
+  "core.writeIo(NORMAL_KEY_CHANNEL, 0)",
+  "document.addEventListener('visibilitychange'",
+  "window.addEventListener('blur', releaseAllKeys",
+  "--key-travel",
+  "keySound(button, false)",
+  "keySound(button, true)"
+]) req(ui, marker, 'mechanical held-key model');
+
+// PRO is physically separate and must remain owned by the source-backed
+// channel-032 hardware path, never converted into a channel-015 key code.
+for (const marker of [
+  "agcCore.proceedKey(true)",
+  "agcCore.proceedKey(false)"
+]) req(hw, marker, 'PRO / standby path');
+no(ui, "P:0o", 'normal-key map must exclude PRO');
 
 for (const marker of [
+  "part:'MS24367-713'",
+  "part:'MS24367-680'",
+  "riseMs:32, fallMs:48",
+  "riseMs:40, fallMs:58",
+  "source.className = `lamp-source lamp-source-${i + 1}`",
+  "--lamp-rise",
+  "--lamp-fall",
+  "--lamp-gain",
   "span.className = 'lamp-legend'",
   "document.body.classList.add('lamp-hardware-ready')",
-  'transition:opacity 145ms',
-  'transition-duration:85ms',
-  'lamp-hardware-ready .lamp::before'
-]) req(ui + finish, marker, 'incandescent thermal model');
+  ".lamp .lamp-source",
+  "transition-duration:var(--lamp-fall,52ms)",
+  "transition-duration:var(--lamp-rise,36ms)"
+]) req(ui + finish, marker, 'three-bulb incandescent model');
+
+// The former generic slow fade was an unsupported presentation choice.
+no(finish, 'transition:opacity 145ms', 'obsolete generic annunciator decay');
+no(finish, 'transition-duration:85ms', 'obsolete generic annunciator rise');
 
 for (const marker of [
   '--key-el-color',
   '--key-el-shadow',
   '.key.pressed',
-  'translateY(.42vmin)',
+  'translateY(var(--key-travel,.42vmin))',
   'color:var(--key-el-color',
   'text-shadow:var(--key-el-shadow'
 ]) req(finish + controls, marker, 'white EL key illumination / options styling');
@@ -75,4 +99,4 @@ req(ui, "oldDim.hidden = true", 'retired whole-panel dimmer');
 req(ui, "document.body.classList.remove('dim')", 'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');
-console.log('  independent NUMERICS/INTEGRAL lighting, retained relay state, thermal lamps, key travel, and DSKY-style options verified');
+console.log('  held channel-015 keys/reset, dedicated PRO, persistent component personalities, and three-bulb annunciator timing gated');
