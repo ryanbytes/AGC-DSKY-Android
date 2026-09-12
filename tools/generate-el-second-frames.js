@@ -27,7 +27,32 @@ const SOURCE=[
  [[96.005094,90.891059],[96.447474,92.542059],[92.028414,92.542059],[91.586024,90.891059]],
 ];
 const MAP=[0,1,2,3,5,4,6];
-const SEG=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
+
+// Comanche RELTAB low-five-bit relay codes.  Generated launcher frames show
+// the settled state produced by the same physical K1..K5 contact matrix used by
+// the WebView and native WidgetRelayModel.  Android RemoteViews cannot reliably
+// repaint at the real relay's sub-20-ms contact-bounce times, so transient
+// armature motion stays in the native hardware model while these resources are
+// the guaranteed settled result.
+const DIGIT_RELAY=[21,3,25,27,15,30,28,19,29,31];
+function segmentsForRelayCode(value){
+  const code=Number(value)&0x1f;
+  const k1=(code>>0)&1,k2=(code>>1)&1,k3=(code>>2)&1,k4=(code>>3)&1,k5=(code>>4)&1;
+  const E=!!k5,F=!!k3,H=!!k1,J=!!k4;
+  const K=!k2&&E;
+  const M=!k2?F:true;
+  const internal=!k3?J:true;
+  const N=!!k5&&internal;
+  let segments='';
+  if(E)segments+='a';
+  if(H)segments+='b';
+  if(M)segments+='c';
+  if(N)segments+='d';
+  if(K)segments+='e';
+  if(F)segments+='f';
+  if(J)segments+='g';
+  return segments;
+}
 
 // 1006315G Detail A, position 6: three luminous islands.  Top and bottom are
 // both segment A; the center horizontal is segment B.  A plus lights A+B.
@@ -57,7 +82,7 @@ for (let sec=0; sec<60; sec++) {
   ];
   const text=`000${String(sec).padStart(2,'0')}`;
   [...text].forEach((ch,i)=>{
-    const lit=SEG[Number(ch)];
+    const lit=segmentsForRelayCode(DIGIT_RELAY[Number(ch)]);
     const ox=FIRST_DIGIT_X+i*REG_ADV;
     [...'abcdefg'].forEach((name,logical)=>{
       if (lit.includes(name)) paths.push(poly(digitPoly(logical,ox)));
@@ -67,4 +92,4 @@ for (let sec=0; sec<60; sec++) {
   const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="106dp"\n    android:height="23dp"\n    android:viewportWidth="106"\n    android:viewportHeight="23">\n${body}\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
-console.log(`generated 60 physical-datum Apollo EL second frames in ${drawable}`);
+console.log(`generated 60 physical-datum Apollo relay-matrix EL second frames in ${drawable}`);
