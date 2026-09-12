@@ -54,6 +54,6 @@
             android:autoStart="true"
             android:animateFirstView="false"
             android:loopViews="true"
-            android:flipInterval="50" />
+            android:flipInterval="1000" />
     </FrameLayout>
 </FrameLayout>
