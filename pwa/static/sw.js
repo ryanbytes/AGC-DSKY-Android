@@ -3,11 +3,21 @@
 const CACHE_PREFIX = 'agc-dsky-pwa-';
 const CACHE_NAME = CACHE_PREFIX + '__CACHE_VERSION__';
 
+// These source-backed flight-hardware layers are explicit because the shared
+// hardware smoke verifies their offline contract directly from this source.
+const REQUIRED_SHARED_ASSETS = [
+  './flight-hardware-ui.js',
+  './lighting-rheostat-stop.js',
+  './key-mechanical-spec.js',
+  './keyboard-electrical-interlock.js'
+];
+
 // build-site.sh expands the marker below from app/src/main/assets so every
-// shared frontend file is automatically offline-capable. Keep PWA-only/runtime
-// files explicit here; do not maintain a second hand-copied Android asset list.
+// other shared frontend file is automatically offline-capable. Keep PWA-only
+// and external runtime files explicit here.
 const CORE_ASSETS = [
   './',
+  ...REQUIRED_SHARED_ASSETS,
   /*__SHARED_ASSET_PRECACHE__*/
   './manifest.webmanifest',
   './pwa-bootstrap.js',
