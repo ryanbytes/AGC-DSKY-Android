@@ -175,6 +175,12 @@
     }
 
     writeIo(channel, value){
+      // Channel 015 zero is the physical KEY RESET/release state, not a new
+      // key event. ringbuffer_api would raise KEYRUPT1 for a zero packet too,
+      // so intercept it and clear the input register directly instead.
+      if ((channel|0) === NORMAL_KEY_CHANNEL && ((value|0) & NORMAL_KEY_MASK) === 0) {
+        return this.keyRelease() ? 1 : 0;
+      }
       return this.exports.packet_write(channel, value);
     }
 
