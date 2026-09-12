@@ -14,7 +14,7 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 20054
+        versionCode 20055
         versionName '1.1.4'
     }
 
@@ -86,8 +86,7 @@ def generateElSecondFrames = tasks.register('generateElSecondFrames', Exec) {
     group = 'build setup'
     description = 'Generate 00-59 Apollo-vector register frames for the live seconds flipper.'
     inputs.file(file('../tools/generate-el-second-frames.js'))
-    outputs.dir(generatedElSecondsResDir
-)
+    outputs.dir(generatedElSecondsResDir)
     commandLine 'node', file('../tools/generate-el-second-frames.js'), generatedElSecondsResDir
 }
 
