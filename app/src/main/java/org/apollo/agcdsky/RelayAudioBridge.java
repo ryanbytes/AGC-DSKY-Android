@@ -23,7 +23,7 @@ import java.util.Set;
  * them directly on an audio-priority Android thread. The electrical/visual
  * relay model remains in JavaScript; this class only reproduces its sound.
  */
-final class RelayAudioBridge implements AutoCloseable {
+public final class RelayAudioBridge implements AutoCloseable {
     private static final int SAMPLE_RATE = 48_000;
     private static final int CHANNELS = 1;
     private static final int BITS_PER_SAMPLE = 16;
@@ -46,7 +46,7 @@ final class RelayAudioBridge implements AutoCloseable {
         audioHandler = new Handler(audioThread.getLooper());
 
         AudioAttributes attributes = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_GAME)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .setFlags(AudioAttributes.FLAG_LOW_LATENCY)
                 .build();
