@@ -102,7 +102,7 @@ const stability = context.window.DSKY_RELAY_STRETCH_STABILITY;
 if (!api) fail('diagnostic API not exported');
 if (!stability) fail('stretched stability diagnostic API not exported');
 if (stability.mode !== 'settled-render-shield') fail('wrong stretched stability mode');
-if (stability.settleShieldMs !== 21) fail('stretched settle shield must follow the 20-ms hardware boundary');
+if (stability.settleShieldMs !== 20) fail('stretched settle shield must share the 20-ms hardware deadline');
 if (api.mode !== 'individual-contact-coupled') fail('wrong visual coupling mode');
 if (api.finalSettleMs !== 20) fail('20-ms final settle contract lost');
 if (api.contactBounceVisible !== false) fail('visual bounce must remain disabled');
@@ -165,9 +165,9 @@ if (!initial || initial.id !== 'verb' || initial.text !== '  ') {
   fail(`stretched mode did not hold prior face: ${JSON.stringify(initial)}`);
 }
 
-const shield = timers.find(x => x.ms === 21);
-const contactTimers = timers.filter(x => x.ms !== 21).sort((a,b) => a.ms - b.ms);
-if (!shield) fail('21-ms settled-render shield missing');
+const shield = timers.find(x => x.ms === 20);
+const contactTimers = timers.filter(x => x.ms !== 20).sort((a,b) => a.ms - b.ms);
+if (!shield) fail('20-ms settled-render shield missing');
 const stretchedTimes = contactTimers.map(x => x.ms);
 if (stretchedTimes[0] !== 27.3 || stretchedTimes[1] !== 55.3) {
   fail(`wrong brisk relay-specific stretched timing: ${stretchedTimes.join(',')}`);
@@ -181,8 +181,8 @@ if (schedule.length !== 2 || schedule[0].bit !== 0 || schedule[1].bit !== 5) fai
 if (schedule[0].stretchedMs === schedule[1].stretchedMs) fail('relay identities collapsed to common stretched delay');
 
 // Simulate hardware-fidelity's real 20-ms final-state render bleeding through.
-// The 21-ms shield must put both the display model and rendered face back at the
-// held presentation before the first stretched contact occurs.
+// The equal-deadline shield must put both the display model and rendered face
+// back at the held presentation before the first stretched contact occurs.
 context.agcDisplay.verb = ['1','1'];
 context.set2('verb', '11');
 hardware.latches[10] = (1 << 5) | 1;
@@ -243,4 +243,4 @@ if (api.getTimingMode() !== 'authentic') fail('switch did not return to authenti
 if (storage.get('relayVisualTimingV1') !== 'authentic') fail('authentic preference not persisted');
 
 console.log('Relay visual coupling smoke: PASS');
-console.log('  stretched EL is frame-synced, bounce-free, shielded from the 20-ms settled render, and continuous across overlapping writes');
+console.log('  stretched EL is frame-synced, bounce-free, shielded at the 20-ms settled render, and continuous across overlapping writes');
