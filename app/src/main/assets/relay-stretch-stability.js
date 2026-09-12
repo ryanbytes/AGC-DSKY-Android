@@ -3,21 +3,25 @@
 /*
  * Stretched-relay presentation stability shim.
  *
- * The physical relay model must still latch at the real 20-ms boundary, but
- * hardware-fidelity.js also renders that settled word at the same time. In
- * STRETCHED presentation mode that hidden settled render can land between two
- * phone refreshes and briefly expose the final word before the slower visual
- * relay sequence reaches it. The result looks like contact bounce/flicker even
- * though relay-visual-coupling.js never replays electrical bounce visually.
+ * The physical relay model still latches at the real 20-ms boundary. In
+ * STRETCHED presentation mode, however, hardware-fidelity.js also performs its
+ * normal settled-word paint at that boundary. A separate later repaint cannot
+ * safely hide that paint: the browser can present the settled word for a frame
+ * before the stretched face is restored, which looks like an already-lit EL
+ * element flickering off and back on.
  *
  * Keep the physical latch/AGC path untouched. For stretched presentation only:
  *   1. derive the relay word represented by the face that is actually visible;
  *   2. let relay-visual-coupling use that visible word as its presentation
  *      starting point, even if the private hardware latch is already ahead;
- *   3. repaint that held presentation at the same 20-ms settle deadline. This
- *      timer is registered after the real hardware path, so it follows the
- *      settled hardware update without leaving a separate 1-ms paint window.
+ *   3. wrap the hardware layer's 20-ms settle callback so its normal paint and
+ *      restoration of the current stretched presentation happen in the SAME
+ *      JavaScript task. The browser therefore never receives an intermediate
+ *      settled-word frame to composite.
  *
+ * The restoration word is captured when the 20-ms callback actually fires,
+ * not when the channel write was scheduled. Once a stretched relay transition
+ * has been presented, the settle path therefore cannot roll that contact back.
  * Authentic mode is a complete pass-through.
  */
 (() => {
@@ -28,9 +32,7 @@
 
   const MODE_STRETCHED = 'stretched';
   const FINAL_SETTLE_MS = Number(visual.finalSettleMs) || 20;
-  const SETTLE_SHIELD_MS = FINAL_SETTLE_MS;
   const baseDecodeChannel10 = decodeChannel10;
-  const generation = Object.create(null);
 
   // relayDigit() is one-to-one for the 32 electrical K1..K5 states: normal
   // decimal characters retain their readable glyphs and non-decimal states use
@@ -142,6 +144,44 @@
     finally { window.AGCDSKY.hardware = actualHardware; }
   }
 
+  function withAtomicSettlePaint(row, fn) {
+    const host = typeof globalThis !== 'undefined' ? globalThis : window;
+    const nativeSetTimeout = host.setTimeout;
+    if (typeof nativeSetTimeout !== 'function') return fn();
+    let settleWrapped = false;
+
+    host.setTimeout = function stretchedSettleAwareTimeout(callback, delay, ...args) {
+      const ms = Number(delay);
+      if (!settleWrapped && Number.isFinite(ms) && Math.abs(ms - FINAL_SETTLE_MS) < 0.001) {
+        settleWrapped = true;
+        return nativeSetTimeout.call(host, () => {
+          if (visual.getTimingMode() !== MODE_STRETCHED) {
+            callback(...args);
+            return;
+          }
+
+          // Capture at execution time. A stretched contact that became visible
+          // after this channel write was issued is now part of the held state
+          // and may not be rolled back by the physical settle paint.
+          const heldWord = capturePresentedWord(row);
+          try {
+            callback(...args);
+          } finally {
+            // The hardware callback may update the display model and DOM while
+            // committing the real latch. Restore the held presentation before
+            // yielding this task, so no browser frame can contain that hidden
+            // settled-word paint.
+            visual.renderWord(row, heldWord);
+          }
+        }, ms);
+      }
+      return nativeSetTimeout.call(host, callback, delay, ...args);
+    };
+
+    try { return fn(); }
+    finally { host.setTimeout = nativeSetTimeout; }
+  }
+
   decodeChannel10 = function stableStretchedRelayDecode(value) {
     const word = Number(value) & 0o77777;
     const row = (word >> 11) & 0o17;
@@ -150,36 +190,25 @@
     }
 
     const presentedWord = capturePresentedWord(row);
-    const token = (generation[row] || 0) + 1;
-    generation[row] = token;
 
     // relay-visual-coupling asks AGCDSKY.hardware() synchronously for its prior
     // presentation word. Supply what the crew is actually seeing while the
     // private hardware model continues to see and update its real latch state.
-    const result = withPresentedLatch(row, presentedWord, () => baseDecodeChannel10(value));
+    const result = withAtomicSettlePaint(row, () =>
+      withPresentedLatch(row, presentedWord, () => baseDecodeChannel10(value))
+    );
 
-    // If a new write arrives while an earlier stretched sequence is still
-    // visible, do not allow the newer sequence's hardware-ahead prior state to
-    // snap the face. Keep the same presented word until its first scheduled
-    // relay contact advances it.
+    // A new channel write must begin from what is actually on the face, not a
+    // private latch that may already be ahead. This immediate render is safe:
+    // later legitimate stretched contacts own all subsequent visible changes.
     visual.renderWord(row, presentedWord);
-
-    // This timer is registered only after the base hardware decode has already
-    // registered its 20-ms settle timer. Equal-deadline FIFO ordering therefore
-    // restores the held presentation immediately after the real latch update,
-    // before the browser has a useful interval in which to present the hidden
-    // final state as a separate frame.
-    setTimeout(() => {
-      if (generation[row] !== token || visual.getTimingMode() !== MODE_STRETCHED) return;
-      visual.renderWord(row, presentedWord);
-    }, SETTLE_SHIELD_MS);
-
     return result;
   };
 
   window.DSKY_RELAY_STRETCH_STABILITY = Object.freeze({
-    mode: 'settled-render-shield',
-    settleShieldMs: SETTLE_SHIELD_MS,
+    mode: 'same-task-settle-shield',
+    settleShieldMs: FINAL_SETTLE_MS,
+    settleRepaintSameTask: true,
     capturePresentedWord
   });
 })();
