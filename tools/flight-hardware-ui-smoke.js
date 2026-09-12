@@ -64,16 +64,19 @@ for (const marker of [
   "keySound(button, true)"
 ]) req(ui, marker, 'mechanical held-key model');
 
-// The electrical layer owns all 18 keycoded switches at window capture.  The
+// The electrical layer owns all 18 keycoded switches at window capture. The
 // first depression latches the keyboard cycle; overlapping keys can move but
-// cannot produce another code, and KEYRST is not asserted until every normal
-// key has returned to released.
+// cannot produce another code. KEYRST waits for all normal keys to return and,
+// for touchscreen-fast taps, for the explicitly estimated D-input dwell.
 for (const marker of [
   "window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false})",
   "if (!button || button.dataset.key === 'P') return null",
   "const accepted = !cycleLatched",
   "if (!state.accepted) return",
   "if (!allNormalKeysReleased()) return",
+  "const MIN_KEYCODE_HOLD_MS = 12",
+  "const remaining = MIN_KEYCODE_HOLD_MS - elapsed",
+  "keyResetPending:!!keyResetTimer",
   "typeof core.keyRelease === 'function'",
   "electricalKeyCode",
   "keyboardElectrical"
@@ -121,4 +124,4 @@ req(ui, "oldDim.hidden = true", 'retired whole-panel dimmer');
 req(ui, "document.body.classList.remove('dim')", 'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');
-console.log('  series-contact key lockout/KEYRST, dedicated PRO, persistent component personalities, and three-bulb annunciator timing gated');
+console.log('  series-contact key lockout/KEYRST, minimum D-input dwell, dedicated PRO, persistent component personalities, and three-bulb annunciator timing gated');
