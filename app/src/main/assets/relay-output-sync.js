@@ -3,7 +3,10 @@
 /* Android native relay audio + relay-driven paint synchronization. */
 (() => {
   const WEB_AUDIO_GUARD_MS = 120;
-  const NATIVE_AUDIO_GUARD_MS = 220;
+  const NATIVE_AUDIO_GUARD_DEFAULT_MS = 320;
+  const NATIVE_AUDIO_GUARD_MIN_MS = 160;
+  const NATIVE_AUDIO_GUARD_MAX_MS = 500;
+  const NATIVE_AUDIO_GUARD_STORAGE_KEY = 'agcRelayPresentationGuardMs';
   const RELAY_SETTLE_MS = 20;
   const AUX_ORDER = Object.freeze([
     'comp', 'uplink', 'temp', 'keyrel', 'oprerr', 'flash', 'restart', 'stby'
@@ -17,7 +20,25 @@
     try { return !!(window.RelayAudioBridge && RelayAudioBridge.isReady()); }
     catch (_) { return false; }
   }
-  function guardMs() { return nativeReady() ? NATIVE_AUDIO_GUARD_MS : WEB_AUDIO_GUARD_MS; }
+  function clampNativeGuard(value) {
+    const ms = Math.round(Number(value));
+    if (!Number.isFinite(ms)) return NATIVE_AUDIO_GUARD_DEFAULT_MS;
+    return Math.max(NATIVE_AUDIO_GUARD_MIN_MS, Math.min(NATIVE_AUDIO_GUARD_MAX_MS, ms));
+  }
+  function loadNativeGuardMs() {
+    try {
+      const stored = localStorage.getItem(NATIVE_AUDIO_GUARD_STORAGE_KEY);
+      if (stored !== null) return clampNativeGuard(stored);
+    } catch (_) {}
+    return NATIVE_AUDIO_GUARD_DEFAULT_MS;
+  }
+  let nativeAudioGuardMs = loadNativeGuardMs();
+  function setNativeGuardMs(value) {
+    nativeAudioGuardMs = clampNativeGuard(value);
+    try { localStorage.setItem(NATIVE_AUDIO_GUARD_STORAGE_KEY, String(nativeAudioGuardMs)); } catch (_) {}
+    return nativeAudioGuardMs;
+  }
+  function guardMs() { return nativeReady() ? nativeAudioGuardMs : WEB_AUDIO_GUARD_MS; }
   function visualDelayMs() { return RELAY_SETTLE_MS + guardMs(); }
 
   // hardware-fidelity.js intentionally caps its own WebAudio compensation at
@@ -26,7 +47,7 @@
   // latch still commits at 20 ms; this affects presentation only.
   const HARDWARE_PRESENTATION_CAP_MS = 120;
   function nativeElExtraMs() {
-    return nativeReady() ? Math.max(0, NATIVE_AUDIO_GUARD_MS - HARDWARE_PRESENTATION_CAP_MS) : 0;
+    return nativeReady() ? Math.max(0, nativeAudioGuardMs - HARDWARE_PRESENTATION_CAP_MS) : 0;
   }
   function recentRelayWrite() {
     const s = snapshot();
@@ -225,6 +246,8 @@
   };
 
   if (window.AGCDSKY) {
+    window.AGCDSKY.setRelayPresentationGuardMs = value => setNativeGuardMs(value);
+    window.AGCDSKY.getRelayPresentationGuardMs = () => nativeAudioGuardMs;
     const before = window.AGCDSKY.hardware;
     if (typeof before === 'function') {
       window.AGCDSKY.hardware = () => {
@@ -233,6 +256,9 @@
         s.presentationVisualDelayMs = visualDelayMs();
         s.relayAudioBackend = nativeReady() ?
           'android-soundpool-low-latency' : 'web-audio-fallback';
+        s.relayPresentationGuardTunable = true;
+        s.relayPresentationGuardMinMs = NATIVE_AUDIO_GUARD_MIN_MS;
+        s.relayPresentationGuardMaxMs = NATIVE_AUDIO_GUARD_MAX_MS;
         return s;
       };
     }
