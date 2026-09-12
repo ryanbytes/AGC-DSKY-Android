@@ -38,6 +38,7 @@ public final class RelayAudioBridge implements AutoCloseable {
     private int setSample;
     private int resetSample;
     private int bounceSample;
+    private boolean warmed;
 
     RelayAudioBridge(Context context) {
         Context app = context.getApplicationContext();
@@ -55,7 +56,10 @@ public final class RelayAudioBridge implements AutoCloseable {
                 .setAudioAttributes(attributes)
                 .build();
         soundPool.setOnLoadCompleteListener((pool, sampleId, status) -> {
-            if (status == 0) synchronized (loaded) { loaded.add(sampleId); }
+            if (status == 0) {
+                synchronized (loaded) { loaded.add(sampleId); }
+                warmIfReady();
+            }
         });
 
         try {
@@ -73,6 +77,19 @@ public final class RelayAudioBridge implements AutoCloseable {
         } catch (IOException ignored) {
             // JavaScript automatically falls back to WebAudio until isReady().
         }
+    }
+
+    private void warmIfReady() {
+        if (closed || warmed || setSample == 0 || resetSample == 0 || bounceSample == 0) return;
+        synchronized (loaded) {
+            if (!(loaded.contains(setSample) && loaded.contains(resetSample) && loaded.contains(bounceSample))) return;
+            warmed = true;
+        }
+        // Prime the Android media route silently so the first audible relay does
+        // not pay the full stream-start penalty. SoundPool keeps the sample hot.
+        audioHandler.post(() -> {
+            if (!closed) soundPool.play(setSample, 0f, 0f, 0, 0, 1f);
+        });
     }
 
     @JavascriptInterface
