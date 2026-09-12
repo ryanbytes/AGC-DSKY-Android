@@ -62,8 +62,16 @@ jobs:
       - name: Sign installable regular and Fire APKs
         run: |
           BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
-          KS="$HOME/.android/debug.keystore"
-          test -f "$KS"
+          KS="$RUNNER_TEMP/agc-dsky-ci.keystore"
+          keytool -genkeypair -noprompt \
+            -keystore "$KS" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=AGC DSKY CI,O=AGC DSKY,C=US"
           "$BT/apksigner" sign \
             --ks "$KS" \
             --ks-key-alias androiddebugkey \
