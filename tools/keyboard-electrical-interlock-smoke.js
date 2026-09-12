@@ -214,5 +214,118 @@ assert(resets.length === 3,
 assert(resets[2][1] - fastMake[2] >= 12,
   'fast-tap keycode was not held for the required minimum electrical dwell');
 
-console.log('keyboard electrical interlock smoke: PASS');
-console.log('  single-code series chain, all-up KEYRST, 12-ms input dwell, PRO bypass, and fast tap verified');
+async function verifyClockHandoff() {
+  const win = Object.create(null);
+  const doc = Object.create(null);
+  const queuedTimers = new Map();
+  const handoffCalls = [];
+  let timerId = 1;
+  let clockNow = 0;
+  let appMode = 'clock';
+
+  const clockCore = {
+    keyPress(code){ handoffCalls.push(['make', code, clockNow]); return 1; },
+    keyRelease(){ handoffCalls.push(['reset', clockNow]); return true; }
+  };
+  const clockContext = {
+    console,
+    performance:{now(){ return clockNow; }},
+    localStorage:{getItem(){ return '0'; }},
+    setTimeout(fn, delay=0){
+      const id = timerId++;
+      queuedTimers.set(id, {fn, due:clockNow + Math.max(0, Number(delay) || 0)});
+      return id;
+    },
+    clearTimeout(id){ queuedTimers.delete(id); },
+    window:null,
+    document:{
+      hidden:false,
+      addEventListener(type, fn){ addListener(doc, type, fn); }
+    },
+    press(key){ handoffCalls.push(['legacy-clock-press', key, clockNow]); }
+  };
+  clockContext.window = clockContext;
+  clockContext.addEventListener = function(type, fn){ addListener(win, type, fn); };
+  clockContext.AGCDSKY = {
+    appStatus(){ return {mode:appMode}; },
+    async enterAgc(){
+      handoffCalls.push(['enter-agc', clockNow]);
+      appMode = 'agc-loading';
+      await Promise.resolve();
+      appMode = 'agc';
+    },
+    getCore(){ return clockCore; },
+    scheduleAgcAutosave(){ handoffCalls.push(['autosave', clockNow]); },
+    hardwarePersonality(){
+      return {keys:{V:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};
+    }
+  };
+
+  vm.createContext(clockContext);
+  vm.runInContext(source, clockContext, {filename:'keyboard-electrical-interlock-clock.js'});
+
+  // Fast-tap VERB while the phone is still showing CLOCK. The electrical
+  // interlock owns window capture, so this is the regression path that used to
+  // prevent clock-behavior.js's document listener from ever seeing the key.
+  const verb = makeButton('V');
+  let event = makeEvent(verb, 41);
+  dispatch(win, 'pointerdown', event);
+  assert(event.prevented && event.immediate,
+    'clock VERB was not captured by the electrical interlock');
+  event = makeEvent(verb, 41);
+  dispatch(win, 'pointerup', event);
+
+  let clockState = clockContext.AGCDSKY.keyboardElectrical.state();
+  assert(clockState.clockHandoffPending && clockState.cycleLatched,
+    'released clock key did not stay owned while AGC startup was pending');
+  assert(!handoffCalls.some(c => c[0] === 'legacy-clock-press'),
+    'clock key fell back into the synthetic clock command editor');
+
+  // Allow enterAgc() and the handoff continuation to complete without running
+  // the synthetic timers used for key-return sound/KEYRST dwell.
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+
+  assert(appMode === 'agc', 'clock key did not promote the app to AGC mode');
+  assert(handoffCalls.filter(c => c[0] === 'enter-agc').length === 1,
+    'clock key did not request exactly one AGC transition');
+  const handoffMakes = handoffCalls.filter(c => c[0] === 'make');
+  assert(handoffMakes.length === 1 && handoffMakes[0][1] === 0o21,
+    'original VERB contact was not forwarded as Pinball keycode 021');
+  assert(!handoffCalls.some(c => c[0] === 'legacy-clock-press'),
+    'clock handoff also executed the old synthetic-clock key path');
+
+  clockState = clockContext.AGCDSKY.keyboardElectrical.state();
+  assert(!clockState.clockHandoffPending && clockState.electricalMade && clockState.keyResetPending,
+    'released handoff key did not enter normal electrical make/KEYRST dwell');
+
+  let guard = 0;
+  while (queuedTimers.size) {
+    let selectedId = null;
+    let selected = null;
+    for (const [id, timer] of queuedTimers) {
+      if (!selected || timer.due < selected.due || (timer.due === selected.due && id < selectedId)) {
+        selectedId = id;
+        selected = timer;
+      }
+    }
+    queuedTimers.delete(selectedId);
+    clockNow = Math.max(clockNow, selected.due);
+    selected.fn();
+    if (++guard > 1000) throw new Error('clock-handoff timer loop did not settle');
+  }
+
+  assert(handoffCalls.filter(c => c[0] === 'reset').length === 1,
+    'released clock-handoff key did not generate exactly one KEYRST');
+  clockState = clockContext.AGCDSKY.keyboardElectrical.state();
+  assert(!clockState.cycleLatched && !clockState.electricalMade && !clockState.keyResetPending,
+    'clock-handoff key left the channel-015 cycle latched');
+}
+
+verifyClockHandoff().then(() => {
+  console.log('keyboard electrical interlock smoke: PASS');
+  console.log('  series chain, KEYRST dwell, PRO bypass, fast tap, and CLOCK -> AGC first-key handoff verified');
+}).catch(error => {
+  console.error('keyboard electrical interlock smoke: FAIL');
+  console.error(error && error.stack ? error.stack : error);
+  process.exitCode = 1;
+});
