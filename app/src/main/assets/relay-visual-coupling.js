@@ -1,27 +1,20 @@
 'use strict';
 
 /*
- * Couple the visible EL/contact output to the individual relay that drives it.
+ * Couple visible EL/contact output to the individual relay that drives it.
  *
  * AUTHENTIC mode uses each relay's deterministic physical set/reset travel time
- * (normally about 5-14 ms) and leaves hardware-fidelity.js's 20-ms settled-bank
- * render untouched.
+ * and leaves hardware-fidelity.js's 20-ms settled-bank render and full relay
+ * contact/bounce audio untouched.
  *
- * STRETCHED mode is explicitly a visual presentation aid for displays whose
- * refresh cadence cannot expose sub-frame relay differences. The AGC, relay
- * latches, relay audio, channel timing, and 20-ms physical settle boundary are
- * NOT slowed. Only the rendered EL/contact sequence is expanded.
- *
- * In stretched mode a frame-lock keeps the last presentation contact state on
- * the screen while the underlying hardware model continues to settle normally.
- * This avoids the old final-state -> prior-state reset flash. Each changed relay
- * then advances the presentation once, with a deterministic delay derived from
- * that relay's own set/reset travel, stable-contact tail, pole skew and bounce
- * fingerprint. Bounce remains diagnostic/audio-only; it is never replayed as
- * EL flicker.
- *
- * The five K-relays for each character are decoded by dsky-relay-matrix.js,
- * which follows the original DSKY relay schematic (E/F/H/J/K/M/N sections).
+ * STRETCHED mode is a screen presentation aid. The AGC, relay latches, channel
+ * timing and 20-ms physical settle boundary remain authentic. A frame lock holds
+ * the presentation state while relay contacts are revealed quickly enough to
+ * resemble flight footage but far enough apart to survive phone refresh cadence.
+ * The stretched click is emitted on the same animation frame as its EL change;
+ * the earlier authentic latching-relay click is suppressed in this mode only.
+ * Stretched clicks keep each relay's acoustic fingerprint but omit secondary
+ * contact-bounce ticks so the sound cannot masquerade as extra EL transitions.
  */
 (() => {
   if (typeof decodeChannel10 !== 'function') return;
@@ -34,15 +27,19 @@
   const MODE_STRETCHED = 'stretched';
   const FINAL_SETTLE_MS = 20;
 
-  const STRETCH_FIRST_BASE_MS = 72;
-  const STRETCH_MIN_GAP_MS = 42;
-  const STRETCH_MAX_GAP_MS = 78;
-  const STRETCH_RELEASE_HOLD_MS = 38;
+  // Brisk presentation: normally one to two 60-Hz frames between contacts.
+  const STRETCH_FIRST_BASE_MS = 20;
+  const STRETCH_MIN_GAP_MS = 18;
+  const STRETCH_MAX_GAP_MS = 28;
+  const STRETCH_RELEASE_HOLD_MS = 24;
 
   const baseDecodeChannel10 = decodeChannel10;
+  const baseIdentityEmitTick = typeof emitTick === 'function' ? emitTick : null;
   const generation = Object.create(null);
   const presentation = Object.create(null);
+  const presentationBufferCache = new Map();
   let frameLoopRunning = false;
+  let lastPresentationClick = null;
 
   function getStoredMode() {
     let value = null;
@@ -61,6 +58,23 @@
   }
 
   let timingMode = getStoredMode();
+
+  // hardware-fidelity schedules latching relay markers at 5.6-15 ms. In
+  // stretched mode those would audibly precede their delayed EL changes. Let
+  // auxiliary ~1-ms relay events through, but suppress the latching markers;
+  // the matching per-relay presentation click is generated at paint time below.
+  if (baseIdentityEmitTick) {
+    emitTick = function relayVisualTimingAwareTick(ctx, when = ctx.currentTime, strength = 1) {
+      if (timingMode === MODE_STRETCHED) {
+        let state = null;
+        try { state = window.AGCDSKY.hardware(); } catch (_) {}
+        const row = Number(state && state.activeDrive) || 0;
+        const deltaMs = Math.max(0, (Number(when) - Number(ctx.currentTime)) * 1000);
+        if (row >= 1 && row <= 12 && deltaMs >= 4) return;
+      }
+      return baseIdentityEmitTick(ctx, when, strength);
+    };
+  }
 
   function currentSettledWord(row) {
     try {
@@ -194,10 +208,10 @@
   function stretchedGapMs(motion) {
     const tailMs = Math.max(0, motion.stableMs - motion.physicalMs);
     const signature =
-      tailMs * 8.0 +
-      Math.min(18, Math.abs(motion.poleSkewUs) / 11) +
-      Math.min(14, motion.bounceCount * 2.2) +
-      (motion.physicalMs - 4.7) * 1.7;
+      tailMs * 2.0 +
+      Math.min(5, Math.abs(motion.poleSkewUs) / 35) +
+      Math.min(4, motion.bounceCount * 0.55) +
+      (motion.physicalMs - 4.7) * 0.45;
     return Math.max(STRETCH_MIN_GAP_MS, Math.min(STRETCH_MAX_GAP_MS, STRETCH_MIN_GAP_MS + signature));
   }
 
@@ -205,13 +219,101 @@
     let at = 0;
     return motions.map((motion, index) => {
       if (index === 0) {
-        at = STRETCH_FIRST_BASE_MS + motion.physicalMs * 2.4 +
-          Math.min(16, Math.abs(motion.poleSkewUs) / 14);
+        at = STRETCH_FIRST_BASE_MS + motion.physicalMs * 1.25 +
+          Math.min(8, Math.abs(motion.poleSkewUs) / 32);
       } else {
         at += stretchedGapMs(motion);
       }
       return {...motion, stretchedMs: Math.round(at * 10) / 10};
     });
+  }
+
+  function xorshift32(seed) {
+    let state = (Number(seed) >>> 0) || 1;
+    return () => {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      return (state >>> 0) / 4294967296;
+    };
+  }
+
+  function presentationBuffer(ctx, row, bit, engaging, p) {
+    const key = `${ctx.sampleRate}|${row}|${bit}|${engaging ? 'set' : 'reset'}`;
+    const cached = presentationBufferCache.get(key);
+    if (cached) return cached;
+
+    const sr = ctx.sampleRate;
+    const duration = engaging ? 0.0105 : 0.0097;
+    const n = Math.max(32, Math.floor(sr * duration));
+    const buffer = ctx.createBuffer(1, n, sr);
+    const data = buffer.getChannelData(0);
+    const rnd = xorshift32((p.phaseSeed >>> 0) ^ (engaging ? 0x53455421 : 0x52535421));
+    const phase = [rnd(),rnd(),rnd(),rnd()].map(v => v * Math.PI * 2);
+    const resetScale = engaging ? 1 : 0.93;
+    const decayScale = engaging ? 1 : 0.90;
+    let prevNoise = 0, prevDiff = 0;
+
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const noise = rnd() * 2 - 1;
+      const diff = noise - prevNoise;
+      const highNoise = diff - prevDiff;
+      prevNoise = noise;
+      prevDiff = diff;
+      const strike = highNoise * Math.exp(-t / p.strikeDecay) * p.strikeMix * resetScale;
+      const ring = p.ringMix * (
+        Math.sin(2 * Math.PI * p.f1 * t + phase[0]) * Math.exp(-t / (p.d1 * decayScale)) * 0.24 +
+        Math.sin(2 * Math.PI * p.f2 * t + phase[1]) * Math.exp(-t / (p.d2 * decayScale)) * 0.34 +
+        Math.sin(2 * Math.PI * p.f3 * t + phase[2]) * Math.exp(-t / (p.d3 * decayScale)) * 0.25 +
+        Math.sin(2 * Math.PI * p.f4 * t + phase[3]) * Math.exp(-t / (p.d4 * decayScale)) * 0.13
+      );
+      data[i] = (strike + ring) * Math.min(1, t / 0.00009);
+    }
+
+    let mean = 0;
+    for (let i = 0; i < n; i++) mean += data[i];
+    mean /= n;
+    let peak = 0;
+    for (let i = 0; i < n; i++) {
+      data[i] -= mean;
+      peak = Math.max(peak, Math.abs(data[i]));
+    }
+    if (peak > 0) {
+      const scale = 0.82 / peak;
+      for (let i = 0; i < n; i++) data[i] *= scale;
+    }
+    presentationBufferCache.set(key, buffer);
+    return buffer;
+  }
+
+  function playPresentationClick(row, bit, engaging) {
+    lastPresentationClick = {row, bit, engaging:!!engaging};
+    if (typeof tickSound === 'boolean' && !tickSound) return;
+    const p = profileFor(row, bit);
+    if (!p || typeof ensureAudio !== 'function') return;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+
+    const play = () => {
+      const start = ctx.currentTime + 0.00005;
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      const level = typeof tickLevel === 'number' ? tickLevel : 1;
+      const setReset = engaging ? 1.035 : 0.915;
+      source.buffer = presentationBuffer(ctx, row, bit, engaging, p);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.linearRampToValueAtTime(0.43 * level * 0.66 * p.level * setReset, start + 0.00008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + (engaging ? 0.0062 : 0.0055));
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(start);
+      source.stop(start + 0.0115);
+      // Deliberately no contact-bounce sources in stretched presentation mode.
+    };
+
+    if (ctx.state === 'running') play();
+    else ctx.resume().then(play).catch(() => {});
   }
 
   function activePresentations() {
@@ -233,6 +335,10 @@
         continue;
       }
       renderWord(row, state.contactWord);
+      if (state.pendingClicks && state.pendingClicks.length) {
+        const pending = state.pendingClicks.splice(0);
+        for (const motion of pending) playPresentationClick(row, motion.bit, motion.on);
+      }
     }
     if (activePresentations()) requestFrameLoop();
   }
@@ -267,7 +373,8 @@
         active: true,
         contactWord: prior & 0o3777,
         target: target & 0o3777,
-        scheduled
+        scheduled,
+        pendingClicks: []
       };
 
       renderWord(row, state.contactWord);
@@ -279,7 +386,10 @@
           if (!live || !live.active || live.token !== token || generation[row] !== token || timingMode !== MODE_STRETCHED) return;
           if (motion.on) live.contactWord |= motion.mask;
           else live.contactWord &= ~motion.mask;
-          renderWord(row, live.contactWord);
+          live.pendingClicks.push(motion);
+          // The next animation frame both paints this contact state and emits
+          // its click, keeping eye and ear tied to the same relay transition.
+          requestFrameLoop();
           if (index === scheduled.length - 1) releasePresentation(row, token, target);
         }, motion.stretchedMs);
       });
@@ -336,7 +446,7 @@
     button.textContent = stretched ? 'RELAY VISUAL STRETCHED' : 'RELAY VISUAL AUTHENTIC';
     button.setAttribute('aria-pressed', stretched ? 'true' : 'false');
     button.title = stretched
-      ? 'Visual-only per-relay stretched timing; AGC and physical relay timing remain authentic'
+      ? 'Frame-synchronized per-relay stretched visuals and clicks; AGC timing remains authentic'
       : 'Authentic modeled relay contact timing';
   }
 
@@ -367,6 +477,8 @@
     contactBounceVisible: false,
     authenticTiming: true,
     stretchedVisualOnly: true,
+    stretchedAudioFrameLocked: true,
+    stretchedBounceAudio: false,
     stretchFirstBaseMs: STRETCH_FIRST_BASE_MS,
     stretchMinGapMs: STRETCH_MIN_GAP_MS,
     stretchMaxGapMs: STRETCH_MAX_GAP_MS,
@@ -377,6 +489,7 @@
     stretchedGapMs,
     stretchedScheduleFor: (row, prior, target) => stretchedSchedule(collectMotions(row, prior, target)).map(item => ({...item})),
     presentationDurationMs,
+    lastPresentationClick: () => lastPresentationClick ? {...lastPresentationClick} : null,
     renderWord
   });
 })();
