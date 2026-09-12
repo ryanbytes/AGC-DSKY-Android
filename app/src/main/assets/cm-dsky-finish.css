@@ -90,16 +90,74 @@ body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .display-wel
   outline-color:#181917;
   box-shadow:inset .4vmin .45vmin 1.1vmin #020302,inset -.18vmin -.18vmin .35vmin rgba(255,255,255,.07),0 .13vmin .16vmin rgba(255,255,255,.06);
 }
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .lamp:not(.on){
-  background:linear-gradient(#5a5b56,#454642);
-  color:#e5e2d8;
-  border-color:#272825;
-  box-shadow:inset .12vmin .12vmin .2vmin rgba(255,255,255,.10),inset -.12vmin -.12vmin .22vmin rgba(0,0,0,.42);
-  text-shadow:0 .07em #111;
-}
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .lamp:not(.on):nth-child(even){
-  background:linear-gradient(#60615b,#4b4c47);
-}
 body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
   border-color:#70716c;
+}
+
+/*
+ * Alarm/status indicator, SCD 1006387C.
+ *
+ * The production indicator is not EL.  Each of the ten active legend areas is
+ * backlit by three parallel-wired incandescent lamps.  The drawing requires
+ * aviation white or aviation yellow when energized, a low-reflective diffuse
+ * neutral-gray background when dark, opaque black Gorton Condensed legends,
+ * and no leakage into an adjacent unlit legend.  Keep all simulated lamp light
+ * clipped inside its own legend cell; there is intentionally no exterior glow.
+ */
+body.spacecraft-cm .lamp{
+  position:relative;
+  overflow:hidden;
+  background:#74756f;
+  color:#11120f;
+  border-color:#2d2e2a;
+  box-shadow:inset 0 0 .18vmin rgba(255,255,255,.10),inset 0 0 .34vmin rgba(0,0,0,.28);
+  font-family:"Arial Narrow","Liberation Sans Narrow","Roboto Condensed",Arial,sans-serif;
+  font-stretch:condensed;
+  font-weight:700;
+  letter-spacing:-.035em;
+  text-shadow:none;
+}
+body.spacecraft-cm .lamp:not(.on),
+body.spacecraft-cm .lamp:not(.on):nth-child(even){
+  background:#74756f;
+  color:#11120f;
+}
+body.spacecraft-cm .lamp::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:0;
+}
+
+/* Three T-1 incandescent sources behind the translucent white legend plate.
+   Their broad overlapping pools reproduce the slight three-source structure
+   without turning the annunciator into three visible dots. */
+body.spacecraft-cm .lamp.on.white{
+  background:#d8d5c5;
+  color:#10110e;
+  box-shadow:inset 0 0 .22vmin rgba(255,255,244,.62),inset 0 0 .42vmin rgba(88,82,62,.18);
+}
+body.spacecraft-cm .lamp.on.white::before{
+  opacity:1;
+  background:
+    radial-gradient(ellipse at 18% 52%,rgba(255,252,224,.98) 0 10%,rgba(255,247,207,.76) 24%,rgba(245,235,193,.30) 48%,transparent 70%),
+    radial-gradient(ellipse at 50% 48%,rgba(255,253,229,.94) 0 11%,rgba(255,247,208,.70) 25%,rgba(244,233,190,.26) 49%,transparent 71%),
+    radial-gradient(ellipse at 82% 53%,rgba(255,250,219,.96) 0 10%,rgba(255,244,201,.74) 24%,rgba(243,230,184,.28) 48%,transparent 70%);
+}
+
+/* The yellow legends use the same three-lamp geometry behind the aviation-
+   yellow filter.  Hot cores remain slightly warmer than the surrounding pane,
+   as expected from tungsten filament sources viewed through a diffuser/filter. */
+body.spacecraft-cm .lamp.on.yellow{
+  background:#c9a92b;
+  color:#111006;
+  box-shadow:inset 0 0 .22vmin rgba(255,241,126,.50),inset 0 0 .42vmin rgba(91,66,5,.20);
+}
+body.spacecraft-cm .lamp.on.yellow::before{
+  opacity:1;
+  background:
+    radial-gradient(ellipse at 18% 52%,rgba(255,238,91,.98) 0 10%,rgba(252,216,54,.78) 24%,rgba(233,183,25,.34) 48%,transparent 70%),
+    radial-gradient(ellipse at 50% 48%,rgba(255,241,101,.94) 0 11%,rgba(252,218,56,.72) 25%,rgba(231,181,24,.30) 49%,transparent 71%),
+    radial-gradient(ellipse at 82% 53%,rgba(255,235,82,.96) 0 10%,rgba(250,211,48,.76) 24%,rgba(229,176,21,.32) 48%,transparent 70%);
 }
