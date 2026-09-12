@@ -14,11 +14,18 @@
  *   - Shaft assembly 2003975 procurement requirements: key EL legend >=2.0
  *     foot-lamberts when excited at 75 Vrms, 400 Hz.
  *
- * Acceptance limits are not statistical distributions.  Only the compression
+ * Acceptance limits are not statistical distributions. Only the compression
  * spring gives a documented bounded rate range suitable for deterministic
- * per-key variation.  Touch-to-contact and return-audio timing remain explicitly
+ * per-key variation. Touch-to-contact and return-audio timing remain explicitly
  * presentation/gesture estimates and are therefore NOT randomized as if they
  * were manufacturing tolerances.
+ *
+ * IMPORTANT FORCE LIMITATION: the surviving drawings checked so far do not
+ * establish the installed/rest length of spring 2004941, hence its preload is
+ * unknown. The leaf-spring lever geometry, switch load and friction also
+ * contribute to finger force. We therefore expose only the spring FORCE CHANGE
+ * caused by the documented 3/16-in and 1/4-in strokes. We do not claim a total
+ * key force from replica/reconstruction figures.
  */
 (() => {
   if (window.__DSKY_KEY_MECHANICAL_SPEC__) return;
@@ -55,6 +62,21 @@
     minimumBrightnessFootLamberts: 2.0,
     testVrms: 75,
     testHz: 400
+  });
+  const SPRING_FORCE_ENVELOPE = Object.freeze({
+    // F = kx. These are DELTAS from the unknown installed/rest spring force.
+    forceIncreaseToActuationOzMin: COMPRESSION_SPRING.rateLbPerInMin * ASSEMBLY.actuationTravelIn * 16,
+    forceIncreaseToActuationOzMax: COMPRESSION_SPRING.rateLbPerInMax * ASSEMBLY.actuationTravelIn * 16,
+    forceIncreaseToBottomOzMin: COMPRESSION_SPRING.rateLbPerInMin * ASSEMBLY.totalTravelIn * 16,
+    forceIncreaseToBottomOzMax: COMPRESSION_SPRING.rateLbPerInMax * ASSEMBLY.totalTravelIn * 16,
+    totalFingerForceOzMin: null,
+    totalFingerForceOzMax: null,
+    unresolvedBecause: Object.freeze([
+      'installed/rest compression-spring length or preload not established by the checked surviving drawings',
+      'cap-housing leaf-spring lever contribution not reduced to a sourced force curve',
+      'sensitive-switch load and sliding/seal friction cannot be summed without the installed geometry'
+    ]),
+    excludedSecondaryEstimate: 'Replica/reconstruction reports of roughly 21-26 oz are not treated as Apollo drawing requirements.'
   });
   const PRESENTATION_ESTIMATES = Object.freeze({
     contactMs: 36,
@@ -113,10 +135,12 @@
         springRateLbPerIn: Number(springRate.toFixed(3)),
         springIncrementAtActuationOz: Number(springIncrementAtActuationOz.toFixed(2)),
         springIncrementAtBottomOz: Number(springIncrementAtBottomOz.toFixed(2)),
+        totalFingerForceOz: null,
         assembly: ASSEMBLY,
         compressionSpring: COMPRESSION_SPRING,
         sensitiveSwitch: SENSITIVE_SWITCH,
         keyEl: KEY_EL,
+        springForceEnvelope: SPRING_FORCE_ENVELOPE,
         estimateFields: Object.freeze(['contactMs','returnSoundMs','travelVmin','makePitch','returnPitch','soundGain'])
       });
     }
@@ -129,8 +153,10 @@
         compressionSpring:COMPRESSION_SPRING,
         sensitiveSwitch:SENSITIVE_SWITCH,
         keyEl:KEY_EL,
+        springForceEnvelope:SPRING_FORCE_ENVELOPE,
         presentationEstimates:PRESENTATION_ESTIMATES,
-        variationPolicy:'Only documented bounded spring-rate range is varied per key; acceptance maxima/minima are retained as envelopes, not sampled distributions.'
+        variationPolicy:'Only documented bounded spring-rate range is varied per key; acceptance maxima/minima are retained as envelopes, not sampled distributions.',
+        forcePolicy:'Only source-derivable spring force increments are reported. Total finger force remains unresolved until installed preload and complete lever/friction geometry are source-backed.'
       })
     });
   }
