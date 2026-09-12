@@ -42,9 +42,17 @@
   }
 
   function apply() {
-    integralVoltageRatio = readIntegralControl();
-    incandescentFluxRatio = incandescentFlux(integralVoltageRatio);
-    root.style.setProperty('--integral-incandescent-level', incandescentFluxRatio.toFixed(5));
+    const nextVoltage = readIntegralControl();
+    const nextFlux = incandescentFlux(nextVoltage);
+    const serialized = nextFlux.toFixed(5);
+    integralVoltageRatio = nextVoltage;
+    incandescentFluxRatio = nextFlux;
+    // This assignment itself changes the root style attribute. Avoid a
+    // self-sustaining MutationObserver loop by writing only when the derived
+    // value actually changed.
+    if (root.style.getPropertyValue('--integral-incandescent-level').trim() !== serialized) {
+      root.style.setProperty('--integral-incandescent-level', serialized);
+    }
   }
 
   function installStyle() {
@@ -64,7 +72,7 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source {
   apply();
 
   // flight-hardware-ui.js changes the normalized INTEGRAL control by writing
-  // --integral-level on the root style.  Recompute the incandescent branch
+  // --integral-level on the root style. Recompute the incandescent branch
   // after each such control/feed change, including LIGHT BUS DEMO transitions.
   const observer = new MutationObserver(mutations => {
     if (mutations.some(m => m.type === 'attributes' && m.attributeName === 'style')) apply();
