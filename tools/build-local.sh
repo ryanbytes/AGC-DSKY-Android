@@ -144,6 +144,7 @@ node tools/lighting-rheostat-stop-smoke.js
 node tools/lighting-electrical-model-smoke.js
 node tools/v35-model-smoke.js
 node tools/dsky-output-path-smoke.js
+node tools/relay-stretch-stability-smoke.js
 node tools/asset-reference-smoke.js
 node tools/wasm-runtime-smoke.js
 

@@ -54,6 +54,9 @@ jobs:
       - name: Flight hardware UI test
         run: node tools/flight-hardware-ui-smoke.js
 
+      - name: Stretched relay stability test
+        run: node tools/relay-stretch-stability-smoke.js
+
       - name: Android frontend parity test
         run: node pwa/tools/pwa-parity-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
 
