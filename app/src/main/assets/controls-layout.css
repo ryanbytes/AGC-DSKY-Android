@@ -1,8 +1,7 @@
 /* Application controls occupy their own flowing strip below the DSKY.
-   The controls intentionally borrow the panel appearance of Honeywell/MICRO
-   SWITCH Series 2 barrier-mount operator indicators: a dark mounting barrier
-   around a raised translucent legend screen.  The actual DSKY keypad retains
-   its Apollo keycap styling in style.css. */
+   These are application options, not claimed spacecraft controls, but they now
+   deliberately use the same black-key / white-EL visual language as the DSKY
+   keyboard. Their legend illumination follows the INTEGRAL lighting feed. */
 #app{
   flex-direction:column;
   justify-content:center;
@@ -32,13 +31,14 @@
   margin:0;
   overflow-y:auto;
   background:
-    repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 4px),
-    linear-gradient(180deg,#41433e 0%,#2b2d29 46%,#1b1c1a 100%);
-  border:1px solid #090a09;
+    radial-gradient(circle at 18% 18%,rgba(255,255,255,.035) 0 1px,transparent 1.4px),
+    repeating-linear-gradient(94deg,rgba(255,255,255,.012) 0 1px,rgba(0,0,0,.014) 1px 3px),
+    linear-gradient(145deg,#666b67 0%,#515652 48%,#3c403d 100%);
+  border:1px solid #151615;
   border-radius:2px;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.18),
-    inset 0 -2px 4px rgba(0,0,0,.72),
+    inset 0 1px 0 rgba(255,255,255,.16),
+    inset 0 -2px 5px rgba(0,0,0,.58),
     0 2px 5px rgba(0,0,0,.58);
   opacity:0;
   visibility:hidden;
@@ -48,99 +48,69 @@
 }
 .controls-visible .app-controls{opacity:.98;visibility:visible;pointer-events:auto;transform:none}
 
-/* Series 2-style operator-indicator housing.  The black outer element is the
-   barrier/housing; ::before is the translucent single-section display cap. */
+/* DSKY-key visual treatment for application options.  The physical DSKY keys
+   remain the authoritative geometry; these smaller controls only borrow the
+   cap material, bevel, travel and white EL legend appearance. */
 .app-controls button{
   position:relative;
-  isolation:isolate;
   flex:0 0 auto;
   width:auto;
   min-width:max-content;
   max-width:none;
   min-height:36px;
   padding:8px 11px 7px;
-  overflow:visible;
+  overflow:hidden;
   text-overflow:clip;
   white-space:nowrap;
-  border:2px solid #11120f;
-  border-radius:1px;
+  border:1px solid #080908;
+  border-radius:3px;
   outline:1px solid #555850;
-  background:linear-gradient(90deg,#171815 0 8%,#292b26 8% 92%,#11120f 92% 100%);
-  color:#181a17;
+  background:linear-gradient(145deg,#343532 0%,#252623 36%,#171816 78%,#10110f 100%);
+  color:var(--key-el-color,rgba(245,247,237,1));
   font:800 8.2px/.98 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
-  letter-spacing:.055em;
+  letter-spacing:.045em;
   text-transform:uppercase;
-  text-shadow:0 1px rgba(255,255,255,.28);
+  text-shadow:var(--key-el-shadow,0 0 .18vmin rgba(244,250,236,.46),0 .08em #000);
   box-shadow:
-    inset 1px 1px 0 rgba(255,255,255,.13),
-    inset -1px -2px 2px rgba(0,0,0,.72),
+    inset 1px 1px 1px rgba(255,255,255,.13),
+    inset -2px -2px 2px rgba(0,0,0,.78),
     0 2px 0 #080908,
-    0 3px 4px rgba(0,0,0,.45);
+    0 3px 4px rgba(0,0,0,.42);
   -webkit-tap-highlight-color:transparent;
   transform:translateY(0);
-  transition:transform 45ms linear,box-shadow 45ms linear,filter 90ms linear;
+  transition:transform 50ms linear,box-shadow 50ms linear,background 50ms linear,color 90ms linear,text-shadow 90ms linear;
 }
 .app-controls button::before{
   content:"";
   position:absolute;
-  z-index:-1;
-  inset:4px 5px 5px;
-  border:1px solid #7c7e76;
-  border-radius:1px;
-  background:
-    linear-gradient(112deg,rgba(255,255,255,.42) 0 10%,transparent 27% 72%,rgba(0,0,0,.08) 100%),
-    linear-gradient(180deg,#e5e3d8 0%,#cacac0 48%,#acada4 100%);
-  box-shadow:
-    inset 0 1px 1px rgba(255,255,255,.78),
-    inset 0 -2px 2px rgba(62,64,58,.38),
-    0 0 0 1px #050605,
-    0 1px 2px rgba(0,0,0,.65);
+  inset:2px;
+  pointer-events:none;
+  border-top:1px solid rgba(255,255,255,.08);
+  border-left:1px solid rgba(255,255,255,.05);
+  border-radius:2px;
 }
-.app-controls button::after{
-  content:"";
-  position:absolute;
-  z-index:-1;
-  left:2px;
-  right:2px;
-  bottom:-3px;
-  height:3px;
-  background:#080908;
-  opacity:.75;
-}
-.app-controls button:hover{filter:brightness(1.06)}
+.app-controls button:hover{filter:brightness(1.04)}
 .app-controls button:active,
 .app-controls button[aria-pressed="true"]{
   transform:translateY(2px);
+  background:linear-gradient(#171816,#10110f);
   box-shadow:
-    inset 1px 2px 2px rgba(0,0,0,.55),
-    inset -1px -1px 0 rgba(255,255,255,.08),
+    inset 1px 2px 3px rgba(0,0,0,.72),
+    inset -1px -1px 0 rgba(255,255,255,.05),
     0 0 0 #080908,
-    0 1px 2px rgba(0,0,0,.45);
+    0 1px 2px rgba(0,0,0,.38);
 }
-.app-controls button:active::before,
-.app-controls button[aria-pressed="true"]::before{
-  inset:5px 5px 4px;
-  background:
-    linear-gradient(112deg,rgba(255,255,255,.22) 0 9%,transparent 28% 72%,rgba(0,0,0,.11) 100%),
-    linear-gradient(180deg,#c9c9c0 0%,#b8b9b0 52%,#9d9f97 100%);
-  box-shadow:
-    inset 0 2px 3px rgba(0,0,0,.22),
-    inset 0 -1px 0 rgba(255,255,255,.40),
-    0 0 0 1px #050605;
-}
-.app-controls button:active::after,
-.app-controls button[aria-pressed="true"]::after{opacity:.15}
 .app-controls button:focus-visible{
-  outline:2px solid #c8c9bd;
+  outline:2px solid rgba(245,247,237,.72);
   outline-offset:2px;
 }
+.app-controls button[hidden]{display:none!important}
 .app-controls span{display:none!important}
 
 @media (max-width:380px){
   .dsky{width:min(calc(100vw - 4px),calc((100vh - 164px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372))}
   .app-controls{gap:4px;padding:5px}
   .app-controls button{min-height:34px;font-size:7.3px;padding:8px 8px 7px}
-  .app-controls button::before{inset:4px 4px 5px}
 }
 @media (orientation:landscape){
   .dsky,.dream .dsky{
