@@ -14,7 +14,7 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 20067
+        versionCode 20068
         versionName '1.1.4'
     }
 
@@ -84,7 +84,7 @@ def stagePinnedAgcAssets = tasks.register('stagePinnedAgcAssets', Sync) {
 
 def generateElSecondFrames = tasks.register('generateElSecondFrames', Exec) {
     group = 'build setup'
-    description = 'Generate 00-59 Apollo-vector register frames for the live seconds flipper.'
+    description = 'Generate settled and stretched-relay Apollo-vector register frames for the widget.'
     inputs.file(file('../tools/generate-el-second-frames.js'))
     outputs.dir(generatedElSecondsResDir)
     commandLine 'node', file('../tools/generate-el-second-frames.js'), generatedElSecondsResDir

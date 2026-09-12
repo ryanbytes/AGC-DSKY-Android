@@ -31,12 +31,21 @@ req(model,'if (elapsedMs >= DRIVE_ENVELOPE_MS) return target;','settled-state bo
 no(model,'Math.random','per-operation randomness');
 
 req(provider,'WidgetRelayModel.segmentsForDigit(ch)','native renderer relay-matrix path');
+req(provider,'R.array.el_stretched_frames','native stretched frame resource path');
+req(provider,'STRETCHED_FRAME_MS=50','native stretched widget cadence');
 no(provider,'private static final String[] SEG=','direct native seven-segment lookup');
 
 req(generator,'const DIGIT_RELAY=[21,3,25,27,15,30,28,19,29,31];','generated Comanche relay codes');
 req(generator,'function segmentsForRelayCode(value)','generated contact matrix');
-req(generator,'const lit=segmentsForRelayCode(DIGIT_RELAY[Number(ch)]);','generated settled relay path');
+req(generator,'[...text].map(ch=>segmentsForRelayCode(DIGIT_RELAY[Number(ch)]))','generated settled relay path');
+req(generator,'function profileFor(row,bit)','generated deterministic relay profile');
+req(generator,'function stretchedSchedule(motions)','generated stretched relay schedule');
+req(generator,'function monotonicMask(shown,targetMask,changedMask,requestedMask)','generated monotonic segment guard');
+req(generator,'const STRETCHED_FRAME_MS=50;','generated stretched sample cadence');
+req(generator,'const STRETCHED_FRAME_COUNT=60*STRETCHED_FRAMES_PER_SECOND;','generated stretched frame count');
+req(generator,'<array name="el_stretched_frames">','generated stretched frame resource array');
 no(generator,"const SEG=['abcdef'",'direct generated seven-segment lookup');
+no(generator,'Math.random','generated per-operation randomness');
 
 // Independent copy of the schematic contact logic. These are the normal
 // Comanche decimal codes; checking them here catches accidental matrix/code
@@ -66,4 +75,4 @@ const resetMax=Number((model.match(/RESET_TRAVEL_MAX_MS = ([0-9.]+);/)||[])[1]);
 if(!(envelope===20&&guard>0&&setMax<envelope&&resetMax<envelope)) fail('relay timing bounds escaped 20-ms envelope');
 
 console.log('Widget relay model smoke: PASS');
-console.log('  12x11 latching banks, Comanche digit codes, K1..K5 contact matrix, persistent set/reset travel, DPST skew, bounce, and 20-ms settled boundary verified');
+console.log('  settled K1..K5 path plus deterministic 50-ms stretched widget timeline, monotonic anti-flicker guard, and 20-ms physical relay envelope verified');
