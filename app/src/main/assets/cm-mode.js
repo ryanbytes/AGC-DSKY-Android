@@ -16,6 +16,15 @@
     document.body.appendChild(script);
   }
 
+  function installLightingRheostatStop() {
+    if (document.querySelector('script[data-feature="lighting-rheostat-stop"]')) return;
+    const script = document.createElement('script');
+    script.src = 'lighting-rheostat-stop.js';
+    script.dataset.feature = 'lighting-rheostat-stop';
+    script.async = false;
+    document.body.appendChild(script);
+  }
+
   function installKeyMechanicalSpec() {
     if (document.querySelector('script[data-feature="key-mechanical-spec"]')) return;
     const script = document.createElement('script');
@@ -62,6 +71,7 @@
 
   function installCmFeatures() {
     installFlightHardwareUi();
+    installLightingRheostatStop();
     installKeyMechanicalSpec();
     installKeyboardElectricalInterlock();
     installLightingElectricalModel();
