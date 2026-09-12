@@ -75,7 +75,7 @@ for (const marker of [
   "--lamp-rise",
   "--lamp-fall",
   "--lamp-gain",
-  "span.className = 'lamp-legend'",
+  "legend.className = 'lamp-legend'",
   "document.body.classList.add('lamp-hardware-ready')",
   ".lamp .lamp-source",
   "transition-duration:var(--lamp-fall,52ms)",
