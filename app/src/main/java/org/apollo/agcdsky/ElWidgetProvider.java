@@ -131,7 +131,6 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         {{96.671774f,91.907059f},{98.249534f,91.907059f},{99.801954f,97.700791f},{97.815844f,96.176791f}},
         {{96.005094f,90.891059f},{96.447474f,92.542059f},{92.028414f,92.542059f},{91.586024f,90.891059f}}};
       private static final int[] MAP={0,1,2,3,5,4,6};
-      private static final String[] SEG={"abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc","abcdefg","abcdfg"};
       private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),PANEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG);
       static{
         ON.setStyle(Paint.Style.FILL);ON.setColor(CORE);
@@ -178,7 +177,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static void dot(Canvas c,float cx,float cy,float rx,float ry){Path p=new Path();for(int i=0;i<12;i++){double a=Math.PI*2d*i/12d;float x=cx+(float)Math.cos(a)*rx,y=cy+(float)Math.sin(a)*ry;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,HARDWARE_FILL_P);}
       private static void digits(Canvas c,String s,float x,float y){for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+i*UPPER_ADV,y);}
       private static void register(Canvas c,char sign,String s,float x,float y){sign(c,sign,x,y);for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+FIRST_DIGIT_X+i*REG_ADV,y);}
-      private static void digit(Canvas c,char ch,float ox,float oy){String lit=SEG[ch-'0'];for(int l=0;l<7;l++)if(lit.indexOf((char)('a'+l))>=0)segment(c,l,ox,oy);}
+      private static void digit(Canvas c,char ch,float ox,float oy){String lit=WidgetRelayModel.segmentsForDigit(ch);for(int l=0;l<7;l++)if(lit.indexOf((char)('a'+l))>=0)segment(c,l,ox,oy);}
       private static void segment(Canvas c,int logical,float ox,float oy){float[][] pts=SOURCE[MAP[logical]];Path p=new Path();for(int i=0;i<pts.length;i++){float x=ox+(MIRROR_X-pts[i][0]-DATUM_X)*MM_TO_U,y=oy+(pts[i][1]-SRC_Y)*MM_TO_U;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,ON);}
       private static void sign(Canvas c,char s,float ox,float oy){
         if(s!='+'&&s!='-')return;
