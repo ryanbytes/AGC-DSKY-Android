@@ -25,15 +25,21 @@ req(manifest,'android:resource="@xml/el_widget_info"','manifest');
 req(manifest,'android.permission.INTERNET','manifest');
 req(layout,'<AdapterViewFlipper','widget layout');
 req(layout,'android:id="@+id/el_seconds_flipper"','seconds flipper');
-req(layout,'android:flipInterval="1000"','seconds flipper');
+req(layout,'android:flipInterval="50"','stretched seconds flipper');
 req(item,'android:id="@+id/el_second_image"','seconds frame');
 no(layout,'<TextClock','widget layout');
 req(info,'android:updatePeriodMillis="1800000"','widget metadata');
-req(info,'android:widgetCategory="home_screen"','widget metadata');
+req(info,'android:widgetCategory="home_screen|keyguard"','widget metadata');
 req(provider,'RemoteViews.RemoteCollectionItems.Builder','live register adapter');
-req(provider,'R.drawable.el_sec_59','generated frame table');
+req(provider,'R.drawable.el_sec_59','generated settled frame table');
 req(provider,'pairFrames=buildFrames(context,60)','60-frame adapter');
 req(provider,'hourFrames=buildFrames(context,24)','24-frame adapter');
+req(provider,'STRETCHED_FRAME_MS=50','stretched widget cadence');
+req(provider,'STRETCHED_FRAME_COUNT=60*STRETCHED_FRAMES_PER_SECOND','stretched widget timeline length');
+req(provider,'R.array.el_stretched_frames','generated stretched frame array');
+req(provider,'buildStretchedFrames(context)','stretched widget adapter');
+req(provider,'setFlipInterval",STRETCHED_FRAME_MS','runtime stretched cadence');
+req(provider,'now.get(Calendar.SECOND)*STRETCHED_FRAMES_PER_SECOND+secondPhase','stretched phase alignment');
 req(provider,'alarm.setExactAndAllowWhileIdle','minute refresh');
 
 req(finish,'--el:#6decb4','WebView EL color');
@@ -44,7 +50,7 @@ no(provider,'Color.rgb(121,239,79)','obsolete native lime color');
 no(generator,'#79EF4F','obsolete generated lime color');
 no(provider,'setShadowLayer','no-glow renderer');
 
-// Android home widget keeps its own outer-frame representation.
+// Android home/keyguard widget keeps its own outer-frame representation.
 req(layout,'android:layout_width="117.678dp"','outer widget width');
 req(layout,'android:layout_height="198.525dp"','outer widget height');
 req(layout,'android:background="#565A56"','outer frame color');
@@ -136,7 +142,8 @@ no(generator,'rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_H)','old continuous generated st
 // Upper two-digit electrode datums from 1006315G sheet 2.  The first separator
 // center is 2.280 in from the bottom (1.780 from the top).  The drawing gives
 // .555/.565 in from the VERB/NOUN digit datum to that center, .560 nominal.
-// With .500-in digits and the .060-in separator, that leaves .030 in clear.
+// The user-visible VERB/NOUN legend plates are intentionally nudged 0.25 panel
+// unit upward without moving the source-backed digit datums.
 req(geometry,'const UPPER_ADVANCE=.420*U;','upper pitch');
 req(geometry,'const REGISTER_ADVANCE=.410*U;','register pitch');
 req(geometry,'const FIRST_DIGIT_X=.400*U;','first register digit datum');
@@ -156,8 +163,14 @@ req(provider,'Typeface.create("sans-serif",Typeface.BOLD)','native legend face')
 req(provider,'LABEL_P.setTextSize(7.42f)','native legend drawing height');
 req(provider,'COMP_P.setTextSize(7.42f)','native COMP ACTY drawing height');
 req(provider,'section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P)','native PROG zone');
-req(provider,'section(c,0f,42.721f,39.525f,11.678f,LEGEND_BG_P)','native VERB zone');
-req(provider,'section(c,66.441f,42.721f,39.525f,11.678f,LEGEND_BG_P)','native NOUN zone');
+req(provider,'section(c,0f,42.471f,39.525f,11.678f,LEGEND_BG_P)','raised native VERB zone');
+req(provider,'section(c,66.441f,42.471f,39.525f,11.678f,LEGEND_BG_P)','raised native NOUN zone');
+req(provider,'c.drawText("VERB",19.763f,50.520f,LABEL_P)','raised native VERB label');
+req(provider,'c.drawText("NOUN",86.237f,50.520f,LABEL_P)','raised native NOUN label');
+req(html,'<rect class="el-legend-bg" x="0" y="42.471" width="39.525" height="11.678"/>','raised WebView VERB zone');
+req(html,'<rect class="el-legend-bg" x="66.441" y="42.471" width="39.525" height="11.678"/>','raised WebView NOUN zone');
+req(html,'x="19.763" y="50.520"','raised WebView VERB label');
+req(html,'x="86.237" y="50.520"','raised WebView NOUN label');
 req(provider,'digits(c,"00",RIGHT_FIELD_X,PROG_Y)','native PROG datum');
 req(provider,'digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y)','native VERB datum');
 req(provider,'digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y)','native NOUN datum');
@@ -165,8 +178,8 @@ no(provider,'LEFT_FIELD_X=.140f*U','obsolete native left datum');
 no(provider,'digits(c,"16",LEFT_FIELD_X,55.5f)','obsolete native VERB Y');
 req(generator,'REG_ADV=.410*U, FIRST_DIGIT_X=.400*U','generated register datums');
 req(html,'transform="translate(72.763 14.148)"','PROG datum');
-req(html,'transform="translate(6.737 54.797)"','VERB datum');
-req(html,'transform="translate(72.763 54.797)"','NOUN datum');
+req(html,'transform="translate(6.737 54.797)"','VERB digit datum');
+req(html,'transform="translate(72.763 54.797)"','NOUN digit datum');
 no(html,'transform="translate(6.737 57.267)"','obsolete overlapping VERB datum');
 no(html,'transform="translate(72.763 57.267)"','obsolete overlapping NOUN datum');
 req(html,'transform="translate(0 84.441)"','register origin');
@@ -174,13 +187,19 @@ req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y)",'nativ
 
 req(generator,'android:viewportWidth="106"','generated viewport width');
 req(generator,'android:viewportHeight="23"','generated viewport height');
+req(generator,'const STRETCHED_FRAME_MS=50;','generated stretched cadence');
+req(generator,'const STRETCHED_FRAME_COUNT=60*STRETCHED_FRAMES_PER_SECOND;','generated stretched timeline length');
+req(generator,'function stretchedSchedule(motions)','generated stretched relay scheduler');
+req(generator,'function monotonicMask(shown,targetMask,changedMask,requestedMask)','generated anti-flicker guard');
+req(generator,'el_stretch_${String(slot).padStart(3','generated stretched resource names');
+req(generator,'<array name="el_stretched_frames">','generated stretched resource array');
 no(generator,'android:viewportWidth="100"','obsolete squeezed viewport');
 no(html,'viewBox="0 0 106 190"','obsolete stretched WebView');
 const versionCode=gradle.match(/\bversionCode\s+(\d+)/);
-if(!versionCode || Number(versionCode[1]) < 20053) fail('Gradle versionCode is missing or regressed below 20053');
+if(!versionCode || Number(versionCode[1]) < 20068) fail('Gradle versionCode is missing or regressed below 20068');
 req(gradle,"versionName '1.1.4'",'Gradle');
-req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
+req(generator,'for(let sec=0;sec<60;sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  1006315G active-face ratio, upper electrodes, labels, and clearance verified');
+console.log('  keyguard stretched relay timeline, raised VERB/NOUN plates, and physical digit datums verified');
