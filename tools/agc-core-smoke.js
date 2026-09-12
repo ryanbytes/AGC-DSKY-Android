@@ -75,7 +75,8 @@ async function testResetAndPeripheralSetup() {
     const writes = calls.filter(([name]) => name === 'write');
     const expected = [
         [0x100 | 0o15, 0o37],
-        [0x100 | 0o32, 0o20000]
+        [0x100 | 0o32, 0o20000],
+        [0o32, 0o20000]
     ];
     assert(writes.length === expected.length,
         `expected ${expected.length} startup I/O writes, got ${writes.length}`);
@@ -85,6 +86,17 @@ async function testResetAndPeripheralSetup() {
     });
     assert(!writes.some(([, channel]) => channel === (0x100 | 0o30) || channel === 0o30),
         'startup must not synthesize an ISS OPERATE transition on channel 030');
+
+    calls.length = 0;
+    core.proceedKey(true);
+    core.proceedKey(false);
+    const proWrites = calls.filter(([name]) => name === 'write');
+    assert(proWrites.length === 2,
+        'PRO press/release must produce exactly two channel-032 writes');
+    assert(proWrites[0][1] === 0o32 && proWrites[0][2] === 0,
+        'PRO press must clear active-low channel 032 bit 020000');
+    assert(proWrites[1][1] === 0o32 && proWrites[1][2] === 0o20000,
+        'PRO release must restore channel 032 bit 020000');
 
     calls.length = 0;
     setPacketWriteResult(0);
@@ -267,8 +279,8 @@ async function testLoadPipeline() {
         'load must prime transport state and then restore the true AGC reset vector');
     assert(calls.filter(([name, count]) => name === 'step' && count === 1).length === 1,
         'load must initialize the ring buffer with exactly one CPU step');
-    assert(calls.filter(([name]) => name === 'write').length === 2,
-        'load must queue only the two DSKY input masks');
+    assert(calls.filter(([name]) => name === 'write').length === 3,
+        'load must queue the two DSKY input masks plus the released active-low PRO level');
     assert(core.totalSteps === 0,
         'post-load mission accounting must begin at the true reset vector');
 }
