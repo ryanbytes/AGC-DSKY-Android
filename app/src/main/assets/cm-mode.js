@@ -7,6 +7,14 @@
     document.body.classList.add('spacecraft-cm');
   }
 
+  function installFlightHardwareUi() {
+    if (document.querySelector('script[data-feature="flight-hardware-ui"]')) return;
+    const script = document.createElement('script');
+    script.src = 'flight-hardware-ui.js';
+    script.dataset.feature = 'flight-hardware-ui';
+    document.body.appendChild(script);
+  }
+
   function installRelayShow() {
     if (document.getElementById('relay-show')) return;
     const controls = document.getElementById('controls');
@@ -24,8 +32,13 @@
     document.body.appendChild(script);
   }
 
+  function installCmFeatures() {
+    installFlightHardwareUi();
+    installRelayShow();
+  }
+
   applyCmMode();
   if (window.AGCDSKY) window.AGCDSKY.applyCmMode = applyCmMode;
-  if (document.readyState === 'complete') installRelayShow();
-  else window.addEventListener('load', installRelayShow, {once:true});
+  if (document.readyState === 'complete') installCmFeatures();
+  else window.addEventListener('load', installCmFeatures, {once:true});
 })();
