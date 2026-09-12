@@ -39,6 +39,7 @@ jobs:
           node tools/optics-lifecycle-smoke.js
           node tools/device-v35-policy-smoke.js
           node tools/display-layout-smoke.js
+          node tools/flight-hardware-ui-smoke.js
           node tools/el-widget-smoke.js
           node tools/widget-relay-model-smoke.js
           node tools/relay-show-smoke.js
