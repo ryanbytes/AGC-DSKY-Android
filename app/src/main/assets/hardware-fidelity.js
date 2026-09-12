@@ -22,6 +22,32 @@
   const DSKY_FLASH_QUANTUM_MS = 320;
   const DSKY_FLASH_PHASES = 4; // 1.28 s, 75% on / 25% off.
   const V35_ORDER = Object.freeze([12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+
+  // WebView/Android can deliver Web Audio noticeably after a DOM mutation even
+  // when both were scheduled in the correct electrical order. Keep the relay
+  // and AGC state timing authoritative, but delay only the visible presentation
+  // by the audio output pipeline so the mechanical clack is heard before the EL
+  // contact result appears. `baseLatency` covers graph->host processing and
+  // `outputLatency` covers host->device playout. Older WebViews often expose
+  // neither, so use a conservative presentation-only fallback.
+  const AUDIO_PRESENTATION_FALLBACK_MS = 35;
+  const AUDIO_PRESENTATION_MAX_MS = 120;
+
+  function audioPresentationLatencyMs() {
+    if (!tickSound) return 0;
+    let ctx = null;
+    try { ctx = audioCtx || null; } catch (_) {}
+    if (!ctx) return 0;
+
+    const base = Number(ctx.baseLatency);
+    const output = Number(ctx.outputLatency);
+    let seconds = 0;
+    let measured = false;
+    if (Number.isFinite(base) && base > 0) { seconds += base; measured = true; }
+    if (Number.isFinite(output) && output > 0) { seconds += output; measured = true; }
+    const ms = measured ? seconds * 1000 : AUDIO_PRESENTATION_FALLBACK_MS;
+    return Math.max(0, Math.min(AUDIO_PRESENTATION_MAX_MS, ms));
+  }
   const t4Epoch = performance.now();
   const scalerEpoch = performance.now();
 
@@ -307,13 +333,27 @@
     // expose only the guaranteed latched state at the 20-ms settle boundary.
     for (const motion of motions) relayArmatureClack(motion.bit, motion.on, motion.delay);
 
+    // Audio hardware adds playout latency after the relay event has been
+    // scheduled. The physical latch still commits at 20 ms; only the browser
+    // paint is held back so a slow Android/Fire audio path cannot make the EL
+    // appear to change before the armature is heard.
+    const presentationLagMs = changed && render ? audioPresentationLatencyMs() : 0;
+    const visualDelayMs = RELAY_DRIVE_MS + presentationLagMs;
+
     later(() => {
       if (hw.relayGeneration[relay] !== generation) return;
       hw.latches[relay] = low11;
       agcRelayWords[relay] = low11;
-      if (render) applyRelayLow11(relay, low11);
       if (hw.activeDrive === relay) hw.activeDrive = 0;
     }, RELAY_DRIVE_MS);
+
+    if (render) {
+      later(() => {
+        if (hw.relayGeneration[relay] !== generation) return;
+        applyRelayLow11(relay, low11);
+      }, visualDelayMs);
+    }
+    return visualDelayMs;
   }
 
 
@@ -409,16 +449,15 @@
       beginRelayDrive(relay, low11, true);
       clockRelayWords[relay] = low11;
 
-      // Keep the phone-clock backing digits synchronized at the guaranteed
-      // 20-ms settle boundary so later dirty comparisons start from reality.
+      // Keep the phone-clock backing digits electrically current at 20 ms.
+      // beginRelayDrive() owns the visible paint at visualDelayMs; rendering
+      // clockDigits here would bypass the audio-presentation ordering and could
+      // also expose a later row early when audio latency exceeds row spacing.
       later(() => {
         if (token !== hw.clockToken || mode !== 'clock' || lampTestActive) return;
-        const touched = new Set();
         for (const [name, index] of cellsOfJob(job)) {
           clockDigits[name][index] = job.want[name][index];
-          touched.add(name);
         }
-        touched.forEach(renderClockReg);
       }, RELAY_DRIVE_MS);
 
       later(step, DIRTY_ROW_START_MS);
@@ -667,6 +706,7 @@
       t4Ms: T4_MS,
       relayDriveMs: RELAY_DRIVE_MS,
       dirtyRowStartMs: DIRTY_ROW_START_MS,
+      audioPresentationLatencyMs: audioPresentationLatencyMs(),
       armatureSettleMs: ARMATURE_SETTLE_MS.slice(),
       v35Order: V35_ORDER.slice(),
       flashQuantumMs: DSKY_FLASH_QUANTUM_MS,
