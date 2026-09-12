@@ -163,7 +163,7 @@
 
   function prepareAnnunciatorLegends() {
     for (const lamp of document.querySelectorAll('.ann-grid .lamp:not(.blank)')) {
-      if (lamp.querySelector(':scope > .lamp-legend')) continue;
+      if (lamp.firstElementChild && lamp.firstElementChild.classList.contains('lamp-legend')) continue;
       const span = document.createElement('span');
       span.className = 'lamp-legend';
       while (lamp.firstChild) span.appendChild(lamp.firstChild);
