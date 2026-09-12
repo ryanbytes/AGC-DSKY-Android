@@ -35,6 +35,7 @@ const CORE_ASSETS = [
   './apollo-stars.js',
   './optics.js',
   './cm-mode.js',
+  './flight-hardware-ui.js',
   './relay-audio-refine.js',
   './dsky-geometry.js',
   './dsky-relay-matrix.js',
