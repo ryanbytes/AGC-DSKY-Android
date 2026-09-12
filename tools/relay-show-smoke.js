@@ -21,6 +21,8 @@ req(cm,"script.src = 'relay-show.js'",'feature loader');
 req(show,"mode = 'relay-show'",'exclusive demo mode');
 req(show,"agcCore.stop()",'AGC task pause');
 req(show,"saveAgcState('relay show checkpoint')",'durable pre-show checkpoint');
+req(show,'const coreWasRunning = !!(mode === \'agc\' && agcCore && agcCore.running);','pre-stop AGC scheduler-state capture');
+req(show,'saved.coreRunning = coreWasRunning;','saved AGC scheduler-state restoration marker');
 req(show,'decodeChannel10','physical bank drive path');
 req(show,'NON_DECIMAL_CODES','contact-matrix burst');
 req(show,'for (let digit = 0; digit <= 9; digit++)','digit chase');
@@ -36,6 +38,14 @@ req(show,'clockRelayWords = {...saved.clockRelayWords}','previous clock task res
 req(show,"status('RELAY SHOW · RESTORING PREVIOUS TASK')",'restore status');
 req(show,'tickSound = saved.tickSound','sound preference restoration');
 
+const runningCapture=show.indexOf("const coreWasRunning = !!(mode === 'agc' && agcCore && agcCore.running);");
+const agcStop=show.indexOf('\n      agcCore.stop();');
+const settledCapture=show.indexOf('saved = captureSettledState();');
+const runningRestore=show.indexOf('saved.coreRunning = coreWasRunning;');
+if(!(runningCapture >= 0 && agcStop > runningCapture && settledCapture > agcStop && runningRestore > settledCapture)) {
+  fail('AGC running state must be captured before stop and restored onto the settled snapshot');
+}
+
 // User explicitly rejected a brightness flare. The demo may change only relay
 // driven DSKY state; it must not add transient optical enhancement effects.
 no(show,'brightness(','brightness flare');
@@ -43,4 +53,4 @@ no(show,'filter:','CSS/filter flare');
 no(show,'classList.add(\'relay-flare\'','relay flare class');
 
 console.log('Relay show smoke: PASS');
-console.log('  slower bank sweep, digit chase, contact burst, finale, and previous-task restore verified');
+console.log('  slower bank sweep, digit chase, contact burst, finale, scheduler-state resume, and previous-task restore verified');
