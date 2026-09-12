@@ -9,15 +9,29 @@
  * the speaker. That makes an electrically correct relay event sound late
  * relative to the DOM paint.
  *
- * This presentation shim reserves the full 120-ms compensation window already
- * bounded by hardware-fidelity.js, and applies the same presentation shift to
+ * Native Android relay audio uses a shorter guard because SoundPool bypasses
+ * WebView's output buffer. WebAudio fallback keeps the conservative 120-ms guard.
+ * The same presentation shift is applied to
  * the relay-driven annunciator/COMP ACTY states. It never changes yaAGC state,
  * relay latches, channel timing, V/N electronic flashing, or EL-OFF timing.
  */
 (() => {
-  const PRESENTATION_AUDIO_MS = 120;
+  const WEB_AUDIO_GUARD_MS = 120;
+  const NATIVE_AUDIO_GUARD_MS = 60;
   const RELAY_SETTLE_MS = 20;
-  const VISUAL_DELAY_MS = RELAY_SETTLE_MS + PRESENTATION_AUDIO_MS;
+
+  function nativeRelayAudioReady() {
+    try { return !!(window.RelayAudioBridge && RelayAudioBridge.isReady()); }
+    catch (_) { return false; }
+  }
+
+  function presentationAudioGuardMs() {
+    return nativeRelayAudioReady() ? NATIVE_AUDIO_GUARD_MS : WEB_AUDIO_GUARD_MS;
+  }
+
+  function presentationVisualDelayMs() {
+    return RELAY_SETTLE_MS + presentationAudioGuardMs();
+  }
 
   // Make hardware-fidelity.js see the real AudioContext through a transparent
   // proxy, except for baseLatency. Its presentation helper already clamps to
@@ -36,7 +50,7 @@
     nativeContext = ctx;
     latencyProxy = new Proxy(ctx, {
       get(target, property) {
-        if (property === 'baseLatency') return PRESENTATION_AUDIO_MS / 1000;
+        if (property === 'baseLatency') return presentationAudioGuardMs() / 1000;
         if (property === 'outputLatency') return 0;
         const value = Reflect.get(target, property, target);
         return typeof value === 'function' ? value.bind(target) : value;
@@ -51,7 +65,7 @@
     const id = setTimeout(() => {
       pendingPaints.delete(id);
       fn();
-    }, VISUAL_DELAY_MS);
+    }, presentationVisualDelayMs());
     pendingPaints.add(id);
   }
 
@@ -114,8 +128,10 @@
     if (typeof hardwareBeforeSync === 'function') {
       window.AGCDSKY.hardware = () => {
         const state = hardwareBeforeSync();
-        state.presentationAudioGuardMs = PRESENTATION_AUDIO_MS;
-        state.presentationVisualDelayMs = VISUAL_DELAY_MS;
+        state.presentationAudioGuardMs = presentationAudioGuardMs();
+        state.presentationVisualDelayMs = presentationVisualDelayMs();
+        state.presentationAudioBackend = nativeRelayAudioReady() ?
+          'android-soundpool-low-latency' : 'web-audio-fallback';
         return state;
       };
     }
