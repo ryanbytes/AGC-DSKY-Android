@@ -153,22 +153,23 @@ body.spacecraft-cm .el-static{opacity:var(--numerics-level)}
 body.spacecraft-cm .el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level))}
 body.spacecraft-cm .comp-el{opacity:var(--numerics-level)}
 
-/* White EL key legends ride on the moving keycap.  The simulation retains a
-   faint unpowered marking at zero INTEGRAL so the physical cap is readable. */
+/* White EL key legends ride on the moving keycap.  Each key receives a stable
+   manufacturing-style travel variation from flight-hardware-ui.js. */
 body.spacecraft-cm .key{
   color:var(--key-el-color);
   text-shadow:var(--key-el-shadow);
   transition:transform 55ms linear,background 55ms linear,box-shadow 55ms linear,color 90ms linear,text-shadow 90ms linear;
 }
 body.spacecraft-cm .key.pressed{
-  transform:translateY(.42vmin);
+  transform:translateY(var(--key-travel,.42vmin));
   background:linear-gradient(#171816,#111210);
   box-shadow:inset .10vmin .18vmin .18vmin rgba(0,0,0,.82),inset 0 0 .25vmin rgba(255,255,255,.05),0 .03vmin .05vmin #454640;
 }
 
-/* Once flight-hardware-ui.js has wrapped each legend in a foreground span,
-   move the three incandescent sources to a separate layer.  The span is above
-   the lamp pools, preventing the WebView washout seen with bare text nodes. */
+/* Once flight-hardware-ui.js has created the three physical source layers,
+   keep the legend in front and let each bulb carry its own stable brightness
+   and thermal timing personality.  The nominal rise/fall values are best
+   engineering estimates, not values claimed by SCD 1006387 or MS24367. */
 body.spacecraft-cm.lamp-hardware-ready .lamp.on.white,
 body.spacecraft-cm.lamp-hardware-ready .lamp.on.yellow{
   background:#74756f;
@@ -180,30 +181,35 @@ body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-legend{
   z-index:2;
   display:block;
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp::before{
-  content:"";
+body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-source{
   position:absolute;
   inset:0;
   z-index:1;
   pointer-events:none;
   opacity:0;
-  transition:opacity 145ms cubic-bezier(.22,.61,.36,1);
+  transition-property:opacity;
+  transition-duration:var(--lamp-fall,52ms);
+  transition-timing-function:cubic-bezier(.22,.61,.36,1);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.on::before{
-  opacity:var(--integral-level);
-  transition-duration:85ms;
+body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source{
+  opacity:calc(var(--integral-level) * var(--lamp-gain,1));
+  transition-duration:var(--lamp-rise,36ms);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.on.white::before{
-  background:
-    radial-gradient(ellipse at 18% 52%,rgba(255,252,224,.98) 0 10%,rgba(255,247,207,.76) 24%,rgba(245,235,193,.30) 48%,transparent 70%),
-    radial-gradient(ellipse at 50% 48%,rgba(255,253,229,.94) 0 11%,rgba(255,247,208,.70) 25%,rgba(244,233,190,.26) 49%,transparent 71%),
-    radial-gradient(ellipse at 82% 53%,rgba(255,250,219,.96) 0 10%,rgba(255,244,201,.74) 24%,rgba(243,230,184,.28) 48%,transparent 70%),
-    linear-gradient(#dedbca,#c9c5b3);
+body.spacecraft-cm.lamp-hardware-ready .lamp.white .lamp-source-1{
+  background:radial-gradient(ellipse at 18% 52%,rgba(255,252,224,.98) 0 10%,rgba(255,247,207,.76) 24%,rgba(245,235,193,.30) 48%,transparent 70%);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.on.yellow::before{
-  background:
-    radial-gradient(ellipse at 18% 52%,rgba(255,238,91,.98) 0 10%,rgba(252,216,54,.78) 24%,rgba(233,183,25,.34) 48%,transparent 70%),
-    radial-gradient(ellipse at 50% 48%,rgba(255,241,101,.94) 0 11%,rgba(252,218,56,.72) 25%,rgba(231,181,24,.30) 49%,transparent 71%),
-    radial-gradient(ellipse at 82% 53%,rgba(255,235,82,.96) 0 10%,rgba(250,211,48,.76) 24%,rgba(229,176,21,.32) 48%,transparent 70%),
-    linear-gradient(#d4b63a,#b89019);
+body.spacecraft-cm.lamp-hardware-ready .lamp.white .lamp-source-2{
+  background:radial-gradient(ellipse at 50% 48%,rgba(255,253,229,.94) 0 11%,rgba(255,247,208,.70) 25%,rgba(244,233,190,.26) 49%,transparent 71%);
+}
+body.spacecraft-cm.lamp-hardware-ready .lamp.white .lamp-source-3{
+  background:radial-gradient(ellipse at 82% 53%,rgba(255,250,219,.96) 0 10%,rgba(255,244,201,.74) 24%,rgba(243,230,184,.28) 48%,transparent 70%);
+}
+body.spacecraft-cm.lamp-hardware-ready .lamp.yellow .lamp-source-1{
+  background:radial-gradient(ellipse at 18% 52%,rgba(255,238,91,.98) 0 10%,rgba(252,216,54,.78) 24%,rgba(233,183,25,.34) 48%,transparent 70%);
+}
+body.spacecraft-cm.lamp-hardware-ready .lamp.yellow .lamp-source-2{
+  background:radial-gradient(ellipse at 50% 48%,rgba(255,241,101,.94) 0 11%,rgba(252,218,56,.72) 25%,rgba(231,181,24,.30) 49%,transparent 71%);
+}
+body.spacecraft-cm.lamp-hardware-ready .lamp.yellow .lamp-source-3{
+  background:radial-gradient(ellipse at 82% 53%,rgba(255,235,82,.96) 0 10%,rgba(250,211,48,.76) 24%,rgba(229,176,21,.32) 48%,transparent 70%);
 }
