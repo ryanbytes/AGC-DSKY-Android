@@ -113,6 +113,12 @@
   async function preflight() {
     if (mode === 'agc-loading' || mode === 'relay-show' || dream) throw new Error('relay-show-unavailable');
 
+    // Capture the scheduler state before pausing it.  The settled DSKY relay
+    // snapshot is intentionally taken after the stop, but agcCore.stop() clears
+    // agcCore.running, so reading that flag afterward would make restore think
+    // the AGC had already been idle and leave the DSKY frozen after the show.
+    const coreWasRunning = !!(mode === 'agc' && agcCore && agcCore.running);
+
     cancelLampTest();
     if (mode === 'agc' && agcCore) {
       // Durable checkpoint in case Android kills the process during a show.
@@ -126,6 +132,7 @@
     // before we capture what must be restored after the show.
     await sleep(28);
     saved = captureSettledState();
+    saved.coreRunning = coreWasRunning;
 
     mode = 'relay-show';
     stopRequested = false;
