@@ -45,6 +45,8 @@ const CORE_ASSETS = [
   './dsky-relay-matrix.js',
   './hardware-fidelity.js',
   './relay-identity-audio.js',
+  './relay-visual-coupling.js',
+  './relay-stretch-stability.js',
   './relay-show.js',
   './background-audio-guard.js',
   './screen-only.js',
