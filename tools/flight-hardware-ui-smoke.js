@@ -11,6 +11,7 @@ const req = (t, n, l) => { if (!t.includes(n)) fail(`${l} missing: ${n}`); };
 const no = (t, n, l) => { if (t.includes(n)) fail(`${l} must not contain: ${n}`); };
 
 const ui = read('app/src/main/assets/flight-hardware-ui.js');
+const rheostat = read('app/src/main/assets/lighting-rheostat-stop.js');
 const keySpec = read('app/src/main/assets/key-mechanical-spec.js');
 const interlock = read('app/src/main/assets/keyboard-electrical-interlock.js');
 const cm = read('app/src/main/assets/cm-mode.js');
@@ -19,18 +20,26 @@ const controls = read('app/src/main/assets/controls-layout.css');
 const hw = read('app/src/main/assets/hardware-fidelity.js');
 const sw = read('pwa/static/sw.js');
 
-for (const [text, filename] of [[ui,'flight-hardware-ui.js'],[keySpec,'key-mechanical-spec.js'],[interlock,'keyboard-electrical-interlock.js']]) {
+for (const [text, filename] of [
+  [ui,'flight-hardware-ui.js'],
+  [rheostat,'lighting-rheostat-stop.js'],
+  [keySpec,'key-mechanical-spec.js'],
+  [interlock,'keyboard-electrical-interlock.js']
+]) {
   try { new vm.Script(text, {filename}); }
   catch (error) { fail(`${filename} syntax error: ${error.message}`); }
 }
 
 req(cm, "script.src = 'flight-hardware-ui.js'", 'CM feature loader');
 req(cm, "script.dataset.feature = 'flight-hardware-ui'", 'CM feature marker');
+req(cm, "script.src = 'lighting-rheostat-stop.js'", 'lighting rheostat stop loader');
+req(cm, "script.dataset.feature = 'lighting-rheostat-stop'", 'lighting rheostat stop marker');
 req(cm, "script.src = 'key-mechanical-spec.js'", 'key mechanical spec loader');
 req(cm, "script.dataset.feature = 'key-mechanical-spec'", 'key mechanical spec marker');
 req(cm, "script.src = 'keyboard-electrical-interlock.js'", 'keyboard interlock loader');
 req(cm, "script.dataset.feature = 'keyboard-electrical-interlock'", 'keyboard interlock marker');
 req(sw, "'./flight-hardware-ui.js'", 'offline PWA cache');
+req(sw, "'./lighting-rheostat-stop.js'", 'offline rheostat stop cache');
 req(sw, "'./key-mechanical-spec.js'", 'offline key mechanical spec cache');
 req(sw, "'./keyboard-electrical-interlock.js'", 'offline keyboard interlock cache');
 
@@ -48,6 +57,18 @@ for (const marker of [
   "BOTH LIGHTING FEEDS OPEN",
   "RELAY STATE RETAINED"
 ]) req(ui, marker, 'independent lighting model');
+
+// The private zero level remains available for explicit feed-open simulation,
+// but the real CM rheostats have mechanical stops and cannot select OFF during
+// ordinary rotation. Complete disable is by opening the lighting circuit/feed.
+for (const marker of [
+  "const MIN_NORMAL_LEVEL = 0.25",
+  "cycleWithMechanicalStop",
+  "normalizeOne('numerics')",
+  "normalizeOne('integral')",
+  "completeOffMethod:'open lighting feed / circuit breaker, not normal rheostat rotation'",
+  "zeroReservedFor:'LIGHT BUS DEMO feed-open state'"
+]) req(rheostat, marker, 'lighting rheostat mechanical stop');
 
 for (const forbidden of ['decodeChannel10(', 'agcCore.stop(', 'agcCore.reset(', 'resetAgcFace('])
   no(ui, forbidden, 'lighting bus demo state isolation');
@@ -71,7 +92,9 @@ for (const marker of [
 // Manufacturing variation is source-bounded, not arbitrary. R-700 supplies the
 // assembled stroke/contact geometry; drawing 2004941 supplies the only bounded
 // spring-rate range we sample. 1010901 acceptance limits stay envelopes rather
-// than being misused as probability distributions.
+// than being misused as probability distributions. Total finger force remains
+// intentionally unknown until installed preload/lever/friction geometry is
+// source-backed.
 for (const marker of [
   "actuationTravelIn: 3 / 16",
   "overtravelToBottomIn: 1 / 16",
@@ -88,7 +111,12 @@ for (const marker of [
   "testHz: 400",
   "contactMs: 36",
   "returnSoundMs: 18",
-  "Only documented bounded spring-rate range is varied per key"
+  "forceIncreaseToActuationOzMin",
+  "forceIncreaseToBottomOzMax",
+  "totalFingerForceOzMin: null",
+  "totalFingerForceOz: null",
+  "Only documented bounded spring-rate range is varied per key",
+  "Total finger force remains unresolved"
 ]) req(keySpec, marker, 'source-backed key mechanics');
 no(keySpec, "vary(KEY_CONTACT_BASE_MS", 'key contact timing must not masquerade as manufacturing tolerance');
 
@@ -152,4 +180,4 @@ req(ui, "oldDim.hidden = true", 'retired whole-panel dimmer');
 req(ui, "document.body.classList.remove('dim')", 'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');
-console.log('  source-bounded key mechanics, series-contact KEYRST, minimum D-input dwell, dedicated PRO, and three-bulb annunciator timing gated');
+console.log('  rheostat stop, source-bounded key mechanics/force policy, series-contact KEYRST, dedicated PRO, and three-bulb annunciators gated');
