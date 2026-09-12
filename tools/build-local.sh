@@ -146,6 +146,7 @@ node tools/keyboard-electrical-interlock-smoke.js
 node tools/lighting-rheostat-stop-smoke.js
 node tools/lighting-electrical-model-smoke.js
 node tools/v35-model-smoke.js
+node tools/relay-presentation-order-smoke.js
 node tools/asset-reference-smoke.js
 node tools/wasm-runtime-smoke.js
 
