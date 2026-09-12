@@ -8,6 +8,9 @@
   const PROCEED_CHANNEL = 0o32;
   const NORMAL_KEY_MASK = 0o37;
   const PROCEED_MASK = 0o20000; // Input channel 032, bit 14. Active low for PRO.
+  // Pinned yaAGC agc_t ABI: from &State.Erasable to State.InputChannel.
+  // Erasable 8*0400*2 + Fixed 40*02000*2 + Parities 40*(02000/32)*4.
+  const ERASABLE_TO_INPUT_CHANNELS = 91136;
   const WASI_ESPIPE = 70;
 
   function makeWasi(memory){
@@ -175,14 +178,57 @@
       return this.exports.packet_write(channel, value);
     }
 
+    inputChannelWordIndex(channel){
+      if (!this.memory || !this.exports || typeof this.exports.get_erasable_ptr !== 'function') return -1;
+      const ch = channel|0;
+      if (ch < 0 || ch >= 512) return -1;
+      const erasable = this.exports.get_erasable_ptr() >>> 0;
+      const byteAddress = erasable + ERASABLE_TO_INPUT_CHANNELS + ch * 2;
+      if (byteAddress + 1 >= this.memory.buffer.byteLength) return -1;
+      return byteAddress >>> 1;
+    }
+
+    setInputChannelBits(channel, mask, value){
+      const index = this.inputChannelWordIndex(channel);
+      if (index < 0) return false;
+      const words = new Uint16Array(this.memory.buffer);
+      const m = mask & 0o77777;
+      words[index] = ((words[index] & ~m) | (value & m)) & 0xffff;
+      return true;
+    }
+
     keyPress(keyCode){
-      if (!keyCode) return;
-      this.writeIo(NORMAL_KEY_CHANNEL, keyCode & 0o37);
+      if (!keyCode) return 0;
+      return this.writeIo(NORMAL_KEY_CHANNEL, keyCode & NORMAL_KEY_MASK);
+    }
+
+    keyRelease(){
+      // KEY RESET is a separate DSKY discrete.  Do NOT send channel 015=0
+      // through ringbuffer_api: that transport raises KEYRUPT1 for every
+      // channel-015 packet, including zero, which would create a fictitious
+      // second keystroke on physical release.
+      //
+      // First let any just-queued make packet reach WriteIO/KEYRUPT1.  wasm.c
+      // documents that queued packets are processed on the next cpu_step().
+      if (this.exports && typeof this.exports.cpu_step === 'function') {
+        this.exports.cpu_step(1);
+        this.totalSteps += 1;
+        this.drainIo();
+      }
+      return this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
+    }
+
+    releaseExternalDskyInputs(){
+      // Physical controls are not persistent AGC state.  A restored snapshot
+      // must come back with the normal keyboard released and PRO released.
+      const keyOk = this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
+      const proOk = this.setInputChannelBits(PROCEED_CHANNEL, PROCEED_MASK, PROCEED_MASK);
+      return keyOk && proOk;
     }
 
     proceedKey(pressed){
       // PRO is electrically active-low: 0 means held, 020000 means released.
-      this.writeIo(PROCEED_CHANNEL, pressed ? 0 : PROCEED_MASK);
+      return this.writeIo(PROCEED_CHANNEL, pressed ? 0 : PROCEED_MASK);
     }
 
     proceedPulse(durationMs=120){
@@ -270,6 +316,7 @@
       if (snapshot.fingerprint && this.snapshotFingerprint() !== snapshot.fingerprint) {
         throw new Error('AGC snapshot fingerprint mismatch');
       }
+      this.releaseExternalDskyInputs();
       this.channels = Object.create(null);
       this.totalSteps = 0;
       this.startTime = performance.now();
