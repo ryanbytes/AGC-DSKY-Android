@@ -3,12 +3,13 @@
 /*
  * Stable per-relay mechanical fingerprints for the Block II DSKY.
  *
- * hardware-fidelity.js owns the 20-ms bank-drive envelope.  This layer gives
- * every one of the 12 x 11 latching relays its own deterministic mechanical
- * settle time inside that envelope and applies the contact state when that
- * individual armature finishes moving.  The associated click starts at the
- * same instant as the contact transition, so a changing row can visibly and
- * audibly resolve as a short relay rattle instead of one 20-ms snap.
+ * hardware-fidelity.js owns the authoritative 20-ms bank-drive/settle model and
+ * the visible/latching relay state.  This layer gives every one of the 12 x 11
+ * latching relays its own deterministic acoustic travel time inside that same
+ * envelope, but it must never publish a partially settled contact word to the
+ * display or to agcRelayWords.  The screen therefore changes only at the
+ * hardware-fidelity layer's guaranteed settled boundary while the relay rattle
+ * can still contain individual armature timing.
  *
  * The settle spread and acoustic tolerances are modeled manufacturing
  * variation, not measured values from the flown Apollo 11 DSKY.  No identified
@@ -22,8 +23,6 @@
   const fallbackEmitTick = emitTick;
   const baseHardware = window.AGCDSKY.hardware.bind(window.AGCDSKY);
   const bufferCache = new Map();
-  const driveVisuals = new Map();
-  const latestDriveStamp = new Map();
 
   const LATCHING_RELAY_COUNT = 132;
   const SETTLE_MIN_MS = 5.2;
@@ -116,8 +115,8 @@
   }
 
   // Use a full-period permutation of the 132 physical latching-relay ordinals.
-  // Every relay therefore gets a unique, stable travel time while all contacts
-  // still complete before the documented 20-ms bank-settle boundary.
+  // Every relay therefore gets a unique, stable travel time while all armature
+  // sounds still complete before the documented 20-ms bank-settle boundary.
   function settleMsForOrdinal(ordinal) {
     const slot = ((ordinal * 73) + 17) % LATCHING_RELAY_COUNT;
     return SETTLE_MIN_MS + slot * (SETTLE_MAX_MS - SETTLE_MIN_MS) / (LATCHING_RELAY_COUNT - 1);
@@ -232,148 +231,6 @@
     source.stop(start + 0.0115);
   }
 
-  function applyRelayVisual(relay, low11) {
-    const b = (low11 >> 10) & 1;
-    const c = (low11 >> 5) & 0o37;
-    const d = low11 & 0o37;
-    switch (relay) {
-      case 12:
-        setLamp('vel', !!(low11 & 0o00004));
-        setLamp('noatt', !!(low11 & 0o00010));
-        setLamp('alt', !!(low11 & 0o00020));
-        setLamp('gimbal', !!(low11 & 0o00040));
-        setLamp('tracker', !!(low11 & 0o00200));
-        setLamp('prog', !!(low11 & 0o00400));
-        break;
-      case 11:
-        agcDisplay.prog[0] = relayDigit(c); agcDisplay.prog[1] = relayDigit(d);
-        set2('prog', agcDisplay.prog.join(''));
-        break;
-      case 10:
-        agcDisplay.verb[0] = relayDigit(c); agcDisplay.verb[1] = relayDigit(d);
-        set2('verb', agcDisplay.verb.join(''));
-        break;
-      case 9:
-        agcDisplay.noun[0] = relayDigit(c); agcDisplay.noun[1] = relayDigit(d);
-        set2('noun', agcDisplay.noun.join(''));
-        break;
-      case 8:
-        agcDisplay.r1.digits[0] = relayDigit(d); renderAgcReg('r1');
-        break;
-      case 7:
-        agcDisplay.r1.plus = !!b; agcDisplay.r1.digits[1] = relayDigit(c); agcDisplay.r1.digits[2] = relayDigit(d); renderAgcReg('r1');
-        break;
-      case 6:
-        agcDisplay.r1.minus = !!b; agcDisplay.r1.digits[3] = relayDigit(c); agcDisplay.r1.digits[4] = relayDigit(d); renderAgcReg('r1');
-        break;
-      case 5:
-        agcDisplay.r2.plus = !!b; agcDisplay.r2.digits[0] = relayDigit(c); agcDisplay.r2.digits[1] = relayDigit(d); renderAgcReg('r2');
-        break;
-      case 4:
-        agcDisplay.r2.minus = !!b; agcDisplay.r2.digits[2] = relayDigit(c); agcDisplay.r2.digits[3] = relayDigit(d); renderAgcReg('r2');
-        break;
-      case 3:
-        agcDisplay.r2.digits[4] = relayDigit(c); agcDisplay.r3.digits[0] = relayDigit(d); renderAgcReg('r2'); renderAgcReg('r3');
-        break;
-      case 2:
-        agcDisplay.r3.plus = !!b; agcDisplay.r3.digits[1] = relayDigit(c); agcDisplay.r3.digits[2] = relayDigit(d); renderAgcReg('r3');
-        break;
-      case 1:
-        agcDisplay.r3.minus = !!b; agcDisplay.r3.digits[3] = relayDigit(c); agcDisplay.r3.digits[4] = relayDigit(d); renderAgcReg('r3');
-        break;
-    }
-  }
-
-  function driveRecord(state, row) {
-    const last = state && state.lastWrite;
-    if (!last || Number(last.relay) !== row) return null;
-    const stamp = Number(last.at);
-    const key = `${row}:${stamp}`;
-    let record = driveVisuals.get(key);
-    if (!record) {
-      const prior = state.latches && Object.prototype.hasOwnProperty.call(state.latches, row)
-        ? Number(state.latches[row]) & 0o3777
-        : 0;
-      record = {
-        key,
-        row,
-        stamp,
-        word: prior,
-        target: Number(last.low11) & 0o3777
-      };
-      driveVisuals.set(key, record);
-      latestDriveStamp.set(row, stamp);
-      setTimeout(() => driveVisuals.delete(key), 40);
-    }
-    return record;
-  }
-
-  function settleContact(record, bit, delayMs) {
-    if (!record) return;
-    const mask = 1 << bit;
-    setTimeout(() => {
-      if (latestDriveStamp.get(record.row) !== record.stamp) return;
-      if (record.target & mask) record.word |= mask;
-      else record.word &= ~mask;
-      record.word &= 0o3777;
-      try { agcRelayWords[record.row] = record.word; } catch (_) {}
-      try { applyRelayVisual(record.row, record.word); } catch (_) {}
-    }, Math.max(0, delayMs));
-  }
-
-  function scheduleDriveSettles(state) {
-    const last = state && state.lastWrite;
-    const row = last ? Number(last.relay) : 0;
-    if (row < 1 || row > 12) return;
-    const record = driveRecord(state, row);
-    if (!record) return;
-    const diff = (record.word ^ record.target) & 0o3777;
-    const elapsed = Math.max(0, performance.now() - record.stamp);
-    const motions = [];
-    for (let bit = 0; bit < 11; bit++) {
-      if (!(diff & (1 << bit))) continue;
-      const settleMs = settleMsForOrdinal(relayOrdinal(row, bit));
-      motions.push({bit, settleMs});
-    }
-    motions.sort((a, b) => a.settleMs - b.settleMs || a.bit - b.bit);
-    for (const motion of motions) {
-      settleContact(record, motion.bit, Math.max(0, motion.settleMs - elapsed));
-    }
-  }
-
-  // Real AGC channel-010 writes pass here synchronously, so start the
-  // individual contact timers immediately after hardware-fidelity.js records
-  // the new 20-ms bank drive.  This remains active even with relay sound off.
-  const baseDecodeChannel10 = decodeChannel10;
-  decodeChannel10 = function individualRelaySettleDecodeChannel10(value) {
-    const result = baseDecodeChannel10.call(this, value);
-    const word = value & 0o77777;
-    const row = (word >> 11) & 0o17;
-    if (result && row >= 1 && row <= 12) scheduleDriveSettles(snapshot());
-    return result;
-  };
-
-  // Synthetic PHONE CLOCK/V35 rows call the private beginRelayDrive() directly
-  // and therefore do not pass decodeChannel10.  Watch only while in clock mode
-  // for a newly recorded drive and schedule it from the original performance
-  // timestamp, preserving the same per-relay settle times without depending on
-  // audio being enabled.
-  let lastClockWriteStamp = firstSnapshot && firstSnapshot.lastWrite
-    ? Number(firstSnapshot.lastWrite.at)
-    : NaN;
-  setInterval(() => {
-    try {
-      if (typeof mode === 'undefined' || mode !== 'clock') return;
-      const state = snapshot();
-      const last = state && state.lastWrite;
-      const row = last ? Number(last.relay) : 0;
-      const stamp = last ? Number(last.at) : NaN;
-      if (row < 1 || row > 12 || !Number.isFinite(stamp) || stamp === lastClockWriteStamp) return;
-      lastClockWriteStamp = stamp;
-      scheduleDriveSettles(state);
-    } catch (_) {}
-  }, 4);
-
   function changedAux(current) {
     const changes = [];
     const next = current && current.auxRelays || {};
@@ -407,9 +264,6 @@
       auxChanges.forEach((change, i) => {
         const id = `AUX:${AUX_LABEL[change.name] || change.name.toUpperCase()}`;
         const ordinal = auxOrdinal(change.name);
-        // The old composite caller scales strength by how many relays changed.
-        // Once expanded, restore a single-relay level so simultaneous lamps do
-        // not become artificially louder merely because they share an edge.
         const individualStrength = change.on ? 0.66 : 0.58;
         playIdentity(ctx, when + i * 0.00016, individualStrength, id, ordinal, change.on);
       });
@@ -419,10 +273,10 @@
     const row = Number(state.activeDrive) || 0;
     const baseSettle = Array.isArray(state.armatureSettleMs) ? state.armatureSettleMs : [];
     if (row >= 1 && row <= 12 && baseSettle.length === 11) {
-      // hardware-fidelity.js still calls emitTick at its legacy per-bit marker.
-      // Use that marker only to identify which physical armature is moving;
-      // then reschedule the actual contact and sound to this relay's own stable
-      // travel time inside the same 20-ms bank envelope.
+      // hardware-fidelity.js calls emitTick at a legacy per-bit marker.  Use
+      // that marker only to identify the physical armature, then reschedule the
+      // sound to this relay's stable acoustic travel time.  No display/latch
+      // state is changed here; hardware-fidelity remains the sole authority.
       const deltaMs = Math.max(0, (when - ctx.currentTime) * 1000);
       const bit = closestBit(deltaMs, baseSettle);
       if (bit >= 0) {
@@ -448,9 +302,8 @@
     ))
   ));
 
-  // Keep the original hardware snapshot fields intact for compatibility, while
-  // exposing the effective 12 x 11 individual-contact timing used by this
-  // physical-settle layer for diagnostics and field verification.
+  // Keep the original hardware snapshot fields intact for compatibility while
+  // exposing the effective 12 x 11 individual acoustic timing for diagnostics.
   window.AGCDSKY.hardware = () => {
     const state = baseHardware();
     state.relaySettleMs = RELAY_SETTLE_MS.map(row => row.slice());
