@@ -25,8 +25,8 @@ req(sw, "'./flight-hardware-ui.js'", 'offline PWA cache');
 
 for (const marker of [
   "const LEVELS = Object.freeze([1.00, 0.75, 0.50, 0.25, 0.00])",
-  "localStorage.setItem('dskyNumericsLevel'",
-  "localStorage.setItem('dskyIntegralLevel'",
+  "saveIndex('dskyNumericsLevel'",
+  "saveIndex('dskyIntegralLevel'",
   "--numerics-level",
   "--integral-level",
   "NUMERICS ${levelText(numericsIndex)}",
