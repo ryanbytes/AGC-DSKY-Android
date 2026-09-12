@@ -1,5 +1,7 @@
 'use strict';
 
+// Device-video regression: stretched relay timing must never make a settled EL
+// segment reverse state or rebuild an unchanged SVG surface between contacts.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
