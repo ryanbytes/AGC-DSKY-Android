@@ -15,13 +15,18 @@ new vm.Script(sync, {filename: 'relay-output-sync.js'});
 
 for (const token of [
   'const WEB_AUDIO_GUARD_MS = 120;',
-  'const NATIVE_AUDIO_GUARD_MS = 220;',
+  'const NATIVE_AUDIO_GUARD_DEFAULT_MS = 320;',
+  'const NATIVE_AUDIO_GUARD_MIN_MS = 160;',
+  'const NATIVE_AUDIO_GUARD_MAX_MS = 500;',
+  "const NATIVE_AUDIO_GUARD_STORAGE_KEY = 'agcRelayPresentationGuardMs';",
   'const RELAY_SETTLE_MS = 20;',
   'const HARDWARE_PRESENTATION_CAP_MS = 120;',
   'function nativeElExtraMs()',
   'set2 = function relaySynchronizedSet2(',
   'renderAgcReg = function relaySynchronizedRenderAgcReg(',
-  'return nativeReady() ? NATIVE_AUDIO_GUARD_MS : WEB_AUDIO_GUARD_MS;',
+  'window.AGCDSKY.setRelayPresentationGuardMs',
+  'window.AGCDSKY.getRelayPresentationGuardMs',
+  's.relayPresentationGuardTunable = true;',
   "if (property === 'baseLatency') return guardMs() / 1000;",
   "deferLamp('comp'", "deferLamp('uplink'", "deferLamp('temp'",
   "deferLamp('keyrel'", "deferLamp('oprerr'", "deferLamp('restart'",
@@ -54,6 +59,6 @@ assert(sync.includes('V/N flash and EL-OFF are electronic blanking behavior'),
   'electronic blanking exception must remain explicit');
 
 console.log('Relay output sync smoke: PASS');
-console.log('  native SoundPool: 220-ms guard + 20-ms settle => 240-ms relay-driven paint shift');
-console.log('  EL rows receive 100 ms extra after hardware-fidelity’s 120-ms cap');
+console.log('  native SoundPool default: 320-ms guard + 20-ms settle => ~340-ms relay-driven paint shift');
+console.log('  persisted calibration range: 160..500 ms');
 console.log('  WebAudio fallback: 120-ms guard + 20-ms settle => 140-ms paint shift');
