@@ -9,6 +9,7 @@ const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'app/src/main/assets');
 const app = fs.readFileSync(path.join(ASSETS, 'app.js'), 'utf8');
 const fidelity = fs.readFileSync(path.join(ASSETS, 'hardware-fidelity.js'), 'utf8');
+const relayAudio = fs.readFileSync(path.join(ASSETS, 'relay-identity-audio.js'), 'utf8');
 const html = fs.readFileSync(path.join(ASSETS, 'index.html'), 'utf8');
 
 function assert(condition, message) {
@@ -92,5 +93,29 @@ assert(fidelity.includes('function releaseProceed()'),
 assert(fidelity.includes('agcCore.proceedKey(false)'),
   'maintained PRO release must deassert channel 032 input');
 
+// The per-relay manufacturing layer may model sub-20-ms mechanical/electrical
+// behavior, but it must never publish transient contact states into the visible
+// DSKY. The hardware-fidelity layer remains the sole settled-state authority.
+new vm.Script(relayAudio, {filename: 'relay-identity-audio.js'});
+assert(relayAudio.includes('const DRIVE_ENVELOPE_MS = 20;'),
+  'relay manufacturing model must retain the documented 20-ms drive envelope');
+assert(relayAudio.includes('MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS'),
+  'manufacturing variation must settle before the 20-ms drive boundary');
+for (const token of [
+  'setTravelMs', 'resetTravelMs', 'setStableMs', 'resetStableMs',
+  'setBounceTimesMs', 'resetBounceTimesMs', 'poleSkewUs',
+  'contactTraceFor', 'playContactBounce'
+]) {
+  assert(relayAudio.includes(token), `relay manufacturing model missing ${token}`);
+}
+assert(relayAudio.includes("relayManufacturingModel = 'deterministic-per-relay-set-reset-bounce-v1'"),
+  'hardware diagnostics must identify the deterministic manufacturing model');
+assert(!relayAudio.includes('Math.random('),
+  'physical relay manufacturing fingerprints must be persistent, not per-operation random');
+assert(!relayAudio.includes('agcRelayWords['),
+  'relay manufacturing layer must not publish partially settled contact words');
+assert(!relayAudio.includes('renderAgcReg(') && !relayAudio.includes("set2('"),
+  'relay manufacturing layer must not render sub-20-ms contact motion to the EL face');
+
 console.log('V35 relay model smoke: PASS');
-console.log('  Comanche055 FULLDSP/FULLDSP1 rows, relay-12 0650, real-AGC command gate, five-second timing, 320 ms flash quantum, and maintained PRO verified');
+console.log('  Comanche055 FULLDSP/FULLDSP1 rows, relay-12 0650, real-AGC command gate, five-second timing, 320 ms flash quantum, maintained PRO, and deterministic relay manufacturing variation verified');
