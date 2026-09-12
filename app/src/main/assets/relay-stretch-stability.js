@@ -282,28 +282,14 @@
       guardByPosition.set(position, {
         row,
         token,
+        targetCode: Number(targetCode) & 0x1f,
         targetMask,
         changedMask: (priorMask ^ targetMask) & SEGMENT_FULL_MASK
       });
     }
-
-    let duration = 0;
-    try {
-      if (typeof visual.presentationDurationMs === 'function') {
-        duration = Number(visual.presentationDurationMs(row, priorWord, targetWord)) || 0;
-      }
-    } catch (_) {}
-    if (typeof setTimeout === 'function') {
-      setTimeout(() => {
-        if (guardGeneration[row] !== token) return;
-        for (const [position, guard] of guardByPosition.entries()) {
-          if (guard.row === row && guard.token === token) guardByPosition.delete(position);
-        }
-      }, Math.max(0, duration) + 40);
-    }
   }
 
-  function filteredMask(position, requestedMask) {
+  function filteredMask(position, requestedMask, requestedCode) {
     const requested = Number(requestedMask) & SEGMENT_FULL_MASK;
     if (!isStretched()) {
       shownMaskByPosition.set(position, requested);
@@ -324,6 +310,15 @@
     const commit = pending & atTarget;
     shown = ((shown & ~commit) | (guard.targetMask & commit)) & SEGMENT_FULL_MASK;
     shownMaskByPosition.set(position, shown);
+
+    // Relay bits only move once from the prior word to the target word during a
+    // presentation. Once this character's exact K1..K5 target code appears,
+    // every changed relay in that character has made its legitimate contact;
+    // later stretched callbacks cannot alter it. End the guard without a
+    // housekeeping timer, keeping the renderer's physical timer contract clean.
+    if ((Number(requestedCode) & 0x1f) === guard.targetCode) {
+      guardByPosition.delete(position);
+    }
     return shown;
   }
 
@@ -331,7 +326,7 @@
     const keys = pairPositions[id];
     if (!keys) return null;
     const chars = String(text || '').padEnd(2, ' ').slice(0, 2).split('');
-    const masks = chars.map((ch, index) => filteredMask(keys[index], maskForChar(ch)));
+    const masks = chars.map((ch, index) => filteredMask(keys[index], maskForChar(ch), codeOf(ch)));
     return {
       text: masks.map(charForMask).join(''),
       signature: `${id}:${masks.join(',')}`
@@ -342,7 +337,7 @@
     const keys = regPositions[id];
     if (!keys) return null;
     const chars = String(digits || '').padEnd(5, ' ').slice(0, 5).split('');
-    const masks = chars.map((ch, index) => filteredMask(keys[index], maskForChar(ch)));
+    const masks = chars.map((ch, index) => filteredMask(keys[index], maskForChar(ch), codeOf(ch)));
     return {
       digits: masks.map(charForMask).join(''),
       signature: `${id}:${String(sign || ' ')}:${masks.join(',')}`
