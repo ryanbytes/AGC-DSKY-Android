@@ -253,6 +253,13 @@ if (!click || click.row !== 10 || click.bit !== 5 || click.engaging !== true) fa
 let release = timers.find(x => x.ms === 24);
 if (!release) fail('final presentation release hold missing');
 release.fn();
+// The prior frame callback has already been queued in this deterministic test
+// harness. Let it observe the now-inactive presentation and clear frameHandle
+// before starting the next independent regression sequence.
+while (raf.length) {
+  const pendingFrame = raf.shift();
+  if (typeof pendingFrame === 'function') pendingFrame();
+}
 
 // Exact video regression: an element is already visibly ON. A later channel
 // word wants that relay OFF. At 20 ms the real latch is allowed to settle OFF,
