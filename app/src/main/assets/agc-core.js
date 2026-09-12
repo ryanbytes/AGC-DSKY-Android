@@ -7,7 +7,7 @@
   const NORMAL_KEY_CHANNEL = 0o15;
   const PROCEED_CHANNEL = 0o32;
   const NORMAL_KEY_MASK = 0o37;
-  const PROCEED_MASK = 0o20000; // Input channel 032, bit 14.
+  const PROCEED_MASK = 0o20000; // Input channel 032, bit 14. Active low for PRO.
   const WASI_ESPIPE = 70;
 
   function makeWasi(memory){
@@ -145,6 +145,12 @@
       // not a harmless startup default.
       this.writeIo(U_BIT | NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK);
       this.writeIo(U_BIT | PROCEED_CHANNEL, PROCEED_MASK);
+
+      // PRO/STBY is a maintained active-low input.  yaDSKY sends channel 032
+      // bit 020000 set when the button is released and clears it while the
+      // astronaut holds PRO.  Establish the released level explicitly after
+      // installing the U-bit mask so a fresh core cannot begin with PRO active.
+      this.writeIo(PROCEED_CHANNEL, PROCEED_MASK);
     }
 
     reset(){
@@ -174,8 +180,9 @@
       this.writeIo(NORMAL_KEY_CHANNEL, keyCode & 0o37);
     }
 
-    proceedKey(state){
-      this.writeIo(PROCEED_CHANNEL, state ? PROCEED_MASK : 0);
+    proceedKey(pressed){
+      // PRO is electrically active-low: 0 means held, 020000 means released.
+      this.writeIo(PROCEED_CHANNEL, pressed ? 0 : PROCEED_MASK);
     }
 
     proceedPulse(durationMs=120){
