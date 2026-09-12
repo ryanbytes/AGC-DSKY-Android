@@ -2,8 +2,6 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PACKAGE=org.apollo.agcdsky
-ACTIVITY="$PACKAGE/.SensorMainActivity"
 APK="${1:-$ROOT/app/build/outputs/apk/regular/debug/app-regular-debug.apk}"
 LOG_DIR="$ROOT/app/build/device-smoke"
 
@@ -49,6 +47,14 @@ capture_private_report() {
 ADB="$(find_adb || true)"
 [[ -n "$ADB" ]] || fail "adb not found; install Android SDK Platform Tools or set ANDROID_SDK_ROOT"
 [[ -f "$APK" ]] || fail "APK not found: $APK"
+
+SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+[[ -n "$SDK" && -x "$SDK/build-tools/36.0.0/aapt2" ]] \
+  || fail "ANDROID_SDK_ROOT or ANDROID_HOME must provide Build Tools 36.0.0 aapt2"
+PACKAGE="$("$SDK/build-tools/36.0.0/aapt2" dump packagename "$APK")"
+[[ "$PACKAGE" =~ ^org\.apollo\.agcdsky(\.eltest)?$ ]] \
+  || fail "unexpected APK package: ${PACKAGE:-unknown}"
+ACTIVITY="$PACKAGE/org.apollo.agcdsky.SensorMainActivity"
 
 APK_SHA256="$(sha256_file "$APK" || true)"
 [[ "$APK_SHA256" =~ ^[0-9a-fA-F]{64}$ ]] \

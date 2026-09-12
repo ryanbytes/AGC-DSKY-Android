@@ -12,8 +12,10 @@ function assert(condition, message) {
 }
 
 for (const required of [
-    'PACKAGE=org.apollo.agcdsky',
-    'DSKY_HOME="$PACKAGE/.SensorMainActivity"',
+    'COMPONENT_NAMESPACE=org.apollo.agcdsky',
+    'FIRE_ACTION_NAMESPACE=org.apollo.agcdsky',
+    'dump packagename',
+    'DSKY_HOME="$PACKAGE/$COMPONENT_NAMESPACE.SensorMainActivity"',
     'com.amazon.firelauncher',
     'android.intent.action.MAIN',
     'android.intent.category.LAUNCHER',

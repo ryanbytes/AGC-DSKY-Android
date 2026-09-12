@@ -283,6 +283,11 @@ function checkSourceInvariants() {
         'debug report must include the installed WebView/Trichrome package version');
     assert(debugReporter.includes('location coordinates are intentionally not included'),
         'debug report must continue excluding saved location coordinates');
+
+    const finalFrontendLayer = fs.readFileSync(
+        path.resolve(ROOT, 'app/src/main/assets/dream-agc.js'), 'utf8');
+    assert(finalFrontendLayer.includes("bridge.ready('app')"),
+        'final packaged frontend layer must emit the debuggable readiness marker');
 }
 
 async function main() {

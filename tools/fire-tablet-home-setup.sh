@@ -3,14 +3,10 @@ set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APK="${1:-$ROOT/app/build/outputs/apk/fire/debug/app-fire-debug.apk}"
-PACKAGE=org.apollo.agcdsky
-DSKY_HOME="$PACKAGE/.SensorMainActivity"
+COMPONENT_NAMESPACE=org.apollo.agcdsky
+FIRE_ACTION_NAMESPACE=org.apollo.agcdsky
 FIRE_LAUNCHER_PACKAGE=com.amazon.firelauncher
 FIRE_LAUNCHER_HOME="$FIRE_LAUNCHER_PACKAGE/.Launcher"
-FIRE_MODE="$PACKAGE/.FireModeActivity"
-FIRE_RECEIVER="$PACKAGE/.FireBootReceiver"
-FIRE_SERVICE_FULL="$PACKAGE/$PACKAGE.FireRedirectAccessibilityService"
-FIRE_SERVICE_SHORT="$PACKAGE/.FireRedirectAccessibilityService"
 USER_ID=0
 launcher_safety_required=false
 
@@ -28,7 +24,7 @@ recover_launcher() {
   if [[ "$launcher_safety_required" == true ]]; then
     printf 'Restoring Amazon Fire Launcher as the safe HOME fallback...\n' >&2
     "${ADB[@]}" wait-for-device >/dev/null 2>&1
-    "${ADB[@]}" shell am start -a "$PACKAGE.FIRE_DISABLE" -n "$FIRE_MODE" >/dev/null 2>&1
+    "${ADB[@]}" shell am start -a "$FIRE_ACTION_NAMESPACE.FIRE_DISABLE" -n "$FIRE_MODE" >/dev/null 2>&1
     "${ADB[@]}" shell pm enable --user "$USER_ID" "$FIRE_LAUNCHER_PACKAGE" >/dev/null 2>&1 \
       || "${ADB[@]}" shell pm enable "$FIRE_LAUNCHER_PACKAGE" >/dev/null 2>&1
     "${ADB[@]}" shell cmd package set-home-activity --user "$USER_ID" "$FIRE_LAUNCHER_HOME" >/dev/null 2>&1
@@ -44,6 +40,17 @@ trap 'recover_launcher 143 $LINENO' TERM
 
 command -v adb >/dev/null 2>&1 || fail "adb is not installed or not on PATH"
 [[ -f "$APK" ]] || fail "APK not found: $APK"
+SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+[[ -n "$SDK" && -x "$SDK/build-tools/36.0.0/aapt2" ]] \
+  || fail "ANDROID_SDK_ROOT or ANDROID_HOME must provide Build Tools 36.0.0 aapt2"
+PACKAGE="$("$SDK/build-tools/36.0.0/aapt2" dump packagename "$APK")"
+[[ "$PACKAGE" =~ ^org\.apollo\.agcdsky(\.eltest)?$ ]] \
+  || fail "unexpected APK package: ${PACKAGE:-unknown}"
+DSKY_HOME="$PACKAGE/$COMPONENT_NAMESPACE.SensorMainActivity"
+FIRE_MODE="$PACKAGE/$COMPONENT_NAMESPACE.FireModeActivity"
+FIRE_RECEIVER="$PACKAGE/$COMPONENT_NAMESPACE.FireBootReceiver"
+FIRE_SERVICE_FULL="$PACKAGE/$COMPONENT_NAMESPACE.FireRedirectAccessibilityService"
+FIRE_SERVICE_SHORT="$PACKAGE/.FireRedirectAccessibilityService"
 
 device_count="$(adb devices | awk 'NR > 1 && $2 == "device" { count++ } END { print count + 0 }')"
 [[ "$device_count" == 1 ]] || fail "connect exactly one authorized Android device; found $device_count"
@@ -144,7 +151,7 @@ else
   "${ADB[@]}" shell settings put secure accessibility_enabled 0
   "${ADB[@]}" shell settings put secure enabled_accessibility_services "$new_services"
   "${ADB[@]}" shell settings put secure accessibility_enabled 1
-  "${ADB[@]}" shell am start -a "$PACKAGE.FIRE_ENABLE" -n "$FIRE_MODE" >/dev/null
+  "${ADB[@]}" shell am start -a "$FIRE_ACTION_NAMESPACE.FIRE_ENABLE" -n "$FIRE_MODE" >/dev/null
   "${ADB[@]}" shell pm enable "$FIRE_RECEIVER" >/dev/null 2>&1 || true
   sleep 5
   retained_services="$("${ADB[@]}" shell settings get secure enabled_accessibility_services | tr -d '\r\n')"

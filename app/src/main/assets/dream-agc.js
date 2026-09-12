@@ -94,3 +94,14 @@
 
   startDreamAgc();
 })();
+
+// This is intentionally last in index.html's script order. On debuggable
+// builds it gives the device smoke a native marker only after every packaged
+// frontend layer has evaluated and the interactive API is available.
+(() => {
+  const bridge = window.DebugBridge;
+  if (bridge && typeof bridge.ready === 'function'
+      && window.AGCDSKY && typeof window.AGCDSKY.appStatus === 'function') {
+    bridge.ready('app');
+  }
+})();

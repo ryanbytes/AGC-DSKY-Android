@@ -134,8 +134,15 @@ AAPT2="$(find_verifier_tool aapt2 || true)"
   || fail "aapt2 not found at pinned Build Tools $PINNED_BUILD_TOOLS under $SDK/build-tools"
 
 badging="$($AAPT2 dump badging "$APK")"
-grep -Eq "^package: name='org\\.apollo\\.agcdsky' versionCode='${EXPECTED_VERSION_CODE}' versionName='${EXPECTED_VERSION_NAME//./\\.}'" <<<"$badging" \
-  || fail "APK package/version does not match org.apollo.agcdsky ${EXPECTED_VERSION_CODE}/${EXPECTED_VERSION_NAME} from app/build.gradle"
+if grep -Fq 'application-debuggable' <<<"$badging"; then
+  EXPECTED_PACKAGE='org.apollo.agcdsky.eltest'
+  EXPECTED_APK_VERSION_NAME="${EXPECTED_VERSION_NAME}-eltest"
+else
+  EXPECTED_PACKAGE='org.apollo.agcdsky'
+  EXPECTED_APK_VERSION_NAME="$EXPECTED_VERSION_NAME"
+fi
+grep -Eq "^package: name='${EXPECTED_PACKAGE//./\\.}' versionCode='${EXPECTED_VERSION_CODE}' versionName='${EXPECTED_APK_VERSION_NAME//./\\.}'" <<<"$badging" \
+  || fail "APK package/version does not match ${EXPECTED_PACKAGE} ${EXPECTED_VERSION_CODE}/${EXPECTED_APK_VERSION_NAME} from app/build.gradle"
 # Build Tools 36 aapt2 emits minSdkVersion; older aapt/aapt2 builds emitted sdkVersion.
 grep -Eq "^(minSdkVersion|sdkVersion):'26'$" <<<"$badging" \
   || fail "APK minSdk is not 26"

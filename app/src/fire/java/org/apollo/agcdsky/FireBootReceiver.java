@@ -23,8 +23,9 @@ public final class FireBootReceiver extends BroadcastReceiver {
 
     static Intent dskyIntent(Context context) {
         Intent launch = new Intent(Intent.ACTION_MAIN);
-        launch.setComponent(new ComponentName(context.getPackageName(),
-                context.getPackageName() + ".SensorMainActivity"));
+        // The application ID may be suffixed for an install-safe debug build,
+        // but the activity's Java class name remains in this namespace.
+        launch.setComponent(new ComponentName(context, SensorMainActivity.class));
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
                 | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         return launch;
