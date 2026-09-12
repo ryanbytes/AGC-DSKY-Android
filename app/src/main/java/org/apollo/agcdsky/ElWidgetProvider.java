@@ -112,7 +112,9 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final float U=106f/2.360f,MM_TO_U=U/25.4f;
       private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,MIRROR_X=2f*SRC_X+SRC_W,DATUM_X=MIRROR_X-96.244524f;
       private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.400f*U;
-      private static final float LEFT_FIELD_X=.140f*U,RIGHT_FIELD_X=1.620f*U;
+      // Same sheet-2 upper electrode datums as the shared WebView renderer.
+      private static final float LEFT_FIELD_X=.150f*U,RIGHT_FIELD_X=1.620f*U;
+      private static final float PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U;
 
       // 1006315G Detail A, position 6: three separate luminous islands.
       // Segment A is the pair of vertical islands; segment B is horizontal.
@@ -134,10 +136,13 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       static{
         ON.setStyle(Paint.Style.FILL);ON.setColor(CORE);
         PANEL_P.setStyle(Paint.Style.FILL);PANEL_P.setColor(PANEL);
-        Typeface tf=Typeface.create("sans-serif-condensed",Typeface.BOLD);
-        LABEL_P.setTypeface(tf);LABEL_P.setTextAlign(Paint.Align.CENTER);LABEL_P.setTextSize(5.1f);LABEL_P.setColor(INK);LABEL_P.setAlpha(245);
+        // 1006315G calls for .125-in-high Futura Demibold legends. Android does
+        // not ship Futura, so use the broad system sans rather than the old
+        // condensed face; 7.42 panel units matches the WebView cap-height target.
+        Typeface tf=Typeface.create("sans-serif",Typeface.BOLD);
+        LABEL_P.setTypeface(tf);LABEL_P.setTextAlign(Paint.Align.CENTER);LABEL_P.setTextSize(7.42f);LABEL_P.setColor(INK);LABEL_P.setAlpha(245);
         RULE_P.setStyle(Paint.Style.FILL);RULE_P.setColor(RULE);RULE_P.setAlpha(224);
-        COMP_P.setTypeface(tf);COMP_P.setTextAlign(Paint.Align.CENTER);COMP_P.setTextSize(4.9f);COMP_P.setColor(INK);COMP_P.setAlpha(235);
+        COMP_P.setTypeface(tf);COMP_P.setTextAlign(Paint.Align.CENTER);COMP_P.setTextSize(7.42f);COMP_P.setColor(INK);COMP_P.setAlpha(235);
         LEGEND_BG_P.setStyle(Paint.Style.FILL);LEGEND_BG_P.setColor(CORE);LEGEND_BG_P.setAlpha(235);
         COMP_BG_P.setStyle(Paint.Style.FILL);COMP_BG_P.setColor(CORE);COMP_BG_P.setAlpha(24);
         HARDWARE_STROKE_P.setStyle(Paint.Style.STROKE);HARDWARE_STROKE_P.setStrokeWidth(.48f);HARDWARE_STROKE_P.setColor(HARDWARE);HARDWARE_STROKE_P.setAlpha(184);
@@ -158,12 +163,12 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.949f,1.294f,1.369f);
         dot(c,100.863f,79.949f,1.294f,1.369f);dot(c,100.863f,114.085f,1.294f,1.369f);dot(c,100.863f,148.220f,1.294f,1.369f);
         dot(c,8.286f,148.220f,1.294f,1.369f);dot(c,8.286f,114.085f,1.294f,1.369f);dot(c,8.286f,79.949f,1.294f,1.369f);
-        section(c,65.553f,.554f,34.868f,11.678f,LEGEND_BG_P);c.drawText("PROG",82.987f,8.600f,LABEL_P);
-        section(c,6.019f,42.721f,35.162f,11.678f,LEGEND_BG_P);c.drawText("VERB",23.600f,50.770f,LABEL_P);
-        section(c,65.920f,42.721f,34.501f,11.678f,LEGEND_BG_P);c.drawText("NOUN",83.171f,50.770f,LABEL_P);
-        section(c,5.726f,.633f,34.795f,35.838f,COMP_BG_P);c.drawText("COMP",23.124f,17.900f,COMP_P);c.drawText("ACTY",23.124f,25.000f,COMP_P);
+        section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P);c.drawText("PROG",86.237f,8.600f,LABEL_P);
+        section(c,0f,42.721f,39.525f,11.678f,LEGEND_BG_P);c.drawText("VERB",19.763f,50.770f,LABEL_P);
+        section(c,66.441f,42.721f,39.525f,11.678f,LEGEND_BG_P);c.drawText("NOUN",86.237f,50.770f,LABEL_P);
+        section(c,0f,.633f,39.525f,35.838f,COMP_BG_P);c.drawText("COMP",19.763f,17.900f,COMP_P);c.drawText("ACTY",19.763f,25.000f,COMP_P);
         rule(c,12.770f,78.602f,84.900f,2.695f);rule(c,12.770f,112.737f,84.900f,2.695f);rule(c,12.770f,146.873f,84.900f,2.695f);
-        digits(c,"00",RIGHT_FIELD_X,14f);digits(c,"16",LEFT_FIELD_X,55.5f);digits(c,"65",RIGHT_FIELD_X,55.5f);
+        digits(c,"00",RIGHT_FIELD_X,PROG_Y);digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y);digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y);
         if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),0,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),0,R3_Y);}
         c.restore();
       }
