@@ -44,6 +44,7 @@ jobs:
           node tools/el-widget-smoke.js
           node tools/widget-relay-model-smoke.js
           node tools/relay-visual-coupling-smoke.js
+          node tools/relay-stretch-stability-smoke.js
           node tools/relay-show-smoke.js
           node tools/dream-orientation-smoke.js
           node tools/dream-mode-smoke.js
