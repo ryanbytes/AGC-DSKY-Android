@@ -3,7 +3,7 @@
 /* Android native relay audio + relay-driven paint synchronization. */
 (() => {
   const WEB_AUDIO_GUARD_MS = 120;
-  const NATIVE_AUDIO_GUARD_MS = 60;
+  const NATIVE_AUDIO_GUARD_MS = 220;
   const RELAY_SETTLE_MS = 20;
   const AUX_ORDER = Object.freeze([
     'comp', 'uplink', 'temp', 'keyrel', 'oprerr', 'flash', 'restart', 'stby'
@@ -19,6 +19,46 @@
   }
   function guardMs() { return nativeReady() ? NATIVE_AUDIO_GUARD_MS : WEB_AUDIO_GUARD_MS; }
   function visualDelayMs() { return RELAY_SETTLE_MS + guardMs(); }
+
+  // hardware-fidelity.js intentionally caps its own WebAudio compensation at
+  // 120 ms. Native SoundPool on this phone is empirically slower than that, so
+  // add only the excess here at the final EL renderer boundary. The electrical
+  // latch still commits at 20 ms; this affects presentation only.
+  const HARDWARE_PRESENTATION_CAP_MS = 120;
+  function nativeElExtraMs() {
+    return nativeReady() ? Math.max(0, NATIVE_AUDIO_GUARD_MS - HARDWARE_PRESENTATION_CAP_MS) : 0;
+  }
+  function recentRelayWrite() {
+    const s = snapshot();
+    const last = s && s.lastWrite;
+    if (!last || Number(last.relay) < 1 || Number(last.relay) > 12) return false;
+    const age = performance.now() - Number(last.at);
+    return Number.isFinite(age) && age >= 0 && age < 320;
+  }
+
+  const baseSet2ForRelaySync = set2;
+  set2 = function relaySynchronizedSet2(id, text) {
+    const extra = nativeElExtraMs();
+    if (extra > 0 && recentRelayWrite() && (id === 'prog' || id === 'verb' || id === 'noun')) {
+      const captured = String(text);
+      setTimeout(() => baseSet2ForRelaySync(id, captured), extra);
+      return;
+    }
+    return baseSet2ForRelaySync(id, text);
+  };
+
+  const baseRenderAgcRegForRelaySync = renderAgcReg;
+  renderAgcReg = function relaySynchronizedRenderAgcReg(name) {
+    const extra = nativeElExtraMs();
+    if (extra > 0 && recentRelayWrite() && (name === 'r1' || name === 'r2' || name === 'r3')) {
+      const r = agcDisplay[name];
+      const sign = regSign(r);
+      const digits = r.digits.join('');
+      setTimeout(() => setReg(name, sign, digits), extra);
+      return;
+    }
+    return baseRenderAgcRegForRelaySync(name);
+  };
 
   // relay-identity-audio.js already owns deterministic relay profiles. Replace
   // only its final sound emitter when Android's native low-latency bridge is ready.
