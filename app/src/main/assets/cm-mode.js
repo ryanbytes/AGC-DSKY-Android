@@ -16,6 +16,15 @@
     document.body.appendChild(script);
   }
 
+  function installKeyMechanicalSpec() {
+    if (document.querySelector('script[data-feature="key-mechanical-spec"]')) return;
+    const script = document.createElement('script');
+    script.src = 'key-mechanical-spec.js';
+    script.dataset.feature = 'key-mechanical-spec';
+    script.async = false;
+    document.body.appendChild(script);
+  }
+
   function installKeyboardElectricalInterlock() {
     if (document.querySelector('script[data-feature="keyboard-electrical-interlock"]')) return;
     const script = document.createElement('script');
@@ -53,6 +62,7 @@
 
   function installCmFeatures() {
     installFlightHardwareUi();
+    installKeyMechanicalSpec();
     installKeyboardElectricalInterlock();
     installLightingElectricalModel();
     installRelayShow();
