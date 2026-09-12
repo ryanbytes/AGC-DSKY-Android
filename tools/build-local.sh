@@ -73,9 +73,6 @@ SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 [[ -n "$SDK" ]] || fail "ANDROID_SDK_ROOT or ANDROID_HOME must point to the Android SDK"
 [[ -d "$SDK" ]] || fail "Android SDK directory does not exist: $SDK"
 
-# AGP 9.3 can resolve its compile SDK without a legacy physical
-# $ANDROID_SDK_ROOT/platforms/android-37/android.jar entry. Do not reject a
-# valid toolchain before Gradle has a chance to resolve compileSdk 37.
 BUILD_TOOLS_VERSION=36.0.0
 BUILD_TOOLS_DIR="$SDK/build-tools/$BUILD_TOOLS_VERSION"
 [[ -d "$BUILD_TOOLS_DIR" ]] \
@@ -146,6 +143,7 @@ node tools/keyboard-electrical-interlock-smoke.js
 node tools/lighting-rheostat-stop-smoke.js
 node tools/lighting-electrical-model-smoke.js
 node tools/v35-model-smoke.js
+node tools/dsky-output-path-smoke.js
 node tools/asset-reference-smoke.js
 node tools/wasm-runtime-smoke.js
 
