@@ -105,24 +105,48 @@ async function testResetAndPeripheralSetup() {
     core.keyPress(0o21);
     assert(calls.filter(([name]) => name === 'write').length === 2,
         'keyPress must forward the key make packet without synthesizing an exception');
+    assert(core.pendingNormalKeyCode === 0,
+        'rejected/full-ring key make must not be recorded as a pending contact');
 
-    // KEY RESET is a separate discrete.  Releasing a normal key must clear
+    // KEY RESET is a separate discrete. Releasing a normal key must clear
     // channel 015 directly and must not enqueue channel-015=0, because the
     // pinned ringbuffer transport would turn that zero packet into KEYRUPT1.
     setPacketWriteResult(4);
-    calls.length = 0;
     const inputWords = new Uint16Array(core.memory.buffer);
     const keyWord = core.inputChannelWordIndex(0o15);
     assert(keyWord >= 0, 'channel-015 ABI address was not resolved');
+
+    // Ordinary human release: the scheduler already consumed the make. KEYRST
+    // only clears the external contact; it must not execute a bonus AGC MCT.
     inputWords[keyWord] = 0o21;
+    core.pendingNormalKeyCode = 0o21;
+    calls.length = 0;
     assert(core.writeIo(0o15, 0) === 1,
         'channel-015 zero must route through discrete key release');
     assert((inputWords[keyWord] & 0o37) === 0,
-        'KEY RESET did not clear the five keycode bits');
+        'settled KEY RESET did not clear the five keycode bits');
     assert(calls.filter(([name]) => name === 'write').length === 0,
         'KEY RESET must not enqueue a channel-015 zero packet / second KEYRUPT');
-    assert(calls.some(([name, steps]) => name === 'step' && steps === 1),
-        'KEY RESET must first allow a just-queued make packet to be consumed');
+    assert(calls.filter(([name]) => name === 'step').length === 0,
+        'settled KEY RESET must not advance the AGC merely to release a switch');
+    assert(core.pendingNormalKeyCode === 0,
+        'settled KEY RESET must clear pending-make bookkeeping');
+
+    // Very fast release before yaAGC has consumed the asynchronous make packet:
+    // one MCT is allowed solely to deliver that queued make/KEYRUPT before the
+    // direct KEYRST clear, otherwise the release could erase the key before it
+    // ever reaches the AGC.
+    inputWords[keyWord] = 0;
+    core.pendingNormalKeyCode = 0o21;
+    calls.length = 0;
+    assert(core.keyRelease() === true,
+        'pending-make KEY RESET failed');
+    assert(calls.filter(([name, steps]) => name === 'step' && steps === 1).length === 1,
+        'pending make must be flushed with exactly one MCT before KEYRST');
+    assert(calls.filter(([name]) => name === 'write').length === 0,
+        'pending-make KEYRST must still avoid a zero-valued channel-015 packet');
+    assert(core.pendingNormalKeyCode === 0,
+        'pending-make KEY RESET must clear pending-make bookkeeping');
 
     calls.length = 0;
     await core.loadRope(new Uint8Array([1, 2, 3, 4]).buffer);
@@ -165,24 +189,21 @@ function testNavigationAndSnapshots() {
 
     bytes[10] = 0;
     bytes[11] = 0;
-    // Deliberately fake held controls before import. importSnapshot must replace
-    // the memory and then re-establish released physical inputs.
-    const words = new Uint16Array(core.memory.buffer);
-    const keyIndex = core.inputChannelWordIndex(0o15);
-    const proIndex = core.inputChannelWordIndex(0o32);
-    words[keyIndex] = 0o21;
-    words[proIndex] &= ~0o20000;
     assert(core.importSnapshot(snapshot) === true,
         'snapshot import must report success');
     assert(bytes[10] === 0x12 && bytes[11] === 0x34,
         'snapshot import did not restore WASM memory');
-    assert((words[keyIndex] & 0o37) === 0,
-        'snapshot import restored a physically held normal DSKY key');
-    assert((words[proIndex] & 0o20000) === 0o20000,
-        'snapshot import restored PRO in the active-low held state');
-    assert(core.snapshotFingerprint() === before,
-        'released-state snapshot round trip changed the memory fingerprint');
+    assert(core.snapshotFingerprint() !== before,
+        'snapshot restore must normalize physical switch contacts after validating saved memory');
+    const inputWords = new Uint16Array(core.memory.buffer);
+    assert((inputWords[core.inputChannelWordIndex(0o15)] & 0o37) === 0,
+        'snapshot restore left a normal DSKY key electrically held');
+    assert((inputWords[core.inputChannelWordIndex(0o32)] & 0o20000) === 0o20000,
+        'snapshot restore left active-low PRO electrically held');
+    assert(core.pendingNormalKeyCode === 0,
+        'snapshot restore retained transient key-make bookkeeping');
 
+    const words = new Uint16Array(core.memory.buffer);
     const baseWord = 1024 >>> 1;
     words[baseWord + 2 * 0o400 + 0o123] = 0x6abc;
     assert(core.readErasable(2, 0o123) === 0x6abc,
@@ -266,8 +287,7 @@ async function testLoadPipeline() {
         cpu_reset() { calls.push(['reset']); },
         cpu_step(steps) { calls.push(['step', steps]); },
         packet_write(channel, value) { calls.push(['write', channel, value]); return 4; },
-        packet_read() { calls.push(['read']); return 0; },
-        get_erasable_ptr() { return 1024; }
+        packet_read() { calls.push(['read']); return 0; }
     };
 
     const fakeWebAssembly = {
