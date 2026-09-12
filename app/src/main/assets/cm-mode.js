@@ -52,6 +52,15 @@
     document.body.appendChild(script);
   }
 
+  function installRelayPerceptualPersonality() {
+    if (document.querySelector('script[data-feature="relay-perceptual-personality"]')) return;
+    const script = document.createElement('script');
+    script.src = 'relay-perceptual-personality.js';
+    script.dataset.feature = 'relay-perceptual-personality';
+    script.async = false;
+    document.body.appendChild(script);
+  }
+
   function installRelayShow() {
     if (document.getElementById('relay-show')) return;
     const controls = document.getElementById('controls');
@@ -75,6 +84,7 @@
     installKeyMechanicalSpec();
     installKeyboardElectricalInterlock();
     installLightingElectricalModel();
+    installRelayPerceptualPersonality();
     installRelayShow();
   }
 
