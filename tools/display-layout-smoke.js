@@ -62,32 +62,43 @@ assert(STYLE.includes('.comp-el{filter:url(#elGlow)}'),
 assert(STYLE.includes('.el-field .el-seg.on{filter:url(#elGlow)}'),
   'numeric EL glow must be scoped to energized segments');
 
-// SCD 1006387C alarm/status indicator: each active legend area is lit by three
-// incandescent lamps, the dark face is diffuse neutral gray with black text,
-// energized colors are aviation white/yellow, and light must not leak into the
-// neighboring legend.  The three source pools belong in the element background
-// so the bare legend text nodes are painted above the light in Android WebView.
+// SCD 1006387C alarm/status indicator.  The first-paint fallback keeps the
+// three-source light in the element background.  After flight-hardware-ui.js
+// wraps the legend text, a separate thermal-fade lamp layer is allowed because
+// the foreground span is explicitly above it.
 assert(CM.includes('Alarm/status indicator, SCD 1006387C'),
   'annunciator SCD fidelity block missing');
 assert(CM.includes('background:#74756f') && CM.includes('color:#11120f'),
   'unenergized annunciator must remain neutral gray with black legend');
 assert(CM.includes('font-family:"Arial Narrow","Liberation Sans Narrow","Roboto Condensed"'),
   'Gorton-condensed fallback treatment missing');
-assert((CM.match(/radial-gradient\(ellipse at/g) || []).length >= 6,
-  'three-source incandescent pools missing for white/yellow annunciators');
-assert(CM.includes('body.spacecraft-cm .lamp.on.white{') &&
-       CM.includes('body.spacecraft-cm .lamp.on.yellow{'),
-  'white/yellow incandescent backgrounds missing');
-assert(!CM.includes('.lamp.on.white::before') && !CM.includes('.lamp.on.yellow::before'),
-  'incandescent overlay must not paint over annunciator legend text');
+assert((CM.match(/radial-gradient\(ellipse at/g) || []).length >= 12,
+  'fallback plus thermal three-source incandescent pools missing');
+assert(CM.includes('lamp-hardware-ready .lamp .lamp-legend'),
+  'annunciator legend foreground layer missing');
+assert(CM.includes('lamp-hardware-ready .lamp::before'),
+  'thermal incandescent source layer missing');
+assert(CM.includes('transition:opacity 145ms') && CM.includes('transition-duration:85ms'),
+  'incandescent filament rise/decay timing missing');
 assert(CM.includes('overflow:hidden'),
   'annunciator light must be clipped to prevent inter-cell leakage');
 assert(!CM.includes('box-shadow:0 0 .62vmin') && !CM.includes('box-shadow:0 0 .7vmin'),
   'legacy exterior annunciator glow must not reappear in CM finish');
 
-// The controls are a flowing, bounded strip below the DSKY.  The current
-// Series-2 operator-indicator treatment is taller than the former flat buttons,
-// so portrait sizing reserves correspondingly more vertical space.
+// NUMERICS and INTEGRAL are electrically separate.  Zero NUMERICS power must
+// change EL visibility, not the DSKY glass/geometry or any relay data structure.
+assert(CM.includes('--numerics-level:1') && CM.includes('--integral-level:1'),
+  'independent lighting variables missing');
+assert(CM.includes('.el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level))}'),
+  'NUMERICS feed must scale energized EL segments only');
+assert(CM.includes('color:var(--key-el-color)') && CM.includes('text-shadow:var(--key-el-shadow)'),
+  'white EL key legend illumination missing');
+assert(CM.includes('.key.pressed') && CM.includes('translateY(.42vmin)'),
+  'mechanical key travel rendering missing');
+
+// The controls remain a flowing bounded strip but intentionally borrow the
+// DSKY black-key / white-EL visual language.  Their legend light follows the
+// same INTEGRAL variables as the physical keyboard.
 assert(CONTROLS.includes('max-width:calc(100vw - 8px)'),
   'control strip must remain constrained to the phone viewport');
 assert(CONTROLS.includes('flex-flow:row wrap'),
@@ -101,24 +112,27 @@ assert(CONTROLS.includes('text-overflow:clip') && CONTROLS.includes('white-space
 assert(CONTROLS.includes('.app-controls span{display:none!important}'),
   'obsolete mode/status span must stay hidden in the flowing control strip');
 assert(CONTROLS.includes('100vh - 138px') && CONTROLS.includes('100vh - 164px'),
-  'DSKY sizing must reserve room for the taller Series 2 control strip');
+  'DSKY sizing must reserve room for the option strip');
 assert(CONTROLS.includes('@media (orientation:landscape)'),
   'control strip landscape sizing override missing');
 assert(CONTROLS.includes('body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}'),
   'dream/display-only/screen-only modes must suppress app controls');
-
 for (const marker of [
-  'Series 2 barrier-mount operator indicators',
-  '.app-controls button::before',
-  'linear-gradient(180deg,#e5e3d8',
+  'same black-key / white-EL visual language as the DSKY',
+  'color:var(--key-el-color',
+  'text-shadow:var(--key-el-shadow',
+  'linear-gradient(145deg,#343532',
   'transform:translateY(2px)',
   '"Arial Narrow"'
 ]) {
-  assert(CONTROLS.includes(marker), 'Series 2 settings-button treatment missing: ' + marker);
+  assert(CONTROLS.includes(marker), 'DSKY-style settings-button treatment missing: ' + marker);
 }
+assert(!CONTROLS.includes('Series 2 barrier-mount operator indicators'),
+  'obsolete Series 2 option-button styling must not return');
 
 console.log('display/layout geometry smoke: PASS');
 console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${expectedVisibleFraction.toFixed(6)})`);
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
-console.log('  incandescent annunciators: three-source white/yellow, isolated, readable black legends');
-console.log('  flowing Series 2 control strip: bounded, wrapping, untruncated labels');
+console.log('  annunciators: three-source thermal fade with foreground black legends');
+console.log('  lighting: independent NUMERICS/INTEGRAL with white EL key legends');
+console.log('  options: bounded DSKY-style illuminated key strip');
