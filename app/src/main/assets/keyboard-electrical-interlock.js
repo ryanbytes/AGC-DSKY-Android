@@ -23,12 +23,21 @@
   });
   const FALLBACK_CONTACT_MS = 36;
   const FALLBACK_RETURN_MS = 18;
+  // Best-estimate minimum electrical dwell, not a measured switch spec.
+  // Block II keyboard lines enter the AGC through noise-filtering D circuits;
+  // surviving descriptions place a valid sustained keyboard input around the
+  // 10-ms region.  Twelve milliseconds prevents an unrealistically short
+  // touchscreen tap from making and resetting in the same JS turn while still
+  // being far below an ordinary human key hold.
+  const MIN_KEYCODE_HOLD_MS = 12;
 
   const pointers = new Map();
   let cycleLatched = false;
   let electricalCore = null;
   let electricalKeyCode = 0;
   let electricalMade = false;
+  let electricalMadeAt = 0;
+  let keyResetTimer = 0;
 
   function normalButton(event) {
     const button = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
@@ -101,6 +110,7 @@
         electricalCore = core;
         electricalKeyCode = code;
         electricalMade = true;
+        electricalMadeAt = performance.now();
         if (window.AGCDSKY && typeof window.AGCDSKY.scheduleAgcAutosave === 'function') {
           window.AGCDSKY.scheduleAgcAutosave('DSKY key make');
         }
@@ -117,11 +127,31 @@
     return true;
   }
 
+  function clearElectricalCycle() {
+    electricalCore = null;
+    electricalKeyCode = 0;
+    electricalMade = false;
+    electricalMadeAt = 0;
+    cycleLatched = false;
+  }
+
   function assertKeyResetIfReady() {
     if (!allNormalKeysReleased()) return;
-    // KEYRST exists only at the all-released state.  If the accepted key had
-    // already generated a KEYRUPT, release its channel-015 state exactly once.
+    // KEYRST exists only at the all-released state. If the accepted contact
+    // was made only moments ago (possible on a touchscreen fast tap), retain
+    // the keycode through a short D-input-filter dwell before restoring KEYRST.
     if (electricalMade) {
+      const elapsed = Math.max(0, performance.now() - electricalMadeAt);
+      const remaining = MIN_KEYCODE_HOLD_MS - elapsed;
+      if (remaining > 0.01) {
+        if (!keyResetTimer) {
+          keyResetTimer = setTimeout(() => {
+            keyResetTimer = 0;
+            assertKeyResetIfReady();
+          }, remaining);
+        }
+        return;
+      }
       const core = electricalCore || currentCore();
       try {
         if (core && typeof core.keyRelease === 'function') core.keyRelease();
@@ -130,10 +160,9 @@
         console.error('DSKY KEYRST failed', error);
       }
     }
-    electricalCore = null;
-    electricalKeyCode = 0;
-    electricalMade = false;
-    cycleLatched = false;
+    if (keyResetTimer) clearTimeout(keyResetTimer);
+    keyResetTimer = 0;
+    clearElectricalCycle();
   }
 
   function onPointerDown(event) {
@@ -209,6 +238,9 @@
       down:pointers.size,
       electricalMade,
       electricalKeyCode,
+      electricalMadeAt,
+      keyResetPending:!!keyResetTimer,
+      minKeycodeHoldMs:MIN_KEYCODE_HOLD_MS,
       keys:Array.from(pointers.values()).map(s => ({key:s.button.dataset.key, accepted:s.accepted, made:s.made}))
     }),
     releaseAll: releaseEverything
