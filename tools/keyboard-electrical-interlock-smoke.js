@@ -45,6 +45,7 @@ const windowListeners = Object.create(null);
 const documentListeners = Object.create(null);
 const timers = new Map();
 let nextTimer = 1;
+let nowMs = 0;
 const calls = [];
 
 function addListener(bucket, type, fn) {
@@ -53,24 +54,43 @@ function addListener(bucket, type, fn) {
 function dispatch(bucket, type, event) {
   for (const fn of bucket[type] || []) fn(event);
 }
+function runNextTimer() {
+  if (!timers.size) return false;
+  let selectedId = null;
+  let selected = null;
+  for (const [id, timer] of timers) {
+    if (!selected || timer.due < selected.due || (timer.due === selected.due && id < selectedId)) {
+      selectedId = id;
+      selected = timer;
+    }
+  }
+  timers.delete(selectedId);
+  nowMs = Math.max(nowMs, selected.due);
+  selected.fn();
+  return true;
+}
 function flushTimers() {
-  while (timers.size) {
-    const batch = Array.from(timers.entries());
-    timers.clear();
-    for (const [, fn] of batch) fn();
+  let guard = 0;
+  while (runNextTimer()) {
+    if (++guard > 1000) throw new Error('timer loop did not settle');
   }
 }
 
 const core = {
-  keyPress(code){ calls.push(['make', code]); return 1; },
-  keyRelease(){ calls.push(['reset']); return true; }
+  keyPress(code){ calls.push(['make', code, nowMs]); return 1; },
+  keyRelease(){ calls.push(['reset', nowMs]); return true; }
 };
 
 const context = {
   console,
   mode:'agc',
+  performance:{now(){ return nowMs; }},
   localStorage:{ getItem(){ return '0'; } },
-  setTimeout(fn){ const id = nextTimer++; timers.set(id, fn); return id; },
+  setTimeout(fn, delay=0){
+    const id = nextTimer++;
+    timers.set(id, {fn, due:nowMs + Math.max(0, Number(delay) || 0)});
+    return id;
+  },
   clearTimeout(id){ timers.delete(id); },
   window:null,
   document:{
@@ -82,7 +102,7 @@ context.window = context;
 context.addEventListener = function(type, fn){ addListener(windowListeners, type, fn); };
 context.AGCDSKY = {
   getCore(){ return core; },
-  scheduleAgcAutosave(){ calls.push(['autosave']); },
+  scheduleAgcAutosave(){ calls.push(['autosave', nowMs]); },
   hardwarePersonality(){
     return {keys:{
       '1':{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1},
@@ -119,6 +139,8 @@ assert(calls.filter(c => c[0] === 'make').length === 1,
 let state = context.AGCDSKY.keyboardElectrical.state();
 assert(state.down === 2 && state.keys.some(k => k.key === '2' && !k.accepted),
   'overlapping key was not retained as a mechanically-down but electrically-blocked switch');
+assert(state.minKeycodeHoldMs === 12,
+  'expected 12-ms best-estimate minimum keycode dwell');
 
 // Releasing the accepted key while the blocked second key remains down must
 // not assert KEYRST yet: the physical series chain has not returned to all-up.
@@ -127,13 +149,20 @@ dispatch(windowListeners, 'pointerup', e);
 assert(calls.filter(c => c[0] === 'reset').length === 0,
   'KEYRST asserted before all normal keys were released');
 
-// Once every normal key is up, KEYRST occurs exactly once.
+// Once every normal key is up the reset may still wait out the minimum input
+// dwell, but it must occur exactly once and then fully unlatch the keyboard.
 e = makeEvent(two, 2);
 dispatch(windowListeners, 'pointerup', e);
-assert(calls.filter(c => c[0] === 'reset').length === 1,
-  'all-released keyboard did not generate exactly one KEYRST');
+assert(calls.filter(c => c[0] === 'reset').length === 0,
+  'KEYRST ignored the minimum electrical dwell');
 state = context.AGCDSKY.keyboardElectrical.state();
-assert(!state.cycleLatched && state.down === 0 && !state.electricalMade,
+assert(state.keyResetPending && state.cycleLatched,
+  'all-up keyboard did not retain its cycle while the KEYRST dwell was pending');
+flushTimers();
+assert(calls.filter(c => c[0] === 'reset').length === 1,
+  'all-released keyboard did not generate exactly one delayed KEYRST');
+state = context.AGCDSKY.keyboardElectrical.state();
+assert(!state.cycleLatched && state.down === 0 && !state.electricalMade && !state.keyResetPending,
   'all-released keyboard did not return to its idle electrical state');
 
 // The previously blocked key can only become a coded key after that complete
@@ -146,6 +175,9 @@ assert(makes.length === 2 && makes[1][1] === 0o02,
   'fresh post-KEYRST depression did not generate key 2 normally');
 e = makeEvent(two, 3);
 dispatch(windowListeners, 'pointerup', e);
+assert(calls.filter(c => c[0] === 'reset').length === 1,
+  'KEYRST should wait for the minimum dwell on the second key cycle');
+flushTimers();
 assert(calls.filter(c => c[0] === 'reset').length === 2,
   'second complete key cycle did not end in KEYRST');
 
@@ -159,8 +191,9 @@ assert(!e.prevented && !e.stopped && !e.immediate,
 assert(calls.filter(c => c[0] === 'make').length === 2,
   'PRO incorrectly generated a normal keyboard keycode');
 
-// Fast tap still makes once and resets once; it cannot disappear between the
-// mechanical contact timer and pointer release.
+// A touchscreen fast tap makes once immediately, but KEYRST must not occur in
+// that same turn.  The keycode stays asserted through the estimated D-filter
+// interval so yaAGC can sample the make just as the hardware interface did.
 const fast = makeButton('1');
 e = makeEvent(fast, 10);
 dispatch(windowListeners, 'pointerdown', e);
@@ -168,8 +201,18 @@ e = makeEvent(fast, 10);
 dispatch(windowListeners, 'pointerup', e);
 assert(calls.filter(c => c[0] === 'make').length === 3,
   'fast tap failed to close the keyboard contact');
-assert(calls.filter(c => c[0] === 'reset').length === 3,
-  'fast tap failed to restore KEYRST');
+assert(calls.filter(c => c[0] === 'reset').length === 2,
+  'fast tap asserted KEYRST in the same turn as key make');
+state = context.AGCDSKY.keyboardElectrical.state();
+assert(state.keyResetPending && state.electricalMade,
+  'fast tap did not retain the keycode during minimum dwell');
+const fastMake = calls.filter(c => c[0] === 'make')[2];
+flushTimers();
+const resets = calls.filter(c => c[0] === 'reset');
+assert(resets.length === 3,
+  'fast tap failed to restore KEYRST after minimum dwell');
+assert(resets[2][1] - fastMake[2] >= 12,
+  'fast-tap keycode was not held for the required minimum electrical dwell');
 
 console.log('keyboard electrical interlock smoke: PASS');
-console.log('  single-code series chain, all-up KEYRST, PRO bypass, and fast tap verified');
+console.log('  single-code series chain, all-up KEYRST, 12-ms input dwell, PRO bypass, and fast tap verified');
