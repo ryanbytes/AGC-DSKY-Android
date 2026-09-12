@@ -41,6 +41,7 @@ jobs:
           node tools/display-layout-smoke.js
           node tools/el-widget-smoke.js
           node tools/widget-relay-model-smoke.js
+          node tools/relay-show-smoke.js
           node tools/dream-orientation-smoke.js
           node tools/dream-mode-smoke.js
           node tools/solar-model-smoke.js
