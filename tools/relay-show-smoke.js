@@ -27,6 +27,7 @@ req(show,"agcCore.stop()",'AGC task pause');
 req(show,"saveAgcState('relay show checkpoint')",'durable pre-show checkpoint');
 req(show,'const coreWasRunning = !!(mode === \'agc\' && agcCore && agcCore.running);','pre-stop AGC scheduler-state capture');
 req(show,'saved.coreRunning = coreWasRunning;','saved AGC scheduler-state restoration marker');
+req(show,'pausedForVisibility: !!agcPausedForVisibility','visibility pause-state snapshot');
 req(show,'decodeChannel10','physical bank drive path');
 req(show,'NON_DECIMAL_CODES','contact-matrix burst');
 req(show,'for (let digit = 0; digit <= 9; digit++)','digit chase');
@@ -50,6 +51,50 @@ req(show,'agcCore.start(1)','previous AGC task resume');
 req(show,'clockRelayWords = {...saved.clockRelayWords}','previous clock task restoration');
 req(show,"status('RELAY SHOW · RESTORING PREVIOUS TASK')",'restore status');
 req(show,'tickSound = saved.tickSound','sound preference restoration');
+
+// Regression: a long relay show can span an Activity visibility transition.
+// setAppVisible() deliberately ignores non-AGC modes, so restore itself must
+// mark a hidden, previously-running AGC as visibility-paused. Otherwise the
+// core remains stopped forever when the app returns to the foreground.
+req(show,"if (appVisible) {",'visibility-aware AGC restore');
+req(show,'agcPausedForVisibility = true;','deferred foreground resume marker');
+req(show,'agcPausedForVisibility = !!saved.pausedForVisibility;','intentional prior pause restoration');
+no(show,'saved.coreRunning && appVisible','old visibility-racy AGC resume condition');
+
+// Regression: any physical/render return-cascade failure must be degraded, not
+// fatal to logical ownership restoration. The app must leave relay-show mode,
+// release lamp-test ownership, and restore scheduler state even after an error.
+req(show,'let restoreError = null;','degraded physical restore accumulator');
+req(show,"console.error('Relay show physical restore degraded', restoreError)",'degraded restore logging');
+const restoreFn=show.indexOf('async function restorePreviousTask()');
+const physicalTry=show.indexOf('let restoreError = null;',restoreFn);
+const physicalCatch=show.indexOf('} catch (error) {',physicalTry);
+const releaseLamp=show.indexOf('lampTestActive = false;',physicalCatch);
+const restoreMode=show.indexOf('mode = saved.mode;',releaseLamp);
+const schedulerBranch=show.indexOf("if (saved.mode === 'clock')",restoreMode);
+if(!(restoreFn>=0&&physicalTry>restoreFn&&physicalCatch>physicalTry&&releaseLamp>physicalCatch&&restoreMode>releaseLamp&&schedulerBranch>restoreMode)) {
+  fail('logical task ownership must be restored after the physical-cascade catch path');
+}
+
+// Stretched visual callbacks are asynchronous and may otherwise repaint a demo
+// contact after scheduler ownership has returned. Toggle the visual mode only
+// in memory to invoke its cancellation barrier without changing user settings.
+req(show,'function quiesceRelayPresentation()','stretched presentation cancellation helper');
+req(show,"visual.setTimingMode('authentic', false);",'stretched presentation cancellation barrier');
+req(show,"visual.setTimingMode('stretched', false);",'stretched mode non-persistent restore');
+const quiesceCall=show.indexOf('quiesceRelayPresentation();',restoreFn);
+if(!(quiesceCall>physicalCatch&&quiesceCall<releaseLamp)) {
+  fail('stretched presentation must be quiesced before logical task ownership is returned');
+}
+
+// CLOCK uses a permanent 20-ms service interval, but an immediate face resync
+// prevents a restored equal relay state from appearing frozen until a later
+// time digit changes.
+req(show,'syncClockFace();','immediate clock catch-up after relay show');
+const clockBranch=show.indexOf("if (saved.mode === 'clock')",restoreFn);
+const clockSync=show.indexOf('syncClockFace();',clockBranch);
+const agcBranch=show.indexOf("} else if (saved.mode === 'agc' && agcCore) {",clockBranch);
+if(!(clockSync>clockBranch&&agcBranch>clockSync)) fail('clock face must resync inside the clock restore branch');
 
 req(perceptual,'window.DSKY_RELAY_AUDIO.profileFor','authoritative individual-relay profile source');
 req(perceptual,"localStorage.getItem('dskyHardwareUnitSeedV1')",'stable installed-unit identity');
@@ -80,4 +125,4 @@ no(show,'filter:','CSS/filter flare');
 no(show,'classList.add(\'relay-flare\'','relay flare class');
 
 console.log('Relay show smoke: PASS');
-console.log('  audible per-relay identities, non-metronomic presentation pacing, scheduler-state resume, and previous-task restore verified');
+console.log('  relay identities, visibility-safe resume, exception-safe ownership restore, and stretched-callback cancellation verified');
