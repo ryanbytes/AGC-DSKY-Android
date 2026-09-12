@@ -18,10 +18,11 @@
  *   J -> g (middle)
  *
  * app.js/hardware-fidelity.js remain authoritative for the 12 selectable banks
- * of 11 bistable relays (B + C1..C5 + D1..D5), their 20-ms settle boundary,
- * condition-light row, signs, and physical relay timing. This layer changes
- * only the K1..K5-to-EL contact decoding so unsupported relay states are no
- * longer incorrectly rendered as blank.
+ * of 11 bistable relays (B + C1..C5 + D1..D5), their 20-ms final settle
+ * boundary, condition-light row, signs, and physical relay timing.
+ * relay-visual-coupling.js uses this exact K1..K5 contact decoder during the
+ * sub-20-ms armature motion so the EL elements follow the individual relay
+ * contacts instead of waiting for the entire bank's final settled render.
  */
 (() => {
   if (typeof relayDigit !== 'function' || typeof SEG !== 'object') return;
@@ -62,8 +63,8 @@
   // Keep normal codes human-readable in agcDisplay diagnostics. For any of the
   // other 21 physical K1..K5 states, use a private-use character whose SEG
   // entry is the exact contact-matrix result. Existing set2()/renderAgcReg()
-  // and the source-art glyph renderer can then draw it without bypassing the
-  // hardware-fidelity layer's 20-ms latch timing.
+  // and the source-art glyph renderer can draw both settled and intermediate
+  // relay-contact states through the same physical decoder.
   const physicalChars = new Array(32);
   for (let code = 0; code < 32; code++) {
     const known = RELAY_DIGIT[code];
