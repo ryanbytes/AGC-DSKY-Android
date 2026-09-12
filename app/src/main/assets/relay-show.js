@@ -40,15 +40,61 @@
     if (stopRequested) throw new Error('relay-show-stop');
   }
 
+  function relayOperationTiming(row, low11) {
+    const model = window.DSKY_RELAY_AUDIO;
+    if (!model || typeof model.profileFor !== 'function') return null;
+    let hardware = null;
+    try { hardware = window.AGCDSKY.hardware(); } catch (_) {}
+    const priorHw = hardware && hardware.latches ? hardware.latches[row] : undefined;
+    const fallback = agcRelayWords[row];
+    const prior = (priorHw !== undefined ? priorHw : (fallback !== undefined ? fallback : 0)) & 0x7ff;
+    const target = low11 & 0x7ff;
+    const diff = (prior ^ target) & 0x7ff;
+    const travel = [];
+    for (let bit = 0; bit < 11; bit++) {
+      const mask = 1 << bit;
+      if (!(diff & mask)) continue;
+      const p = model.profileFor(row, bit);
+      if (!p) continue;
+      travel.push(target & mask ? Number(p.setTravelMs) : Number(p.resetTravelMs));
+    }
+    if (!travel.length) return {changed:0, minTravelMs:0, maxTravelMs:0, meanTravelMs:0, spreadMs:0};
+    const minTravelMs = Math.min(...travel);
+    const maxTravelMs = Math.max(...travel);
+    const meanTravelMs = travel.reduce((sum, value) => sum + value, 0) / travel.length;
+    return {
+      changed: travel.length,
+      minTravelMs,
+      maxTravelMs,
+      meanTravelMs,
+      spreadMs: maxTravelMs - minTravelMs
+    };
+  }
+
+  // The bank is still electrically selected as one operation and still settles
+  // at the common 20-ms hardware boundary.  RELAY SHOW is presentation mode,
+  // so its intentionally slow inter-bank pause can expose the mechanical
+  // personality of the armatures that actually moved instead of marching at a
+  // metronomic fixed rate.  This never changes real channel-010 timing.
+  function personalityGapMs(baseMs, timing) {
+    if (!timing || timing.changed <= 0) return baseMs;
+    const meanBias = (timing.meanTravelMs - 8.9) * 1.65;
+    const spreadBias = (timing.spreadMs - 4.0) * 0.34;
+    const changedBias = (Math.min(11, timing.changed) - 5.5) * 0.18;
+    return Math.max(baseMs * 0.72, Math.min(baseMs * 1.34, baseMs + meanBias + spreadBias + changedBias));
+  }
+
   function drive(row, low11) {
+    const timing = relayOperationTiming(row, low11);
     decodeChannel10(((row & 0x0f) << 11) | (low11 & 0x7ff));
+    return timing;
   }
 
   async function driveState(state, order = ROWS_DOWN, gapMs = 40) {
     for (const row of order) {
       ensureRunningDemo();
-      drive(row, state[row] || 0);
-      await showSleep(gapMs);
+      const timing = drive(row, state[row] || 0);
+      await showSleep(personalityGapMs(gapMs, timing));
     }
   }
 
@@ -154,9 +200,9 @@
     const target = fullState();
     for (const row of ROWS_DOWN) {
       ensureRunningDemo();
-      drive(row, target[row]);
+      const timing = drive(row, target[row]);
       status(`RELAY SHOW · BANK ${row}`);
-      await showSleep(52);
+      await showSleep(personalityGapMs(52, timing));
     }
     await showSleep(180);
   }
@@ -167,9 +213,9 @@
       const target = digitState(digit);
       for (const row of DISPLAY_ROWS_DOWN) {
         ensureRunningDemo();
-        drive(row, target[row]);
+        const timing = drive(row, target[row]);
         status(`RELAY SHOW · DIGIT ${digit} · BANK ${row}`);
-        await showSleep(28);
+        await showSleep(personalityGapMs(28, timing));
       }
       await showSleep(65);
     }
@@ -181,8 +227,8 @@
       const target = contactMatrixState(frame);
       for (const row of DISPLAY_ROWS_DOWN) {
         ensureRunningDemo();
-        drive(row, target[row]);
-        await showSleep(26);
+        const timing = drive(row, target[row]);
+        await showSleep(personalityGapMs(26, timing));
       }
       await showSleep(70);
     }
@@ -200,11 +246,11 @@
     // crescendo, then pull in the condition/annunciator relays last.
     for (const row of DISPLAY_ROWS_UP) {
       ensureRunningDemo();
-      drive(row, target[row]);
-      await showSleep(54);
+      const timing = drive(row, target[row]);
+      await showSleep(personalityGapMs(54, timing));
     }
-    drive(12, target[12]);
-    await showSleep(70);
+    const conditionTiming = drive(12, target[12]);
+    await showSleep(personalityGapMs(70, conditionTiming));
     decodeChannel11(0o46); // COMP ACTY, UPLINK ACTY, FLASH relay.
     await showSleep(80);
     decodeChannel163(0o730); // TEMP, KEY REL, OPR ERR, RESTART, STBY.
