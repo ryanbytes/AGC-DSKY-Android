@@ -9,6 +9,7 @@ const ASSETS = path.join(ROOT, 'app/src/main/assets');
 const INDEX = path.join(ASSETS, 'index.html');
 const APP = path.join(ASSETS, 'app.js');
 const CORE = path.join(ASSETS, 'agc-core.js');
+const DREAM_SILENCE = path.join(ASSETS, 'dream-silence.js');
 
 function assert(condition, message) {
     if (!condition) throw new Error(message);
@@ -45,9 +46,27 @@ for (const stale of [
         `current DSKY-only asset tree unexpectedly retains stale renderer/patch asset ${stale}`);
 }
 
-for (const required of ['cm-dsky-finish.css', 'cm-mode.js']) {
+for (const required of ['cm-dsky-finish.css', 'cm-mode.js', 'dream-silence.js']) {
     assert(refs.includes(required), `current CM-only index is missing required frontend asset ${required}`);
 }
+
+const appIndex = refs.indexOf('app.js');
+const dreamSilenceIndex = refs.indexOf('dream-silence.js');
+const clockBehaviorIndex = refs.indexOf('clock-behavior.js');
+assert(appIndex >= 0 && dreamSilenceIndex === appIndex + 1,
+    'dream-silence.js must load immediately after app.js');
+assert(clockBehaviorIndex > dreamSilenceIndex,
+    'dream-silence.js must load before clock behavior and before timer callbacks can run');
+
+const dreamSilence = fs.readFileSync(DREAM_SILENCE, 'utf8');
+assert(dreamSilence.includes("new URLSearchParams(location.search).get('dream') === '1'"),
+    'Dream silence guard no longer scopes itself to dream=1');
+assert(dreamSilence.includes("ensureAudio = () => null"),
+    'Dream mode no longer blocks WebAudio creation/resume');
+assert(dreamSilence.includes("playRelayBurst = () => {}"),
+    'Dream mode no longer suppresses clock relay bursts');
+assert(!dreamSilence.includes("store.set('audioTickV4'"),
+    'Dream silence guard must not alter the saved relay-click preference');
 
 const app = fs.readFileSync(APP, 'utf8');
 assert(app.includes("comanche055:{label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}"),
