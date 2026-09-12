@@ -25,15 +25,9 @@ const stabilityAt = index.indexOf('<script src="relay-stretch-stability.js"></sc
 if (!(identityAt >= 0 && visualAt > identityAt)) fail('visual coupling must load after relay identity profiles');
 if (!(stabilityAt > visualAt)) fail('stretched stability layer must load after visual coupling');
 if (!index.includes('<button id="relay-timing">')) fail('relay timing switch missing from controls');
-if (stabilitySource.includes('setTimeout(() => {\n      if (generation[row]')) {
-  fail('obsolete separate settle-shield timer returned');
-}
-if (!stabilitySource.includes('const heldWord = capturePresentedWord(row)')) {
-  fail('settle callback must capture the currently presented word at execution time');
-}
-if (!stabilitySource.includes('visual.renderWord(row, heldWord)')) {
-  fail('settle callback must restore the current presentation before yielding');
-}
+if (stabilitySource.includes('setTimeout(() => {\n      if (generation[row]')) fail('obsolete separate settle-shield timer returned');
+if (!stabilitySource.includes('const heldWord = capturePresentedWord(row)')) fail('settle callback must capture current presentation at execution time');
+if (!stabilitySource.includes('visual.renderWord(row, heldWord)')) fail('settle callback must restore held presentation before yielding');
 
 const timers = [];
 const rendered = [];
@@ -49,6 +43,41 @@ const timingButton = {
 };
 const hardware = {latches:{10:0}, activeDrive:0};
 let simulateHardwareSettle = false;
+
+// The integration harness cares about optical state, not the literal private
+// character used to represent an arbitrary seven-segment pattern. Code 1 is a
+// simple one-segment fixture; the stability layer may replace it with a private
+// character that has the same segment mask.
+const SEG = {' ':'', '1':'a'};
+const segmentsForCode = code => (Number(code) & 0x1f) === 1 ? 'a' : '';
+
+function segmentMask(ch) {
+  const order = 'abcdefg';
+  const segments = SEG[ch] || '';
+  let mask = 0;
+  for (let i = 0; i < order.length; i++) if (segments.includes(order[i])) mask |= (1 << i);
+  return mask;
+}
+
+function masksOfText(text) {
+  return [...String(text)].map(segmentMask);
+}
+
+function sameMasks(actual, expected) {
+  return actual.length === expected.length && actual.every((value, i) => value === expected[i]);
+}
+
+function latestVerbRender() {
+  for (let i = rendered.length - 1; i >= 0; i--) if (rendered[i].id === 'verb') return rendered[i];
+  return null;
+}
+
+function assertLatestVerbMasks(expected, label) {
+  const item = latestVerbRender();
+  if (!item) fail(`${label}: no VERB surface render`);
+  const masks = masksOfText(item.text);
+  if (!sameMasks(masks, expected)) fail(`${label}: masks ${masks.join(',')} expected ${expected.join(',')}`);
+}
 
 function profile(bit) {
   if (bit === 0) return {
@@ -74,10 +103,11 @@ function profile(bit) {
 let context;
 context = {
   console,
+  SEG,
   window: {
-    AGCDSKY: { hardware: () => ({latches:{...hardware.latches}, activeDrive:hardware.activeDrive}) },
-    DSKY_RELAY_AUDIO: { profileFor: (_row, bit) => profile(bit) },
-    DSKY_RELAY_MATRIX: { segmentsForCode: () => '' }
+    AGCDSKY: {hardware: () => ({latches:{...hardware.latches}, activeDrive:hardware.activeDrive})},
+    DSKY_RELAY_AUDIO: {profileFor: (_row, bit) => profile(bit)},
+    DSKY_RELAY_MATRIX: {segmentsForCode}
   },
   document: {
     getElementById: id => id === 'relay-timing' ? timingButton : null,
@@ -102,7 +132,7 @@ context = {
       context.set2('verb', context.agcDisplay.verb.join(''));
     }, 20);
   },
-  emitTick: (ctx, when, strength) => { baseTicks.push({ctx, when, strength}); },
+  emitTick: (ctx, when, strength) => baseTicks.push({ctx, when, strength}),
   tickSound: false,
   agcRelayWords: {10:0},
   agcDisplay: {
@@ -111,11 +141,12 @@ context = {
     r2:{plus:false,minus:false,digits:[' ',' ',' ',' ',' ']},
     r3:{plus:false,minus:false,digits:[' ',' ',' ',' ',' ']}
   },
-  relayDigit: code => code === 0 ? ' ' : String(code),
-  set2: (id, text) => rendered.push({id, text}),
+  relayDigit: code => (Number(code) & 0x1f) === 0 ? ' ' : String(Number(code) & 0x1f),
+  set2: (id, text) => rendered.push({id, text:String(text)}),
+  setReg: (id, sign, digits) => rendered.push({id, sign:String(sign), text:String(digits)}),
   renderAgcReg: id => rendered.push({id, text:'reg'}),
   setLamp: (id, on) => rendered.push({id, on}),
-  setTimeout: (fn, ms) => { timers.push({fn, ms}); return timers.length; },
+  setTimeout: (fn, ms) => { timers.push({fn, ms:Number(ms)}); return timers.length; },
   requestAnimationFrame: fn => { raf.push(fn); return raf.length; }
 };
 context.globalThis = context;
@@ -130,7 +161,10 @@ if (!api) fail('diagnostic API not exported');
 if (!stability) fail('stretched stability diagnostic API not exported');
 if (stability.mode !== 'same-task-settle-shield') fail('wrong stretched stability mode');
 if (stability.settleShieldMs !== 20) fail('stretched settle shield must share the 20-ms hardware deadline');
-if (stability.settleRepaintSameTask !== true) fail('settled paint is not restored in the same JavaScript task');
+if (stability.settleRepaintSameTask !== true) fail('settled presentation is not restored in the same JavaScript task');
+if (stability.settleCrewFacingWriteSuppressed !== true) fail('hardware settle can still paint/advance stretched optical state');
+if (stability.eventDrivenDomWrites !== true) fail('stretched identical DOM writes are not suppressed');
+if (stability.monotonicSegments !== true) fail('stretched segment reversals are not guarded');
 if (api.mode !== 'individual-contact-coupled') fail('wrong visual coupling mode');
 if (api.finalSettleMs !== 20) fail('20-ms final settle contract lost');
 if (api.contactBounceVisible !== false) fail('visual bounce must remain disabled');
@@ -140,38 +174,31 @@ if (api.getTimingMode() !== 'authentic') fail('default timing mode must be authe
 if (timingButton.textContent !== 'RELAY VISUAL AUTHENTIC') fail('authentic button label missing');
 if (typeof buttonListeners.click !== 'function') fail('timing switch click handler missing');
 
-// Authentic mode keeps original physical audio and visual timing. The test's
-// synthetic 20-ms hardware paint is disabled here so the existing contact gate
-// remains isolated from the stretched-only stability layer.
 const fakeCtx = {currentTime:1};
 hardware.activeDrive = 10;
 context.emitTick(fakeCtx, 1.006, 0.66);
 if (baseTicks.length !== 1) fail('authentic mode suppressed physical relay click');
 hardware.activeDrive = 0;
 
-// Row 10 is VERB. D-K1 is bit 0 and C-K1 is bit 5.
+// Authentic mode: physical per-relay set timing remains unchanged.
 const command = (10 << 11) | (1 << 5) | 1;
 context.decodeChannel10(command);
 if (baseCalls.length !== 1 || baseCalls[0] !== command) fail('base channel-010 path not preserved');
 if (timers.length !== 2) fail(`expected 2 authentic relay timers, got ${timers.length}`);
 timers.sort((a,b) => a.ms - b.ms);
-if (timers[0].ms !== 5 || timers[1].ms !== 11) {
-  fail(`authentic relay profile timing not used: ${timers.map(x=>x.ms).join(',')}`);
-}
+if (timers[0].ms !== 5 || timers[1].ms !== 11) fail(`authentic relay timing changed: ${timers.map(x=>x.ms).join(',')}`);
 timers[0].fn();
-let last = rendered[rendered.length - 1];
-if (!last || last.id !== 'verb' || last.text !== ' 1') fail(`bad first authentic state: ${JSON.stringify(last)}`);
+assertLatestVerbMasks([0,1], 'first authentic contact');
 timers[1].fn();
-last = rendered[rendered.length - 1];
-if (!last || last.id !== 'verb' || last.text !== '11') fail(`bad final authentic state: ${JSON.stringify(last)}`);
+assertLatestVerbMasks([1,1], 'final authentic contact');
 
 buttonListeners.click();
 if (api.getTimingMode() !== 'stretched') fail('switch did not enter stretched mode');
 if (storage.get('relayVisualTimingV1') !== 'stretched') fail('stretched preference not persisted');
 if (timingButton.textContent !== 'RELAY VISUAL STRETCHED') fail('stretched button label missing');
 
-// Latching relay clicks at the authentic 5-15 ms markers are suppressed while
-// stretched; the ~1-ms auxiliary path is intentionally left alone.
+// Latching clicks at authentic 5-15 ms markers are suppressed in stretched
+// mode; auxiliary-style ~1-ms events stay on their physical path.
 hardware.activeDrive = 10;
 context.emitTick(fakeCtx, 1.006, 0.66);
 if (baseTicks.length !== 1) fail('stretched mode did not suppress early latching click');
@@ -179,9 +206,6 @@ context.emitTick(fakeCtx, 1.001, 0.66);
 if (baseTicks.length !== 2) fail('stretched mode incorrectly suppressed auxiliary-style click');
 hardware.activeDrive = 0;
 
-// From here on the mock base decoder reproduces the real hardware layer's
-// settled-word paint at 20 ms. The stability wrapper must make that paint and
-// its restoration atomic from the browser's point of view.
 simulateHardwareSettle = true;
 timers.length = 0;
 rendered.length = 0;
@@ -191,134 +215,127 @@ context.agcRelayWords[10] = 0;
 context.agcDisplay.verb = [' ',' '];
 context.decodeChannel10(command);
 if (baseCalls.length !== 2 || baseCalls[1] !== command) fail('stretched mode bypassed base channel-010 path');
-if (timers.length !== 3) fail(`expected hardware settle + 2 stretched contact timers, got ${timers.length}`);
+if (context.agcDisplay.verb.join('') !== '  ') fail('stretched write did not begin from presented blank face');
 if (raf.length !== 1) fail('stretched mode did not start frame lock');
 
-const initial = rendered[rendered.length - 1];
-if (!initial || initial.id !== 'verb' || initial.text !== '  ') {
-  fail(`stretched mode did not hold prior face: ${JSON.stringify(initial)}`);
-}
-
-const settle = timers.find(x => x.ms === 20);
-const contactTimers = timers.filter(x => x.ms !== 20).sort((a,b) => a.ms - b.ms);
+const settle = timers.find(x => Math.abs(x.ms - 20) < 0.001);
+const contactTimers = timers.filter(x => Math.abs(x.ms - 20) >= 0.001).sort((a,b) => a.ms - b.ms);
 if (!settle) fail('wrapped 20-ms hardware settle timer missing');
+if (contactTimers.length !== 2) fail(`expected 2 stretched contact timers, got ${contactTimers.length}`);
 const stretchedTimes = contactTimers.map(x => x.ms);
-if (stretchedTimes[0] !== 27.3 || stretchedTimes[1] !== 55.3) {
-  fail(`wrong brisk relay-specific stretched timing: ${stretchedTimes.join(',')}`);
-}
-if (!(stretchedTimes[1] - stretchedTimes[0] >= 18 && stretchedTimes[1] - stretchedTimes[0] <= 28)) {
-  fail('stretched relay gap outside brisk screen-visible range');
-}
+if (stretchedTimes[0] !== 27.3 || stretchedTimes[1] !== 55.3) fail(`wrong brisk stretched timing: ${stretchedTimes.join(',')}`);
+if (!(stretchedTimes[1] - stretchedTimes[0] >= 18 && stretchedTimes[1] - stretchedTimes[0] <= 28)) fail('stretched gap outside screen-visible range');
 
 const schedule = api.stretchedScheduleFor(10, 0, (1 << 5) | 1);
 if (schedule.length !== 2 || schedule[0].bit !== 0 || schedule[1].bit !== 5) fail('stretched order lost physical relay order');
-if (schedule[0].stretchedMs === schedule[1].stretchedMs) fail('relay identities collapsed to common stretched delay');
+if (schedule[0].stretchedMs === schedule[1].stretchedMs) fail('relay identities collapsed to common delay');
 
-// The real 20-ms latch commits target "11", but the wrapped callback restores
-// the currently visible blank face before the same task yields. There is no
-// separate timer/task in which the hidden final word can reach a screen frame.
+// The real latch reaches the target at 20 ms, but that hidden settle may not
+// paint the final word or advance the optical guard. The held face is restored
+// before this task returns.
 const settleStart = rendered.length;
 settle.fn();
-const settleRenders = rendered.slice(settleStart).filter(x => x.id === 'verb').map(x => x.text);
-if (settleRenders.join('|') !== '11|  ') {
-  fail(`settle paint was not restored atomically: ${settleRenders.join('|')}`);
+if (hardware.latches[10] !== ((1 << 5) | 1)) fail('physical latch did not settle at 20 ms');
+if (context.agcDisplay.verb.join('') !== '  ') fail('hardware settle contaminated presented model');
+const settleVerb = rendered.slice(settleStart).filter(x => x.id === 'verb');
+for (const item of settleVerb) {
+  if (!sameMasks(masksOfText(item.text), [0,0])) fail('hardware-ahead final EL escaped during 20-ms settle');
 }
-last = rendered[rendered.length - 1];
-if (!last || last.text !== '  ') fail(`settle callback ended on hidden hardware state: ${JSON.stringify(last)}`);
-if (context.agcDisplay.verb.join('') !== '  ') fail('settle callback left presentation model contaminated');
 
-// Timer changes the presentation contact state, but both the EL paint and the
-// clean click are committed together on the next animation frame.
+// First stretched contact: timer alone does not paint or click. The next screen
+// frame commits both together.
+const beforeFirstContactPaints = rendered.length;
 contactTimers[0].fn();
-last = rendered[rendered.length - 1];
-if (!last || last.text !== '  ') fail('stretched contact painted before its synchronized frame');
-if (api.lastPresentationClick() !== null) fail('stretched click fired before its visual frame');
+if (rendered.length !== beforeFirstContactPaints) fail('stretched contact painted before synchronized frame');
+if (api.lastPresentationClick() !== null) fail('stretched click fired before visual frame');
 let frame = raf.shift();
 if (typeof frame !== 'function') fail('missing first synchronized animation frame');
 frame();
-last = rendered[rendered.length - 1];
-if (!last || last.id !== 'verb' || last.text !== ' 1') fail(`bad first stretched frame: ${JSON.stringify(last)}`);
+assertLatestVerbMasks([0,1], 'first stretched frame');
 let click = api.lastPresentationClick();
-if (!click || click.row !== 10 || click.bit !== 0 || click.engaging !== true) fail(`first stretched click not tied to first EL relay: ${JSON.stringify(click)}`);
+if (!click || click.row !== 10 || click.bit !== 0 || click.engaging !== true) fail(`first stretched click mismatch: ${JSON.stringify(click)}`);
+
+// The frame lock may continue to run to protect timing, but an unchanged EL
+// state must not rebuild the SVG. This is the Android-WebView shimmer regression.
+const afterFirstPaints = rendered.length;
+let holdFrame = raf.shift();
+if (typeof holdFrame !== 'function') fail('missing stretched hold frame');
+holdFrame();
+if (rendered.length !== afterFirstPaints) fail('unchanged stretched frame rebuilt EL DOM');
 
 contactTimers[1].fn();
 frame = raf.shift();
 if (typeof frame !== 'function') fail('missing second synchronized animation frame');
 frame();
-last = rendered[rendered.length - 1];
-if (!last || last.id !== 'verb' || last.text !== '11') fail(`bad final stretched frame: ${JSON.stringify(last)}`);
+assertLatestVerbMasks([1,1], 'final stretched frame');
 click = api.lastPresentationClick();
-if (!click || click.row !== 10 || click.bit !== 5 || click.engaging !== true) fail(`second stretched click not tied to second EL relay: ${JSON.stringify(click)}`);
+if (!click || click.row !== 10 || click.bit !== 5 || click.engaging !== true) fail(`second stretched click mismatch: ${JSON.stringify(click)}`);
 
-let release = timers.find(x => x.ms === 24);
+const release = timers.find(x => Math.abs(x.ms - 24) < 0.001);
 if (!release) fail('final presentation release hold missing');
 release.fn();
-// The prior frame callback has already been queued in this deterministic test
-// harness. Let it observe the now-inactive presentation and clear frameHandle
-// before starting the next independent regression sequence.
 while (raf.length) {
-  const pendingFrame = raf.shift();
-  if (typeof pendingFrame === 'function') pendingFrame();
+  const pending = raf.shift();
+  if (typeof pending === 'function') pending();
 }
 
-// Exact video regression: an element is already visibly ON. A later channel
-// word wants that relay OFF. At 20 ms the real latch is allowed to settle OFF,
-// but the element must remain visibly ON until its stretched reset contact.
+// Video regression: D is already visibly ON and a later word legitimately
+// resets it. The 20-ms physical settle must not make it disappear; only the
+// stretched reset contact/frame may do that.
 rendered.length = 0;
 timers.length = 0;
 raf.length = 0;
 context.agcDisplay.verb = ['1','1'];
 hardware.latches[10] = (1 << 5) | 1;
 context.agcRelayWords[10] = (1 << 5) | 1;
-const resetD = (10 << 11) | (1 << 5); // C-K1 stays on; D-K1 legitimately resets later.
+const resetD = (10 << 11) | (1 << 5);
 context.decodeChannel10(resetD);
-last = rendered[rendered.length - 1];
-if (!last || last.id !== 'verb' || last.text !== '11') fail('post-on regression did not start from lit face');
+if (context.agcDisplay.verb.join('') !== '11') fail('post-on regression did not start from lit face');
 
-const resetSettle = timers.find(x => x.ms === 20);
-const resetContact = timers.filter(x => x.ms !== 20 && x.ms !== 24).sort((a,b) => a.ms - b.ms)[0];
-if (!resetSettle || !resetContact) fail('post-on regression missing settle/contact timing');
-if (!(resetContact.ms > 20)) fail('reset contact must remain later than physical settle in stretched mode');
+const resetSettle = timers.find(x => Math.abs(x.ms - 20) < 0.001);
+const resetContacts = timers.filter(x => Math.abs(x.ms - 20) >= 0.001).sort((a,b) => a.ms - b.ms);
+if (!resetSettle || resetContacts.length !== 1) fail('post-on regression missing settle/reset contact');
+if (!(resetContacts[0].ms > 20)) fail('stretched reset must remain later than physical settle');
 
-const postOnSettleStart = rendered.length;
+const beforeResetSettlePaints = rendered.length;
 resetSettle.fn();
-const postOnSettleRenders = rendered.slice(postOnSettleStart).filter(x => x.id === 'verb').map(x => x.text);
-if (postOnSettleRenders.join('|') !== '1 |11') {
-  fail(`post-on settle did not atomically preserve lit element: ${postOnSettleRenders.join('|')}`);
+if (hardware.latches[10] !== (1 << 5)) fail('physical reset latch did not settle');
+if (context.agcDisplay.verb.join('') !== '11') fail('lit element dropped at physical settle boundary');
+for (const item of rendered.slice(beforeResetSettlePaints).filter(x => x.id === 'verb')) {
+  if (!sameMasks(masksOfText(item.text), [1,1])) fail('20-ms settle exposed premature reset');
 }
-last = rendered[rendered.length - 1];
-if (!last || last.text !== '11') fail(`lit element dropped at settle task boundary: ${JSON.stringify(last)}`);
-if (context.agcDisplay.verb.join('') !== '11') fail('lit presentation state was rolled back by physical settle');
 
-resetContact.fn();
-last = rendered[rendered.length - 1];
-if (!last || last.text !== '11') fail('reset contact painted before synchronized frame');
+const beforeResetContactPaints = rendered.length;
+resetContacts[0].fn();
+if (rendered.length !== beforeResetContactPaints) fail('reset contact painted before synchronized frame');
 frame = raf.shift();
-if (typeof frame !== 'function') fail('missing synchronized reset animation frame');
+if (typeof frame !== 'function') fail('missing synchronized reset frame');
 frame();
-last = rendered[rendered.length - 1];
-if (!last || last.text !== '1 ') fail(`legitimate stretched reset did not change element: ${JSON.stringify(last)}`);
+assertLatestVerbMasks([1,0], 'legitimate stretched reset');
 click = api.lastPresentationClick();
-if (!click || click.row !== 10 || click.bit !== 0 || click.engaging !== false) fail(`reset click not tied to visible reset: ${JSON.stringify(click)}`);
+if (!click || click.row !== 10 || click.bit !== 0 || click.engaging !== false) fail(`reset click mismatch: ${JSON.stringify(click)}`);
 
-// A new stretched write still begins from the face currently being shown rather
-// than snapping to a hardware-ahead latch.
+// An overlapping write begins from the face actually being shown, even when
+// the physical latch is ahead.
 rendered.length = 0;
 timers.length = 0;
 raf.length = 0;
 context.agcDisplay.verb = [' ','1'];
-hardware.latches[10] = (1 << 5) | 1; // hardware is ahead at "11"
+hardware.latches[10] = (1 << 5) | 1;
 context.agcRelayWords[10] = (1 << 5) | 1;
 const followup = (10 << 11) | (1 << 5);
 context.decodeChannel10(followup);
-last = rendered[rendered.length - 1];
-if (!last || last.id !== 'verb' || last.text !== ' 1') {
-  fail(`overlapping stretched write snapped to hardware-ahead state: ${JSON.stringify(last)}`);
-}
+if (context.agcDisplay.verb.join('') !== ' 1') fail('overlapping stretched write snapped to hardware-ahead latch');
+const overlapRender = latestVerbRender();
+if (overlapRender && !sameMasks(masksOfText(overlapRender.text), [0,1])) fail('overlapping write painted hardware-ahead surface');
 
 buttonListeners.click();
 if (api.getTimingMode() !== 'authentic') fail('switch did not return to authentic mode');
 if (storage.get('relayVisualTimingV1') !== 'authentic') fail('authentic preference not persisted');
 
 console.log('Relay visual coupling smoke: PASS');
-console.log('  stretched EL is frame-synced, bounce-free, same-task shielded at 20 ms, and cannot drop an already-lit element before its legitimate reset contact');
+console.log('  authentic relay timing preserved');
+console.log('  stretched clicks remain frame-synchronized');
+console.log('  hidden 20-ms settle cannot paint or advance stretched EL');
+console.log('  unchanged frame-lock redraws cannot rebuild SVG DOM');
+console.log('  already-lit element cannot drop before legitimate stretched reset');
