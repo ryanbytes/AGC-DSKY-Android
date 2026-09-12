@@ -40,6 +40,20 @@
     if (stopRequested) throw new Error('relay-show-stop');
   }
 
+  // RELAY SHOW can schedule many stretched optical-contact callbacks.  A
+  // callback belonging to the show must never paint after ownership has been
+  // returned to CLOCK or AGC.  The visual layer already has an authoritative
+  // cancellation barrier when its timing mode changes, so toggle it without
+  // persistence and immediately restore the user's selected mode.
+  function quiesceRelayPresentation() {
+    const visual = window.DSKY_RELAY_VISUAL;
+    if (!visual || typeof visual.getTimingMode !== 'function' || typeof visual.setTimingMode !== 'function') return;
+    const timingMode = visual.getTimingMode();
+    if (timingMode !== 'stretched') return;
+    visual.setTimingMode('authentic', false);
+    visual.setTimingMode('stretched', false);
+  }
+
   function relayOperationTiming(row, low11) {
     const model = window.DSKY_RELAY_AUDIO;
     if (!model || typeof model.profileFor !== 'function') return null;
@@ -142,6 +156,7 @@
       mode,
       modeLabel: document.getElementById('mode') ? document.getElementById('mode').textContent : '',
       coreRunning: !!(agcCore && agcCore.running),
+      pausedForVisibility: !!agcPausedForVisibility,
       tickSound,
       verb,
       noun,
@@ -261,17 +276,34 @@
     if (!saved) return;
     status('RELAY SHOW · RESTORING PREVIOUS TASK');
 
-    // Restore through the same physical bank path rather than teleporting the
-    // SVG. That means the return cascade has authentic relay identities/sound.
-    for (const row of ROWS_DOWN) {
-      drive(row, saved.latches[row] || 0);
-      await sleep(40);
+    let restoreError = null;
+    try {
+      // Restore through the same physical bank path rather than teleporting the
+      // SVG. That means the return cascade keeps authentic relay identities and
+      // sound under normal operation.
+      for (const row of ROWS_DOWN) {
+        drive(row, saved.latches[row] || 0);
+        await sleep(40);
+      }
+      decodeChannel11(saved.ch11 || 0);
+      decodeChannel163(saved.ch163 || 0);
+      agcCh13 = saved.ch13 || 0;
+      await sleep(45);
+    } catch (error) {
+      // A rendering/audio/presentation error must not strand the application in
+      // relay-show mode with the real AGC stopped. Logical task restoration is
+      // deliberately performed below regardless of physical-cascade success.
+      restoreError = error;
     }
-    decodeChannel11(saved.ch11 || 0);
-    decodeChannel163(saved.ch163 || 0);
-    agcCh13 = saved.ch13 || 0;
-    await sleep(45);
 
+    try {
+      quiesceRelayPresentation();
+    } catch (error) {
+      if (!restoreError) restoreError = error;
+    }
+
+    // From this point onward recover ownership first.  These assignments must
+    // happen even if one bank in the physical return cascade failed.
     verb = saved.verb;
     noun = saved.noun;
     entryMode = saved.entryMode;
@@ -283,16 +315,37 @@
     mode = saved.mode;
 
     if (saved.mode === 'clock') {
-      // The return cascade restores the exact prior face first. Normal clock
-      // service then catches up to current NTP-corrected time on its next pass.
+      // The global 20-ms clock service interval never stops. Clear any stale
+      // relay queue and immediately catch the face up to current accurate time
+      // instead of waiting for a later delta to make the clock visibly move.
       stopClockQueue();
-    } else if (saved.mode === 'agc' && agcCore && saved.coreRunning && appVisible) {
-      // stop()/start() does not reset yaAGC memory. Execution resumes the exact
-      // flight-software task that was running when RELAY SHOW was pressed.
-      agcCore.start(1);
+      syncClockFace();
+      agcPausedForVisibility = false;
+    } else if (saved.mode === 'agc' && agcCore) {
+      if (saved.coreRunning) {
+        if (appVisible) {
+          // Mark as resumable before start(). If start ever throws, a later
+          // visibility transition still has a recovery path instead of leaving
+          // the stopped core indistinguishable from an intentional pause.
+          agcPausedForVisibility = true;
+          try {
+            agcCore.start(1);
+            agcPausedForVisibility = false;
+          } catch (error) {
+            if (!restoreError) restoreError = error;
+          }
+        } else {
+          // While RELAY SHOW owns mode, setAppVisible(false) cannot mark the AGC
+          // as visibility-paused. Do it here so foregrounding resumes the core.
+          agcPausedForVisibility = true;
+        }
+      } else {
+        agcPausedForVisibility = !!saved.pausedForVisibility;
+      }
     }
 
     status(saved.modeLabel || (saved.mode === 'clock' ? clockTimeLabel() : 'AGC'));
+    if (restoreError) console.error('Relay show physical restore degraded', restoreError);
   }
 
   async function runShow() {
