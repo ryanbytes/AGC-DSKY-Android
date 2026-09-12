@@ -101,13 +101,30 @@ async function testResetAndPeripheralSetup() {
     calls.length = 0;
     setPacketWriteResult(0);
     assert(core.writeIo(0o15, 0o21) === 0,
-        'writeIo must return the raw packet_write result');
+        'writeIo must return the raw packet_write result for an asserted key');
     core.keyPress(0o21);
     assert(calls.filter(([name]) => name === 'write').length === 2,
-        'keyPress must forward the key packet without synthesizing an exception');
+        'keyPress must forward the key make packet without synthesizing an exception');
+
+    // KEY RESET is a separate discrete.  Releasing a normal key must clear
+    // channel 015 directly and must not enqueue channel-015=0, because the
+    // pinned ringbuffer transport would turn that zero packet into KEYRUPT1.
+    setPacketWriteResult(4);
+    calls.length = 0;
+    const inputWords = new Uint16Array(core.memory.buffer);
+    const keyWord = core.inputChannelWordIndex(0o15);
+    assert(keyWord >= 0, 'channel-015 ABI address was not resolved');
+    inputWords[keyWord] = 0o21;
+    assert(core.writeIo(0o15, 0) === 1,
+        'channel-015 zero must route through discrete key release');
+    assert((inputWords[keyWord] & 0o37) === 0,
+        'KEY RESET did not clear the five keycode bits');
+    assert(calls.filter(([name]) => name === 'write').length === 0,
+        'KEY RESET must not enqueue a channel-015 zero packet / second KEYRUPT');
+    assert(calls.some(([name, steps]) => name === 'step' && steps === 1),
+        'KEY RESET must first allow a just-queued make packet to be consumed');
 
     calls.length = 0;
-    setPacketWriteResult(4);
     await core.loadRope(new Uint8Array([1, 2, 3, 4]).buffer);
     assert(calls.some(([name, size]) => name === 'malloc' && size === 4),
         'loadRope must allocate the actual rope buffer length');
@@ -131,6 +148,12 @@ function testNavigationAndSnapshots() {
     assert(bytes[1024 + 92196 + 6] === 1,
         'navigation key must assert KEYRUPT2 request byte');
 
+    // A persisted AGC snapshot represents internal computer state, not a
+    // finger still holding a DSKY button. Establish the normal released levels
+    // before taking the round-trip fingerprint.
+    assert(core.releaseExternalDskyInputs() === true,
+        'could not establish released DSKY inputs for snapshot');
+
     bytes[10] = 0x12;
     bytes[11] = 0x34;
     const before = core.snapshotFingerprint();
@@ -142,14 +165,24 @@ function testNavigationAndSnapshots() {
 
     bytes[10] = 0;
     bytes[11] = 0;
+    // Deliberately fake held controls before import. importSnapshot must replace
+    // the memory and then re-establish released physical inputs.
+    const words = new Uint16Array(core.memory.buffer);
+    const keyIndex = core.inputChannelWordIndex(0o15);
+    const proIndex = core.inputChannelWordIndex(0o32);
+    words[keyIndex] = 0o21;
+    words[proIndex] &= ~0o20000;
     assert(core.importSnapshot(snapshot) === true,
         'snapshot import must report success');
     assert(bytes[10] === 0x12 && bytes[11] === 0x34,
         'snapshot import did not restore WASM memory');
+    assert((words[keyIndex] & 0o37) === 0,
+        'snapshot import restored a physically held normal DSKY key');
+    assert((words[proIndex] & 0o20000) === 0o20000,
+        'snapshot import restored PRO in the active-low held state');
     assert(core.snapshotFingerprint() === before,
-        'snapshot round trip changed the memory fingerprint');
+        'released-state snapshot round trip changed the memory fingerprint');
 
-    const words = new Uint16Array(core.memory.buffer);
     const baseWord = 1024 >>> 1;
     words[baseWord + 2 * 0o400 + 0o123] = 0x6abc;
     assert(core.readErasable(2, 0o123) === 0x6abc,
@@ -233,7 +266,8 @@ async function testLoadPipeline() {
         cpu_reset() { calls.push(['reset']); },
         cpu_step(steps) { calls.push(['step', steps]); },
         packet_write(channel, value) { calls.push(['write', channel, value]); return 4; },
-        packet_read() { calls.push(['read']); return 0; }
+        packet_read() { calls.push(['read']); return 0; },
+        get_erasable_ptr() { return 1024; }
     };
 
     const fakeWebAssembly = {
