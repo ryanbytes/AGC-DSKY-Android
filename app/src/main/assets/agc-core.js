@@ -86,6 +86,10 @@
       this.running = false;
       this.timer = 0;
       this.startTime = 0;
+      // A successful packet_write is asynchronous.  Remember only the make
+      // that may still be queued so KEYRST can flush it when necessary without
+      // advancing the AGC on every ordinary physical release.
+      this.pendingNormalKeyCode = 0;
     }
 
     async load(options={}){
@@ -170,6 +174,7 @@
       this.exports.cpu_reset();
 
       this.channels = Object.create(null);
+      this.pendingNormalKeyCode = 0;
       this.totalSteps = 0;
       this.startTime = performance.now();
     }
@@ -194,6 +199,12 @@
       return byteAddress >>> 1;
     }
 
+    inputChannelBits(channel, mask=0o77777){
+      const index = this.inputChannelWordIndex(channel);
+      if (index < 0) return null;
+      return new Uint16Array(this.memory.buffer)[index] & (mask & 0o77777);
+    }
+
     setInputChannelBits(channel, mask, value){
       const index = this.inputChannelWordIndex(channel);
       if (index < 0) return false;
@@ -204,8 +215,11 @@
     }
 
     keyPress(keyCode){
-      if (!keyCode) return 0;
-      return this.writeIo(NORMAL_KEY_CHANNEL, keyCode & NORMAL_KEY_MASK);
+      const code = keyCode & NORMAL_KEY_MASK;
+      if (!code) return 0;
+      const accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);
+      if (accepted > 0) this.pendingNormalKeyCode = code;
+      return accepted;
     }
 
     keyRelease(){
@@ -214,19 +228,25 @@
       // channel-015 packet, including zero, which would create a fictitious
       // second keystroke on physical release.
       //
-      // First let any just-queued make packet reach WriteIO/KEYRUPT1.  wasm.c
-      // documents that queued packets are processed on the next cpu_step().
-      if (this.exports && typeof this.exports.cpu_step === 'function') {
+      // Normally the 4-ms scheduler has already consumed the make packet long
+      // before a human releases the key.  Advance one MCT only when the make is
+      // demonstrably still pending; an ordinary settled release must not alter
+      // AGC execution timing merely to clear the external keyboard contact.
+      const pending = this.pendingNormalKeyCode & NORMAL_KEY_MASK;
+      if (pending && this.inputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK) !== pending
+          && this.exports && typeof this.exports.cpu_step === 'function') {
         this.exports.cpu_step(1);
         this.totalSteps += 1;
         this.drainIo();
       }
+      this.pendingNormalKeyCode = 0;
       return this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
     }
 
     releaseExternalDskyInputs(){
       // Physical controls are not persistent AGC state.  A restored snapshot
       // must come back with the normal keyboard released and PRO released.
+      this.pendingNormalKeyCode = 0;
       const keyOk = this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
       const proOk = this.setInputChannelBits(PROCEED_CHANNEL, PROCEED_MASK, PROCEED_MASK);
       return keyOk && proOk;
