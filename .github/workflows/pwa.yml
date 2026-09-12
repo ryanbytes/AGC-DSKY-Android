@@ -48,6 +48,9 @@ jobs:
       - name: Clock mode behavior test
         run: node tools/clock-mode-behavior-smoke.js
 
+      - name: Relay show behavior test
+        run: node tools/relay-show-smoke.js
+
       - name: Android frontend parity test
         run: node pwa/tools/pwa-parity-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
 
