@@ -9,9 +9,24 @@
 - VirtualAGC `piPeripheral/humanizeScript.py`: channel `010` relay-word decoding and DSKY channel bit names.
 - VirtualAGC `piPeripheral/convertNasspLog.py`: DSKY relay/digit code generation and register/sign relay mapping.
 - VirtualAGC `yaAGC/agc_engine.h`: fictitious channel `0163` DSKY modulation masks.
+- VirtualAGC `yaAGC/agc_engine.c`: DSKY hardware reconstruction, RESTART flip-flop/RSET behavior, STBY/EL-off behavior, channel `0163` output.
+- VirtualAGC `yaAGC/ringbuffer_api.c`: browser/WASM input transport and KEYRUPT generation behavior.
+- Apollo 11 Comanche 055 `PINBALL_GAME__BUTTONS_AND_LIGHTS.agc`: CM Pinball keyboard processing, RSET/error-reset path, display lock/release behavior.
 - Apollo 11 Luminary 099 `PINBALL_GAME_BUTTONS_AND_LIGHTS.agc`: original DSKY key codes, channel 15 keyboard behavior, channel 10 relay-word display format, and relay digit codes.
 - Apollo 11 source mirror: https://github.com/chrislgarry/Apollo-11
 - Apollo-derived DSKY interface drawing: https://commons.wikimedia.org/wiki/File:Apollo_DSKY_interface.svg
+
+### Block II DSKY key hardware
+
+These sources are authoritative for the source-backed mechanical envelope in `key-mechanical-spec.js`:
+
+- MIT/IL final report R-700, *Apollo Guidance, Navigation and Control — MIT's Role in Project Apollo, Vol. III, Computer Subsystem*, §3.10.1.5, Pushbutton Switch: approximately `3/16 in` cap-housing movement to switch actuation plus `1/16 in` additional travel before bottoming, for approximately `1/4 in` total stroke. https://www.ibiblio.org/apollo/Documents/R-700.pdf
+- NASA/MIT drawing `2004941`, compression spring, DSKY pushbutton: `3.0–3.5 lb/in` spring rate, `0.500 in` free length (REF), `0.100 in` maximum solid height, approximately `1.2 lb` load at solid height, `0.245 in` OD, `0.016 in` wire.
+- NASA specification-control drawing `1010901`, sensitive switch: `7 oz` maximum actuating force, `1 oz` minimum release force, `0.030 in` maximum pretravel, `0.006 in` maximum differential movement, `0.003 in` minimum overtravel, `3 lb` maximum overtravel force, SPDT contacts, minimum 25,000 operating cycles. https://www.ibiblio.org/apollo/SCDs/scd_1010901b.pdf
+- NASA/MIT shaft assembly `2003975-011`: key EL panel acceptance requirement of at least `2.0 foot-lamberts` at `75 Vrms`, `400 Hz`.
+- Raytheon Block II development report / NASA NTRS 19700015154: later cap-housing leaf-spring redesign retained the original spring rate while improving fatigue life; Teflon-coated shafts were adopted after wear produced rough/high-force key operation. https://www.ibiblio.org/apollo/Documents/19700015154.pdf
+
+Important modeling rule: acceptance maxima/minima are envelopes, not probability distributions. The app only samples per-key variation where a bounded manufacturing range is actually documented (currently the `3.0–3.5 lb/in` compression-spring rate). Contact timing, return-audio timing, synthesized sound pitch/gain, and screen-space key depth remain explicitly labeled presentation/interaction estimates.
 
 ### Mappings implemented in v0.7
 
