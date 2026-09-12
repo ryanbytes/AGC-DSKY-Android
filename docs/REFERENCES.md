@@ -28,6 +28,16 @@ These sources are authoritative for the source-backed mechanical envelope in `ke
 
 Important modeling rule: acceptance maxima/minima are envelopes, not probability distributions. The app only samples per-key variation where a bounded manufacturing range is actually documented (currently the `3.0–3.5 lb/in` compression-spring rate). Contact timing, return-audio timing, synthesized sound pitch/gain, and screen-space key depth remain explicitly labeled presentation/interaction estimates.
 
+The documented spring rate and assembled stroke allow only the spring-force *increase* to be calculated without additional geometry: `9.0–10.5 oz` from rest to the approximately `3/16 in` actuation position, and `12–14 oz` from rest to the approximately `1/4 in` bottomed position. These are force deltas, not total astronaut finger force. The checked surviving drawings do not establish the installed spring length/preload or a complete leaf-spring/switch/friction force curve, so `key-mechanical-spec.js` intentionally leaves total finger force unresolved. Secondary replica/reconstruction figures around `21–26 oz` are not treated as Apollo drawing requirements.
+
+### Block II DSKY lighting controls
+
+- The CM NUMERICS and INTEGRAL lighting controls are rheostats with mechanical stops that prevent normal rotation to OFF; spacecraft training/schematic material specifies opening the applicable circuit breaker/feed when complete lighting disable is required.
+- `flight-hardware-ui.js` retains a private zero level only so the diagnostic LIGHT BUS DEMO can represent an electrically opened feed.
+- `lighting-rheostat-stop.js` prevents ordinary NUMERICS/INTEGRAL control clicks from selecting that zero state and normalizes a legacy saved zero setting back to a legal nonzero position.
+- The current discrete UI positions (`100%`, `75%`, `50%`, `25%`) are interaction approximations, not claimed Apollo rheostat calibration detents. The hardware control was continuous.
+- The INTEGRAL control feeds unlike loads: illuminated key legends are electroluminescent while status/caution legends use incandescent lamps. `lighting-electrical-model.js` therefore keeps their optical response separate; the incandescent `V^3.4` response is explicitly an engineering approximation rather than an Apollo-specified dimmer curve.
+
 ### Mappings implemented in v0.7
 
 - COMP ACTY: output channel `011` octal, bit 2.
