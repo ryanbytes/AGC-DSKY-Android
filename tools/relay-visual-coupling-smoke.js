@@ -21,15 +21,26 @@ const visualAt = index.indexOf('<script src="relay-visual-coupling.js"></script>
 if (!(identityAt >= 0 && visualAt > identityAt)) {
   fail('visual coupling must load after relay identity profiles');
 }
+if (!index.includes('<button id="relay-timing">')) {
+  fail('relay timing switch missing from controls');
+}
 
 const timers = [];
 const rendered = [];
 const baseCalls = [];
+const storage = new Map();
+const buttonListeners = {};
+const timingButton = {
+  textContent:'', title:'', attrs:{},
+  addEventListener(type, fn) { buttonListeners[type] = fn; },
+  setAttribute(name, value) { this.attrs[name] = String(value); }
+};
+const hardware = {latches:{10:0}};
 const context = {
   console,
   window: {
     AGCDSKY: {
-      hardware: () => ({latches:{10:0}})
+      hardware: () => ({latches:{...hardware.latches}})
     },
     DSKY_RELAY_AUDIO: {
       profileFor: (_row, bit) => ({
@@ -41,6 +52,14 @@ const context = {
       segmentsForCode: () => ''
     }
   },
+  document: {
+    getElementById: id => id === 'relay-timing' ? timingButton : null
+  },
+  localStorage: {
+    getItem: key => storage.has(key) ? storage.get(key) : null,
+    setItem: (key, value) => storage.set(key, String(value))
+  },
+  showControls: () => {},
   decodeChannel10: value => { baseCalls.push(value); },
   agcRelayWords: {10:0},
   agcDisplay: {
@@ -59,37 +78,76 @@ context.window.window = context.window;
 vm.createContext(context);
 vm.runInContext(source, context, {filename:'relay-visual-coupling.js'});
 
-if (!context.window.DSKY_RELAY_VISUAL) fail('diagnostic API not exported');
-if (context.window.DSKY_RELAY_VISUAL.mode !== 'individual-contact-coupled') {
-  fail('wrong visual coupling mode');
-}
-if (context.window.DSKY_RELAY_VISUAL.finalSettleMs !== 20) {
-  fail('20-ms final settle contract lost');
-}
+const api = context.window.DSKY_RELAY_VISUAL;
+if (!api) fail('diagnostic API not exported');
+if (api.mode !== 'individual-contact-coupled') fail('wrong visual coupling mode');
+if (api.finalSettleMs !== 20) fail('20-ms final settle contract lost');
+if (api.getTimingMode() !== 'authentic') fail('default timing mode must be authentic');
+if (timingButton.textContent !== 'RELAY VISUAL AUTHENTIC') fail('authentic button label missing');
+if (typeof buttonListeners.click !== 'function') fail('timing switch click handler missing');
 
-// Row 10 is VERB. D-K1 is bit 0 and C-K1 is bit 5. Give them deliberately
-// different physical travel times and prove the visible contact matrix changes
-// at those two times rather than waiting for the bank's 20-ms final settle.
+// Row 10 is VERB. D-K1 is bit 0 and C-K1 is bit 5. In authentic mode the
+// visual layer must use their actual individual 5-ms and 11-ms travel times.
 const command = (10 << 11) | (1 << 5) | 1;
 context.decodeChannel10(command);
 if (baseCalls.length !== 1 || baseCalls[0] !== command) fail('base channel-010 path not preserved');
-if (timers.length !== 2) fail(`expected 2 individual relay timers, got ${timers.length}`);
+if (timers.length !== 2) fail(`expected 2 authentic relay timers, got ${timers.length}`);
 timers.sort((a,b) => a.ms - b.ms);
 if (timers[0].ms !== 5 || timers[1].ms !== 11) {
-  fail(`relay profile timing not used: ${timers.map(x=>x.ms).join(',')}`);
+  fail(`authentic relay profile timing not used: ${timers.map(x=>x.ms).join(',')}`);
 }
-
 timers[0].fn();
 let last = rendered[rendered.length - 1];
 if (!last || last.id !== 'verb' || last.text !== ' 1') {
-  fail(`first relay did not produce intermediate VERB contact state: ${JSON.stringify(last)}`);
+  fail(`first authentic relay did not produce intermediate VERB state: ${JSON.stringify(last)}`);
 }
-
 timers[1].fn();
 last = rendered[rendered.length - 1];
 if (!last || last.id !== 'verb' || last.text !== '11') {
-  fail(`second relay did not complete VERB contact state: ${JSON.stringify(last)}`);
+  fail(`second authentic relay did not complete VERB state: ${JSON.stringify(last)}`);
 }
 
+// Switch to stretched presentation. The actual channel-010 path still runs
+// immediately, but visual-only timers restore the prior face just after the
+// 20-ms physical settle and replay the two contacts on separate phone frames.
+buttonListeners.click();
+if (api.getTimingMode() !== 'stretched') fail('switch did not enter stretched mode');
+if (storage.get('relayVisualTimingV1') !== 'stretched') fail('stretched preference not persisted');
+if (timingButton.textContent !== 'RELAY VISUAL STRETCHED') fail('stretched button label missing');
+
+timers.length = 0;
+rendered.length = 0;
+hardware.latches[10] = 0;
+context.agcRelayWords[10] = 0;
+context.decodeChannel10(command);
+if (baseCalls.length !== 2 || baseCalls[1] !== command) fail('stretched mode bypassed base channel-010 path');
+if (timers.length !== 3) fail(`expected reset + 2 stretched timers, got ${timers.length}`);
+timers.sort((a,b) => a.ms - b.ms);
+const stretchedTimes = timers.map(x => x.ms);
+if (stretchedTimes[0] !== 20.5 || stretchedTimes[1] !== 38 || stretchedTimes[2] !== 60) {
+  fail(`wrong stretched timing: ${stretchedTimes.join(',')}`);
+}
+
+timers[0].fn();
+last = rendered[rendered.length - 1];
+if (!last || last.id !== 'verb' || last.text !== '  ') {
+  fail(`stretched reset did not restore prior VERB state: ${JSON.stringify(last)}`);
+}
+timers[1].fn();
+last = rendered[rendered.length - 1];
+if (!last || last.id !== 'verb' || last.text !== ' 1') {
+  fail(`first stretched relay did not produce intermediate VERB state: ${JSON.stringify(last)}`);
+}
+timers[2].fn();
+last = rendered[rendered.length - 1];
+if (!last || last.id !== 'verb' || last.text !== '11') {
+  fail(`second stretched relay did not complete VERB state: ${JSON.stringify(last)}`);
+}
+if (api.presentationDurationMs(2) !== 60) fail('stretched duration diagnostic wrong');
+
+buttonListeners.click();
+if (api.getTimingMode() !== 'authentic') fail('switch did not return to authentic mode');
+if (storage.get('relayVisualTimingV1') !== 'authentic') fail('authentic preference not persisted');
+
 console.log('Relay visual coupling smoke: PASS');
-console.log('  individual relay travel times drive intermediate EL contact-matrix states; base 20-ms hardware path retained');
+console.log('  authentic mode keeps physical contact timing; stretched mode preserves order while making relay changes screen-visible');
