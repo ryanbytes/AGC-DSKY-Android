@@ -33,7 +33,8 @@
 
   function keyMake(code) {
     const value = Number(code);
-    if (!Number.isInteger(value) || value < 0 || value > 0o37) {
+    // Channel 015 zero is the all-released/KEYRST level, never a key make.
+    if (!Number.isInteger(value) || value <= 0 || value > 0o37) {
       throw new Error(`Invalid DSKY keycode: ${code}`);
     }
     const core = currentCore('DSKY key make');
