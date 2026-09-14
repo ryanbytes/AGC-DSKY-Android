@@ -609,46 +609,6 @@
     AgcCore.prototype.__dskyFidelityStart = true;
   }
 
-  // AGC PRO is a maintained contact, not a 120-ms synthetic pulse.  Capture
-  // the real pointer hold in AGC mode and release on pointer-up/cancel/hidden.
-  const pro = document.querySelector('[data-key="P"]');
-  let proPointer = null;
-  function releaseProceed() {
-    if (proPointer === null) return;
-    proPointer = null;
-    if (pro) pro.classList.remove('pressed');
-    if (mode === 'agc' && agcCore) {
-      try { agcCore.proceedKey(false); } catch (error) { agcFailure(error); }
-    }
-  }
-  if (pro) {
-    pro.addEventListener('pointerdown', event => {
-      if (mode !== 'agc' || !agcCore) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (proPointer !== null) return;
-      proPointer = event.pointerId;
-      pro.classList.add('pressed');
-      try { if (pro.setPointerCapture) pro.setPointerCapture(event.pointerId); } catch (_) {}
-      try { agcCore.proceedKey(true); } catch (error) { releaseProceed(); agcFailure(error); }
-    }, true);
-    pro.addEventListener('pointerup', event => {
-      if (event.pointerId !== proPointer) return;
-      event.preventDefault(); event.stopImmediatePropagation(); releaseProceed();
-    }, true);
-    pro.addEventListener('pointercancel', event => {
-      if (event.pointerId !== proPointer) return;
-      event.stopImmediatePropagation(); releaseProceed();
-    }, true);
-  }
-  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseProceed(); });
-
-  const enterClockBeforeProceedGuard = enterClock;
-  enterClock = function hardwareEnterClock(...args) {
-    releaseProceed();
-    return enterClockBeforeProceedGuard.apply(this, args);
-  };
-
   // Seed the physical latch model and AGC-facing renderer from the already
   // visible phone-clock face.  There is no electrical drive or sound here; it
   // simply establishes the hardware's retained contact state at app startup.
