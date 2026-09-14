@@ -9,6 +9,8 @@ const keycodeSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/dsky-keycodes.js'), 'utf8');
 const transitionSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/runtime-transitions.js'), 'utf8');
+const inputSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/dsky-input-runtime.js'), 'utf8');
 const clockSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/clock-behavior.js'), 'utf8');
 const fail = message => { console.error('CLOCK MODE BEHAVIOR FAIL: ' + message); process.exit(1); };
@@ -38,12 +40,16 @@ for (const forbidden of [
 }
 for (const marker of [
   'const AGC_KEY = window.AGCDSKY_KEY_CODES;',
+  'const input = api?.inputRuntime;',
   "requestAgc('clock keypad fallback')",
-  'core.keyPress(code)',
+  'input.keyMake(code)',
   "scheduleAgcAutosave('clock keypad handoff')",
   'api.clockBehavior = clockBehavior'
 ]) {
   if (!clockSource.includes(marker)) fail('missing clock-fallback marker: ' + marker);
+}
+if (clockSource.includes('.keyPress(') || clockSource.includes('writeIo(0o15')) {
+  fail('clock fallback must not bypass the shared input runtime');
 }
 for (const forbidden of [
   '[data-lamp="comp"]',
@@ -54,8 +60,8 @@ for (const forbidden of [
 ]) {
   if (clockSource.includes(forbidden)) fail('clock COMP ACTY synthesis must remain disabled: ' + forbidden);
 }
-if (/fetch\s*\(/.test(keycodeSource + transitionSource + clockSource)
-    || /XMLHttpRequest/.test(keycodeSource + transitionSource + clockSource)) {
+if (/fetch\s*\(/.test(keycodeSource + transitionSource + inputSource + clockSource)
+    || /XMLHttpRequest/.test(keycodeSource + transitionSource + inputSource + clockSource)) {
   fail('clock transition behavior must not be tied to network activity');
 }
 
@@ -81,7 +87,6 @@ function createHarness(initialMode = 'clock') {
   };
   const documentObject = {addEventListener(name,fn){ handlers[name] = fn; }};
   const context = {
-    AGC_KEY:KEY_CODES,
     AGCDSKY,
     document:documentObject,
     console,
@@ -102,9 +107,13 @@ function createHarness(initialMode = 'clock') {
   if (context.enterAgc === baseEnterAgc || context.AGCDSKY.enterAgc !== context.enterAgc) {
     fail('runtime service did not replace both global/API AGC entry references');
   }
+  vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
+  if (context.AGCDSKY_INPUT !== context.AGCDSKY.inputRuntime) {
+    fail('shared input runtime did not publish one controller reference');
+  }
   vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
   if (!context.AGCDSKY.clockBehavior) {
-    fail('clock fallback did not initialize against the shared keycode table');
+    fail('clock fallback did not initialize against shared keycode/runtime/input services');
   }
   return {
     AGCDSKY, context, handlers, timers, keyPresses,
@@ -160,8 +169,6 @@ async function flush(count = 20) {
     fail('clock fallback queue did not settle cleanly');
   }
 
-  // Multiple fallback contacts while the first transition is awaiting the core
-  // must be serialized through one transition and delivered in contact order.
   const queued = createHarness();
   let releaseLoad;
   queued.setEnterImpl(() => {
@@ -184,9 +191,6 @@ async function flush(count = 20) {
   if (queued.keyPresses.join(',') !== `${0o21},${0o37}`) fail('queued keypad contacts were not forwarded in order');
   if (queued.AGCDSKY.clockBehavior.snapshot().pendingKeys.length) fail('queued keypad contacts were not drained');
 
-  // Simulate app.js's already-installed AGC button/startup closure calling the
-  // global enterAgc binding first. A later DSKY key must join that same
-  // underlying entry operation without polling or another loader start.
   const loading = createHarness();
   let releaseDirectLoad;
   let directStarts = 0;
@@ -217,10 +221,6 @@ async function flush(count = 20) {
     fail('direct app transition ownership was not retained when keypad joined');
   }
 
-  // Preserve app.js failure compatibility: direct AGC entry must resolve after
-  // app.js catches a load error and falls back to clock, while a keyboard/fallback
-  // caller joined to the same operation must receive a rejection because it
-  // requires a ready AGC before injecting its key.
   const failed = createHarness();
   let finishFailure;
   failed.setEnterImpl(() => {
@@ -252,5 +252,5 @@ async function flush(count = 20) {
   }
 
   console.log('Clock mode behavior: PASS');
-  console.log('  shared keycodes, shared entry, fallback queue, no polling, and app-failure compatibility verified');
+  console.log('  shared keycodes/runtime/input entry, fallback queue, no polling, and app-failure compatibility verified');
 })().catch(error => fail(error.stack || String(error)));
