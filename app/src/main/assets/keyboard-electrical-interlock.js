@@ -114,35 +114,19 @@
     return true;
   }
 
-  function waitForAgcLoad(api) {
-    return new Promise((resolve, reject) => {
-      const check = () => {
-        let status;
-        try { status = api.appStatus(); }
-        catch (error) { reject(error); return; }
-        if (status && status.mode === 'agc') { resolve(); return; }
-        if (!status || status.mode !== 'agc-loading') {
-          reject(new Error(`AGC handoff ended in ${status?.mode || 'unknown'} mode`));
-          return;
-        }
-        setTimeout(check, 10);
-      };
-      check();
-    });
-  }
-
   async function promoteClockContact(state, code) {
     const api = window.AGCDSKY;
     try {
-      if (!api || typeof api.enterAgc !== 'function' || typeof api.appStatus !== 'function') {
-        throw new Error('AGC mode API unavailable');
+      const transitions = api?.runtimeTransitions;
+      if (!api || !transitions || typeof transitions.requestAgc !== 'function' || typeof api.appStatus !== 'function') {
+        throw new Error('shared AGC transition API unavailable');
       }
 
-      // enterAgc() is the authoritative transition.  If another caller already
-      // has the core in agc-loading, enterAgc() intentionally returns early;
-      // wait for that in-flight load rather than dropping this physical key.
-      await api.enterAgc();
-      if (currentMode() === 'agc-loading') await waitForAgcLoad(api);
+      // clock-behavior.js owns transition serialization.  The electrical
+      // interlock owns the physical contact, but it must not maintain a second
+      // AGC-loading poll/state machine.  Await the shared transition before
+      // asserting the original contact onto channel 015.
+      await transitions.requestAgc('keyboard electrical contact');
 
       const core = currentCore();
       if (!core || currentMode() !== 'agc') throw new Error('AGC core not ready after clock handoff');
@@ -177,9 +161,9 @@
     try {
       const modeNow = currentMode();
       if (modeNow === 'clock' || modeNow === 'agc-loading') {
-        // The window-capture electrical layer stops propagation before
-        // clock-behavior.js can see the pointer.  Promote here, at the real
-        // contact point, and preserve this same contact through AGC startup.
+        // The window-capture electrical layer stops propagation before the
+        // document-level clock listener.  Preserve this same physical contact
+        // while the shared transition coordinator gets the real AGC ready.
         if (!clockHandoffPending) {
           clockHandoffPending = true;
           void promoteClockContact(state, code);
