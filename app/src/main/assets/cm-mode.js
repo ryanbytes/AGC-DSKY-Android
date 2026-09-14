@@ -1,64 +1,13 @@
 'use strict';
 
 // CM-only build: lock the mission and apply the mounted-CM DSKY finish.
+// Parser-ordered CM hardware layers are declared directly in index.html;
+// Relay Show remains the only load-time dynamic feature because its script is
+// intentionally paired with the control button created here.
 (() => {
   function applyCmMode() {
     try { localStorage.setItem('agcMission','comanche055'); } catch (_) {}
     document.body.classList.add('spacecraft-cm');
-  }
-
-  function installFlightHardwareUi() {
-    if (document.querySelector('script[data-feature="flight-hardware-ui"]')) return;
-    const script = document.createElement('script');
-    script.src = 'flight-hardware-ui.js';
-    script.dataset.feature = 'flight-hardware-ui';
-    script.async = false;
-    document.body.appendChild(script);
-  }
-
-  function installLightingRheostatStop() {
-    if (document.querySelector('script[data-feature="lighting-rheostat-stop"]')) return;
-    const script = document.createElement('script');
-    script.src = 'lighting-rheostat-stop.js';
-    script.dataset.feature = 'lighting-rheostat-stop';
-    script.async = false;
-    document.body.appendChild(script);
-  }
-
-  function installKeyMechanicalSpec() {
-    if (document.querySelector('script[data-feature="key-mechanical-spec"]')) return;
-    const script = document.createElement('script');
-    script.src = 'key-mechanical-spec.js';
-    script.dataset.feature = 'key-mechanical-spec';
-    script.async = false;
-    document.body.appendChild(script);
-  }
-
-  function installKeyboardElectricalInterlock() {
-    if (document.querySelector('script[data-feature="keyboard-electrical-interlock"]')) return;
-    const script = document.createElement('script');
-    script.src = 'keyboard-electrical-interlock.js';
-    script.dataset.feature = 'keyboard-electrical-interlock';
-    script.async = false;
-    document.body.appendChild(script);
-  }
-
-  function installLightingElectricalModel() {
-    if (document.querySelector('script[data-feature="lighting-electrical-model"]')) return;
-    const script = document.createElement('script');
-    script.src = 'lighting-electrical-model.js';
-    script.dataset.feature = 'lighting-electrical-model';
-    script.async = false;
-    document.body.appendChild(script);
-  }
-
-  function installRelayPerceptualPersonality() {
-    if (document.querySelector('script[data-feature="relay-perceptual-personality"]')) return;
-    const script = document.createElement('script');
-    script.src = 'relay-perceptual-personality.js';
-    script.dataset.feature = 'relay-perceptual-personality';
-    script.async = false;
-    document.body.appendChild(script);
   }
 
   function installRelayShow() {
@@ -78,18 +27,8 @@
     document.body.appendChild(script);
   }
 
-  function installCmFeatures() {
-    installFlightHardwareUi();
-    installLightingRheostatStop();
-    installKeyMechanicalSpec();
-    installKeyboardElectricalInterlock();
-    installLightingElectricalModel();
-    installRelayPerceptualPersonality();
-    installRelayShow();
-  }
-
   applyCmMode();
   if (window.AGCDSKY) window.AGCDSKY.applyCmMode = applyCmMode;
-  if (document.readyState === 'complete') installCmFeatures();
-  else window.addEventListener('load', installCmFeatures, {once:true});
+  if (document.readyState === 'complete') installRelayShow();
+  else window.addEventListener('load', installRelayShow, {once:true});
 })();

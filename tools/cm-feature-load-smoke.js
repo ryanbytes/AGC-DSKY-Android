@@ -34,9 +34,9 @@ for (const feature of features) {
   if (index <= priorIndex) fail(`${feature}.js is out of CM dependency order`);
   priorIndex = index;
 
-  const selector = `script[data-feature="${feature}"]`;
-  if (!cm.includes(selector)) fail(`cm-mode.js no longer guards duplicate ${feature} injection`);
-  if (!cm.includes(`script.src = '${feature}.js'`)) fail(`cm-mode.js lost fallback loader for ${feature}`);
+  if (cm.includes(`script.src = '${feature}.js'`)) {
+    fail(`cm-mode.js still contains dead dynamic fallback loading for ${feature}`);
+  }
 }
 
 const dreamIndex = html.indexOf('<script src="dream-agc.js"></script>');
@@ -54,9 +54,8 @@ if (keyboardIndex < 0 || keyboardIndex >= closingBody) {
   fail('keyboard electrical interlock is not parser-loaded before the page completes');
 }
 
-// Execute cm-mode.js against a minimal DOM that reflects the parser-loaded
-// feature tags. Its deferred load callback must see every static marker and
-// append no duplicate hardware script; Relay Show remains the sole dynamic
+// Execute cm-mode.js against a minimal DOM. Parser-loaded CM features need no
+// runtime discovery or fallback injection; Relay Show is the sole dynamic
 // script because its button/script pair is intentionally created together.
 const loadHandlers = [];
 const appendedScripts = [];
@@ -69,10 +68,6 @@ const controls = {
 };
 const display = {id:'display', parentNode:controls};
 
-function parserHasFeature(feature) {
-  return html.includes(`<script src="${feature}.js" data-feature="${feature}"></script>`);
-}
-
 const documentObject = {
   readyState:'loading',
   body:{
@@ -82,10 +77,6 @@ const documentObject = {
       node.parentNode = this;
       return node;
     }
-  },
-  querySelector(selector){
-    const match = selector.match(/^script\[data-feature="([^"]+)"\]$/);
-    return match && parserHasFeature(match[1]) ? {dataset:{feature:match[1]}} : null;
   },
   getElementById(id){
     if (id === 'controls') return controls;
@@ -120,14 +111,17 @@ assert(loadHandlers[0].options && loadHandlers[0].options.once === true,
 
 loadHandlers[0].fn();
 const scriptSources = appendedScripts.map(node => node.src);
-for (const feature of features) {
-  assert(!scriptSources.includes(`${feature}.js`),
-    `cm-mode.js duplicated parser-loaded ${feature}.js at window load`);
-}
 assert(scriptSources.length === 1 && scriptSources[0] === 'relay-show.js',
   `expected only dynamic relay-show.js after load, got: ${scriptSources.join(', ') || 'none'}`);
 assert(insertedButtons.filter(node => node.id === 'relay-show').length === 1,
   'Relay Show control was not created exactly once');
+
+// Re-running the load hook cannot duplicate the button/script pair.
+loadHandlers[0].fn();
+assert(appendedScripts.length === 1,
+  'repeat Relay Show installation appended another script');
+assert(insertedButtons.filter(node => node.id === 'relay-show').length === 1,
+  'repeat Relay Show installation duplicated its control');
 
 // A second direct apply must be harmless and continue locking CM mission state.
 context.AGCDSKY.applyCmMode();
@@ -135,4 +129,4 @@ assert(classes.has('spacecraft-cm') && storage.get('agcMission') === 'comanche05
   'repeat CM-mode application changed the locked CM state');
 
 console.log('CM feature load smoke: PASS');
-console.log('  parser-loaded hardware layers are ordered and skipped by the load fallback; only Relay Show is injected dynamically');
+console.log('  CM hardware layers are parser-loaded only; cm-mode injects no fallback copies; Relay Show remains the sole dynamic feature');
