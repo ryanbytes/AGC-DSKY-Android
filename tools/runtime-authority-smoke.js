@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'app/src/main/assets');
 const html = fs.readFileSync(path.join(ASSETS, 'index.html'), 'utf8');
 const runtime = fs.readFileSync(path.join(ASSETS, 'runtime-transitions.js'), 'utf8');
+const input = fs.readFileSync(path.join(ASSETS, 'dsky-input-runtime.js'), 'utf8');
 const consumers = [
   ['clock-behavior.js', fs.readFileSync(path.join(ASSETS, 'clock-behavior.js'), 'utf8')],
   ['proceed-electrical.js', fs.readFileSync(path.join(ASSETS, 'proceed-electrical.js'), 'utf8')],
@@ -39,20 +40,41 @@ assert(runtime.includes('api.appStatus()'),
 assert(runtime.includes('api.getCore()'),
   'runtime-transitions.js must remain the adapter over getCore()');
 
+for (const marker of [
+  'const runtime = api.runtimeTransitions',
+  'function keyMake(code)',
+  'function keyReset(coreOverride = null)',
+  'function proceed(pressed)',
+  'core.keyPress(value)',
+  'core.keyRelease()',
+  'core.proceedKey(!!pressed)',
+  'api.inputRuntime = input'
+]) {
+  assert(input.includes(marker), `dsky-input-runtime.js missing electrical marker: ${marker}`);
+}
+assert(!input.includes('api.appStatus(') && !input.includes('api.getCore('),
+  'input runtime must consume runtime-transitions rather than app mode/core directly');
+
 for (const [file, source] of consumers) {
   assert(source.includes('runtimeTransitions'), `${file} does not consume shared runtime authority`);
+  assert(source.includes('inputRuntime'), `${file} does not consume shared input runtime`);
   assert(!source.includes('api.appStatus('), `${file} regained direct api.appStatus() ownership`);
   assert(!source.includes('api.getCore('), `${file} regained direct api.getCore() ownership`);
   assert(!source.includes('window.AGCDSKY.appStatus('), `${file} regained direct window.AGCDSKY.appStatus() ownership`);
   assert(!source.includes('window.AGCDSKY.getCore('), `${file} regained direct window.AGCDSKY.getCore() ownership`);
+  for (const primitive of ['.keyPress(', '.keyRelease(', 'writeIo(0o15', '.proceedKey(']) {
+    assert(!source.includes(primitive), `${file} bypasses shared input runtime with ${primitive}`);
+  }
 }
 
 const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
+const inputIndex = html.indexOf('<script src="dsky-input-runtime.js"></script>');
 assert(runtimeIndex >= 0, 'runtime-transitions.js is not packaged');
+assert(inputIndex > runtimeIndex, 'dsky-input-runtime.js must load after runtime-transitions.js');
 for (const file of ['clock-behavior.js', 'proceed-electrical.js', 'keyboard-electrical-interlock.js']) {
   const index = html.indexOf(`<script src="${file}"`);
-  assert(index > runtimeIndex, `${file} must load after runtime-transitions.js`);
+  assert(index > inputIndex, `${file} must load after dsky-input-runtime.js`);
 }
 
 console.log('runtime authority smoke: PASS');
-console.log('  clock fallback, PRO, and normal keyboard consume one validated mode/core authority');
+console.log('  mode/core interpretation is centralized in runtime-transitions; channel-015/032 electrical primitives are centralized in dsky-input-runtime');
