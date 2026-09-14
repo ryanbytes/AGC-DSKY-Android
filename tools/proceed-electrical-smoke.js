@@ -7,9 +7,11 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const SOURCE = path.join(ROOT, 'app/src/main/assets/proceed-electrical.js');
+const INPUT = path.join(ROOT, 'app/src/main/assets/dsky-input-runtime.js');
 const HARDWARE = path.join(ROOT, 'app/src/main/assets/hardware-fidelity.js');
 const INDEX = path.join(ROOT, 'app/src/main/assets/index.html');
 const source = fs.readFileSync(SOURCE, 'utf8');
+const inputSource = fs.readFileSync(INPUT, 'utf8');
 const hardware = fs.readFileSync(HARDWARE, 'utf8');
 const html = fs.readFileSync(INDEX, 'utf8');
 
@@ -25,21 +27,24 @@ for (const marker of [
   'window.__DSKY_PROCEED_ELECTRICAL__',
   'const api = window.AGCDSKY',
   'const runtime = api?.runtimeTransitions',
+  'const input = api?.inputRuntime',
   "document.querySelector('[data-key=\"P\"]')",
   "pro.addEventListener('pointerdown'",
   "pro.addEventListener('pointerup'",
   "pro.addEventListener('pointercancel'",
   "document.addEventListener('visibilitychange'",
-  'core.proceedKey(true)',
-  'core.proceedKey(false)',
+  'input.proceed(true)',
+  'input.proceed(false)',
   'window.enterClock = function proceedSafeEnterClock',
   'api.proceedElectrical = controller'
 ]) {
   assert(source.includes(marker), `extracted PRO controller missing lifecycle marker: ${marker}`);
 }
 assert(!source.includes('proceedPulse('), 'physical PRO path must not use a synthetic pulse');
+assert(!source.includes('.proceedKey('),
+  'PRO controller must not bypass the shared input runtime');
 assert(!source.includes('api.appStatus') && !source.includes('api.getCore'),
-  'PRO controller must consume shared runtime mode/core authority instead of interpreting app state directly');
+  'PRO controller must consume shared runtime authority instead of interpreting app state directly');
 
 for (const forbidden of [
   "document.querySelector('[data-key=\"P\"]')",
@@ -54,11 +59,13 @@ for (const forbidden of [
 }
 
 const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
+const inputIndex = html.indexOf('<script src="dsky-input-runtime.js"></script>');
 const hardwareIndex = html.indexOf('<script src="hardware-fidelity.js"></script>');
 const proceedIndex = html.indexOf('<script src="proceed-electrical.js"></script>');
 const relayAudioIndex = html.indexOf('<script src="relay-identity-audio.js"></script>');
-assert(runtimeIndex >= 0 && hardwareIndex > runtimeIndex && proceedIndex > hardwareIndex && relayAudioIndex > proceedIndex,
-  'PRO electrical controller must load after runtime authority/hardware-fidelity and before later relay refinements');
+assert(runtimeIndex >= 0 && inputIndex > runtimeIndex && hardwareIndex > inputIndex
+  && proceedIndex > hardwareIndex && relayAudioIndex > proceedIndex,
+  'PRO electrical controller must load after shared runtime/input authority and hardware-fidelity');
 
 function makeEvent(pointerId) {
   return {
@@ -125,6 +132,10 @@ const context = {
 };
 context.window = context;
 vm.createContext(context);
+
+vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
+assert(context.AGCDSKY_INPUT === AGCDSKY.inputRuntime,
+  'shared input runtime did not publish one controller reference');
 
 // Match production classic-script semantics. app.js declares enterClock and
 // installs closures before this later script replaces the global binding.
@@ -239,4 +250,4 @@ assert(finalReleases === 5,
   `failed PRO make did not restore released level; releases=${finalReleases}`);
 
 console.log('PRO electrical smoke: PASS');
-console.log('  shared runtime authority, maintained make/release, pointer ownership, cancel/hidden cleanup, CLOCK release ordering, non-AGC bypass, idempotence, and failure cleanup verified');
+console.log('  shared runtime/input authority, maintained make/release, pointer ownership, cancel/hidden cleanup, CLOCK release ordering, non-AGC bypass, idempotence, and failure cleanup verified');
