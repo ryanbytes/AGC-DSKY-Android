@@ -127,6 +127,8 @@ bash tools/ntp-time-smoke.sh
 node tools/ntp-policy-smoke.js
 node tools/fire-home-setup-smoke.js
 node tools/csp-smoke.js
+node tools/display-runtime-smoke.js
+node tools/phone-clock-runtime-smoke.js
 node tools/frontend-smoke.js
 node tools/cm-feature-load-smoke.js
 node tools/clock-mode-behavior-smoke.js
