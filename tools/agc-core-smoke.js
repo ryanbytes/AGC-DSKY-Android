@@ -1,0 +1,358 @@
+#!/usr/bin/env node
+'use strict';
+
+/* Dependency-free source smoke for the current v0.38.3 agc-core.js wrapper. */
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const CORE_JS = path.resolve(__dirname, '../app/src/main/assets/agc-core.js');
+const source = fs.readFileSync(CORE_JS, 'utf8');
+
+function assert(condition, message) {
+    if (!condition) throw new Error(message);
+}
+
+function createEnvironment(overrides = {}) {
+    const context = {
+        window: null,
+        console,
+        TextDecoder,
+        Uint8Array,
+        Uint16Array,
+        DataView,
+        ArrayBuffer,
+        Math,
+        WebAssembly,
+        performance: { now: () => 1000 },
+        setInterval: () => 1,
+        clearInterval: () => {},
+        setTimeout: () => 1,
+        clearTimeout: () => {},
+        btoa: (text) => Buffer.from(text, 'binary').toString('base64'),
+        atob: (text) => Buffer.from(text, 'base64').toString('binary'),
+        ...overrides
+    };
+    context.window = context;
+    vm.createContext(context);
+    vm.runInContext(source, context, { filename: 'agc-core.js' });
+    return context;
+}
+
+function makeCoreHarness(options = {}) {
+    const calls = [];
+    let packetWriteResult = options.packetWriteResult ?? 4;
+    const core = new (createEnvironment(options.environment || {}).AgcCore)();
+    core.memory = { buffer: new ArrayBuffer(options.memoryBytes || 200000) };
+    core.exports = {
+        cpu_reset() { calls.push(['reset']); },
+        cpu_step(steps) { calls.push(['step', steps]); },
+        packet_read() { calls.push(['read']); return 0; },
+        packet_write(channel, value) { calls.push(['write', channel, value]); return packetWriteResult; },
+        malloc(size) { calls.push(['malloc', size]); return 256; },
+        free(ptr) { calls.push(['free', ptr]); },
+        set_fixed(ptr) { calls.push(['set_fixed', ptr]); },
+        get_erasable_ptr() { return 1024; }
+    };
+    return { core, calls, setPacketWriteResult: (v) => { packetWriteResult = v; } };
+}
+
+async function testResetAndPeripheralSetup() {
+    const { core, calls, setPacketWriteResult } = makeCoreHarness();
+
+    core.reset();
+    assert(calls.filter(([name]) => name === 'reset').length === 2,
+        'reset must prime the transport and then return to the true reset vector');
+    assert(calls.some(([name, steps]) => name === 'step' && steps === 1),
+        'reset must execute one transport-initialization CPU step');
+    assert(calls.some(([name]) => name === 'read'),
+        'reset must drain transient transport output before the final reset');
+    assert(core.totalSteps === 0,
+        'transport initialization must not count as mission execution');
+
+    calls.length = 0;
+    core.configureInputMasks();
+    const writes = calls.filter(([name]) => name === 'write');
+    const expected = [
+        [0x100 | 0o15, 0o37],
+        [0x100 | 0o32, 0o20000],
+        [0o32, 0o20000]
+    ];
+    assert(writes.length === expected.length,
+        `expected ${expected.length} startup I/O writes, got ${writes.length}`);
+    expected.forEach(([channel, value], i) => {
+        assert(writes[i][1] === channel && writes[i][2] === value,
+            `startup I/O write ${i} mismatch`);
+    });
+    assert(!writes.some(([, channel]) => channel === (0x100 | 0o30) || channel === 0o30),
+        'startup must not synthesize an ISS OPERATE transition on channel 030');
+
+    calls.length = 0;
+    core.proceedKey(true);
+    core.proceedKey(false);
+    const proWrites = calls.filter(([name]) => name === 'write');
+    assert(proWrites.length === 2,
+        'PRO press/release must produce exactly two channel-032 writes');
+    assert(proWrites[0][1] === 0o32 && proWrites[0][2] === 0,
+        'PRO press must clear active-low channel 032 bit 020000');
+    assert(proWrites[1][1] === 0o32 && proWrites[1][2] === 0o20000,
+        'PRO release must restore channel 032 bit 020000');
+
+    calls.length = 0;
+    setPacketWriteResult(0);
+    assert(core.writeIo(0o15, 0o21) === 0,
+        'writeIo must return the raw packet_write result for an asserted key');
+    core.keyPress(0o21);
+    assert(calls.filter(([name]) => name === 'write').length === 2,
+        'keyPress must forward the key make packet without synthesizing an exception');
+    assert(core.pendingNormalKeyCode === 0,
+        'rejected/full-ring key make must not be recorded as a pending contact');
+
+    // KEY RESET is a separate discrete. Releasing a normal key must clear
+    // channel 015 directly and must not enqueue channel-015=0, because the
+    // pinned ringbuffer transport would turn that zero packet into KEYRUPT1.
+    setPacketWriteResult(4);
+    const inputWords = new Uint16Array(core.memory.buffer);
+    const keyWord = core.inputChannelWordIndex(0o15);
+    assert(keyWord >= 0, 'channel-015 ABI address was not resolved');
+
+    // Ordinary human release: the scheduler already consumed the make. KEYRST
+    // only clears the external contact; it must not execute a bonus AGC MCT.
+    inputWords[keyWord] = 0o21;
+    core.pendingNormalKeyCode = 0o21;
+    calls.length = 0;
+    assert(core.writeIo(0o15, 0) === 1,
+        'channel-015 zero must route through discrete key release');
+    assert((inputWords[keyWord] & 0o37) === 0,
+        'settled KEY RESET did not clear the five keycode bits');
+    assert(calls.filter(([name]) => name === 'write').length === 0,
+        'KEY RESET must not enqueue a channel-015 zero packet / second KEYRUPT');
+    assert(calls.filter(([name]) => name === 'step').length === 0,
+        'settled KEY RESET must not advance the AGC merely to release a switch');
+    assert(core.pendingNormalKeyCode === 0,
+        'settled KEY RESET must clear pending-make bookkeeping');
+
+    // Very fast release before yaAGC has consumed the asynchronous make packet:
+    // one MCT is allowed solely to deliver that queued make/KEYRUPT before the
+    // direct KEYRST clear, otherwise the release could erase the key before it
+    // ever reaches the AGC.
+    inputWords[keyWord] = 0;
+    core.pendingNormalKeyCode = 0o21;
+    calls.length = 0;
+    assert(core.keyRelease() === true,
+        'pending-make KEY RESET failed');
+    assert(calls.filter(([name, steps]) => name === 'step' && steps === 1).length === 1,
+        'pending make must be flushed with exactly one MCT before KEYRST');
+    assert(calls.filter(([name]) => name === 'write').length === 0,
+        'pending-make KEYRST must still avoid a zero-valued channel-015 packet');
+    assert(core.pendingNormalKeyCode === 0,
+        'pending-make KEY RESET must clear pending-make bookkeeping');
+
+    calls.length = 0;
+    await core.loadRope(new Uint8Array([1, 2, 3, 4]).buffer);
+    assert(calls.some(([name, size]) => name === 'malloc' && size === 4),
+        'loadRope must allocate the actual rope buffer length');
+    assert(calls.some(([name]) => name === 'set_fixed'),
+        'loadRope must call set_fixed');
+    assert(calls.some(([name]) => name === 'free'),
+        'loadRope must free its temporary WASM allocation');
+}
+
+function testNavigationAndSnapshots() {
+    const { core, calls } = makeCoreHarness({ memoryBytes: 220000 });
+    const bytes = new Uint8Array(core.memory.buffer);
+
+    assert(core.navKeyPress(0o20) === true,
+        'accepted navigation key must assert KEYRUPT2');
+    assert(calls.some(([name, channel, value]) => name === 'write'
+        && channel === 0o16 && value === 0o20),
+        'navigation key must write channel 016');
+    assert(calls.some(([name, steps]) => name === 'step' && steps === 1),
+        'navigation key must process one CPU step before KEYRUPT2');
+    assert(bytes[1024 + 92196 + 6] === 1,
+        'navigation key must assert KEYRUPT2 request byte');
+
+    // Deliberately snapshot transient physical switch states. importSnapshot()
+    // must validate the saved bytes first, then restore the external keyboard
+    // and active-low PRO contact to their physically released states.
+    const inputWords = new Uint16Array(core.memory.buffer);
+    const keyWord = core.inputChannelWordIndex(0o15);
+    const proWord = core.inputChannelWordIndex(0o32);
+    assert(keyWord >= 0 && proWord >= 0,
+        'could not resolve DSKY input words for snapshot test');
+    inputWords[keyWord] = (inputWords[keyWord] & ~0o37) | 0o21;
+    inputWords[proWord] &= ~0o20000;
+    core.pendingNormalKeyCode = 0o21;
+
+    bytes[10] = 0x12;
+    bytes[11] = 0x34;
+    const before = core.snapshotFingerprint();
+    const snapshot = core.exportSnapshot();
+    assert(snapshot.schema === 1 && snapshot.byteLength === bytes.length,
+        'snapshot metadata is invalid');
+    assert(snapshot.fingerprint === before,
+        'snapshot fingerprint must match current memory before physical normalization');
+
+    bytes[10] = 0;
+    bytes[11] = 0;
+    assert(core.importSnapshot(snapshot) === true,
+        'snapshot import must report success');
+    assert(bytes[10] === 0x12 && bytes[11] === 0x34,
+        'snapshot import did not restore WASM memory');
+    assert(core.snapshotFingerprint() !== before,
+        'snapshot restore must normalize held physical switch contacts after validating saved memory');
+    assert((inputWords[keyWord] & 0o37) === 0,
+        'snapshot restore left a normal DSKY key electrically held');
+    assert((inputWords[proWord] & 0o20000) === 0o20000,
+        'snapshot restore left active-low PRO electrically held');
+    assert(core.pendingNormalKeyCode === 0,
+        'snapshot restore retained transient key-make bookkeeping');
+
+    const words = new Uint16Array(core.memory.buffer);
+    const baseWord = 1024 >>> 1;
+    words[baseWord + 2 * 0o400 + 0o123] = 0x6abc;
+    assert(core.readErasable(2, 0o123) === 0x6abc,
+        'readErasable returned the wrong word');
+    assert(core.readErasable(8, 0) === null,
+        'readErasable must reject invalid banks');
+}
+
+function testSchedulerLifecycle() {
+    let now = 5000;
+    let intervalCallback = null;
+    let intervalMs = null;
+    let intervalCreates = 0;
+    const cleared = [];
+    const steps = [];
+
+    const context = createEnvironment({
+        performance: { now: () => now },
+        setInterval(callback, ms) {
+            intervalCreates++;
+            intervalCallback = callback;
+            intervalMs = ms;
+            return 77;
+        },
+        clearInterval(id) { cleared.push(id); }
+    });
+    const core = new context.AgcCore();
+    core.exports = {
+        cpu_step(count) { steps.push(count); },
+        packet_read() { return 0; }
+    };
+
+    core.start(1);
+    assert(core.running && core.timer === 77,
+        'scheduler did not enter running state');
+    assert(intervalCreates === 1 && intervalMs === 4,
+        `scheduler must run the peripheral drain at 4 ms; got ${intervalMs}`);
+
+    core.start(2);
+    assert(intervalCreates === 1 && core.clockDivisor === 1,
+        'start must be idempotent while already running');
+
+    const start = core.startTime;
+    now += 11.72;
+    const expected = Math.floor((now - start) / (1000 / 85333));
+    intervalCallback();
+    assert(steps.length === 1 && steps[0] === expected,
+        `scheduler executed ${JSON.stringify(steps)}; expected ${expected}`);
+    assert(core.totalSteps === expected,
+        'scheduler accounting does not match executed machine cycles');
+
+    const beforeBacklog = steps.length;
+    now += 2000;
+    intervalCallback();
+    assert(steps.length === beforeBacklog,
+        'scheduler must not execute an unbounded backlog');
+    assert(core.totalSteps === 0 && core.startTime === now,
+        'backlog rebase did not reset relative scheduler accounting');
+
+    core.stop();
+    assert(!core.running && core.timer === 0 && cleared.includes(77),
+        'stop did not clear the active scheduler');
+}
+
+async function testLoadPipeline() {
+    const calls = [];
+    let memory;
+
+    class FakeMemory {
+        constructor(options) {
+            calls.push(['memory', options.initial]);
+            this.buffer = new ArrayBuffer(options.initial * 65536);
+            memory = this;
+        }
+    }
+
+    const fakeExports = {
+        malloc(size) { calls.push(['malloc', size]); return 1024; },
+        free(ptr) { calls.push(['free', ptr]); },
+        set_fixed(ptr) { calls.push(['set_fixed', ptr]); },
+        cpu_reset() { calls.push(['reset']); },
+        cpu_step(steps) { calls.push(['step', steps]); },
+        packet_write(channel, value) { calls.push(['write', channel, value]); return 4; },
+        packet_read() { calls.push(['read']); return 0; }
+    };
+
+    const fakeWebAssembly = {
+        Memory: FakeMemory,
+        async compile(bytes) { calls.push(['compile', bytes.byteLength]); return { fake: true }; },
+        async instantiate(module, imports) {
+            assert(module.fake, 'compiled module must reach instantiate');
+            assert(imports.env.memory === memory, 'env.memory must use the allocated AGC memory');
+            const wasi = imports.wasi_snapshot_preview1;
+            for (const name of ['fd_close', 'fd_fdstat_get', 'fd_seek', 'fd_write']) {
+                assert(typeof wasi[name] === 'function', `missing WASI import ${name}`);
+            }
+            calls.push(['instantiate']);
+            return { exports: fakeExports };
+        }
+    };
+
+    const fetched = [];
+    const context = createEnvironment({
+        WebAssembly: fakeWebAssembly,
+        fetch: async (url) => {
+            fetched.push(String(url));
+            return {
+                ok: true,
+                status: 200,
+                async arrayBuffer() {
+                    return new ArrayBuffer(String(url).endsWith('.wasm') ? 32 : 73728);
+                }
+            };
+        }
+    });
+
+    const core = new context.AgcCore();
+    await core.load();
+
+    assert(fetched.includes('yaAGC.wasm'),
+        'default load did not fetch yaAGC.wasm');
+    assert(fetched.includes('Comanche055.bin'),
+        'default load did not fetch Comanche055.bin');
+    assert(!fetched.includes('Luminary099.bin'),
+        'CM-only default load unexpectedly fetched Luminary099.bin');
+    assert(calls.filter(([name]) => name === 'reset').length === 2,
+        'load must prime transport state and then restore the true AGC reset vector');
+    assert(calls.filter(([name, count]) => name === 'step' && count === 1).length === 1,
+        'load must initialize the ring buffer with exactly one CPU step');
+    assert(calls.filter(([name]) => name === 'write').length === 3,
+        'load must queue the two DSKY input masks plus the released active-low PRO level');
+    assert(core.totalSteps === 0,
+        'post-load mission accounting must begin at the true reset vector');
+}
+
+async function main() {
+    await testResetAndPeripheralSetup();
+    testNavigationAndSnapshots();
+    testSchedulerLifecycle();
+    await testLoadPipeline();
+    console.log('agc-core source smoke: PASS');
+}
+
+main().catch((error) => {
+    console.error(error.stack || error);
+    process.exitCode = 1;
+});
