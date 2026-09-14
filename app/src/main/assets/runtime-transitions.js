@@ -5,7 +5,11 @@
   if (!api || api.runtimeTransitions) return;
 
   const baseEnterAgc = api.enterAgc;
-  if (typeof baseEnterAgc !== 'function') return;
+  const baseEnterClock = window.enterClock;
+  const baseApiEnterClock = api.enterClock;
+  if (typeof baseEnterAgc !== 'function'
+      || typeof baseEnterClock !== 'function'
+      || typeof baseApiEnterClock !== 'function') return;
 
   const MODES = Object.freeze({
     CLOCK:'clock',
@@ -16,6 +20,9 @@
   let transitionPromise = null;
   let transitionSerial = 0;
   let lastTransition = null;
+  let clockTransitionSerial = 0;
+  let lastClockTransition = null;
+  const beforeClockHooks = new Set();
 
   function status() {
     if (typeof api.appStatus !== 'function') throw new Error('AGC runtime status API unavailable');
@@ -87,24 +94,64 @@
     });
   }
 
+  function onBeforeClock(handler) {
+    if (typeof handler !== 'function') throw new TypeError('CLOCK transition hook must be a function');
+    beforeClockHooks.add(handler);
+    return () => beforeClockHooks.delete(handler);
+  }
+
+  function runBeforeClock(reason, from) {
+    for (const handler of Array.from(beforeClockHooks)) {
+      try { handler(Object.freeze({reason, from})); }
+      catch (error) { console.error('CLOCK transition cleanup failed', error); }
+    }
+  }
+
+  function sharedEnterClock(...args) {
+    const from = mode();
+    runBeforeClock('app enterClock', from);
+    const result = baseEnterClock.apply(this, args);
+    const next = status();
+    lastClockTransition = Object.freeze({
+      serial:++clockTransitionSerial,
+      from,
+      to:next.mode,
+      reason:'app enterClock'
+    });
+    return result;
+  }
+
+  // AGCDSKY.enterClock() in app.js is intentionally a no-argument convenience
+  // wrapper that requests preserveAgc=true. Keep that wrapper intact and let it
+  // resolve the replaced classic-script global enterClock binding, so cleanup
+  // hooks run exactly once without changing the public API's historical default.
+  function sharedApiEnterClock(...args) {
+    return baseApiEnterClock.apply(this, args);
+  }
+
   const runtime = Object.freeze({
     modes:MODES,
     mode,
     core,
     requestAgc,
+    onBeforeClock,
     snapshot:() => ({
       mode:mode(),
       transitionInFlight:!!transitionPromise,
-      lastTransition:lastTransition ? {...lastTransition} : null
+      lastTransition:lastTransition ? {...lastTransition} : null,
+      lastClockTransition:lastClockTransition ? {...lastClockTransition} : null,
+      beforeClockHooks:beforeClockHooks.size
     })
   });
 
-  // app.js is a classic script, so its global `enterAgc` identifier resolves
-  // through the window global binding at call time. Replacing both references
-  // therefore covers the already-installed AGC button/startup closures as well
-  // as later callers through AGCDSKY, without changing the underlying loader.
+  // app.js is a classic script, so its global transition identifiers resolve
+  // through window at call time. Replace AGC entry directly. For CLOCK entry,
+  // replace the global binding and keep the exported convenience wrapper above
+  // so its preserveAgc=true behavior is unchanged.
   window.enterAgc = sharedEnterAgc;
   api.enterAgc = sharedEnterAgc;
+  window.enterClock = sharedEnterClock;
+  api.enterClock = sharedApiEnterClock;
   window.AGCDSKY_RUNTIME = runtime;
   api.runtimeTransitions = runtime;
 })();
