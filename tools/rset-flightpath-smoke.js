@@ -18,6 +18,7 @@ const ASSETS = path.join(ROOT, 'app/src/main/assets');
 const appSource = fs.readFileSync(path.join(ASSETS, 'app.js'), 'utf8');
 const keycodesSource = fs.readFileSync(path.join(ASSETS, 'dsky-keycodes.js'), 'utf8');
 const transitionsSource = fs.readFileSync(path.join(ASSETS, 'runtime-transitions.js'), 'utf8');
+const inputSource = fs.readFileSync(path.join(ASSETS, 'dsky-input-runtime.js'), 'utf8');
 const keyboardSource = fs.readFileSync(path.join(ASSETS, 'keyboard-electrical-interlock.js'), 'utf8');
 const clockSource = fs.readFileSync(path.join(ASSETS, 'clock-behavior.js'), 'utf8');
 
@@ -30,18 +31,22 @@ function assert(condition, message) {
 }
 
 const mapMatch = appSource.match(/const\s+AGC_KEY\s*=\s*(\{[^}]+\})/s);
-assert(mapMatch, 'app.js canonical keycode table missing');
+assert(mapMatch, 'app.js legacy keycode table missing');
 const appMap = vm.runInNewContext(`(${mapMatch[1]})`, Object.create(null));
-assert(appMap.R === 0o22, `RSET canonical keycode is ${String(appMap.R)}, expected octal 022`);
+assert(appMap.R === 0o22, `RSET app keycode is ${String(appMap.R)}, expected octal 022`);
 assert(!Object.prototype.hasOwnProperty.call(appMap, 'P'), 'PRO leaked into the normal keycode table');
 
-// Neither physical input layer may directly manipulate display/error state.
+// Neither physical input layer may directly manipulate display/error state or
+// bypass the shared channel-015 input runtime.
 for (const [file, source] of [
   ['keyboard-electrical-interlock.js', keyboardSource],
   ['clock-behavior.js', clockSource]
 ]) {
   for (const forbidden of ['clearLamps(', 'resetAgcFace(', 'cancelLampTest(', "press('R')", 'press("R")']) {
     assert(!source.includes(forbidden), `${file} contains synthetic RSET/reset behavior: ${forbidden}`);
+  }
+  for (const forbidden of ['.keyPress(', '.keyRelease(', 'writeIo(0o15']) {
+    assert(!source.includes(forbidden), `${file} bypasses shared input runtime: ${forbidden}`);
   }
 }
 
@@ -138,13 +143,13 @@ async function main() {
   context.enterAgc=AGCDSKY.enterAgc;
 
   vm.createContext(context);
-  // Reproduce app.js's top-level lexical table, then execute the same bridge
-  // production uses. The bridge must resolve RSET=022 from that canonical map.
-  vm.runInContext(`const AGC_KEY=${mapMatch[1]};`,context,{filename:'app-keycodes.js'});
   vm.runInContext(keycodesSource,context,{filename:'dsky-keycodes.js'});
   assert(context.AGCDSKY_KEY_CODES.R === 0o22, 'shared RSET keycode is not 022');
 
   vm.runInContext(transitionsSource,context,{filename:'runtime-transitions.js'});
+  vm.runInContext(inputSource,context,{filename:'dsky-input-runtime.js'});
+  assert(context.AGCDSKY_INPUT === AGCDSKY.inputRuntime,
+    'RSET harness did not initialize the shared input runtime');
   vm.runInContext(clockSource,context,{filename:'clock-behavior.js'});
   vm.runInContext(keyboardSource,context,{filename:'keyboard-electrical-interlock.js'});
   assert(AGCDSKY.keyboardElectrical, 'physical electrical interlock did not initialize');
@@ -171,8 +176,6 @@ async function main() {
   assert(makes.length === 1 && makes[0][1] === 0o22,
     `CLOCK RSET forwarded ${makes.length ? makes[0][1].toString(8) : 'no'} keycode instead of 022`);
 
-  // Drain only the electrical-return timers. The resulting cycle must contain
-  // one KEYRST and no synthetic clear/reset action.
   let guard=0;
   while(timers.size){
     let id=null, selected=null;
@@ -188,8 +191,6 @@ async function main() {
   assert(!state.cycleLatched&&!state.electricalMade&&!state.keyResetPending,
     'CLOCK RSET left channel-015 electrical state latched');
 
-  // Already in AGC: RSET remains an ordinary physical channel-015 make. A fast
-  // tap must produce another 022 and another KEYRST, with no mode transition.
   const entersBefore=enterCount;
   event=makeEvent(rset,51); dispatchPointer(win,doc,'pointerdown',event);
   event=makeEvent(rset,51); dispatchPointer(win,doc,'pointerup',event);
@@ -213,7 +214,7 @@ async function main() {
     'two physical RSET cycles did not produce exactly two KEYRST releases');
 
   console.log('RSET flight path smoke: PASS');
-  console.log('  CLOCK handoff and AGC-mode physical RSET both deliver Pinball 022 + KEYRST with no synthetic JavaScript reset path');
+  console.log('  CLOCK handoff and AGC-mode physical RSET both deliver Pinball 022 + KEYRST through shared input runtime with no synthetic JavaScript reset path');
 }
 
 main().catch(error=>fail(error && error.stack ? error.stack : String(error)));
