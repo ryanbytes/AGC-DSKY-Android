@@ -3,15 +3,13 @@
 // Synthetic PHONE CLOCK relay/display runtime. This owns only clock-mode relay
 // state, queueing, and the local lamp-test presentation. Real AGC output state
 // and snapshot persistence are owned by their dedicated runtimes.
-const appState=window.AGCDSKY_APP_STATE;
-if(!appState)throw new Error('Shared application state unavailable');
+const clockState=window.AGCDSKY_APP_STATE;
+if(!clockState)throw new Error('Shared application state unavailable');
 const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20,V35_ROW_MS=40,V35_TEST_MS=5000;
 let clockDigits={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']},
     clockRelayWords={},relayQueue=[],relayBusy=false;
 let lampTestActive=false,lampTestTimer=0,lampTestSoundTimers=[];
 
-// Block II uses five latching relays per character; the contact matrix decodes
-// the 5-bit relay state into the seven EL strokes.
 const DIGIT_RELAY={' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31};
 const CLOCK_GROUPS=[
   {relay:8,cells:[['r1',0]],singleRight:true},
@@ -40,12 +38,12 @@ function stopClockQueue(){relayQueue=[];relayBusy=false}
 function runRelayQueue(){
   const job=relayQueue.shift();
   if(!job){relayBusy=false;return}
-  if(appState.mode!=='clock'){relayBusy=false;relayQueue=[];return}
+  if(clockState.mode!=='clock'){relayBusy=false;relayQueue=[];return}
   const old=clockRelayWords[job.group.relay]??job.newWord,diff=popcount11(old^job.newWord);
   clockRelayWords[job.group.relay]=job.newWord;
   if(tickSound&&diff)playRelayBurst(diff);
   setTimeout(()=>{
-    if(appState.mode!=='clock')return;
+    if(clockState.mode!=='clock')return;
     const touched=new Set();
     for(const [name,i] of job.group.cells){clockDigits[name][i]=job.want[name][i];touched.add(name)}
     touched.forEach(renderClockReg);
@@ -53,7 +51,7 @@ function runRelayQueue(){
   setTimeout(runRelayQueue,CLOCK_RELAY_MS);
 }
 function tick(){
-  if(appState.mode!=='clock'||lampTestActive||relayBusy)return;
+  if(clockState.mode!=='clock'||lampTestActive||relayBusy)return;
   const want=desiredClockDigits(),jobs=[];
   for(const group of CLOCK_GROUPS){const w=clockWord(group,want);if(clockRelayWords[group.relay]!==w)jobs.push({group,want,newWord:w})}
   if(!jobs.length)return;
@@ -72,14 +70,14 @@ function v35Low11(relay){
   const eight=DIGIT_RELAY['8'],plus=(relay===7||relay===5||relay===2)?1:0;
   return (plus<<10)|(eight<<5)|eight;
 }
-function captureClockRelayState(commandVerb=appState.verb,commandNoun=appState.noun){
+function captureClockRelayState(commandVerb=clockState.verb,commandNoun=clockState.noun){
   const out={11:pairLow11('00'),10:pairLow11(commandVerb),9:pairLow11(commandNoun),12:0};
   for(const group of CLOCK_GROUPS)out[group.relay]=(clockRelayWords[group.relay]??0)&0x7ff;
   return out;
 }
 function v35RelayState(){
   const out={};for(const relay of [11,10,9,8,7,6,5,4,3,2,1])out[relay]=v35Low11(relay);
-  out[12]=appState.selectedMission==='comanche055'?0o650:0o674;return out;
+  out[12]=clockState.selectedMission==='comanche055'?0o650:0o674;return out;
 }
 function scheduleV35RelaySounds(from,to){
   clearLampTestSoundTimers();
@@ -99,9 +97,9 @@ function lampTest(){
   document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.add('on'));
   set2('prog','88');set2('verb','88');set2('noun','88');['r1','r2','r3'].forEach(x=>setReg(x,'+','88888'));
   lampTestTimer=setTimeout(()=>{
-    lampTestTimer=0;if(appState.mode!=='clock'){cancelLampTest();return}
+    lampTestTimer=0;if(clockState.mode!=='clock'){cancelLampTest();return}
     const want=desiredClockDigits();for(const group of CLOCK_GROUPS)clockRelayWords[group.relay]=clockWord(group,want);
     const restore=captureClockRelayState('16','65');scheduleV35RelaySounds(active,restore);
-    lampTestActive=false;clearLamps();set2('prog','00');appState.verb='16';appState.noun='65';show(appState.verb,appState.noun);stopClockQueue();syncClockFace();
+    lampTestActive=false;clearLamps();set2('prog','00');clockState.verb='16';clockState.noun='65';show(clockState.verb,clockState.noun);stopClockQueue();syncClockFace();
   },V35_TEST_MS);
 }
