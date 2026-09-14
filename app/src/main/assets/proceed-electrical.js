@@ -5,8 +5,8 @@
  *
  * PRO is electrically separate from the 18-key channel-015 matrix. The AGC
  * interface exposes it as active-low input channel 032 bit 020000: held = 0,
- * released = 020000. This layer owns only the physical pointer/lifecycle
- * contact. AgcCore.proceedKey() remains the electrical primitive.
+ * released = 020000. This layer owns only physical pointer/lifecycle state;
+ * dsky-input-runtime.js owns the electrical primitive.
  */
 (() => {
   if (window.__DSKY_PROCEED_ELECTRICAL__) return;
@@ -14,7 +14,11 @@
 
   const api = window.AGCDSKY;
   const runtime = api?.runtimeTransitions;
-  if (!api || !runtime || typeof runtime.mode !== 'function' || typeof runtime.core !== 'function') return;
+  const input = api?.inputRuntime;
+  if (!api || !runtime || !input
+      || typeof runtime.mode !== 'function'
+      || typeof input.ready !== 'function'
+      || typeof input.proceed !== 'function') return;
 
   const pro = document.querySelector('[data-key="P"]');
   let proPointer = null;
@@ -22,11 +26,6 @@
   function currentMode() {
     try { return String(runtime.mode() || ''); }
     catch (_) { return ''; }
-  }
-
-  function currentCore() {
-    try { return runtime.core(); }
-    catch (_) { return null; }
   }
 
   function reportFailure(error) {
@@ -42,18 +41,15 @@
     if (proPointer === null) return false;
     proPointer = null;
     if (pro) pro.classList.remove('pressed');
-    const core = currentCore();
-    if (currentMode() === runtime.modes.AGC && core) {
-      try { core.proceedKey(false); }
+    if (currentMode() === runtime.modes.AGC && input.ready()) {
+      try { input.proceed(false); }
       catch (error) { reportFailure(error); }
     }
     return true;
   }
 
   function onPointerDown(event) {
-    if (currentMode() !== runtime.modes.AGC) return;
-    const core = currentCore();
-    if (!core || typeof core.proceedKey !== 'function') return;
+    if (currentMode() !== runtime.modes.AGC || !input.ready()) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -62,7 +58,7 @@
     proPointer = event.pointerId;
     pro.classList.add('pressed');
     try { if (pro.setPointerCapture) pro.setPointerCapture(event.pointerId); } catch (_) {}
-    try { core.proceedKey(true); }
+    try { input.proceed(true); }
     catch (error) {
       releaseProceed();
       reportFailure(error);
