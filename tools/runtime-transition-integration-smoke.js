@@ -11,14 +11,12 @@ const keycodeSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/dsky-keycodes.js'), 'utf8');
 const transitionSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/runtime-transitions.js'), 'utf8');
+const inputSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/dsky-input-runtime.js'), 'utf8');
 const clockSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/clock-behavior.js'), 'utf8');
 const keyboardSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/keyboard-electrical-interlock.js'), 'utf8');
-const KEY_CODES = Object.freeze({
-  '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
-  V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
-});
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -72,20 +70,29 @@ async function main() {
   const dreamSilenceIndex = html.indexOf('<script src="dream-silence.js"></script>');
   const keycodesIndex = html.indexOf('<script src="dsky-keycodes.js"></script>');
   const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
+  const inputIndex = html.indexOf('<script src="dsky-input-runtime.js"></script>');
   const clockIndex = html.indexOf('<script src="clock-behavior.js"></script>');
   const cmIndex = html.indexOf('<script src="cm-mode.js"></script>');
   assert(appIndex >= 0
       && dreamSilenceIndex > appIndex
       && keycodesIndex > dreamSilenceIndex
       && runtimeIndex > keycodesIndex
-      && clockIndex > runtimeIndex
+      && inputIndex > runtimeIndex
+      && clockIndex > inputIndex
       && cmIndex > clockIndex,
-    'script order must be app -> dream silence -> shared keycodes -> runtime transitions -> clock fallback -> CM dynamic features');
+    'script order must be app -> dream silence -> shared keycodes -> runtime -> input runtime -> clock fallback -> CM config');
   assert(!transitionSource.includes('waitForAgcReady') && !transitionSource.includes('LOAD_POLL_MS'),
     'shared transition service must not retain an independent loading poll loop');
   assert(clockSource.includes('window.AGCDSKY_KEY_CODES')
       && keyboardSource.includes('window.AGCDSKY_KEY_CODES'),
     'clock and electrical layers must consume the shared DSKY keycodes');
+  assert(clockSource.includes('api?.inputRuntime') && keyboardSource.includes('api?.inputRuntime'),
+    'clock and electrical layers must consume shared input runtime');
+  for (const [label, source] of [['clock', clockSource], ['keyboard', keyboardSource]]) {
+    for (const forbidden of ['.keyPress(', '.keyRelease(', 'writeIo(0o15']) {
+      assert(!source.includes(forbidden), `${label} layer bypasses input runtime with ${forbidden}`);
+    }
+  }
 
   const windowListeners = Object.create(null);
   const documentListeners = Object.create(null);
@@ -122,7 +129,6 @@ async function main() {
   };
 
   const context = {
-    AGC_KEY:KEY_CODES,
     console,
     Promise,
     performance:{now(){ return nowMs; }},
@@ -150,8 +156,6 @@ async function main() {
   vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
   assert(context.AGCDSKY_KEY_CODES && Object.isFrozen(context.AGCDSKY_KEY_CODES),
     'shared DSKY keycode bridge did not publish a frozen table');
-  assert(context.AGCDSKY_KEY_CODES !== KEY_CODES,
-    'shared DSKY keycodes must be an immutable copy rather than the source object');
 
   vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
   assert(AGCDSKY.runtimeTransitions,
@@ -161,17 +165,18 @@ async function main() {
   assert(context.enterAgc !== originalEnterAgc && AGCDSKY.enterAgc === context.enterAgc,
     'runtime service did not replace both global/API AGC entry references');
 
+  vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
+  assert(context.AGCDSKY_INPUT === AGCDSKY.inputRuntime,
+    'input runtime did not publish one shared controller');
+
   vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
   assert(AGCDSKY.clockBehavior,
-    'clock fallback layer did not initialize against the transition service/shared keycodes');
+    'clock fallback layer did not initialize against shared transition/input/keycode services');
 
   vm.runInContext(keyboardSource, context, {filename:'keyboard-electrical-interlock.js'});
   assert(AGCDSKY.keyboardElectrical,
-    'keyboard electrical interlock did not initialize against shared keycodes');
+    'keyboard electrical interlock did not initialize against shared input/keycode services');
 
-  // Simulate app.js's already-installed AGC button/startup closure calling the
-  // global binding first. The physical keyboard must join this exact Promise;
-  // no second loader call and no readiness polling are allowed.
   const existingTransition = context.enterAgc();
   await flushMicrotasks(2);
   assert(mode === 'agc-loading', 'direct app transition did not enter agc-loading');
@@ -183,8 +188,6 @@ async function main() {
   assert(event.prevented && event.immediate,
     'electrical interlock did not own the physical VERB contact at window capture');
 
-  // Fast tap while loading. finishPointer closes the contact immediately; the
-  // shared Promise should retain it until the already-running app load ends.
   event = makeEvent(verb, 41);
   dispatchPointer(windowListeners, documentListeners, 'pointerup', event);
   let state = AGCDSKY.keyboardElectrical.state();
@@ -248,7 +251,7 @@ async function main() {
     'channel-015 electrical cycle remained latched after KEYRST');
 
   console.log('runtime transition integration smoke: PASS');
-  console.log('  shared keycodes, direct app entry, window/document ownership, physical join, no polling, and make/KEYRST verified');
+  console.log('  shared keycodes/runtime/input, direct app entry, window/document ownership, physical join, no polling, and make/KEYRST verified');
 }
 
 main().catch(error => {
