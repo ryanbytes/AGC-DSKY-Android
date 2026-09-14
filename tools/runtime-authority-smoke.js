@@ -29,9 +29,15 @@ for (const marker of [
   'function mode()',
   'function core()',
   'requestAgc,',
+  'function onBeforeClock(handler)',
+  'const clockEntryAvailable',
+  'function sharedEnterClock(...args)',
+  'window.enterClock = sharedEnterClock',
+  'api.enterClock = sharedApiEnterClock',
   'modes:MODES',
   'mode,',
-  'core,'
+  'core,',
+  'onBeforeClock,'
 ]) {
   assert(runtime.includes(marker), `runtime-transitions.js missing authority marker: ${marker}`);
 }
@@ -54,6 +60,8 @@ for (const marker of [
 }
 assert(!input.includes('api.appStatus(') && !input.includes('api.getCore('),
   'input runtime must consume runtime-transitions rather than app mode/core directly');
+assert(!input.includes('window.enterClock ='),
+  'input runtime must not wrap application CLOCK entry');
 
 for (const [file, source] of consumers) {
   assert(source.includes('runtimeTransitions'), `${file} does not consume shared runtime authority`);
@@ -62,10 +70,18 @@ for (const [file, source] of consumers) {
   assert(!source.includes('api.getCore('), `${file} regained direct api.getCore() ownership`);
   assert(!source.includes('window.AGCDSKY.appStatus('), `${file} regained direct window.AGCDSKY.appStatus() ownership`);
   assert(!source.includes('window.AGCDSKY.getCore('), `${file} regained direct window.AGCDSKY.getCore() ownership`);
+  assert(!source.includes('window.enterClock ='), `${file} regained direct CLOCK-transition wrapping`);
   for (const primitive of ['.keyPress(', '.keyRelease(', 'writeIo(0o15', '.proceedKey(']) {
     assert(!source.includes(primitive), `${file} bypasses shared input runtime with ${primitive}`);
   }
 }
+
+const proceed = consumers.find(([file]) => file === 'proceed-electrical.js')[1];
+const keyboard = consumers.find(([file]) => file === 'keyboard-electrical-interlock.js')[1];
+assert(proceed.includes('runtime.onBeforeClock(releaseProceed)'),
+  'PRO must release through shared pre-CLOCK transition cleanup');
+assert(keyboard.includes('runtime.onBeforeClock(releaseForClock)'),
+  'normal keyboard must release through shared pre-CLOCK transition cleanup');
 
 const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
 const inputIndex = html.indexOf('<script src="dsky-input-runtime.js"></script>');
@@ -77,4 +93,4 @@ for (const file of ['clock-behavior.js', 'proceed-electrical.js', 'keyboard-elec
 }
 
 console.log('runtime authority smoke: PASS');
-console.log('  mode/core interpretation is centralized in runtime-transitions; channel-015/032 electrical primitives are centralized in dsky-input-runtime');
+console.log('  AGC/CLOCK transition ownership is centralized in runtime-transitions; channel-015/032 primitives are centralized in dsky-input-runtime');
