@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/el_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <FrameLayout
+        android:id="@+id/el_widget_panel"
+        android:layout_width="117.678dp"
+        android:layout_height="198.525dp"
+        android:layout_gravity="center"
+        android:background="#565A56">
+
+        <ImageView
+            android:id="@+id/el_widget_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="0dp"
+            android:scaleType="fitXY"
+            android:contentDescription="Apollo DSKY electroluminescent display" />
+
+        <AdapterViewFlipper
+            android:id="@+id/el_hour_flipper"
+            android:layout_width="106dp"
+            android:layout_height="23dp"
+            android:layout_gravity="start|top"
+            android:layout_marginStart="5.839dp"
+            android:layout_marginTop="92.526dp"
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="3600000" />
+
+        <AdapterViewFlipper
+            android:id="@+id/el_minute_flipper"
+            android:layout_width="106dp"
+            android:layout_height="23dp"
+            android:layout_gravity="start|top"
+            android:layout_marginStart="5.839dp"
+            android:layout_marginTop="126.661dp"
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="60000" />
+
+        <AdapterViewFlipper
+            android:id="@+id/el_seconds_flipper"
+            android:layout_width="106dp"
+            android:layout_height="23dp"
+            android:layout_gravity="start|top"
+            android:layout_marginStart="5.839dp"
+            android:layout_marginTop="160.797dp"
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="1000" />
+    </FrameLayout>
+</FrameLayout>
