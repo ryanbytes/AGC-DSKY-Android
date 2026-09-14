@@ -134,6 +134,7 @@ node tools/clock-fallback-cancel-smoke.js
 node tools/runtime-authority-smoke.js
 node tools/runtime-clock-transition-smoke.js
 node tools/dsky-input-runtime-smoke.js
+node tools/app-input-boundary-smoke.js
 node tools/audio-recovery-smoke.js
 node tools/cheatsheet-smoke.js
 node tools/optics-lifecycle-smoke.js
