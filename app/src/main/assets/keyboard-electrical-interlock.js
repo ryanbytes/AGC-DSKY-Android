@@ -181,9 +181,7 @@
 
       if (modeNow === runtime.modes.AGC && input.ready()) {
         registerElectricalMake(code);
-        return;
       }
-      if (typeof window.press === 'function') window.press(key);
     } catch (error) {
       console.error('DSKY series-key contact failed', error);
     }
