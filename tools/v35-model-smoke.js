@@ -69,10 +69,12 @@ for (const relay of [11,10,9,8,7,6,5,4,3,2,1]) {
 
 assert(app.includes('V35_ROW_MS=40,V35_TEST_MS=5000'),
   'base relay-sound model must retain 40 ms row spacing and five-second test duration');
-assert(app.includes("if(verb==='35'){$('mode').textContent='V35 · REAL AGC MODE REQUIRED';return}"),
-  'phone-clock command path must refuse to synthesize V35 as real AGC output');
+assert(!app.includes('function executeClock(')
+    && !app.includes('PHONE CLOCK INPUT')
+    && !app.includes('V35 · REAL AGC MODE REQUIRED'),
+  'synthetic phone-clock DSKY command path must remain removed; real AGC owns V35 commands');
 assert(app.includes("document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.add('on'))"),
-  'legacy local lamp-test helper unexpectedly changed; real AGC V35 remains authoritative through the command gate');
+  'local lamp-test presentation helper unexpectedly changed; real AGC V35 remains authoritative');
 
 assert(fidelity.includes('In AGC mode V35 is not synthesized here'),
   'hardware-fidelity layer must document real Comanche/yaAGC V35 authority');
@@ -118,4 +120,4 @@ assert(!relayAudio.includes('renderAgcReg(') && !relayAudio.includes("set2('"),
   'relay manufacturing layer must not render sub-20-ms contact motion to the EL face');
 
 console.log('V35 relay model smoke: PASS');
-console.log('  Comanche055 FULLDSP/FULLDSP1 rows, relay-12 0650, real-AGC command gate, five-second timing, 320 ms flash quantum, maintained PRO, and deterministic relay manufacturing variation verified');
+console.log('  Comanche055 FULLDSP/FULLDSP1 rows, relay-12 0650, no synthetic phone command path, five-second timing, 320 ms flash quantum, maintained PRO, and deterministic relay manufacturing variation verified');
