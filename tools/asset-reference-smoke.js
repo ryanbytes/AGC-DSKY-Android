@@ -88,10 +88,12 @@ assert(!dreamSilence.includes("store.set('audioTickV4'"),
 const app = fs.readFileSync(APP, 'utf8');
 assert(app.includes("comanche055:{label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}"),
     'current app no longer defines the Comanche 055 mission');
-assert(app.includes('const AGC_KEY=window.AGCDSKY_KEY_CODES;'),
-    'app.js no longer consumes the parser-loaded shared DSKY keycode table');
-assert(!/const\s+AGC_KEY\s*=\s*\{/.test(app),
-    'app.js regained a private DSKY keycode literal');
+for (const forbidden of ['AGC_KEY', 'AGCDSKY_KEY_CODES', '.keyPress(', '.keyRelease(', '.proceedKey(', 'writeIo(0o15']) {
+    assert(!app.includes(forbidden),
+        `app.js regained extracted DSKY input ownership: ${forbidden}`);
+}
+assert(app.includes("if(mode==='agc')return;"),
+    'legacy app press() helper is no longer explicitly CLOCK-only');
 assert(!app.includes('Luminary099.bin'),
     'CM-only app unexpectedly references Luminary099.bin');
 
