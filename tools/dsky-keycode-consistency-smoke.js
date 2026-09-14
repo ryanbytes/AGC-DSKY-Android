@@ -7,6 +7,7 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'app/src/main/assets');
+const html = fs.readFileSync(path.join(ASSETS, 'index.html'), 'utf8');
 const appSource = fs.readFileSync(path.join(ASSETS, 'app.js'), 'utf8');
 const sharedSource = fs.readFileSync(path.join(ASSETS, 'dsky-keycodes.js'), 'utf8');
 const clockSource = fs.readFileSync(path.join(ASSETS, 'clock-behavior.js'), 'utf8');
@@ -18,11 +19,6 @@ const canonical = Object.freeze({
   V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
 });
 function fail(message){ console.error('DSKY KEYCODE CONSISTENCY FAIL: ' + message); process.exit(1); }
-function extractAppLiteral(){
-  const match = appSource.match(/const\s+AGC_KEY\s*=\s*(\{[^}]+\})/s);
-  if (!match) fail('app.js legacy AGC_KEY table is missing before its input path is migrated');
-  return match[1];
-}
 function assertCanonical(map, label){
   const expected = Object.keys(canonical).sort();
   const actual = Object.keys(map || {}).sort();
@@ -37,21 +33,7 @@ function assertCanonical(map, label){
   if (Object.prototype.hasOwnProperty.call(map, 'P')) fail(`${label} incorrectly includes PRO in channel 015`);
 }
 
-const literal = extractAppLiteral();
-let appMap;
-try {
-  appMap = vm.runInNewContext(`(${literal})`, Object.create(null), {filename:'app.js'});
-} catch (error) {
-  fail(`app.js AGC_KEY could not be evaluated: ${error.message}`);
-}
-assertCanonical(appMap, 'app.js');
-
-// The shared map must now initialize without app.js/global lexical state. This
-// keeps later extracted input layers independently loadable while the smoke
-// prevents the temporary app.js copy from drifting during the migration.
-if (/\bAGC_KEY\b/.test(sharedSource)) {
-  fail('dsky-keycodes.js still depends on app.js AGC_KEY lexical state');
-}
+// dsky-keycodes.js is now the only literal Pinball map in the packaged frontend.
 const context = {window:null, Object};
 context.window = context;
 vm.createContext(context);
@@ -60,8 +42,23 @@ const shared = context.AGCDSKY_KEY_CODES;
 if (!shared || !Object.isFrozen(shared)) fail('shared DSKY keycode table is missing or mutable');
 assertCanonical(shared, 'shared table');
 
-for (const key of Object.keys(canonical)) {
-  if (shared[key] !== appMap[key]) fail(`shared/app keycode drift at ${key}`);
+for (const marker of [
+  'const AGC_KEY=window.AGCDSKY_KEY_CODES;',
+  "if(!AGC_KEY)throw new Error('Shared DSKY keycode table unavailable')"
+]) {
+  if (!appSource.includes(marker)) fail(`app.js does not require shared DSKY keycodes: ${marker}`);
+}
+if (/const\s+AGC_KEY\s*=\s*\{/.test(appSource)
+    || appSource.includes("'1':0o01")
+    || appSource.includes('V:0o21')
+    || appSource.includes('N:0o37')) {
+  fail('app.js regained a private Pinball keycode literal');
+}
+
+const keycodesIndex = html.indexOf('<script src="dsky-keycodes.js"></script>');
+const appIndex = html.indexOf('<script src="app.js"></script>');
+if (keycodesIndex < 0 || appIndex < 0 || keycodesIndex > appIndex) {
+  fail('dsky-keycodes.js must parser-load before app.js');
 }
 
 const consumers = [
@@ -75,9 +72,8 @@ for (const [file, source, marker] of consumers) {
   }
 }
 
-// flight-hardware-ui.js now owns presentation personality only. A keycode-table
-// dependency there would mean the removed document-level channel-015 path was
-// being reintroduced instead of keeping the electrical interlock authoritative.
+// flight-hardware-ui.js owns presentation personality only. A keycode-table
+// dependency there would reintroduce electrical ownership outside the shared path.
 for (const forbidden of [
   'AGCDSKY_KEY_CODES',
   'DSKY_KEY_CODE',
@@ -92,4 +88,4 @@ for (const forbidden of [
 }
 
 console.log('DSKY keycode consistency smoke: PASS');
-console.log('  standalone shared Pinball map matches the legacy app.js table; clock fallback and the electrical interlock consume the frozen shared map; PRO remains separate');
+console.log('  dsky-keycodes.js is the single frozen Pinball map consumed by app, clock fallback, and the electrical interlock; PRO remains separate');
