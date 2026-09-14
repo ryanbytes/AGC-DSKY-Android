@@ -73,14 +73,14 @@ async function main() {
   const inputIndex = html.indexOf('<script src="dsky-input-runtime.js"></script>');
   const clockIndex = html.indexOf('<script src="clock-behavior.js"></script>');
   const cmIndex = html.indexOf('<script src="cm-mode.js"></script>');
-  assert(appIndex >= 0
+  assert(keycodesIndex >= 0
+      && appIndex > keycodesIndex
       && dreamSilenceIndex > appIndex
-      && keycodesIndex > dreamSilenceIndex
-      && runtimeIndex > keycodesIndex
+      && runtimeIndex > dreamSilenceIndex
       && inputIndex > runtimeIndex
       && clockIndex > inputIndex
       && cmIndex > clockIndex,
-    'script order must be app -> dream silence -> shared keycodes -> runtime -> input runtime -> clock fallback -> CM config');
+    'script order must be shared keycodes -> app -> dream silence -> runtime -> input runtime -> clock fallback -> CM config');
   assert(!transitionSource.includes('waitForAgcReady') && !transitionSource.includes('LOAD_POLL_MS'),
     'shared transition service must not retain an independent loading poll loop');
   assert(clockSource.includes('window.AGCDSKY_KEY_CODES')
