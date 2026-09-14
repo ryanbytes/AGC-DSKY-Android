@@ -14,6 +14,7 @@ const ui = read('app/src/main/assets/flight-hardware-ui.js');
 const rheostat = read('app/src/main/assets/lighting-rheostat-stop.js');
 const keySpec = read('app/src/main/assets/key-mechanical-spec.js');
 const interlock = read('app/src/main/assets/keyboard-electrical-interlock.js');
+const proceed = read('app/src/main/assets/proceed-electrical.js');
 const cm = read('app/src/main/assets/cm-mode.js');
 const finish = read('app/src/main/assets/cm-dsky-finish.css');
 const controls = read('app/src/main/assets/controls-layout.css');
@@ -24,7 +25,8 @@ for (const [text, filename] of [
   [ui,'flight-hardware-ui.js'],
   [rheostat,'lighting-rheostat-stop.js'],
   [keySpec,'key-mechanical-spec.js'],
-  [interlock,'keyboard-electrical-interlock.js']
+  [interlock,'keyboard-electrical-interlock.js'],
+  [proceed,'proceed-electrical.js']
 ]) {
   try { new vm.Script(text, {filename}); }
   catch (error) { fail(`${filename} syntax error: ${error.message}`); }
@@ -73,10 +75,9 @@ for (const marker of [
 for (const forbidden of ['decodeChannel10(', 'agcCore.stop(', 'agcCore.reset(', 'resetAgcFace('])
   no(ui, forbidden, 'lighting bus demo state isolation');
 
-// flight-hardware-ui.js now owns presentation personality only. It still
-// prepares deterministic key travel/contact/sound values consumed by the real
-// electrical interlock, but must never capture normal key events or touch
-// channel 015 itself.
+// flight-hardware-ui.js owns presentation personality only. It prepares
+// deterministic key travel/contact/sound values consumed by the real electrical
+// interlock, but never captures normal key events or touches channel 015.
 for (const marker of [
   "const KEY_CONTACT_BASE_MS = 36",
   "const KEY_RETURN_SOUND_BASE_MS = 18",
@@ -136,10 +137,10 @@ for (const marker of [
 ]) req(keySpec, marker, 'source-backed key mechanics');
 no(keySpec, "vary(KEY_CONTACT_BASE_MS", 'key contact timing must not masquerade as manufacturing tolerance');
 
-// The electrical layer is the sole owner of all 18 keycoded switches at window
-// capture. The first depression latches the keyboard cycle; overlapping keys
-// can move but cannot produce another code. KEYRST waits for all normal keys to
-// return and, for touchscreen-fast taps, for the estimated D-input dwell.
+// The electrical interlock is the sole owner of all 18 keycoded switches at
+// window capture. The first depression latches the keyboard cycle; overlapping
+// keys can move but cannot produce another code. KEYRST waits for all normal
+// keys to return and for the estimated D-input dwell on a fast tap.
 for (const marker of [
   "window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false})",
   "if (!button || button.dataset.key === 'P') return null",
@@ -155,12 +156,26 @@ for (const marker of [
 ]) req(interlock, marker, 'series-contact keyboard interlock');
 no(interlock, "P:0o", 'series-contact keycode map must exclude PRO');
 
-// PRO is physically separate and must remain owned by the source-backed
-// channel-032 hardware path, never converted into a channel-015 key code.
+// PRO is physically separate from channel 015. Pointer/lifecycle ownership now
+// lives in proceed-electrical.js; hardware-fidelity.js must remain focused on
+// relay/display timing and must not regain a PRO event handler.
 for (const marker of [
-  "agcCore.proceedKey(true)",
-  "agcCore.proceedKey(false)"
-]) req(hw, marker, 'PRO / standby path');
+  "document.querySelector('[data-key=\"P\"]')",
+  "pro.addEventListener('pointerdown'",
+  "pro.addEventListener('pointerup'",
+  "pro.addEventListener('pointercancel'",
+  'core.proceedKey(true)',
+  'core.proceedKey(false)',
+  'window.enterClock = function proceedSafeEnterClock'
+]) req(proceed, marker, 'dedicated PRO / channel-032 path');
+for (const forbidden of [
+  "document.querySelector('[data-key=\"P\"]')",
+  'proPointer',
+  'releaseProceed',
+  'proceedKey(true)',
+  'proceedKey(false)',
+  'hardwareEnterClock'
+]) no(hw, forbidden, 'relay fidelity PRO ownership');
 no(ui, "P:0o", 'presentation layer must not define a normal-key map including PRO');
 
 for (const marker of [
@@ -179,7 +194,6 @@ for (const marker of [
   "transition-duration:var(--lamp-rise,36ms)"
 ]) req(ui + finish, marker, 'three-bulb incandescent model');
 
-// The former generic slow fade was an unsupported presentation choice.
 no(finish, 'transition:opacity 145ms', 'obsolete generic annunciator decay');
 no(finish, 'transition-duration:85ms', 'obsolete generic annunciator rise');
 
@@ -196,4 +210,4 @@ req(ui, "oldDim.hidden = true", 'retired whole-panel dimmer');
 req(ui, "document.body.classList.remove('dim')", 'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');
-console.log('  lighting/personality presentation remains isolated; electrical interlock is the single normal-key owner; dedicated PRO and three-bulb annunciators gated');
+console.log('  presentation, normal-key electrical ownership, dedicated PRO controller, rheostat stop, key mechanics, and three-bulb annunciators gated');
