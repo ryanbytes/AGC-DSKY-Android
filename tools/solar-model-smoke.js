@@ -43,10 +43,11 @@ function loadModel(nowIso, lat = null, lon = null) {
   const storage = new Map();
   if (lat !== null) storage.set('solarLat', String(lat));
   if (lon !== null) storage.set('solarLon', String(lon));
+  const FixedDate = fixedDateClass(nowIso);
   const context = {
     Math, Number, parseFloat,
-    Date: fixedDateClass(nowIso),
-    accurateDate(){ return new this.Date(); },
+    Date: FixedDate,
+    accurateDate(){ return new FixedDate(); },
     store:{get(key){ return storage.has(key) ? storage.get(key) : null; }}
   };
   context.globalThis = context;
