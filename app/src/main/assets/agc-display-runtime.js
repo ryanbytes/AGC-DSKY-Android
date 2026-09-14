@@ -3,8 +3,8 @@
 // Authoritative AGC DSKY output/display state. This module owns the mutable
 // channel/display backing model and UI snapshot serialization exactly once.
 // Core lifecycle and persistence are owned by their dedicated runtimes.
-const appState=window.AGCDSKY_APP_STATE;
-if(!appState)throw new Error('Shared application state unavailable');
+const displayState=window.AGCDSKY_APP_STATE;
+if(!displayState)throw new Error('Shared application state unavailable');
 const agcRelayWords={};
 let agcCh11=0,agcCh13=0,agcCh163=0;
 const RELAY_DIGIT={0:' ',21:'0',3:'1',25:'2',27:'3',15:'4',30:'5',28:'6',19:'7',29:'8',31:'9'};
@@ -49,7 +49,7 @@ function decodeChannel163(value){
   agcCh163=value;setLamp('temp',value&0o00010);setLamp('keyrel',value&0o00020);document.body.classList.toggle('vn-flash-off',!!(value&0o00040));setLamp('oprerr',value&0o00100);setLamp('restart',value&0o00200);setLamp('stby',value&0o00400);document.body.classList.toggle('el-off',!!(value&0o01000));
 }
 function onAgcChannel(channel,value){
-  if(appState.mode!=='agc'&&appState.mode!=='agc-loading')return;
+  if(displayState.mode!=='agc'&&displayState.mode!=='agc-loading')return;
   if(channel===0o10)decodeChannel10(value);else if(channel===0o11)decodeChannel11(value);else if(channel===0o13)decodeChannel13(value);else if(channel===0o163)decodeChannel163(value);
 }
 function renderAgcSnapshot(){
