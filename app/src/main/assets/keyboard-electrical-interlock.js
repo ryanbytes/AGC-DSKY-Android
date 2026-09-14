@@ -10,10 +10,8 @@
  * active-low input on channel 032.
  *
  * This listener lives on window capture, ahead of the older document-level
- * mechanical handler.  It therefore owns the 18 keycoded switches without
- * changing PRO or the rest of flight-hardware-ui.js.  Because it owns the
- * earliest normal-key event, it also owns CLOCK -> AGC handoff so the first
- * physical contact is not swallowed before the older document listener sees it.
+ * mechanical handler. It owns the 18 keycoded switches and CLOCK -> AGC
+ * first-contact handoff. dsky-input-runtime.js owns channel-015 make/KEYRST.
  */
 (() => {
   const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;
@@ -23,12 +21,16 @@
 
   const api = window.AGCDSKY;
   const runtime = api?.runtimeTransitions;
-  if (!api || !runtime
+  const input = api?.inputRuntime;
+  if (!api || !runtime || !input
       || typeof runtime.mode !== 'function'
       || typeof runtime.core !== 'function'
       || typeof runtime.requestAgc !== 'function'
+      || typeof input.ready !== 'function'
+      || typeof input.keyMake !== 'function'
+      || typeof input.keyReset !== 'function'
       || !runtime.modes) {
-    throw new Error('Shared AGC runtime authority unavailable');
+    throw new Error('Shared AGC runtime/input authority unavailable');
   }
 
   const FALLBACK_CONTACT_MS = 36;
@@ -36,7 +38,7 @@
   // Best-estimate minimum electrical dwell, not a measured switch spec.
   // Block II keyboard lines enter the AGC through noise-filtering D circuits;
   // surviving descriptions place a valid sustained keyboard input around the
-  // 10-ms region.  Twelve milliseconds prevents an unrealistically short
+  // 10-ms region. Twelve milliseconds prevents an unrealistically short
   // touchscreen tap from making and resetting in the same JS turn while still
   // being far below an ordinary human key hold.
   const MIN_KEYCODE_HOLD_MS = 12;
@@ -92,20 +94,17 @@
     if (ctx.state === 'running') fire(); else ctx.resume().then(fire).catch(() => {});
   }
 
-  function currentCore() {
-    try { return runtime.core(); }
-    catch (_) { return null; }
-  }
-
   function currentMode() {
     try { return String(runtime.mode() || ''); }
     catch (_) { return ''; }
   }
 
-  function registerElectricalMake(core, code) {
-    const accepted = typeof core.keyPress === 'function'
-      ? core.keyPress(code)
-      : (typeof core.writeIo === 'function' ? core.writeIo(0o15, code) : 0);
+  function registerElectricalMake(code) {
+    if (!input.ready()) return false;
+    let core = null;
+    try { core = runtime.core(); } catch (_) { return false; }
+    if (!core) return false;
+    const accepted = input.keyMake(code);
     if (!(accepted > 0)) return false;
     electricalCore = core;
     electricalKeyCode = code;
@@ -120,16 +119,17 @@
   async function promoteClockContact(state, code) {
     try {
       // runtime-transitions.js owns transition serialization and mode/core
-      // authority. The electrical interlock owns only this physical contact.
+      // authority; dsky-input-runtime.js owns channel-015 electrical access.
       await runtime.requestAgc('keyboard electrical contact');
 
-      const core = currentCore();
-      if (!core || currentMode() !== runtime.modes.AGC) throw new Error('AGC core not ready after clock handoff');
-      if (!registerElectricalMake(core, code)) throw new Error('AGC rejected clock-handoff keycode');
+      if (currentMode() !== runtime.modes.AGC || !input.ready()) {
+        throw new Error('AGC input runtime not ready after clock handoff');
+      }
+      if (!registerElectricalMake(code)) throw new Error('AGC rejected clock-handoff keycode');
 
       clockHandoffPending = false;
       // A touchscreen tap may have physically returned while the WASM/rope was
-      // loading.  In that case the make still happened, so assert its keycode
+      // loading. In that case the make still happened, so assert its keycode
       // first and then let the normal minimum-dwell/KEYRST path release it.
       if (!state.down) assertKeyResetIfReady();
     } catch (error) {
@@ -146,7 +146,7 @@
 
     // A mechanically depressed second key is real, but the series contact
     // network prevents it from generating another keycode until every normal
-    // key has first returned to released.  It must not become the new owner
+    // key has first returned to released. It must not become the new owner
     // merely because the original key is subsequently released.
     if (!state.accepted) return;
 
@@ -157,7 +157,7 @@
       const modeNow = currentMode();
       if (modeNow === runtime.modes.CLOCK || modeNow === runtime.modes.AGC_LOADING) {
         // The window-capture electrical layer stops propagation before the
-        // document-level clock listener.  Preserve this same physical contact
+        // document-level clock listener. Preserve this same physical contact
         // while the shared transition coordinator gets the real AGC ready.
         if (!clockHandoffPending) {
           clockHandoffPending = true;
@@ -166,9 +166,8 @@
         return;
       }
 
-      const core = currentCore();
-      if (core && modeNow === runtime.modes.AGC) {
-        registerElectricalMake(core, code);
+      if (modeNow === runtime.modes.AGC && input.ready()) {
+        registerElectricalMake(code);
         return;
       }
       if (typeof window.press === 'function') window.press(key);
@@ -194,7 +193,7 @@
   function assertKeyResetIfReady() {
     if (!allNormalKeysReleased()) return;
     // While CLOCK -> AGC startup is in flight, retain ownership of this
-    // physical cycle.  Clearing it here would let the async handoff assert a
+    // physical cycle. Clearing it here would let the async handoff assert a
     // keycode after KEYRST had already been declared, leaving channel 015 held.
     if (clockHandoffPending && !electricalMade) return;
 
@@ -213,10 +212,9 @@
         }
         return;
       }
-      const core = electricalCore || currentCore();
       try {
-        if (core && typeof core.keyRelease === 'function') core.keyRelease();
-        else if (core && typeof core.writeIo === 'function') core.writeIo(0o15, 0);
+        if (electricalCore) input.keyReset(electricalCore);
+        else if (input.ready()) input.keyReset();
       } catch (error) {
         console.error('DSKY KEYRST failed', error);
       }
