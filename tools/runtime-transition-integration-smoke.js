@@ -7,12 +7,18 @@ const vm = require('vm');
 
 const html = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/index.html'), 'utf8');
+const keycodeSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/dsky-keycodes.js'), 'utf8');
 const transitionSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/runtime-transitions.js'), 'utf8');
 const clockSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/clock-behavior.js'), 'utf8');
 const keyboardSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/keyboard-electrical-interlock.js'), 'utf8');
+const KEY_CODES = Object.freeze({
+  '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
+  V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
+});
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -64,17 +70,22 @@ async function flushMicrotasks(count = 12) {
 async function main() {
   const appIndex = html.indexOf('<script src="app.js"></script>');
   const dreamSilenceIndex = html.indexOf('<script src="dream-silence.js"></script>');
+  const keycodesIndex = html.indexOf('<script src="dsky-keycodes.js"></script>');
   const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
   const clockIndex = html.indexOf('<script src="clock-behavior.js"></script>');
   const cmIndex = html.indexOf('<script src="cm-mode.js"></script>');
   assert(appIndex >= 0
       && dreamSilenceIndex > appIndex
-      && runtimeIndex > dreamSilenceIndex
+      && keycodesIndex > dreamSilenceIndex
+      && runtimeIndex > keycodesIndex
       && clockIndex > runtimeIndex
       && cmIndex > clockIndex,
-    'script order must be app -> dream silence -> runtime transitions -> clock fallback -> CM dynamic features');
+    'script order must be app -> dream silence -> shared keycodes -> runtime transitions -> clock fallback -> CM dynamic features');
   assert(!transitionSource.includes('waitForAgcReady') && !transitionSource.includes('LOAD_POLL_MS'),
     'shared transition service must not retain an independent loading poll loop');
+  assert(clockSource.includes('window.AGCDSKY_KEY_CODES')
+      && keyboardSource.includes('window.AGCDSKY_KEY_CODES'),
+    'clock and electrical layers must consume the shared DSKY keycodes');
 
   const windowListeners = Object.create(null);
   const documentListeners = Object.create(null);
@@ -111,6 +122,7 @@ async function main() {
   };
 
   const context = {
+    AGC_KEY:KEY_CODES,
     console,
     Promise,
     performance:{now(){ return nowMs; }},
@@ -135,6 +147,12 @@ async function main() {
   const originalEnterAgc = context.enterAgc;
 
   vm.createContext(context);
+  vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
+  assert(context.AGCDSKY_KEY_CODES && Object.isFrozen(context.AGCDSKY_KEY_CODES),
+    'shared DSKY keycode bridge did not publish a frozen table');
+  assert(context.AGCDSKY_KEY_CODES !== KEY_CODES,
+    'shared DSKY keycodes must be an immutable copy rather than the source object');
+
   vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
   assert(AGCDSKY.runtimeTransitions,
     'runtime transition service did not publish on AGCDSKY');
@@ -145,11 +163,11 @@ async function main() {
 
   vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
   assert(AGCDSKY.clockBehavior,
-    'clock fallback layer did not initialize against the transition service');
+    'clock fallback layer did not initialize against the transition service/shared keycodes');
 
   vm.runInContext(keyboardSource, context, {filename:'keyboard-electrical-interlock.js'});
   assert(AGCDSKY.keyboardElectrical,
-    'keyboard electrical interlock did not initialize');
+    'keyboard electrical interlock did not initialize against shared keycodes');
 
   // Simulate app.js's already-installed AGC button/startup closure calling the
   // global binding first. The physical keyboard must join this exact Promise;
@@ -230,7 +248,7 @@ async function main() {
     'channel-015 electrical cycle remained latched after KEYRST');
 
   console.log('runtime transition integration smoke: PASS');
-  console.log('  direct app entry, window/document ownership, physical join, no polling, and make/KEYRST verified');
+  console.log('  shared keycodes, direct app entry, window/document ownership, physical join, no polling, and make/KEYRST verified');
 }
 
 main().catch(error => {

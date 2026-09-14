@@ -25,10 +25,8 @@
   const modeLabel = document.getElementById('mode');
   const LEVELS = Object.freeze([1.00, 0.75, 0.50, 0.25, 0.00]);
   const NORMAL_KEY_CHANNEL = 0o15;
-  const DSKY_KEY_CODE = Object.freeze({
-    '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
-    V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
-  });
+  const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;
+  if (!DSKY_KEY_CODE) throw new Error('Shared DSKY keycode table unavailable');
   const KEY_CONTACT_BASE_MS = 36;
   const KEY_RETURN_SOUND_BASE_MS = 18;
   // Best-estimate optical timing only.  White legends use MS24367-713 lamps;

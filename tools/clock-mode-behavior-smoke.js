@@ -5,11 +5,17 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+const keycodeSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/dsky-keycodes.js'), 'utf8');
 const transitionSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/runtime-transitions.js'), 'utf8');
 const clockSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/clock-behavior.js'), 'utf8');
 const fail = message => { console.error('CLOCK MODE BEHAVIOR FAIL: ' + message); process.exit(1); };
+const KEY_CODES = Object.freeze({
+  '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
+  V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
+});
 
 for (const marker of [
   'const baseEnterAgc = api.enterAgc',
@@ -31,6 +37,7 @@ for (const forbidden of [
   if (transitionSource.includes(forbidden)) fail('runtime transition service still contains polling fallback: ' + forbidden);
 }
 for (const marker of [
+  'const AGC_KEY = window.AGCDSKY_KEY_CODES;',
   "requestAgc('clock keypad fallback')",
   'core.keyPress(code)',
   "scheduleAgcAutosave('clock keypad handoff')",
@@ -47,7 +54,8 @@ for (const forbidden of [
 ]) {
   if (clockSource.includes(forbidden)) fail('clock COMP ACTY synthesis must remain disabled: ' + forbidden);
 }
-if (/fetch\s*\(/.test(transitionSource + clockSource) || /XMLHttpRequest/.test(transitionSource + clockSource)) {
+if (/fetch\s*\(/.test(keycodeSource + transitionSource + clockSource)
+    || /XMLHttpRequest/.test(keycodeSource + transitionSource + clockSource)) {
   fail('clock transition behavior must not be tied to network activity');
 }
 
@@ -73,6 +81,7 @@ function createHarness(initialMode = 'clock') {
   };
   const documentObject = {addEventListener(name,fn){ handlers[name] = fn; }};
   const context = {
+    AGC_KEY:KEY_CODES,
     AGCDSKY,
     document:documentObject,
     console,
@@ -85,11 +94,18 @@ function createHarness(initialMode = 'clock') {
   context.enterAgc = AGCDSKY.enterAgc;
   const baseEnterAgc = context.enterAgc;
   vm.createContext(context);
+  vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
+  if (!context.AGCDSKY_KEY_CODES || !Object.isFrozen(context.AGCDSKY_KEY_CODES)) {
+    fail('shared DSKY keycode bridge did not publish a frozen table');
+  }
   vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
   if (context.enterAgc === baseEnterAgc || context.AGCDSKY.enterAgc !== context.enterAgc) {
     fail('runtime service did not replace both global/API AGC entry references');
   }
   vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
+  if (!context.AGCDSKY.clockBehavior) {
+    fail('clock fallback did not initialize against the shared keycode table');
+  }
   return {
     AGCDSKY, context, handlers, timers, keyPresses,
     get mode(){ return mode; }, set mode(value){ mode = value; },
@@ -236,5 +252,5 @@ async function flush(count = 20) {
   }
 
   console.log('Clock mode behavior: PASS');
-  console.log('  shared entry, fallback queue, no polling, and app-failure compatibility verified');
+  console.log('  shared keycodes, shared entry, fallback queue, no polling, and app-failure compatibility verified');
 })().catch(error => fail(error.stack || String(error)));

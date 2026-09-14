@@ -5,13 +5,28 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+const keycodeSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/dsky-keycodes.js'),
+  'utf8'
+);
 const source = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/keyboard-electrical-interlock.js'),
   'utf8'
 );
+const KEY_CODES = Object.freeze({
+  '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
+  V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
+});
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function installKeycodes(context) {
+  context.AGC_KEY = KEY_CODES;
+  vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
+  assert(context.AGCDSKY_KEY_CODES && Object.isFrozen(context.AGCDSKY_KEY_CODES),
+    'shared DSKY keycode bridge did not publish a frozen table');
 }
 
 function makeButton(key) {
@@ -113,6 +128,7 @@ context.AGCDSKY = {
 };
 
 vm.createContext(context);
+installKeycodes(context);
 vm.runInContext(source, context, {filename:'keyboard-electrical-interlock.js'});
 
 const one = makeButton('1');
@@ -192,7 +208,7 @@ assert(calls.filter(c => c[0] === 'make').length === 2,
   'PRO incorrectly generated a normal keyboard keycode');
 
 // A touchscreen fast tap makes once immediately, but KEYRST must not occur in
-// that same turn.  The keycode stays asserted through the estimated D-filter
+// that same turn. The keycode stays asserted through the estimated D-filter
 // interval so yaAGC can sample the make just as the hardware interface did.
 const fast = makeButton('1');
 e = makeEvent(fast, 10);
@@ -269,6 +285,7 @@ async function verifyClockHandoff() {
   };
 
   vm.createContext(clockContext);
+  installKeycodes(clockContext);
   vm.runInContext(source, clockContext, {filename:'keyboard-electrical-interlock-clock.js'});
 
   // Fast-tap VERB while the phone is still showing CLOCK. The electrical
@@ -332,7 +349,7 @@ async function verifyClockHandoff() {
 
 verifyClockHandoff().then(() => {
   console.log('keyboard electrical interlock smoke: PASS');
-  console.log('  series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
+  console.log('  shared keycodes, series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
 }).catch(error => {
   console.error('keyboard electrical interlock smoke: FAIL');
   console.error(error && error.stack ? error.stack : error);

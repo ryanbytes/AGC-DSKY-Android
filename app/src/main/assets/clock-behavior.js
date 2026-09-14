@@ -3,15 +3,12 @@
 
   const api = window.AGCDSKY;
   const transitions = api?.runtimeTransitions;
-  if (!api || !transitions || typeof transitions.requestAgc !== 'function') return;
+  const AGC_KEY = window.AGCDSKY_KEY_CODES;
+  if (!api || !transitions || typeof transitions.requestAgc !== 'function' || !AGC_KEY) return;
 
   // This layer owns only the document-level CLOCK keypad fallback. The live
   // CM electrical interlock normally captures physical normal keys earlier at
-  // window capture and uses the same shared runtime transition service.
-  const AGC_KEY = Object.freeze({
-    '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
-    V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
-  });
+  // window capture and uses the same shared runtime transition service/key map.
   const pendingKeys = [];
   let promotionPromise = null;
 
