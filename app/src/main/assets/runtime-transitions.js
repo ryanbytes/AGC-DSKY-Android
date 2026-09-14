@@ -29,11 +29,12 @@
     if (current.mode === MODES.AGC) return Promise.resolve(current);
     if (transitionPromise) return transitionPromise;
 
-    // runtime-transitions.js loads immediately after app.js, before the event
-    // loop can run app.js's startup timeout and before the user can press the
-    // AGC control. All normal entry points are replaced below, so seeing a
-    // loading state without our Promise is an invariant violation, not a state
-    // to paper over with another independent polling loop.
+    // runtime-transitions.js is loaded synchronously after app.js and the
+    // required dream-silence guard, before the event loop can run app.js's
+    // startup timeout and before the user can press the AGC control. All normal
+    // entry points are replaced below, so seeing a loading state without our
+    // Promise is an invariant violation, not a state to paper over with another
+    // independent polling loop.
     if (current.mode === MODES.AGC_LOADING) {
       return Promise.reject(new Error('AGC loading state has no shared transition owner'));
     }
