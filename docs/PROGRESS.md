@@ -10,37 +10,39 @@ The effective input/transition ownership is now documented as follows:
 
 - `keyboard-electrical-interlock.js` owns the 18 normal keycoded switches at **window capture** and preserves the series-key / KEYRST electrical model;
 - `hardware-fidelity.js` owns the maintained PRO contact on channel `032`;
-- `clock-behavior.js` is loaded before the dynamic CM layers and now owns one shared CLOCK -> AGC transition coordinator exposed as `AGCDSKY.runtimeTransitions` / `AGCDSKY_RUNTIME`;
-- `app.js` remains the authoritative owner of actual AGC creation, channel decoding, display state, snapshots, and the `enterAgc()` operation;
-- the document-level clock keypad listener remains a fallback for the pre-CM-load window, but once the electrical interlock is installed the physical normal-key event is stopped earlier at window capture.
+- `runtime-transitions.js` loads immediately after `app.js` and owns one shared CLOCK -> AGC in-flight Promise exposed through `AGCDSKY.runtimeTransitions` / `AGCDSKY_RUNTIME`;
+- `runtime-transitions.js` replaces both the classic-script global `enterAgc` binding and `AGCDSKY.enterAgc` with the same serialized wrapper, so app startup, the AGC button, clock fallback input, and the electrical interlock all join the same transition;
+- `clock-behavior.js` now owns only the document-level clock keypad fallback/queue and consumes the shared transition service;
+- `app.js` remains the authoritative underlying AGC loader, channel decoder, display-state owner, and snapshot owner;
+- once the electrical interlock is dynamically installed, physical normal-key events are stopped at window capture before the document-level clock fallback can see them.
 
-Phase 1 now removes duplicate AGC-loading coordination from the live physical-key path while preserving the existing CM-only behavior:
+Phase 1 removes duplicate AGC-loading coordination while preserving the existing CM-only behavior:
 
-- `clock-behavior.js` serializes transition requests through one `requestAgc()` Promise;
-- if another caller already started an AGC load, later callers join that same transition instead of starting another one;
-- the coordinator retains a bounded 2,000 x 10 ms fallback wait for the current `app.js` behavior where `enterAgc()` may return early while another load is in progress;
-- `keyboard-electrical-interlock.js` no longer owns a second independent `agc-loading` polling loop; it awaits `runtimeTransitions.requestAgc('keyboard electrical contact')` and only then asserts the original Pinball keycode on channel `015`;
+- the shared service serializes AGC entry through one Promise and returns that same Promise to later callers while the load is in flight;
+- the already-installed app startup/AGC-button closures resolve the replaced classic-script global `enterAgc` binding at call time, so they enter through the same service without rewriting the underlying `app.js` loader;
+- the previous 10 ms readiness polling fallback has been removed; an `agc-loading` state without the shared Promise is now treated as an invariant violation instead of being hidden by another polling loop;
+- `keyboard-electrical-interlock.js` awaits `runtimeTransitions.requestAgc('keyboard electrical contact')` and only then asserts the original Pinball keycode on channel `015`;
 - a fast touchscreen release during loading still preserves the physical cycle until the make is delivered and the minimum KEYRST dwell completes;
 - queued document-level fallback contacts remain ordered and are forwarded after AGC readiness;
-- transition diagnostics return copied queue/state data rather than mutable production structures;
+- transition diagnostics return copied state rather than mutable production structures;
 - synthetic CLOCK-mode COMP ACTY remains forbidden;
 - AGC/WASM startup ordering, channel mappings, relay state, PRO semantics, snapshot format, and display rendering are unchanged by this phase.
 
 Regression coverage was tightened in three places:
 
-- `tools/clock-mode-behavior-smoke.js` covers ordinary promotion, multiple queued fallback contacts, and joining a pre-existing `agc-loading` transition;
-- `tools/keyboard-electrical-interlock-smoke.js` now treats the shared transition API as the handoff contract while retaining the series-chain, PRO-bypass, fast-tap, and KEYRST checks;
-- new `tools/runtime-transition-integration-smoke.js` loads the transition coordinator and electrical interlock together and requires a physical VERB fast-tap during an already-running load to join one transition, generate one Pinball `021` make, avoid the legacy clock editor, and end with one KEYRST.
+- `tools/clock-mode-behavior-smoke.js` covers ordinary fallback promotion, ordered fallback contacts during one load, and a direct app/startup-style `enterAgc` call followed by a keypad join with no polling or second loader start;
+- `tools/keyboard-electrical-interlock-smoke.js` treats the shared transition API as the handoff contract while retaining the series-chain, PRO-bypass, fast-tap, and KEYRST checks;
+- `tools/runtime-transition-integration-smoke.js` checks script order, installs the extracted transition service plus clock fallback and electrical interlock together, propagates pointer events from window to document unless actually stopped, and requires a physical VERB fast-tap during a direct app AGC load to join one transition, generate one Pinball `021` make, avoid the clock fallback/legacy editor, avoid readiness polling, and end with one KEYRST.
 
-All three are wired into `tools/build-local.sh`. The clock behavior smoke existed previously but was not part of the canonical build gate; Phase 1 added it, and the new integration smoke is now adjacent to the electrical-interlock gate.
+All three are wired into `tools/build-local.sh`. The clock behavior smoke existed previously but was not part of the canonical build gate; Phase 1 added it, and the new integration smoke is adjacent to the electrical-interlock gate.
 
 Observed in this execution environment:
 
-- the earlier staged `clock-behavior.js` syntax check passed;
-- the strengthened clock-mode behavior smoke passed its three transition cases;
-- a staged integration run matching the edited coordinator/electrical handoff logic passed the shared-transition, Pinball `021`, and single-KEYRST assertions.
+- staged copies matching the current `runtime-transitions.js` and `clock-behavior.js` logic passed `node --check`;
+- a staged shared-entry check confirmed direct app entry and a later runtime request receive the same Promise and start the underlying loader once;
+- a staged physical handoff check confirmed window-capture ownership, no document fallback participation, no 10 ms readiness polling, one Pinball `021` make, and one KEYRST.
 
-These are source-level results only. The complete canonical `tools/build-local.sh`, Gradle regular/Fire builds, APK verification, and Android/WebView/device smokes have **not** been run for this branch in this environment. The Android SDK/recursive-checkout limitations below still apply. No device/runtime claim is upgraded from these source checks.
+These are source-level staged results only. The complete current smoke files have **not** been executed from a full checkout at the exact branch HEAD. The canonical `tools/build-local.sh`, Gradle regular/Fire builds, APK verification, and Android/WebView/device smokes also have **not** been run for this branch in this environment. The Android SDK/recursive-checkout limitations below still apply. No device/runtime claim is upgraded from these source checks.
 
 ## 2026-09-13 WebAudio renderer recovery
 
@@ -112,7 +114,7 @@ The electrical interlock still owns the physical transition point, but transitio
 - keeps PRO separate on channel `032` exactly as before;
 - does not invoke the old synthetic clock command editor for the handoff key.
 
-`tools/keyboard-electrical-interlock-smoke.js` remains the isolated electrical regression gate. `tools/runtime-transition-integration-smoke.js` is the corresponding two-layer gate for the shared transition coordinator plus physical electrical owner.
+`tools/keyboard-electrical-interlock-smoke.js` remains the isolated electrical regression gate. `tools/runtime-transition-integration-smoke.js` is the corresponding multi-layer gate for the shared transition service, clock fallback, and physical electrical owner.
 
 The source gates are committed. They are **not** substitutes for the current canonical local build and Android device smoke.
 
