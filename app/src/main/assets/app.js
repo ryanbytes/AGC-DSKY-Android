@@ -12,8 +12,7 @@ let verb='16',noun='65',mode='clock',
     dim=store.get('dim')==='1',
     tickSound=store.get('audioTickV4')!=='0',
     displayOnly=dream||store.get('displayOnly')==='1',
-    controlsTimer=0,audioCtx=null,tickLevel=1,solarFactor=0;
-const RELAY_CLICK_SPREAD_MS=2.5;
+    controlsTimer=0;
 const agcRelayWords={};
 let agcCh11=0,agcCh13=0,agcCh163=0,agcSuspendedForClock=false;
 let agcCore=null,agcLoadedMission='',appVisible=!document.hidden,agcPausedForVisibility=false;
@@ -77,18 +76,10 @@ function decodeChannel10(value){
   }
 }
 function updateAgcCompActy(){
-  // Block II DSKY COMP ACTY is controlled by output channel 011 bit 2.
-  // Comanche 055 V35 intentionally does not hold COMP ACTY on.
   setLamp('comp',!!(agcCh11&0o00002));
 }
 function decodeChannel11(value){agcCh11=value;updateAgcCompActy();setLamp('uplink',value&0o00004)}
-function decodeChannel13(value){
-  // Channel 013 bit 10 is ALTEST.  On real Block II hardware it exercises
-  // the non-programmable alarm paths (notably RESTART and STBY).  yaAGC's
-  // hardware model exposes their resulting physical DSKY states on channel
-  // 0163, so no visual lamp state is synthesized here.
-  agcCh13=value;
-}
+function decodeChannel13(value){agcCh13=value}
 function decodeChannel163(value){
   agcCh163=value;setLamp('temp',value&0o00010);setLamp('keyrel',value&0o00020);document.body.classList.toggle('vn-flash-off',!!(value&0o00040));setLamp('oprerr',value&0o00100);setLamp('restart',value&0o00200);setLamp('stby',value&0o00400);document.body.classList.toggle('el-off',!!(value&0o01000));
 }
@@ -175,14 +166,12 @@ function agcAppStatus(){
 async function enterAgc(){
   if(dream||mode==='agc-loading'||mode==='agc')return;
   cancelLampTest();
-
   const selected=missionSpec();
   if(agcSuspendedForClock&&agcCore&&agcLoadedMission===selectedMission){
     mode='agc';agcSuspendedForClock=false;rememberRunMode('agc');$('agc').textContent='AGC MODE';$('mode').textContent=`${selected.label} · ${agcCore.version()}`;renderAgcSnapshot();
     if(appVisible){agcCore.start(1);agcPausedForVisibility=false}else{agcPausedForVisibility=true}
     return;
   }
-
   mode='agc-loading';stopClockQueue();$('agc').textContent='...';$('mode').textContent=`LOADING ${selected.label} · AGC`;resetAgcFace();
   try{
     if(!agcCore||agcLoadedMission!==selectedMission){
@@ -199,108 +188,13 @@ async function enterAgc(){
     if(appVisible){agcCore.start(1);agcPausedForVisibility=false}else{agcPausedForVisibility=true}
   }catch(error){agcFailure(error)}
 }
-function cycleMission(){
-  selectedMission='comanche055'; store.set('agcMission','comanche055'); applyMissionButton();
-}
+function cycleMission(){selectedMission='comanche055';store.set('agcMission','comanche055');applyMissionButton()}
 function setAppVisible(visible){
   appVisible=!!visible;
   if(mode!=='agc'||!agcCore)return;
-  if(!appVisible){
-    if(agcCore.running){agcCore.stop();agcPausedForVisibility=true}
-    saveAgcState('app background');
-    return;
-  }
+  if(!appVisible){if(agcCore.running){agcCore.stop();agcPausedForVisibility=true}saveAgcState('app background');return}
   if(agcPausedForVisibility){agcPausedForVisibility=false;agcCore.start(1)}
 }
-
-// Solar brightness is computed locally from the saved latitude/longitude.
-// Sunrise/sunset use the standard -0.833 degree solar altitude and a smooth
-// one-hour gradual transition centered on each event.
-const DAY_MS=86400000,J1970=2440588,J2000=2451545,J0=.0009,RAD=Math.PI/180,SOLAR_FADE_HALF_MS=30*60*1000;
-function toJulian(date){return date.valueOf()/DAY_MS-.5+J1970}
-function fromJulian(j){return new Date((j+.5-J1970)*DAY_MS)}
-function toDays(date){return toJulian(date)-J2000}
-function solarMeanAnomaly(d){return RAD*(357.5291+.98560028*d)}
-function eclipticLongitude(M){const C=RAD*(1.9148*Math.sin(M)+.02*Math.sin(2*M)+.0003*Math.sin(3*M)),P=RAD*102.9372;return M+C+P+Math.PI}
-function declination(l){const e=RAD*23.4397;return Math.asin(Math.sin(e)*Math.sin(l))}
-function julianCycle(d,lw){return Math.round(d-J0-lw/(2*Math.PI))}
-function approxTransit(Ht,lw,n){return J0+(Ht+lw)/(2*Math.PI)+n}
-function solarTransitJ(ds,M,L){return J2000+ds+.0053*Math.sin(M)-.0069*Math.sin(2*L)}
-function hourAngle(h,phi,d){const x=(Math.sin(h)-Math.sin(phi)*Math.sin(d))/(Math.cos(phi)*Math.cos(d));if(x<-1||x>1)return null;return Math.acos(x)}
-function solarTimes(date,lat,lng){
-  const lw=RAD*-lng,phi=RAD*lat,d=toDays(date),n=julianCycle(d,lw),ds=approxTransit(0,lw,n),M=solarMeanAnomaly(ds),L=eclipticLongitude(M),dec=declination(L),Jnoon=solarTransitJ(ds,M,L),w=hourAngle(RAD*-.833,phi,dec);
-  if(w===null)return null;
-  const a=approxTransit(w,lw,n),Jset=solarTransitJ(a,M,L),Jrise=Jnoon-(Jset-Jnoon);
-  return {sunrise:fromJulian(Jrise),sunset:fromJulian(Jset)};
-}
-function smoothstep(a,b,x){const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)}
-function currentSolarFactor(){
-  const lat=parseFloat(store.get('solarLat')),lon=parseFloat(store.get('solarLon'));
-  if(!Number.isFinite(lat)||!Number.isFinite(lon))return 0;
-  const now=typeof accurateDate==='function'?accurateDate():new Date(),times=solarTimes(now,lat,lon);
-  if(!times)return 0;
-  const half=SOLAR_FADE_HALF_MS,t=now.getTime(),rise=times.sunrise.getTime(),set=times.sunset.getTime();
-  if(t<rise-half||t>set+half)return 0;
-  if(t<=rise+half)return smoothstep(rise-half,rise+half,t);
-  if(t<set-half)return 1;
-  return 1-smoothstep(set-half,set+half,t);
-}
-function requestSolarLocation(){
-  if(!navigator.geolocation){$('mode').textContent='SOLAR LOCATION UNAVAILABLE';dreamMode='dim';applyDreamMode();return}
-  $('mode').textContent='REQUESTING LOCAL SOLAR POSITION';
-  navigator.geolocation.getCurrentPosition(p=>{
-    store.set('solarLat',String(p.coords.latitude));store.set('solarLon',String(p.coords.longitude));
-    dreamMode='solar';applyDreamMode();$('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE';
-  },()=>{
-    dreamMode='dim';applyDreamMode();$('mode').textContent='SOLAR NEEDS LOCATION PERMISSION';
-  },{enableHighAccuracy:false,maximumAge:2592000000,timeout:12000});
-}
-function applyDim(){
-  if(!dream){document.body.classList.toggle('dim',dim);$('dsky').style.filter='';store.set('dim',dim?'1':'0')}
-}
-function setDreamWindowBrightness(v){try{if(window.DreamBridge&&DreamBridge.setBrightness)DreamBridge.setBrightness(v)}catch(e){}}
-function updateDreamEnvironment(){
-  if(!dream){tickLevel=1;return}
-  if(dreamMode==='bright')solarFactor=1;
-  else if(dreamMode==='solar')solarFactor=currentSolarFactor();
-  else solarFactor=0;
-  const visual=.20+.80*solarFactor,sat=.62+.38*solarFactor;
-  $('dsky').style.filter=`brightness(${visual.toFixed(3)}) saturate(${sat.toFixed(3)})`;
-  tickLevel=.08+.92*solarFactor;
-  setDreamWindowBrightness(.05+.80*solarFactor);
-}
-function applyDreamMode(){
-  store.set('dreamMode',dreamMode);store.set('dreamBright',dreamMode==='bright'?'1':'0');
-  const b=$('dreambright');if(b)b.textContent=dreamMode==='solar'?'DREAM BRIGHTNESS AUTO':'DREAM BRIGHTNESS '+dreamMode.toUpperCase();
-  if(dream)updateDreamEnvironment();
-}
-function cycleDreamMode(){
-  if(dreamMode==='dim'){dreamMode='bright';applyDreamMode()}
-  else if(dreamMode==='bright'){
-    const have=Number.isFinite(parseFloat(store.get('solarLat')))&&Number.isFinite(parseFloat(store.get('solarLon')));
-    if(have){dreamMode='solar';applyDreamMode();$('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE'}else requestSolarLocation();
-  }else{dreamMode='dim';applyDreamMode()}
-}
-function applyDisplayOnly(){document.body.classList.toggle('display-only',displayOnly);if(!dream)store.set('displayOnly',displayOnly?'1':'0');const b=$('display');if(b)b.textContent=displayOnly?'EXIT FULL DSKY DISPLAY':'FULL DSKY DISPLAY'}
-function ensureAudio(){if(!audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;audioCtx=new AC()}if(audioCtx.state==='suspended')audioCtx.resume().catch(()=>{});return audioCtx}
-function emitTick(ctx,when=ctx.currentTime){
-  const sr=ctx.sampleRate,n=Math.max(1,Math.floor(sr*.0065)),buf=ctx.createBuffer(1,n,sr),data=buf.getChannelData(0);
-  for(let i=0;i<n;i++){
-    const tm=i/sr;
-    let env=Math.exp(-tm/.00075);
-    if(tm>=.00155)env+=.30*Math.exp(-(tm-.00155)/.00048);
-    if(tm>=.00305)env+=.13*Math.exp(-(tm-.00305)/.00038);
-    data[i]=(Math.random()*2-1)*env;
-  }
-  const src=ctx.createBufferSource(),high=ctx.createBiquadFilter(),low=ctx.createBiquadFilter(),snap=ctx.createGain();src.buffer=buf;
-  high.type='highpass';high.frequency.setValueAtTime(760,when);high.Q.setValueAtTime(.65,when);
-  low.type='lowpass';low.frequency.setValueAtTime(5600,when);low.Q.setValueAtTime(.55,when);
-  snap.gain.setValueAtTime(.52*tickLevel,when);snap.gain.exponentialRampToValueAtTime(.0001,when+.0075);
-  src.connect(high);high.connect(low);low.connect(snap);snap.connect(ctx.destination);src.start(when);
-  const osc=ctx.createOscillator(),body=ctx.createGain();osc.type='triangle';osc.frequency.setValueAtTime(610,when);osc.frequency.exponentialRampToValueAtTime(270,when+.007);body.gain.setValueAtTime(.045*tickLevel,when);body.gain.exponentialRampToValueAtTime(.0001,when+.010);osc.connect(body);body.connect(ctx.destination);osc.start(when);osc.stop(when+.011);
-}
-function playRelayBurst(count){const ctx=ensureAudio();if(!ctx||count<1)return;const go=()=>{const base=ctx.currentTime+.002;for(let i=0;i<count;i++)emitTick(ctx,base+i*1.7/1000)};if(ctx.state==='running')go();else ctx.resume().then(go).catch(()=>{})}
-function applyTickSound(){store.set('audioTickV4',tickSound?'1':'0');const b=$('sound');if(b)b.textContent=tickSound?'RELAY CLICKS ON':'RELAY CLICKS OFF'}
 function showControls(){if(dream||displayOnly)return;document.body.classList.add('controls-visible');clearTimeout(controlsTimer);controlsTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),5500)}
 let holdTimer=0;
 document.addEventListener('pointerdown',e=>{
