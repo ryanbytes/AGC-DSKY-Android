@@ -88,12 +88,14 @@ assert(!dreamSilence.includes("store.set('audioTickV4'"),
 const app = fs.readFileSync(APP, 'utf8');
 assert(app.includes("comanche055:{label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}"),
     'current app no longer defines the Comanche 055 mission');
-for (const forbidden of ['AGC_KEY', 'AGCDSKY_KEY_CODES', '.keyPress(', '.keyRelease(', '.proceedKey(', 'writeIo(0o15']) {
+for (const forbidden of [
+    'AGC_KEY', 'AGCDSKY_KEY_CODES', '.keyPress(', '.keyRelease(', '.proceedKey(',
+    'writeIo(0o15', 'function press(', 'window.press', 'function executeClock(',
+    'PHONE CLOCK INPUT', 'entryMode='
+]) {
     assert(!app.includes(forbidden),
-        `app.js regained extracted DSKY input ownership: ${forbidden}`);
+        `app.js regained removed DSKY input/editor ownership: ${forbidden}`);
 }
-assert(app.includes("if(mode==='agc')return;"),
-    'legacy app press() helper is no longer explicitly CLOCK-only');
 assert(!app.includes('Luminary099.bin'),
     'CM-only app unexpectedly references Luminary099.bin');
 
