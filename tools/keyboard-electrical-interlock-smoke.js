@@ -98,7 +98,6 @@ const core = {
 
 const context = {
   console,
-  mode:'agc',
   performance:{now(){ return nowMs; }},
   localStorage:{ getItem(){ return '0'; } },
   setTimeout(fn, delay=0){
@@ -116,6 +115,7 @@ const context = {
 context.window = context;
 context.addEventListener = function(type, fn){ addListener(windowListeners, type, fn); };
 context.AGCDSKY = {
+  appStatus(){ return {mode:'agc'}; },
   getCore(){ return core; },
   scheduleAgcAutosave(){ calls.push(['autosave', nowMs]); },
   hardwarePersonality(){
@@ -198,7 +198,7 @@ assert(calls.filter(c => c[0] === 'reset').length === 2,
   'second complete key cycle did not end in KEYRST');
 
 // PRO is outside the 18-key coding matrix. The electrical interlock must not
-// consume its event or emit a channel-015 keycode; hardware-fidelity.js owns it.
+// consume its event or emit a channel-015 keycode; proceed-electrical.js owns it.
 e = makeEvent(pro, 9);
 dispatch(windowListeners, 'pointerdown', e);
 flushTimers();
@@ -349,7 +349,7 @@ async function verifyClockHandoff() {
 
 verifyClockHandoff().then(() => {
   console.log('keyboard electrical interlock smoke: PASS');
-  console.log('  shared keycodes, series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
+  console.log('  shared keycodes, appStatus authority, series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
 }).catch(error => {
   console.error('keyboard electrical interlock smoke: FAIL');
   console.error(error && error.stack ? error.stack : error);
