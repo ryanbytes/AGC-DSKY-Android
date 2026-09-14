@@ -11,7 +11,8 @@
  *
  * This listener lives on window capture, ahead of the older document-level
  * mechanical handler. It owns the 18 keycoded switches and CLOCK -> AGC
- * first-contact handoff. dsky-input-runtime.js owns channel-015 make/KEYRST.
+ * first-contact handoff. dsky-input-runtime.js owns channel-015 make/KEYRST;
+ * runtime-transitions.js owns CLOCK-entry cleanup ordering.
  */
 (() => {
   const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;
@@ -26,6 +27,7 @@
       || typeof runtime.mode !== 'function'
       || typeof runtime.core !== 'function'
       || typeof runtime.requestAgc !== 'function'
+      || typeof runtime.onBeforeClock !== 'function'
       || typeof input.ready !== 'function'
       || typeof input.keyMake !== 'function'
       || typeof input.keyReset !== 'function'
@@ -224,6 +226,36 @@
     clearElectricalCycle();
   }
 
+  function clearPointers() {
+    for (const state of Array.from(pointers.values())) {
+      clearTimeout(state.timer);
+      state.down = false;
+      state.button.classList.remove('pressed');
+      try { state.button.releasePointerCapture(state.pointerId); } catch (_) {}
+      pointers.delete(state.pointerId);
+    }
+  }
+
+  function releaseEverything() {
+    clearPointers();
+    assertKeyResetIfReady();
+  }
+
+  function releaseForClock() {
+    clearPointers();
+    if (keyResetTimer) clearTimeout(keyResetTimer);
+    keyResetTimer = 0;
+    if (electricalMade) {
+      try {
+        if (electricalCore) input.keyReset(electricalCore);
+        else if (input.ready()) input.keyReset();
+      } catch (error) {
+        console.error('DSKY KEYRST before CLOCK failed', error);
+      }
+    }
+    clearElectricalCycle();
+  }
+
   function onPointerDown(event) {
     const button = normalButton(event);
     if (!button) return;
@@ -265,17 +297,6 @@
     return true;
   }
 
-  function releaseEverything() {
-    for (const state of Array.from(pointers.values())) {
-      clearTimeout(state.timer);
-      state.down = false;
-      state.button.classList.remove('pressed');
-      try { state.button.releasePointerCapture(state.pointerId); } catch (_) {}
-      pointers.delete(state.pointerId);
-    }
-    assertKeyResetIfReady();
-  }
-
   // Window capture executes before the document-capture handler in
   // flight-hardware-ui.js. PRO is deliberately allowed to continue downward.
   window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false});
@@ -289,6 +310,11 @@
   }, {capture:true, passive:false});
   window.addEventListener('blur', releaseEverything, {passive:true});
   document.addEventListener('visibilitychange', () => { if (document.hidden) releaseEverything(); }, {capture:true});
+
+  // CLOCK entry is an application mode transition, not a physical key return.
+  // Release any held/pending matrix state synchronously before app.js stops the
+  // AGC so channel 015 cannot remain asserted across the mode boundary.
+  runtime.onBeforeClock(releaseForClock);
 
   api.keyboardElectrical = Object.freeze({
     state: () => ({
