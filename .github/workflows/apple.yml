@@ -1,0 +1,70 @@
+name: Apple build
+
+on:
+  push:
+    branches: [main, apple-port]
+    paths:
+      - 'apple/**'
+      - 'app/src/main/assets/**'
+      - 'vendor/webAGC'
+      - '.github/workflows/apple.yml'
+  pull_request:
+    paths:
+      - 'apple/**'
+      - 'app/src/main/assets/**'
+      - 'vendor/webAGC'
+      - '.github/workflows/apple.yml'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Verify pinned AGC assets
+        run: apple/tools/verify-pinned-assets.sh
+
+      - name: Build macOS app
+        run: |
+          xcodebuild \
+            -project apple/AGCDSKY.xcodeproj \
+            -target AGCDSKYmacOS \
+            -configuration Debug \
+            -sdk macosx \
+            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/mac-build" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          codesign --force --deep --sign - "$RUNNER_TEMP/mac-build/AGC DSKY.app"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/mac-build/AGC DSKY.app" \
+            "$RUNNER_TEMP/AGC-DSKY-macOS.zip"
+
+      - name: Upload macOS app
+        uses: actions/upload-artifact@v4
+        with:
+          name: AGC-DSKY-macOS
+          path: ${{ runner.temp }}/AGC-DSKY-macOS.zip
+          if-no-files-found: error
+
+      - name: Build iOS simulator app
+        run: |
+          xcodebuild \
+            -project apple/AGCDSKY.xcodeproj \
+            -target AGCDSKYiOS \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/ios-simulator-build" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/ios-simulator-build/AGC DSKY.app" \
+            "$RUNNER_TEMP/AGC-DSKY-iOS-Simulator.zip"
+
+      - name: Upload iOS simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: AGC-DSKY-iOS-Simulator
+          path: ${{ runner.temp }}/AGC-DSKY-iOS-Simulator.zip
+          if-no-files-found: error

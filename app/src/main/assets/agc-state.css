@@ -1,0 +1,13 @@
+/* States supplied by yaAGC's modulated DSKY channel 0163. */
+.vn-flash-off #verb,
+.vn-flash-off #noun {
+  opacity: 0;
+}
+
+/* Channel 0163 represents the post-hardware DSKY EL excitation state.
+   When excitation is removed, the luminous strokes themselves are fully dark. */
+.el-off .el-static,
+.el-off .el-field,
+.el-off .comp-el {
+  opacity: 0;
+}
