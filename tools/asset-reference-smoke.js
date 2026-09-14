@@ -46,7 +46,10 @@ for (const stale of [
         `current DSKY-only asset tree unexpectedly retains stale renderer/patch asset ${stale}`);
 }
 
-for (const required of ['cm-dsky-finish.css', 'cm-mode.js', 'dream-silence.js', 'dsky-keycodes.js', 'runtime-transitions.js']) {
+for (const required of [
+    'cm-dsky-finish.css', 'cm-mode.js', 'dream-silence.js', 'dsky-keycodes.js',
+    'runtime-transitions.js', 'hardware-fidelity.js', 'proceed-electrical.js'
+]) {
     assert(refs.includes(required), `current CM-only index is missing required frontend asset ${required}`);
 }
 
@@ -63,6 +66,14 @@ assert(runtimeTransitionsIndex === keycodesIndex + 1,
     'runtime-transitions.js must load immediately after dsky-keycodes.js');
 assert(clockBehaviorIndex > runtimeTransitionsIndex,
     'runtime-transitions.js must load before clock behavior and before startup timers can run');
+
+const hardwareIndex = refs.indexOf('hardware-fidelity.js');
+const proceedIndex = refs.indexOf('proceed-electrical.js');
+const relayIdentityIndex = refs.indexOf('relay-identity-audio.js');
+assert(hardwareIndex >= 0 && proceedIndex === hardwareIndex + 1,
+    'proceed-electrical.js must load immediately after hardware-fidelity.js');
+assert(relayIdentityIndex > proceedIndex,
+    'PRO electrical ownership must initialize before later relay refinements');
 
 const dreamSilence = fs.readFileSync(DREAM_SILENCE, 'utf8');
 assert(dreamSilence.includes("new URLSearchParams(location.search).get('dream') === '1'"),
