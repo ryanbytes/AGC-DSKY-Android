@@ -50,11 +50,14 @@ Owns application transition coordination:
 - validated mode/core access for extracted runtime layers;
 - pre-CLOCK cleanup hooks;
 - replacement of CLOCK entry surfaces when they are available;
+- explicit pending-CLOCK intent through `clockRequested()`;
 - serialization of a CLOCK request behind an already-running AGC load.
 
-A CLOCK request made during `agc-loading` runs physical-input cleanup immediately but delays the underlying `app.js` CLOCK switch until the owned AGC load settles. This prevents the loader's asynchronous completion from switching the app back to AGC after the user selected CLOCK.
+A CLOCK request made during `agc-loading` marks CLOCK intent first, runs physical-input cleanup immediately, and delays only the underlying `app.js` CLOCK switch until the owned AGC load settles. This prevents the loader's asynchronous completion from switching the app back to AGC after the user selected CLOCK.
 
-Partial AGC-only test harnesses may omit CLOCK entry functions; mode/core authority and cleanup-hook registration still initialize in that environment.
+While that deferred CLOCK request exists, new input handoffs are not allowed to join the AGC load. Repeated CLOCK requests join the already-pending CLOCK transition instead of rerunning cleanup or creating another transition.
+
+Partial AGC-only test harnesses may omit CLOCK entry functions; mode/core authority, pending-CLOCK state, and cleanup-hook registration still initialize in that environment.
 
 ### `dsky-input-runtime.js`
 
@@ -66,7 +69,7 @@ Owns all extracted electrical input primitives:
 
 `keyMake(0)` is invalid. Channel-015 zero is reserved for KEYRST and can only be produced through `keyReset()`.
 
-The input runtime uses `runtime-transitions.js` as its mode/core authority and does not read `appStatus()` or `getCore()` directly.
+The input runtime uses `runtime-transitions.js` as its mode/core authority and does not read `appStatus()` or `getCore()` directly. It remains capable of releasing an already-active contact during pre-CLOCK cleanup; pending-CLOCK suppression is enforced by the physical/fallback input owners so cleanup itself is never blocked.
 
 ### `keyboard-electrical-interlock.js`
 
@@ -83,11 +86,13 @@ It does not call `keyPress()`, `keyRelease()`, or channel-015 `writeIo()` direct
 
 When CLOCK is selected it registers a pre-CLOCK cleanup hook. Any held channel-015 make is reset before the base CLOCK transition stops the AGC. A first-key handoff still waiting on AGC loading is canceled and cannot later reappear as a ghost keycode when the asynchronous load finishes. Blur/hidden cleanup also cancels a pending, not-yet-made handoff.
 
+While `runtimeTransitions.clockRequested()` is true, new normal-key pointerdowns are consumed at window capture but do not create mechanical/electrical ownership or another channel-015 cycle.
+
 ### `proceed-electrical.js`
 
 Owns physical pointer/lifecycle state for PRO only. The electrical make/release is delegated to `dsky-input-runtime.js`.
 
-PRO no longer wraps `window.enterClock` itself. It registers a pre-CLOCK cleanup hook with `runtime-transitions.js`, returning the maintained active-low channel-032 contact to its released level before `app.js` stops the AGC.
+PRO no longer wraps `window.enterClock` itself. It registers a pre-CLOCK cleanup hook with `runtime-transitions.js`, returning the maintained active-low channel-032 contact to its released level before `app.js` stops the AGC. New PRO makes are suppressed after CLOCK intent has been registered.
 
 ### `clock-behavior.js`
 
@@ -99,17 +104,20 @@ Owns only the document-level CLOCK keypad fallback/queue. It uses:
 
 The normal CM electrical interlock normally stops physical normal-key events earlier at window capture.
 
+The fallback queue now also registers a pre-CLOCK cleanup hook. CLOCK intent clears queued contacts and advances a promotion epoch so an older asynchronous drain cannot emit a stale keycode or erase a later fresh queue. New fallback contacts during pending CLOCK are consumed but not queued, and expected cancellation does not generate an error report or autosave.
+
 ## Current regression gates
 
 The canonical local build gate includes dedicated checks for these boundaries:
 
-- `runtime-authority-smoke.js` — transition/input ownership and forbidden direct primitives;
+- `runtime-authority-smoke.js` — transition/input ownership, pending-CLOCK contract, and forbidden direct primitives;
 - `runtime-clock-transition-smoke.js` — direct/API CLOCK semantics, pre-CLOCK cleanup hooks, AGC-load serialization, diagnostics, and partial-harness behavior;
 - `dsky-input-runtime-smoke.js` — key make, KEYRST, retained-core release, PRO levels, channel-015 zero rejection;
 - `clock-mode-behavior-smoke.js` — CLOCK fallback promotion and shared AGC-entry behavior;
-- `keyboard-electrical-interlock-smoke.js` — series-key exclusion, minimum KEYRST dwell, PRO bypass, pre-CLOCK held-key release, first-key handoff;
-- `keyboard-clock-cancel-smoke.js` — canceled first-key handoff cannot reappear after AGC loading finishes;
-- `proceed-electrical-smoke.js` — maintained PRO behavior and centralized pre-CLOCK release;
+- `clock-fallback-cancel-smoke.js` — queued fallback contacts and later fallback contacts cannot survive pending CLOCK intent;
+- `keyboard-electrical-interlock-smoke.js` — series-key exclusion, minimum KEYRST dwell, PRO bypass, pre-CLOCK held-key release, pending-CLOCK suppression, first-key handoff;
+- `keyboard-clock-cancel-smoke.js` — canceled first-key handoff cannot reappear after AGC loading finishes and later contacts are suppressed;
+- `proceed-electrical-smoke.js` — maintained PRO behavior, centralized pre-CLOCK release, and pending-CLOCK make suppression;
 - `rset-flightpath-smoke.js` — physical RSET remains Pinball `022` plus KEYRST with no synthetic JavaScript reset;
 - `runtime-transition-integration-smoke.js` — multi-layer transition/input integration.
 
