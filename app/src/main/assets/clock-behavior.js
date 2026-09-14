@@ -3,32 +3,33 @@
 
   const api = window.AGCDSKY;
   const transitions = api?.runtimeTransitions;
+  const input = api?.inputRuntime;
   const AGC_KEY = window.AGCDSKY_KEY_CODES;
-  if (!api || !transitions
+  if (!api || !transitions || !input
       || typeof transitions.requestAgc !== 'function'
       || typeof transitions.mode !== 'function'
-      || typeof transitions.core !== 'function'
+      || typeof input.ready !== 'function'
+      || typeof input.keyMake !== 'function'
       || !AGC_KEY) return;
 
-  // This layer owns only the document-level CLOCK keypad fallback. The live
-  // CM electrical interlock normally captures physical normal keys earlier at
-  // window capture and uses the same shared runtime transition service/key map.
-  // Runtime mode/core authority also stays in runtime-transitions.js so this
-  // fallback cannot grow a second appStatus/getCore interpretation.
+  // This layer owns only the document-level CLOCK keypad fallback. The
+  // parser-loaded CM electrical interlock normally captures physical normal
+  // keys earlier at window capture. Both paths share the same transition,
+  // keycode and electrical-input services, so this fallback cannot grow a
+  // second app/runtime/core interpretation.
   const pendingKeys = [];
   let promotionPromise = null;
 
   async function drainClockInput() {
     try {
       await transitions.requestAgc('clock keypad fallback');
-      const core = transitions.core();
-      if (!core || transitions.mode() !== transitions.modes.AGC) {
-        throw new Error('AGC core unavailable after clock keypad handoff');
+      if (transitions.mode() !== transitions.modes.AGC || !input.ready()) {
+        throw new Error('AGC input runtime unavailable after clock keypad handoff');
       }
       while (pendingKeys.length) {
         const next = pendingKeys.shift();
         const code = AGC_KEY[next];
-        if (code !== undefined) core.keyPress(code);
+        if (code !== undefined) input.keyMake(code);
       }
       if (typeof api.scheduleAgcAutosave === 'function') {
         api.scheduleAgcAutosave('clock keypad handoff');
@@ -54,8 +55,8 @@
     try { currentMode = transitions.mode(); } catch (_) { return; }
     if (currentMode !== transitions.modes.CLOCK && currentMode !== transitions.modes.AGC_LOADING) return;
 
-    // Before the CM electrical interlock is dynamically installed, this keeps
-    // app.js's synthetic clock editor from consuming a normal DSKY contact.
+    // This is a fallback only. In the live CM path the parser-loaded electrical
+    // interlock owns window capture first and stops propagation before here.
     event.preventDefault();
     event.stopPropagation();
     key.classList.add('pressed');
