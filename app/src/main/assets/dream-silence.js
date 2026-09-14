@@ -5,12 +5,12 @@
 // preference untouched so leaving Dream mode restores the normal app exactly as
 // configured.
 (() => {
-  const isDream = new URLSearchParams(location.search).get('dream') === '1';
-  if (!isDream) return;
+  const state = window.AGCDSKY_APP_STATE;
+  if (!state || !state.dream) return;
 
   // Prevent creation/resumption of WebAudio in Dream mode and make the direct
-  // clock relay-burst path a no-op. app.js has already established these global
-  // functions, and this synchronous script runs before timer callbacks can fire.
+  // clock relay-burst path a no-op. The shell/audio runtimes have established
+  // these globals synchronously before timer callbacks can fire.
   if (typeof ensureAudio === 'function') ensureAudio = () => null;
   if (typeof playRelayBurst === 'function') playRelayBurst = () => {};
 
