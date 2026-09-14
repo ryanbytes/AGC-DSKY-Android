@@ -41,7 +41,7 @@ function runRelayQueue(){
   if(clockState.mode!=='clock'){relayBusy=false;relayQueue=[];return}
   const old=clockRelayWords[job.group.relay]??job.newWord,diff=popcount11(old^job.newWord);
   clockRelayWords[job.group.relay]=job.newWord;
-  if(tickSound&&diff)playRelayBurst(diff);
+  if(clockState.tickSound&&diff)playRelayBurst(diff);
   setTimeout(()=>{
     if(clockState.mode!=='clock')return;
     const touched=new Set();
@@ -81,7 +81,7 @@ function v35RelayState(){
 }
 function scheduleV35RelaySounds(from,to){
   clearLampTestSoundTimers();
-  if(!tickSound)return;
+  if(!clockState.tickSound)return;
   ensureAudio();
   [11,10,9,8,7,6,5,4,3,2,1,12].forEach((relay,index)=>{
     const changed=popcount11((from[relay]||0)^(to[relay]||0));
