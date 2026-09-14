@@ -1,0 +1,9 @@
+AGC DSKY Android corresponding source
+
+Public repository:
+https://github.com/ryanbytes/AGC-DSKY-Android
+
+Commercial release source snapshot:
+release/0.38.3-commercial-1
+
+The Android/frontend project is distributed under GNU GPL version 2. The release snapshot contains the source, build scripts, pinned submodule reference, and notices corresponding to the commercial-ready binary.

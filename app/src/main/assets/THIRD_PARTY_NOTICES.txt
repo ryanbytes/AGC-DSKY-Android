@@ -1,0 +1,28 @@
+AGC DSKY Android - third-party notices
+
+Virtual AGC / yaAGC
+https://github.com/virtualagc/virtualagc
+GNU GPL version 2 or later.
+
+webAGC
+https://github.com/michaelfranzl/webAGC
+Pinned revision: 0575ea7a1231e3948bae7d2c22a6ac146da0c38d
+GNU GPL version 2 or later for the upstream software.
+
+Apollo 11 Comanche 055 rope
+Historical Apollo Guidance Computer flight software preserved by the Virtual AGC/Apollo source-preservation projects and treated there as public-domain U.S. Government material.
+
+DSKY electroluminescent segment geometry
+Derived from Ben Krasnow's DSKY_EL_replica project:
+https://github.com/benkrasnow/DSKY_EL_replica
+Copyright (c) 2019 Ben Krasnow
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+NASA / U.S. Government non-endorsement
+AGC DSKY Android is an independent historical simulator. It is not affiliated with, sponsored by, or endorsed by NASA or the United States Government. NASA names and mission references are used descriptively for historical identification.

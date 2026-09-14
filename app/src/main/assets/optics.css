@@ -1,0 +1,44 @@
+/* Apollo CM sextant camera/optics view. */
+#sxt-view{position:fixed;inset:0;z-index:10000;background:#030303;display:none;align-items:center;justify-content:center;overflow:hidden;color:#e7e1d4;font-family:Arial,Helvetica,sans-serif}
+#sxt-view.open{display:flex}
+#sxt-eyepiece{position:relative;width:min(94vw,94vh);height:min(94vw,94vh);border-radius:50%;overflow:hidden;background:#000;box-shadow:0 0 0 3px #222,0 0 0 9px #090909,0 0 36px #000;touch-action:manipulation;user-select:none}
+#sxt-video{position:absolute;left:50%;top:50%;width:100%;height:100%;object-fit:cover;transform-origin:center center;transform:translate(calc(-50% + var(--pan-x,0px)),calc(-50% + var(--pan-y,0px))) scale(var(--cam-zoom,1));filter:contrast(1.07) brightness(.92)}
+#sxt-reticle{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;filter:drop-shadow(0 0 2px rgba(255,224,170,.45));opacity:var(--reticle-opacity,.90)}
+#sxt-reticle .ret{stroke:#ffdca1;stroke-width:.42;fill:none;vector-effect:non-scaling-stroke}
+#sxt-reticle .fine{stroke-width:.28}
+#sxt-reticle .field{stroke:#241d15;stroke-width:.32;opacity:.65}
+#sxt-ui{position:fixed;left:0;right:0;bottom:max(8px,env(safe-area-inset-bottom));z-index:10002;display:flex;gap:7px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 10px;background:linear-gradient(transparent,rgba(0,0,0,.72) 24%,rgba(0,0,0,.88));font-size:12px}
+#sxt-ui button{border:1px solid #777;background:#202020;color:#eee;border-radius:4px;padding:9px 12px;font-weight:700;letter-spacing:.03em}
+#sxt-ui button:active{background:#444}
+#sxt-ui .mark{border-color:#b8b8b8;background:#343434}
+#sxt-ui .reject{border-color:#9a6969}
+#sxt-readout{min-width:175px;text-align:center;font-family:monospace;font-size:12px;line-height:1.3;text-shadow:0 1px 2px #000}
+#sxt-reticle-bright{width:110px}
+#sxt-status{position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:10002;background:rgba(0,0,0,.62);padding:5px 10px;border-radius:4px;font-size:11px;letter-spacing:.04em;white-space:nowrap}
+@media (orientation:landscape){#sxt-eyepiece{width:min(88vw,94vh);height:min(88vw,94vh)}#sxt-ui{padding-bottom:6px}}
+#sxt-starbox{position:fixed;z-index:10003;left:max(8px,env(safe-area-inset-left));top:max(42px,calc(env(safe-area-inset-top) + 38px));width:min(330px,calc(100vw - 16px));display:none;padding:8px 9px;border:1px solid #666;border-radius:5px;background:rgba(0,0,0,.78);font:700 10px/1.35 Arial,Helvetica,sans-serif;letter-spacing:.025em;color:#eee;box-shadow:0 3px 16px #000}
+#sxt-starbox.visible{display:block}
+.sxt-star-title{font-size:9px;color:#d3c7ad;margin-bottom:4px}
+#sxt-star-location,#sxt-star-pair,#sxt-star-target,#sxt-star-command{margin-top:3px}
+#sxt-star-buttons{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+#sxt-star-buttons button{padding:5px 7px;border:1px solid #777;background:#171717;color:#eee;border-radius:3px;font:700 9px Arial,sans-serif}
+#sxt-star-buttons button.selected{outline:1px solid #e4d6b7;background:#3b3932}
+.sxt-arrow-wrap{display:flex;align-items:center;gap:8px;margin-top:5px}
+#sxt-star-arrow{display:inline-block;font-size:28px;line-height:28px;transform-origin:50% 52%;color:#ffdca1;text-shadow:0 0 4px #000;transition:transform .10s linear}
+#sxt-star-error{font-size:10px}
+#sxt-star-command{font-family:monospace;color:#ddd}
+@media (orientation:landscape){#sxt-starbox{width:310px;top:max(38px,calc(env(safe-area-inset-top) + 34px));font-size:9px}}
+
+/* v0.38.1 live celestial pointing cue. It is phone-side guidance only. */
+#sxt-eyepiece{position:relative}
+#sxt-star-cue{position:absolute;z-index:6;left:50%;top:50%;width:18px;height:18px;display:none;align-items:center;justify-content:center;pointer-events:none;transform:translate(-50%,-50%) translate(var(--cue-x,0px),var(--cue-y,0px));transition:transform .06s linear;filter:drop-shadow(0 0 3px #000)}
+#sxt-star-cue.active{display:flex}
+#sxt-star-cue span{font:700 18px/18px Arial,sans-serif;color:#fff4c6;text-shadow:0 0 2px #000,0 0 5px #000}
+#sxt-star-cue.outside span{font-size:15px;opacity:.9}
+
+/* v0.38.2 pointing calibration + visibility ranking. */
+#sxt-star-conditions{margin-top:3px;color:#c9c2b2;font-size:9px}
+#sxt-star-cal{margin-top:5px;padding-top:4px;border-top:1px solid #444;color:#d8cfbb;font-size:9px}
+#sxt-star-cue.centered span{font-size:20px;text-shadow:0 0 3px #000,0 0 8px #fff4c6}
+#sxt-calibrate,#sxt-cal-clear{font-size:10px}
+@media (max-width:430px){#sxt-ui{gap:4px;padding-left:5px;padding-right:5px}#sxt-ui button{padding:7px 8px;font-size:9px}#sxt-readout{min-width:145px;font-size:10px}}

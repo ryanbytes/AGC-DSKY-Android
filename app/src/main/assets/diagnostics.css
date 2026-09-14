@@ -1,0 +1,92 @@
+#diag-view{
+  position:fixed;
+  z-index:11000;
+  left:50%;
+  right:auto;
+  top:max(6px,env(safe-area-inset-top));
+  transform:translateX(-50%);
+  width:min(760px,calc(100vw - 12px));
+  height:min(94dvh,calc(100dvh - 12px));
+  max-height:calc(100dvh - 12px);
+  display:none;
+  overflow:hidden;
+  border:1px solid #686868;
+  border-radius:7px;
+  background:rgba(8,8,8,.97);
+  color:#ededed;
+  box-shadow:0 4px 28px #000;
+  font:11px/1.35 Arial,Helvetica,sans-serif;
+}
+#diag-view.open{display:flex;flex-direction:column}
+#diag-head{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  background:#0b0b0b;
+  padding:10px 12px 9px;
+  border-bottom:1px solid #353535;
+  z-index:2;
+}
+#diag-head strong{letter-spacing:.07em;font-size:12px}
+#diag-head button,#diag-actions button{
+  border:1px solid #777;
+  background:#242424;
+  color:#eee;
+  border-radius:4px;
+  padding:7px 9px;
+  font-weight:700;
+  font-size:10px;
+}
+#diag-head button:disabled,#diag-actions button:disabled{opacity:.42}
+#diag-scroll{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:0 12px calc(12px + env(safe-area-inset-bottom));
+}
+#diag-view table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-family:ui-monospace,Consolas,monospace;
+  font-size:10.5px;
+}
+#diag-view th{
+  text-align:left;
+  color:#c6bda9;
+  padding:10px 4px 4px;
+  border-bottom:1px solid #4d4d4d;
+  letter-spacing:.05em;
+}
+#diag-view td{
+  padding:3px 4px;
+  vertical-align:top;
+  border-bottom:1px solid #202020;
+  white-space:normal;
+  word-break:normal;
+  overflow-wrap:anywhere;
+}
+#diag-view td:first-child{width:30%;color:#aaa}
+#diag-view td:last-child{width:70%;color:#ededed}
+#diag-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+  margin-top:10px;
+}
+#diag-actions button{min-height:34px;white-space:normal}
+#diag-note{margin:9px 1px 2px;color:#aaa;font-size:9px;line-height:1.35}
+@media (max-width:520px){
+  #diag-view{width:calc(100vw - 8px);height:calc(100dvh - 8px);top:max(4px,env(safe-area-inset-top));border-radius:5px}
+  #diag-head{padding:9px 9px 8px}
+  #diag-scroll{padding:0 8px calc(10px + env(safe-area-inset-bottom))}
+  #diag-view table{font-size:10px}
+  #diag-view td:first-child{width:28%}
+  #diag-view td:last-child{width:72%}
+  #diag-actions{grid-template-columns:1fr}
+}

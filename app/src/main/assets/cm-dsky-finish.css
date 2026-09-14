@@ -1,0 +1,50 @@
+/* CM-mounted Apollo Block II DSKY finish.
+   The photographic spacecraft-panel compositor is intentionally absent. */
+
+body:not(.dream):not(.screen-only):not(.display-only) .dsky{
+  z-index:3;
+  filter:drop-shadow(0 5px 7px rgba(0,0,0,.72));
+}
+
+/* Apollo Block II DSKY external finish: FS 36231 Dark Gull Gray. */
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky{
+  background:
+    radial-gradient(circle at 18% 12%,rgba(255,255,255,.065) 0 1px,transparent 1.4px),
+    radial-gradient(circle at 74% 38%,rgba(0,0,0,.075) 0 1px,transparent 1.5px),
+    repeating-linear-gradient(94deg,rgba(255,255,255,.012) 0 1px,rgba(0,0,0,.014) 1px 3px),
+    linear-gradient(145deg,#858b87 0%,#747a76 34%,#656b67 72%,#7b817d 100%);
+  border-color:#151615;
+  box-shadow:
+    inset 0 0 0 .22vmin #929894,
+    inset 0 0 0 .55vmin #555b57,
+    inset 0 0 1.7vmin rgba(0,0,0,.42),
+    0 .35vmin .7vmin rgba(0,0,0,.72);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky:before{
+  border-color:rgba(38,41,39,.72);
+  box-shadow:inset 0 .1vmin .22vmin rgba(255,255,255,.24),0 .08vmin .12vmin rgba(255,255,255,.09);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .ann-well{
+  background:#30312f;
+  border-color:#484944;
+  outline-color:#1a1b19;
+  box-shadow:inset .35vmin .35vmin .7vmin rgba(0,0,0,.68),inset -.2vmin -.18vmin .35vmin rgba(255,255,255,.09),0 .13vmin .16vmin rgba(255,255,255,.07);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .display-well{
+  border-color:#494a46;
+  outline-color:#181917;
+  box-shadow:inset .4vmin .45vmin 1.1vmin #020302,inset -.18vmin -.18vmin .35vmin rgba(255,255,255,.07),0 .13vmin .16vmin rgba(255,255,255,.06);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .lamp:not(.on){
+  background:linear-gradient(#5a5b56,#454642);
+  color:#e5e2d8;
+  border-color:#272825;
+  box-shadow:inset .12vmin .12vmin .2vmin rgba(255,255,255,.10),inset -.12vmin -.12vmin .22vmin rgba(0,0,0,.42);
+  text-shadow:0 .07em #111;
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .lamp:not(.on):nth-child(even){
+  background:linear-gradient(#60615b,#4b4c47);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
+  border-color:#70716c;
+}
