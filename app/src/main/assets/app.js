@@ -12,42 +12,14 @@ let verb='16',noun='65',mode='clock',
     dim=store.get('dim')==='1',
     tickSound=store.get('audioTickV4')!=='0',
     displayOnly=dream||store.get('displayOnly')==='1',
-    lampTestActive=false,controlsTimer=0,audioCtx=null,tickLevel=1,solarFactor=0;
-const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20,RELAY_CLICK_SPREAD_MS=2.5,V35_ROW_MS=40,V35_TEST_MS=5000;
-let clockDigits={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']},
-    clockRelayWords={},relayQueue=[],relayBusy=false;
+    controlsTimer=0,audioCtx=null,tickLevel=1,solarFactor=0;
+const RELAY_CLICK_SPREAD_MS=2.5;
 const agcRelayWords={};
 let agcCh11=0,agcCh13=0,agcCh163=0,agcSuspendedForClock=false;
 let agcCore=null,agcLoadedMission='',appVisible=!document.hidden,agcPausedForVisibility=false;
 const SNAPSHOT_KEY='agcSnapshotV1',SNAPSHOT_META_KEY='agcSnapshotMetaV1';
 let lastSnapshotError='',lastSnapshotAction='none',lastSnapshotVerify=null,autosaveTimer=0,lastAutosaveAt=0;
 
-
-const SEG={0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',8:'abcdefg',9:'abcdfg'};
-const PATH={
-  a:'M1.62 1.28 L11.72 1.28 L12.32 1.84 L11.70 2.42 L1.60 2.42 L1.02 1.84 Z',
-  g:'M0.88 10.92 L1.50 10.34 L10.90 10.34 L11.52 10.92 L10.88 11.50 L1.48 11.50 Z',
-  d:'M-0.02 21.46 L0.60 20.88 L10.00 20.88 L10.62 21.46 L9.98 22.04 L0.58 22.04 Z',
-  f:'M1.36 2.84 L2.42 3.36 L1.56 10.10 L0.54 10.68 L0.16 10.12 L1.02 3.40 Z',
-  b:'M11.44 2.84 L12.50 3.36 L11.64 10.10 L10.62 10.68 L10.24 10.12 L11.10 3.40 Z',
-  e:'M0.26 11.92 L1.32 12.44 L0.46 19.18 L-0.56 19.76 L-0.94 19.20 L-0.08 12.48 Z',
-  c:'M10.34 11.92 L11.40 12.44 L10.54 19.18 L9.52 19.76 L9.14 19.20 L10.00 12.48 Z'
-};
-function pathEl(name,on){return `<path class="el-seg ${on?'on':'off'}" data-seg="${name}" d="${PATH[name]}"/>`}
-function glyph(ch,x){const lit=SEG[ch]||'';return `<g class="el-glyph" transform="translate(${x} 0)">${['a','b','c','d','e','f','g'].map(s=>pathEl(s,lit.includes(s))).join('')}</g>`}
-function signGlyph(sign){
-  const plus=sign==='+',bar=plus||sign==='-';
-  return `<g class="el-sign">`+
-    `<path class="el-seg ${bar?'on':'off'}" d="M.54 10.92 L1.12 10.34 L5.74 10.34 L6.32 10.92 L5.72 11.50 L1.10 11.50 Z"/>`+
-    `<path class="el-seg ${plus?'on':'off'}" d="M3.56 4.26 L4.46 4.72 L3.76 10.06 L2.90 10.56 L2.58 10.10 L3.26 4.76 Z"/>`+
-    `<path class="el-seg ${plus?'on':'off'}" d="M2.70 11.88 L3.60 12.34 L2.90 17.70 L2.04 18.20 L1.72 17.74 L2.40 12.38 Z"/>`+
-    `</g>`;
-}
-function renderDigits(el,text){let out='';String(text).split('').forEach((ch,i)=>out+=glyph(ch,i*14));el.innerHTML=out}
-function renderReg(el,text){text=String(text);let out=signGlyph(text[0]);text.slice(1).split('').forEach((ch,i)=>out+=glyph(ch,7+i*14));el.innerHTML=out}
-function set2(id,text){renderDigits($(id),String(text).padEnd(2,' ').slice(0,2))}
-function setReg(id,sign,digits){renderReg($(id),(sign||' ')+String(digits).padEnd(5,' ').slice(0,5))}
-function pad(n,len){return String(n).padStart(len,'0').slice(-len)}
 function show(v,n){verb=v;noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
 let ntpStatus={server:'time.cloudflare.com',offsetMs:0,lastSyncUtcMs:0,roundTripMs:-1,ageMs:-1,state:'unavailable'};
 function accurateTime(){return Date.now()+(Number(ntpStatus.offsetMs)||0)}
@@ -55,105 +27,6 @@ function accurateDate(){return new Date(accurateTime())}
 function clockTimeLabel(){return ntpStatus.state==='synced'?'PHONE CLOCK · NTP TIME':ntpStatus.state==='stale'?'PHONE CLOCK · NTP OFFSET STALE':'PHONE CLOCK · ANDROID WALL TIME'}
 function updateNtpStatus(value){try{const parsed=typeof value==='string'?JSON.parse(value):value;if(parsed&&typeof parsed==='object'){ntpStatus={...ntpStatus,...parsed};if(mode==='clock')$('mode').textContent=clockTimeLabel()}}catch(_){/* malformed bridge data must not affect the DSKY */}}
 function loadNativeNtpStatus(){try{if(window.TimeBridge&&typeof TimeBridge.getStatus==='function')updateNtpStatus(TimeBridge.getStatus())}catch(_){/* bridge is unavailable outside Android */}}
-
-// Block II uses five latching relays per character; the contact matrix decodes
-// the 5-bit relay state into the seven EL strokes.
-const DIGIT_RELAY={' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31};
-const CLOCK_GROUPS=[
-  {relay:8,cells:[['r1',0]],singleRight:true},
-  {relay:7,cells:[['r1',1],['r1',2]],b:1},{relay:6,cells:[['r1',3],['r1',4]],b:0},
-  {relay:5,cells:[['r2',0],['r2',1]],b:1},{relay:4,cells:[['r2',2],['r2',3]],b:0},
-  {relay:3,cells:[['r2',4],['r3',0]],b:0},
-  {relay:2,cells:[['r3',1],['r3',2]],b:1},{relay:1,cells:[['r3',3],['r3',4]],b:0}
-];
-function desiredClockDigits(){const d=accurateDate();return {r1:pad(d.getHours(),5).split(''),r2:pad(d.getMinutes(),5).split(''),r3:pad(d.getSeconds(),5).split('')}}
-function renderClockReg(name){setReg(name,'+',clockDigits[name].join(''))}
-function clockWord(group,want){
-  let c=0,d=0;
-  if(group.singleRight)d=DIGIT_RELAY[want[group.cells[0][0]][group.cells[0][1]]]||0;
-  else{c=DIGIT_RELAY[want[group.cells[0][0]][group.cells[0][1]]]||0;d=DIGIT_RELAY[want[group.cells[1][0]][group.cells[1][1]]]||0}
-  return ((group.b||0)<<10)|(c<<5)|d;
-}
-function popcount11(v){v&=0x7ff;let n=0;while(v){v&=v-1;n++}return n}
-function syncClockFace(){
-  const want=desiredClockDigits();
-  for(const name of ['r1','r2','r3'])clockDigits[name]=want[name].slice();
-  for(const group of CLOCK_GROUPS)clockRelayWords[group.relay]=clockWord(group,want);
-  ['r1','r2','r3'].forEach(renderClockReg);
-}
-function stopClockQueue(){relayQueue=[];relayBusy=false}
-function runRelayQueue(){
-  const job=relayQueue.shift();
-  if(!job){relayBusy=false;return}
-  if(mode!=='clock'){relayBusy=false;relayQueue=[];return}
-  const old=clockRelayWords[job.group.relay]??job.newWord,diff=popcount11(old^job.newWord);
-  clockRelayWords[job.group.relay]=job.newWord;
-  if(tickSound&&diff)playRelayBurst(diff);
-  setTimeout(()=>{
-    if(mode!=='clock')return;
-    const touched=new Set();
-    for(const [name,i] of job.group.cells){clockDigits[name][i]=job.want[name][i];touched.add(name)}
-    touched.forEach(renderClockReg);
-  },CLOCK_SETTLE_MS);
-  setTimeout(runRelayQueue,CLOCK_RELAY_MS);
-}
-function tick(){
-  if(mode!=='clock'||lampTestActive||relayBusy)return;
-  const want=desiredClockDigits(),jobs=[];
-  for(const group of CLOCK_GROUPS){const w=clockWord(group,want);if(clockRelayWords[group.relay]!==w)jobs.push({group,want,newWord:w})}
-  if(!jobs.length)return;
-  relayQueue=jobs;relayBusy=true;runRelayQueue();
-}
-function setLamp(name,on){const x=document.querySelector(`[data-lamp="${name}"]`);if(x)x.classList.toggle('on',!!on)}
-function clearLamps(){document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.remove('on'));document.body.classList.remove('vn-flash-off','el-off')}
-let lampTestTimer=0,lampTestSoundTimers=[];
-function clearLampTestSoundTimers(){for(const id of lampTestSoundTimers)clearTimeout(id);lampTestSoundTimers=[]}
-function cancelLampTest(){
-  if(lampTestTimer){clearTimeout(lampTestTimer);lampTestTimer=0}
-  clearLampTestSoundTimers();lampTestActive=false;
-}
-function pairLow11(text){
-  const value=String(text||'').padEnd(2,' ').slice(0,2);
-  return ((DIGIT_RELAY[value[0]]||0)<<5)|(DIGIT_RELAY[value[1]]||0);
-}
-function v35Low11(relay){
-  const eight=DIGIT_RELAY['8'],plus=(relay===7||relay===5||relay===2)?1:0;
-  // FULLDSP drives both 5-relay character banks even where one bank is not visible.
-  return (plus<<10)|(eight<<5)|eight;
-}
-function captureClockRelayState(commandVerb=verb,commandNoun=noun){
-  const out={11:pairLow11('00'),10:pairLow11(commandVerb),9:pairLow11(commandNoun),12:0};
-  for(const group of CLOCK_GROUPS)out[group.relay]=(clockRelayWords[group.relay]??0)&0x7ff;
-  return out;
-}
-function v35RelayState(){
-  const out={};for(const relay of [11,10,9,8,7,6,5,4,3,2,1])out[relay]=v35Low11(relay);
-  out[12]=selectedMission==='comanche055'?0o650:0o674;return out;
-}
-function scheduleV35RelaySounds(from,to){
-  clearLampTestSoundTimers();
-  if(!tickSound)return;
-  ensureAudio();
-  [11,10,9,8,7,6,5,4,3,2,1,12].forEach((relay,index)=>{
-    const changed=popcount11((from[relay]||0)^(to[relay]||0));
-    if(!changed)return;
-    const id=setTimeout(()=>{lampTestSoundTimers=lampTestSoundTimers.filter(x=>x!==id);playRelayBurst(changed)},index*V35_ROW_MS);
-    lampTestSoundTimers.push(id);
-  });
-}
-function lampTest(){
-  cancelLampTest();stopClockQueue();
-  const prior=captureClockRelayState(),active=v35RelayState();
-  lampTestActive=true;scheduleV35RelaySounds(prior,active);
-  document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.add('on'));
-  set2('prog','88');set2('verb','88');set2('noun','88');['r1','r2','r3'].forEach(x=>setReg(x,'+','88888'));
-  lampTestTimer=setTimeout(()=>{
-    lampTestTimer=0;if(mode!=='clock'){cancelLampTest();return}
-    const want=desiredClockDigits();for(const group of CLOCK_GROUPS)clockRelayWords[group.relay]=clockWord(group,want);
-    const restore=captureClockRelayState('16','65');scheduleV35RelaySounds(active,restore);
-    lampTestActive=false;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
-  },V35_TEST_MS);
-}
 
 function missionSpec(){return MISSIONS[selectedMission]}
 function applyMissionButton(){const b=$('mission');if(b)b.textContent=missionSpec().short}
