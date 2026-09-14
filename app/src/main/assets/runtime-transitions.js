@@ -5,11 +5,15 @@
   if (!api || api.runtimeTransitions) return;
 
   const baseEnterAgc = api.enterAgc;
-  const baseEnterClock = window.enterClock;
-  const baseApiEnterClock = api.enterClock;
-  if (typeof baseEnterAgc !== 'function'
-      || typeof baseEnterClock !== 'function'
-      || typeof baseApiEnterClock !== 'function') return;
+  if (typeof baseEnterAgc !== 'function') return;
+
+  // CLOCK entry is present in production app.js, but keep the shared runtime
+  // authority usable in isolated AGC-only harnesses as well. When both CLOCK
+  // entry surfaces are present they are wrapped below without changing either
+  // surface's existing calling convention.
+  const baseEnterClock = typeof window.enterClock === 'function' ? window.enterClock : null;
+  const baseApiEnterClock = typeof api.enterClock === 'function' ? api.enterClock : null;
+  const clockEntryAvailable = !!(baseEnterClock && baseApiEnterClock);
 
   const MODES = Object.freeze({
     CLOCK:'clock',
@@ -108,6 +112,7 @@
   }
 
   function sharedEnterClock(...args) {
+    if (!clockEntryAvailable) throw new Error('CLOCK runtime entry API unavailable');
     const from = mode();
     runBeforeClock('app enterClock', from);
     const result = baseEnterClock.apply(this, args);
@@ -126,6 +131,7 @@
   // resolve the replaced classic-script global enterClock binding, so cleanup
   // hooks run exactly once without changing the public API's historical default.
   function sharedApiEnterClock(...args) {
+    if (!clockEntryAvailable) throw new Error('CLOCK runtime entry API unavailable');
     return baseApiEnterClock.apply(this, args);
   }
 
@@ -140,18 +146,21 @@
       transitionInFlight:!!transitionPromise,
       lastTransition:lastTransition ? {...lastTransition} : null,
       lastClockTransition:lastClockTransition ? {...lastClockTransition} : null,
-      beforeClockHooks:beforeClockHooks.size
+      beforeClockHooks:beforeClockHooks.size,
+      clockEntryWrapped:clockEntryAvailable
     })
   });
 
   // app.js is a classic script, so its global transition identifiers resolve
-  // through window at call time. Replace AGC entry directly. For CLOCK entry,
-  // replace the global binding and keep the exported convenience wrapper above
-  // so its preserveAgc=true behavior is unchanged.
+  // through window at call time. AGC entry is always present. In production the
+  // two CLOCK entry surfaces are also replaced; isolated AGC-only harnesses can
+  // omit them and still exercise shared mode/core/input authority.
   window.enterAgc = sharedEnterAgc;
   api.enterAgc = sharedEnterAgc;
-  window.enterClock = sharedEnterClock;
-  api.enterClock = sharedApiEnterClock;
+  if (clockEntryAvailable) {
+    window.enterClock = sharedEnterClock;
+    api.enterClock = sharedApiEnterClock;
+  }
   window.AGCDSKY_RUNTIME = runtime;
   api.runtimeTransitions = runtime;
 })();
