@@ -5,6 +5,10 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+const html = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/index.html'), 'utf8');
+const transitionSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/runtime-transitions.js'), 'utf8');
 const clockSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/clock-behavior.js'), 'utf8');
 const keyboardSource = fs.readFileSync(
@@ -54,6 +58,13 @@ async function flushMicrotasks(count = 12) {
 }
 
 async function main() {
+  const appIndex = html.indexOf('<script src="app.js"></script>');
+  const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
+  const clockIndex = html.indexOf('<script src="clock-behavior.js"></script>');
+  const cmIndex = html.indexOf('<script src="cm-mode.js"></script>');
+  assert(appIndex >= 0 && runtimeIndex > appIndex && clockIndex > runtimeIndex && cmIndex > clockIndex,
+    'script order must be app -> runtime transitions -> clock fallback -> CM dynamic features');
+
   const windowListeners = Object.create(null);
   const documentListeners = Object.create(null);
   const timers = new Map();
@@ -111,11 +122,15 @@ async function main() {
   context.addEventListener = function(type, fn){ addListener(windowListeners, type, fn); };
 
   vm.createContext(context);
-  vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
+  vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
   assert(AGCDSKY.runtimeTransitions,
-    'clock behavior did not publish the shared runtime transition coordinator');
+    'runtime transition service did not publish on AGCDSKY');
   assert(context.AGCDSKY_RUNTIME === AGCDSKY.runtimeTransitions,
-    'global and AGCDSKY transition coordinator references differ');
+    'global and AGCDSKY transition service references differ');
+
+  vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
+  assert(AGCDSKY.clockBehavior,
+    'clock fallback layer did not initialize against the transition service');
 
   vm.runInContext(keyboardSource, context, {filename:'keyboard-electrical-interlock.js'});
   assert(AGCDSKY.keyboardElectrical,
@@ -167,6 +182,9 @@ async function main() {
     'shared transition diagnostics did not record AGC completion');
   assert(transitionState.lastTransition.reason === 'external startup',
     'joining keyboard request incorrectly replaced the owner/reason of the existing transition');
+  const clockState = AGCDSKY.clockBehavior.snapshot();
+  assert(!clockState.promotionInFlight && clockState.pendingKeys.length === 0,
+    'document-level fallback incorrectly participated in the window-capture electrical handoff');
 
   state = AGCDSKY.keyboardElectrical.state();
   assert(!state.clockHandoffPending && state.electricalMade && state.keyResetPending,
@@ -195,7 +213,7 @@ async function main() {
     'channel-015 electrical cycle remained latched after KEYRST');
 
   console.log('runtime transition integration smoke: PASS');
-  console.log('  dynamic electrical owner joined one shared CLOCK -> AGC transition and preserved make/KEYRST');
+  console.log('  extracted transition service, clock fallback isolation, dynamic electrical owner, and make/KEYRST verified');
 }
 
 main().catch(error => {
