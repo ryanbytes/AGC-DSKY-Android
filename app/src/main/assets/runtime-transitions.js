@@ -4,16 +4,13 @@
   const api = window.AGCDSKY;
   if (!api || api.runtimeTransitions) return;
 
-  const baseEnterAgc = api.enterAgc;
+  // Capture the lifecycle implementation before installing compatibility
+  // wrappers. The public AGCDSKY facade dynamically delegates to this runtime
+  // after publication, so the facade itself never needs to be replaced.
+  const baseEnterAgc = typeof window.enterAgc === 'function' ? window.enterAgc : api.enterAgc;
   if (typeof baseEnterAgc !== 'function') return;
-
-  // CLOCK entry is present in production app.js, but keep the shared runtime
-  // authority usable in isolated AGC-only harnesses as well. When both CLOCK
-  // entry surfaces are present they are wrapped below without changing either
-  // surface's existing calling convention.
   const baseEnterClock = typeof window.enterClock === 'function' ? window.enterClock : null;
-  const baseApiEnterClock = typeof api.enterClock === 'function' ? api.enterClock : null;
-  const clockEntryAvailable = !!(baseEnterClock && baseApiEnterClock);
+  const clockEntryAvailable = typeof baseEnterClock === 'function';
 
   const MODES = Object.freeze({
     CLOCK:'clock',
@@ -55,12 +52,10 @@
     if (current.mode === MODES.AGC) return Promise.resolve(current);
     if (transitionPromise) return transitionPromise;
 
-    // runtime-transitions.js is loaded synchronously after app.js and the
-    // required dream-silence guard, before the event loop can run app.js's
-    // startup timeout and before the user can press the AGC control. All normal
-    // entry points are replaced below, so seeing a loading state without our
-    // Promise is an invariant violation, not a state to paper over with another
-    // independent polling loop.
+    // All production AGC entry surfaces resolve through this coordinator before
+    // the event loop can deliver user input. A loading state without the owned
+    // Promise therefore signals a broken transition invariant; do not create a
+    // second independent polling/loader path.
     if (current.mode === MODES.AGC_LOADING) {
       return Promise.reject(new Error('AGC loading state has no shared transition owner'));
     }
@@ -68,12 +63,10 @@
     const serial = ++transitionSerial;
     const from = current.mode;
     transitionPromise = (async () => {
-      await baseEnterAgc();
+      await baseEnterAgc.call(window);
       const next = status();
-      // app.js historically catches its own load/runtime failure and returns to
-      // clock mode. Preserve that behavior for the AGC button/startup caller:
-      // the shared entry Promise resolves with the final state instead of
-      // inventing a new unhandled rejection at this wrapper layer.
+      // The lifecycle layer catches its own load/runtime failure and may return
+      // to CLOCK. Preserve that contract for normal app/public entry callers.
       lastTransition = Object.freeze({
         serial,
         from,
@@ -88,19 +81,21 @@
     return transitionPromise;
   }
 
+  // Public/app entry preserves lifecycle failure semantics. Physical input
+  // callers use requestAgc() below because they require a definitely-ready core
+  // immediately after awaiting the transition.
+  function enterAgc(reason = 'runtime enterAgc') {
+    return beginAgc(reason);
+  }
+
   function sharedEnterAgc() {
-    return beginAgc('app enterAgc');
+    return beginAgc('global enterAgc');
   }
 
   function requestAgc(reason = 'runtime request') {
-    // Once CLOCK has been requested, no new input handoff may join an AGC load
-    // that is only being allowed to finish so CLOCK can take ownership safely.
     if (clockRequestPending) {
       return Promise.reject(new Error('AGC transition rejected because CLOCK is pending'));
     }
-    // Keyboard/fallback callers require a ready AGC because they must inject a
-    // key immediately after this awaits. Give them a checked derived Promise
-    // without changing the underlying app-entry Promise's failure semantics.
     return beginAgc(reason).then(next => {
       if (clockRequestPending) {
         throw new Error('AGC transition completed after CLOCK was requested');
@@ -125,7 +120,7 @@
     }
   }
 
-  function finishClock(thisArg, args, requestedFrom, deferred) {
+  function finishClock(thisArg, args, requestedFrom, deferred, reason) {
     const executedFrom = mode();
     const result = baseEnterClock.apply(thisArg, args);
     const next = status();
@@ -134,28 +129,25 @@
       from:requestedFrom,
       executedFrom,
       to:next.mode,
-      reason:'app enterClock',
+      reason,
       deferred:!!deferred
     });
     return result;
   }
 
-  function sharedEnterClock(...args) {
+  function coordinateClock(thisArg, args, reason = 'runtime enterClock') {
     if (!clockEntryAvailable) throw new Error('CLOCK runtime entry API unavailable');
     if (deferredClockPromise) return deferredClockPromise;
 
     const from = mode();
-    // Mark CLOCK intent before cleanup so input layers can suppress any new
-    // contact while an active AGC load is being allowed to finish.
     clockRequestPending = true;
-    runBeforeClock('app enterClock', from);
+    runBeforeClock(reason, from);
 
     if (transitionPromise) {
       const activeTransition = transitionPromise;
-      const thisArg = this;
       deferredClockPromise = activeTransition
         .catch(() => null)
-        .then(() => finishClock(thisArg, args, from, true))
+        .then(() => finishClock(thisArg, args, from, true, reason))
         .finally(() => {
           deferredClockPromise = null;
           clockRequestPending = false;
@@ -164,19 +156,18 @@
     }
 
     try {
-      return finishClock(this, args, from, false);
+      return finishClock(thisArg, args, from, false, reason);
     } finally {
       clockRequestPending = false;
     }
   }
 
-  // AGCDSKY.enterClock() in app.js is intentionally a no-argument convenience
-  // wrapper that requests preserveAgc=true. Keep that wrapper intact and let it
-  // resolve the replaced classic-script global enterClock binding, so cleanup
-  // hooks run exactly once without changing the public API's historical default.
-  function sharedApiEnterClock(...args) {
-    if (!clockEntryAvailable) throw new Error('CLOCK runtime entry API unavailable');
-    return baseApiEnterClock.apply(this, args);
+  function enterClock(statusLabel, preserveAgc = false, reason = 'runtime enterClock') {
+    return coordinateClock(window, [statusLabel, preserveAgc], reason);
+  }
+
+  function sharedEnterClock(...args) {
+    return coordinateClock(this, args, 'global enterClock');
   }
 
   const runtime = Object.freeze({
@@ -184,6 +175,8 @@
     mode,
     core,
     clockRequested,
+    enterAgc,
+    enterClock,
     requestAgc,
     onBeforeClock,
     snapshot:() => ({
@@ -194,20 +187,16 @@
       lastTransition:lastTransition ? {...lastTransition} : null,
       lastClockTransition:lastClockTransition ? {...lastClockTransition} : null,
       beforeClockHooks:beforeClockHooks.size,
-      clockEntryWrapped:clockEntryAvailable
+      clockEntryWrapped:clockEntryAvailable,
+      publicApiDelegates:true
     })
   });
 
-  // app.js is a classic script, so its global transition identifiers resolve
-  // through window at call time. AGC entry is always present. In production the
-  // two CLOCK entry surfaces are also replaced; isolated AGC-only harnesses can
-  // omit them and still exercise shared mode/core/input authority.
+  // Keep classic-script global entrypoints as compatibility shims for the shell
+  // and older presentation layers. The public AGCDSKY methods are stable
+  // wrappers that discover AGCDSKY_RUNTIME at call time and are not rewritten.
   window.enterAgc = sharedEnterAgc;
-  api.enterAgc = sharedEnterAgc;
-  if (clockEntryAvailable) {
-    window.enterClock = sharedEnterClock;
-    api.enterClock = sharedApiEnterClock;
-  }
+  if (clockEntryAvailable) window.enterClock = sharedEnterClock;
   window.AGCDSKY_RUNTIME = runtime;
   api.runtimeTransitions = runtime;
 })();
