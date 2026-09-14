@@ -1,7 +1,9 @@
 'use strict';
 
 // Display-environment state shared by interactive and DreamService modes.
-// The AGC loader/decoder/snapshot model deliberately does not live here.
+// User/session presentation settings live in app-state-runtime.js.
+const environmentState=window.AGCDSKY_APP_STATE;
+if(!environmentState)throw new Error('Shared application state unavailable');
 let tickLevel=1,solarFactor=0;
 const DAY_MS=86400000,J1970=2440588,J2000=2451545,J0=.0009,RAD=Math.PI/180,SOLAR_FADE_HALF_MS=30*60*1000;
 function toJulian(date){return date.valueOf()/DAY_MS-.5+J1970}
@@ -33,23 +35,23 @@ function currentSolarFactor(){
   return 1-smoothstep(set-half,set+half,t);
 }
 function requestSolarLocation(){
-  if(!navigator.geolocation){$('mode').textContent='SOLAR LOCATION UNAVAILABLE';dreamMode='dim';applyDreamMode();return}
+  if(!navigator.geolocation){$('mode').textContent='SOLAR LOCATION UNAVAILABLE';environmentState.dreamMode='dim';applyDreamMode();return}
   $('mode').textContent='REQUESTING LOCAL SOLAR POSITION';
   navigator.geolocation.getCurrentPosition(p=>{
     store.set('solarLat',String(p.coords.latitude));store.set('solarLon',String(p.coords.longitude));
-    dreamMode='solar';applyDreamMode();$('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE';
+    environmentState.dreamMode='solar';applyDreamMode();$('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE';
   },()=>{
-    dreamMode='dim';applyDreamMode();$('mode').textContent='SOLAR NEEDS LOCATION PERMISSION';
+    environmentState.dreamMode='dim';applyDreamMode();$('mode').textContent='SOLAR NEEDS LOCATION PERMISSION';
   },{enableHighAccuracy:false,maximumAge:2592000000,timeout:12000});
 }
 function applyDim(){
-  if(!dream){document.body.classList.toggle('dim',dim);$('dsky').style.filter='';store.set('dim',dim?'1':'0')}
+  if(!environmentState.dream){document.body.classList.toggle('dim',environmentState.dim);$('dsky').style.filter='';store.set('dim',environmentState.dim?'1':'0')}
 }
 function setDreamWindowBrightness(v){try{if(window.DreamBridge&&DreamBridge.setBrightness)DreamBridge.setBrightness(v)}catch(e){}}
 function updateDreamEnvironment(){
-  if(!dream){tickLevel=1;return}
-  if(dreamMode==='bright')solarFactor=1;
-  else if(dreamMode==='solar')solarFactor=currentSolarFactor();
+  if(!environmentState.dream){tickLevel=1;return}
+  if(environmentState.dreamMode==='bright')solarFactor=1;
+  else if(environmentState.dreamMode==='solar')solarFactor=currentSolarFactor();
   else solarFactor=0;
   const visual=.20+.80*solarFactor,sat=.62+.38*solarFactor;
   $('dsky').style.filter=`brightness(${visual.toFixed(3)}) saturate(${sat.toFixed(3)})`;
@@ -57,15 +59,15 @@ function updateDreamEnvironment(){
   setDreamWindowBrightness(.05+.80*solarFactor);
 }
 function applyDreamMode(){
-  store.set('dreamMode',dreamMode);store.set('dreamBright',dreamMode==='bright'?'1':'0');
-  const b=$('dreambright');if(b)b.textContent=dreamMode==='solar'?'DREAM BRIGHTNESS AUTO':'DREAM BRIGHTNESS '+dreamMode.toUpperCase();
-  if(dream)updateDreamEnvironment();
+  store.set('dreamMode',environmentState.dreamMode);store.set('dreamBright',environmentState.dreamMode==='bright'?'1':'0');
+  const b=$('dreambright');if(b)b.textContent=environmentState.dreamMode==='solar'?'DREAM BRIGHTNESS AUTO':'DREAM BRIGHTNESS '+environmentState.dreamMode.toUpperCase();
+  if(environmentState.dream)updateDreamEnvironment();
 }
 function cycleDreamMode(){
-  if(dreamMode==='dim'){dreamMode='bright';applyDreamMode()}
-  else if(dreamMode==='bright'){
+  if(environmentState.dreamMode==='dim'){environmentState.dreamMode='bright';applyDreamMode()}
+  else if(environmentState.dreamMode==='bright'){
     const have=Number.isFinite(parseFloat(store.get('solarLat')))&&Number.isFinite(parseFloat(store.get('solarLon')));
-    if(have){dreamMode='solar';applyDreamMode();$('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE'}else requestSolarLocation();
-  }else{dreamMode='dim';applyDreamMode()}
+    if(have){environmentState.dreamMode='solar';applyDreamMode();$('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE'}else requestSolarLocation();
+  }else{environmentState.dreamMode='dim';applyDreamMode()}
 }
-function applyDisplayOnly(){document.body.classList.toggle('display-only',displayOnly);if(!dream)store.set('displayOnly',displayOnly?'1':'0');const b=$('display');if(b)b.textContent=displayOnly?'EXIT FULL DSKY DISPLAY':'FULL DSKY DISPLAY'}
+function applyDisplayOnly(){document.body.classList.toggle('display-only',environmentState.displayOnly);if(!environmentState.dream)store.set('displayOnly',environmentState.displayOnly?'1':'0');const b=$('display');if(b)b.textContent=environmentState.displayOnly?'EXIT FULL DSKY DISPLAY':'FULL DSKY DISPLAY'}
