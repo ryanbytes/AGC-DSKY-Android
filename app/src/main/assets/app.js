@@ -169,10 +169,8 @@ function enterClock(status=clockTimeLabel(),preserveAgc=false){
   $('agc').textContent='AGC MODE';$('mode').textContent=status;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
 }
 
-const AGC_KEY={
-  '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
-  V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
-};
+const AGC_KEY=window.AGCDSKY_KEY_CODES;
+if(!AGC_KEY)throw new Error('Shared DSKY keycode table unavailable');
 const RELAY_DIGIT={0:' ',21:'0',3:'1',25:'2',27:'3',15:'4',30:'5',28:'6',19:'7',29:'8',31:'9'};
 const agcDisplay={
   prog:[' ',' '],verb:[' ',' '],noun:[' ',' '],
