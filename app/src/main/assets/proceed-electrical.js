@@ -18,6 +18,7 @@
   const input = api?.inputRuntime;
   if (!api || !runtime || !input
       || typeof runtime.mode !== 'function'
+      || typeof runtime.clockRequested !== 'function'
       || typeof runtime.onBeforeClock !== 'function'
       || typeof input.ready !== 'function'
       || typeof input.proceed !== 'function') return;
@@ -51,7 +52,9 @@
   }
 
   function onPointerDown(event) {
-    if (currentMode() !== runtime.modes.AGC || !input.ready()) return;
+    if (runtime.clockRequested()
+        || currentMode() !== runtime.modes.AGC
+        || !input.ready()) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
