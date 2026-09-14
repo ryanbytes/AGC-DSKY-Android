@@ -12,8 +12,13 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
-const APP_JS = path.join(ROOT, 'app/src/main/assets/app.js');
-const INDEX_HTML = path.join(ROOT, 'app/src/main/assets/index.html');
+const ASSETS = path.join(ROOT, 'app/src/main/assets');
+const APP_JS = path.join(ASSETS, 'app.js');
+const KEYCODES_JS = path.join(ASSETS, 'dsky-keycodes.js');
+const RUNTIME_TRANSITIONS_JS = path.join(ASSETS, 'runtime-transitions.js');
+const INPUT_RUNTIME_JS = path.join(ASSETS, 'dsky-input-runtime.js');
+const KEYBOARD_INTERLOCK_JS = path.join(ASSETS, 'keyboard-electrical-interlock.js');
+const INDEX_HTML = path.join(ASSETS, 'index.html');
 const MANIFEST = path.join(ROOT, 'app/src/main/AndroidManifest.xml');
 const APP_GRADLE = path.join(ROOT, 'app/build.gradle');
 const SENSOR_ACTIVITY = path.join(
@@ -49,7 +54,12 @@ class Element {
         this.style = { filter: '', setProperty() {} };
     }
     addEventListener(name, callback) { this.listeners[name] = callback; }
-    closest() { return null; }
+    closest(selector) {
+        if (selector === '[data-key]' && this.dataset.key) return this;
+        return null;
+    }
+    setPointerCapture() {}
+    releasePointerCapture() {}
 }
 
 class FakeAgcCore {
@@ -58,6 +68,7 @@ class FakeAgcCore {
         this.running = false;
         this.rope = null;
         this.keyCodes = [];
+        this.keyReleaseCount = 0;
         this.startCount = 0;
         this.stopCount = 0;
         this.resetCount = 0;
@@ -72,7 +83,9 @@ class FakeAgcCore {
     start() { this.running = true; this.startCount++; }
     stop() { this.running = false; this.stopCount++; }
     version() { return 'fake-test-core'; }
-    keyPress(code) { this.keyCodes.push(code); }
+    keyPress(code) { this.keyCodes.push(code); return 1; }
+    keyRelease() { this.keyReleaseCount++; return true; }
+    proceedKey() { return 1; }
     exportSnapshot() {
         this.exportCount++;
         const serial = ++this.snapshotSerial;
@@ -117,8 +130,11 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
         listeners: {},
         getElementById(id) { return elements[id] || null; },
         querySelector(selector) {
-            const match = selector.match(/^\[data-lamp="(.+)"\]$/);
-            return match ? elements[`lamp-${match[1]}`] : null;
+            const lampMatch = selector.match(/^\[data-lamp="(.+)"\]$/);
+            if (lampMatch) return elements[`lamp-${lampMatch[1]}`];
+            const keyMatch = selector.match(/^\[data-key="(.+)"\]$/);
+            if (keyMatch) return keyElements.find((element) => element.dataset.key === keyMatch[1]) || null;
+            return null;
         },
         querySelectorAll(selector) {
             if (selector === '[data-lamp]') return allLamps;
@@ -151,6 +167,8 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
         Math,
         Number,
         JSON,
+        Object,
+        Promise,
         performance: { now: () => 0 },
         setInterval: () => 1,
         clearInterval: () => {},
@@ -161,7 +179,11 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
     context.window = context;
 
     vm.createContext(context);
+    vm.runInContext(fs.readFileSync(KEYCODES_JS, 'utf8'), context, { filename: 'dsky-keycodes.js' });
     vm.runInContext(fs.readFileSync(APP_JS, 'utf8'), context, { filename: 'app.js' });
+    vm.runInContext(fs.readFileSync(RUNTIME_TRANSITIONS_JS, 'utf8'), context, { filename: 'runtime-transitions.js' });
+    vm.runInContext(fs.readFileSync(INPUT_RUNTIME_JS, 'utf8'), context, { filename: 'dsky-input-runtime.js' });
+    vm.runInContext(fs.readFileSync(KEYBOARD_INTERLOCK_JS, 'utf8'), context, { filename: 'keyboard-electrical-interlock.js' });
     return { context, document, elements, keyElements, storage, windowListeners };
 }
 
@@ -239,13 +261,30 @@ function checkSourceInvariants() {
     assert(html.includes('controls-layout.css'),
         'responsive controls stylesheet missing from index.html');
     const coreIndex = html.indexOf('<script src="agc-core.js"></script>');
+    const keycodesIndex = html.indexOf('<script src="dsky-keycodes.js"></script>');
     const appIndex = html.indexOf('<script src="app.js"></script>');
+    const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
+    const inputIndex = html.indexOf('<script src="dsky-input-runtime.js"></script>');
     const phoneIndex = html.indexOf('<script src="phone-icdu.js"></script>');
+    const keyboardIndex = html.indexOf('<script src="keyboard-electrical-interlock.js"');
     const diagnosticsIndex = html.indexOf('<script src="diagnostics.js"></script>');
-    assert(coreIndex >= 0 && appIndex > coreIndex && phoneIndex > appIndex && diagnosticsIndex > phoneIndex,
-        'current AGC/app/phone/diagnostics script order is invalid');
+    assert(coreIndex >= 0
+        && keycodesIndex > coreIndex
+        && appIndex > keycodesIndex
+        && runtimeIndex > appIndex
+        && inputIndex > runtimeIndex
+        && phoneIndex > inputIndex
+        && keyboardIndex > inputIndex
+        && diagnosticsIndex > phoneIndex,
+        'current shared-keycode/app/runtime/input/phone/keyboard script order is invalid');
     for (const removed of ['runtime-debug.js', 'app-refine.js', 'v35-audio-refine.js', 'spacecraft-panels.js']) {
         assert(!html.includes(`src="${removed}"`), `removed/stale script is loaded: ${removed}`);
+    }
+
+    const appSource = fs.readFileSync(APP_JS, 'utf8');
+    for (const forbidden of ['AGC_KEY', 'AGCDSKY_KEY_CODES', '.keyPress(', '.keyRelease(', '.proceedKey(', 'writeIo(0o15']) {
+        assert(!appSource.includes(forbidden),
+            `app.js regained extracted DSKY input ownership: ${forbidden}`);
     }
 
     const sensorActivity = fs.readFileSync(SENSOR_ACTIVITY, 'utf8');
@@ -290,6 +329,19 @@ function checkSourceInvariants() {
         'final packaged frontend layer must emit the debuggable readiness marker');
 }
 
+function pointerEvent(target, pointerId) {
+    return {
+        target,
+        pointerId,
+        prevented:false,
+        stopped:false,
+        immediate:false,
+        preventDefault(){ this.prevented = true; },
+        stopPropagation(){ this.stopped = true; },
+        stopImmediatePropagation(){ this.immediate = true; }
+    };
+}
+
 async function main() {
     checkSourceInvariants();
 
@@ -309,15 +361,23 @@ async function main() {
     assert(fresh.elements.mode.textContent.includes('COMANCHE055'),
         'mode status must identify Comanche055');
 
-    // Normal DSKY keys still route into the real AGC keyboard path. PRO is
-    // intentionally excluded here because current hardware-fidelity handling
-    // owns its physical semantics outside app.js.
+    // Normal DSKY keys must reach AGC only through the extracted window-capture
+    // electrical owner. app.js still has a CLOCK-only target listener, but the
+    // physical AGC path stops propagation before that legacy helper can run.
     const key1 = fresh.keyElements.find((element) => element.dataset.key === '1');
-    assert(key1 && typeof key1.listeners.pointerdown === 'function',
-        'DSKY key pointer handler must be installed');
-    key1.listeners.pointerdown({ preventDefault() {} });
+    assert(key1 && typeof fresh.windowListeners.pointerdown === 'function'
+        && typeof fresh.windowListeners.pointerup === 'function',
+        'extracted physical DSKY keyboard listeners must be installed');
+    const down = pointerEvent(key1, 41);
+    fresh.windowListeners.pointerdown(down);
+    assert(down.prevented && down.immediate,
+        'physical AGC key was not exclusively captured at window capture');
     assert(core.keyCodes.includes(0o01),
-        'DSKY digit 1 must route keycode 01 to AgcCore');
+        'physical DSKY digit 1 did not route keycode 01 through the extracted input path');
+    const up = pointerEvent(key1, 41);
+    fresh.windowListeners.pointerup(up);
+    assert(core.keyReleaseCount === 1,
+        'physical DSKY digit 1 did not end with exactly one KEYRST');
 
     // Clock mode suspends the same running AGC and saves a snapshot. Returning
     // to AGC resumes that same core rather than reloading another rope.
@@ -370,7 +430,7 @@ async function main() {
         'DreamService page must stay display-only');
 
     console.log('frontend/source smoke: PASS');
-    console.log('  CM-only startup, DSKY key route, snapshot suspend/resume, visibility lifecycle, clock persistence, and dream isolation verified');
+    console.log('  CM-only startup, extracted DSKY make/KEYRST, snapshot suspend/resume, visibility lifecycle, clock persistence, and dream isolation verified');
 }
 
 main().catch((error) => {
