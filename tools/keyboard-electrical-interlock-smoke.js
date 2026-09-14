@@ -260,13 +260,20 @@ async function verifyClockHandoff() {
       return {keys:{V:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};
     }
   };
+  clockContext.AGCDSKY.runtimeTransitions = {
+    async requestAgc(reason){
+      handoffCalls.push(['transition-request', reason, clockNow]);
+      await clockContext.AGCDSKY.enterAgc();
+      return {mode:appMode};
+    }
+  };
 
   vm.createContext(clockContext);
   vm.runInContext(source, clockContext, {filename:'keyboard-electrical-interlock-clock.js'});
 
   // Fast-tap VERB while the phone is still showing CLOCK. The electrical
-  // interlock owns window capture, so this is the regression path that used to
-  // prevent clock-behavior.js's document listener from ever seeing the key.
+  // interlock owns window capture, so this is the regression path that prevents
+  // the later document listener from consuming the physical contact.
   const verb = makeButton('V');
   let event = makeEvent(verb, 41);
   dispatch(win, 'pointerdown', event);
@@ -281,13 +288,15 @@ async function verifyClockHandoff() {
   assert(!handoffCalls.some(c => c[0] === 'legacy-clock-press'),
     'clock key fell back into the synthetic clock command editor');
 
-  // Allow enterAgc() and the handoff continuation to complete without running
-  // the synthetic timers used for key-return sound/KEYRST dwell.
+  // Allow the shared transition stub and handoff continuation to complete
+  // without running the synthetic key-return/KEYRST timers.
   for (let i = 0; i < 8; i++) await Promise.resolve();
 
   assert(appMode === 'agc', 'clock key did not promote the app to AGC mode');
+  assert(handoffCalls.filter(c => c[0] === 'transition-request').length === 1,
+    'clock key did not request exactly one shared AGC transition');
   assert(handoffCalls.filter(c => c[0] === 'enter-agc').length === 1,
-    'clock key did not request exactly one AGC transition');
+    'shared transition did not call enterAgc exactly once');
   const handoffMakes = handoffCalls.filter(c => c[0] === 'make');
   assert(handoffMakes.length === 1 && handoffMakes[0][1] === 0o21,
     'original VERB contact was not forwarded as Pinball keycode 021');
@@ -323,7 +332,7 @@ async function verifyClockHandoff() {
 
 verifyClockHandoff().then(() => {
   console.log('keyboard electrical interlock smoke: PASS');
-  console.log('  series chain, KEYRST dwell, PRO bypass, fast tap, and CLOCK -> AGC first-key handoff verified');
+  console.log('  series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
 }).catch(error => {
   console.error('keyboard electrical interlock smoke: FAIL');
   console.error(error && error.stack ? error.stack : error);
