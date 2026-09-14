@@ -16,6 +16,7 @@ for (const marker of [
   'function beginAgc(',
   'await baseEnterAgc()',
   'if (transitionPromise) return transitionPromise',
+  'ready:next.mode === MODES.AGC',
   'window.enterAgc = sharedEnterAgc',
   'api.enterAgc = sharedEnterAgc',
   'api.runtimeTransitions = runtime'
@@ -134,7 +135,8 @@ async function flush(count = 20) {
   if (!runtimeSnapshot.lastTransition
       || runtimeSnapshot.lastTransition.from !== 'clock'
       || runtimeSnapshot.lastTransition.to !== 'agc'
-      || runtimeSnapshot.lastTransition.reason !== 'clock keypad fallback') {
+      || runtimeSnapshot.lastTransition.reason !== 'clock keypad fallback'
+      || runtimeSnapshot.lastTransition.ready !== true) {
     fail('runtime transition did not record the fallback clock -> AGC handoff');
   }
   const clockSnapshot = fresh.AGCDSKY.clockBehavior.snapshot();
@@ -167,8 +169,8 @@ async function flush(count = 20) {
   if (queued.AGCDSKY.clockBehavior.snapshot().pendingKeys.length) fail('queued keypad contacts were not drained');
 
   // Simulate app.js's already-installed AGC button/startup closure calling the
-  // global enterAgc binding first. A later DSKY key must join that same Promise
-  // without polling and without starting the underlying loader again.
+  // global enterAgc binding first. A later DSKY key must join that same
+  // underlying entry operation without polling or another loader start.
   const loading = createHarness();
   let releaseDirectLoad;
   let directStarts = 0;
@@ -193,10 +195,46 @@ async function flush(count = 20) {
     fail('key was dropped while direct app AGC loading was already in flight');
   }
   const directSnapshot = loading.AGCDSKY.runtimeTransitions.snapshot();
-  if (!directSnapshot.lastTransition || directSnapshot.lastTransition.reason !== 'app enterAgc') {
+  if (!directSnapshot.lastTransition
+      || directSnapshot.lastTransition.reason !== 'app enterAgc'
+      || directSnapshot.lastTransition.ready !== true) {
     fail('direct app transition ownership was not retained when keypad joined');
   }
 
+  // Preserve app.js failure compatibility: direct AGC entry must resolve after
+  // app.js catches a load error and falls back to clock, while a keyboard/fallback
+  // caller joined to the same operation must receive a rejection because it
+  // requires a ready AGC before injecting its key.
+  const failed = createHarness();
+  let finishFailure;
+  failed.setEnterImpl(() => {
+    failed.mode = 'agc-loading';
+    return new Promise(resolve => {
+      finishFailure = () => { failed.mode = 'clock'; resolve(); };
+    });
+  });
+  const appFailurePromise = failed.context.enterAgc();
+  const requiredAgcPromise = failed.AGCDSKY.runtimeTransitions.requestAgc('keyboard readiness test');
+  await flush(2);
+  finishFailure();
+  const appFailureResult = await appFailurePromise;
+  if (!appFailureResult || appFailureResult.mode !== 'clock') {
+    fail('direct app entry no longer resolves with app.js clock fallback state');
+  }
+  let readinessRejected = false;
+  try {
+    await requiredAgcPromise;
+  } catch (error) {
+    readinessRejected = /ended in clock mode/.test(String(error && error.message || error));
+  }
+  if (!readinessRejected) fail('AGC-required caller did not reject after app.js fell back to clock');
+  const failedSnapshot = failed.AGCDSKY.runtimeTransitions.snapshot();
+  if (!failedSnapshot.lastTransition
+      || failedSnapshot.lastTransition.to !== 'clock'
+      || failedSnapshot.lastTransition.ready !== false) {
+    fail('failed app transition diagnostics did not preserve clock fallback outcome');
+  }
+
   console.log('Clock mode behavior: PASS');
-  console.log('  shared app entry promise, fallback key queue, and no-poll handoff verified');
+  console.log('  shared entry, fallback queue, no polling, and app-failure compatibility verified');
 })().catch(error => fail(error.stack || String(error)));
