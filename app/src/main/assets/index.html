@@ -30,6 +30,7 @@ html,body,#app{background:#000!important}
   <section id="dsky" class="dsky" aria-label="Apollo Block II DSKY">
     <div class="ann-well" aria-hidden="true"></div>
     <div class="display-well" aria-hidden="true"></div>
+
     <div class="ann-grid">
       <div class="lamp white" data-lamp="uplink">UPLINK<br>ACTY</div><div class="lamp yellow" data-lamp="temp">TEMP</div>
       <div class="lamp white" data-lamp="noatt">NO ATT</div><div class="lamp yellow" data-lamp="gimbal">GIMBAL<br>LOCK</div>
@@ -39,24 +40,83 @@ html,body,#app{background:#000!important}
       <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
       <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
     </div>
+
+    <!-- MIT/IL SCD 1006315G sheet 2 active EL face: 2.360 x 4.060 in.
+         The left and right upper EL zones are .885/.875 in wide (.880 nominal)
+         with .445/.435 TYP half-width (.440 nominal).  In the 106-unit face
+         this is 39.525 units wide, with centers at .440 and 1.920 in.  Keep the
+         viewport on the physical 106-unit active face; overflow provides any
+         rendering safety margin without shrinking the drawing geometry. -->
     <svg id="elpanel" class="elpanel" viewBox="0 0 106 182.356" preserveAspectRatio="xMidYMid meet" aria-label="DSKY electroluminescent display">
       <defs>
-        <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%"><feGaussianBlur stdDeviation="0.24" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <filter id="elGlow" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="1.05" result="halo"/><feGaussianBlur in="SourceGraphic" stdDeviation="0.30" result="near"/><feMerge><feMergeNode in="halo"/><feMergeNode in="near"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="elSoft" x="-35%" y="-35%" width="170%" height="170%">
+          <feGaussianBlur stdDeviation="0.24" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="elGlow" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.05" result="halo"/>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.30" result="near"/>
+          <feMerge><feMergeNode in="halo"/><feMergeNode in="near"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
       </defs>
       <rect class="el-glass-background" x="0" y="0" width="106" height="182.356" aria-hidden="true"/>
       <g class="el-ito-dots" aria-hidden="true">
-        <ellipse class="el-ito-dot" cx="53.000" cy="6.914" rx="1.294" ry="1.369"/><ellipse class="el-ito-dot" cx="53.000" cy="43.427" rx="1.294" ry="1.369"/><ellipse class="el-ito-dot" cx="53.000" cy="79.949" rx="1.294" ry="1.369"/><ellipse class="el-ito-dot" cx="100.863" cy="79.949" rx="1.294" ry="1.369"/><ellipse class="el-ito-dot" cx="100.863" cy="114.085" rx="1.294" ry="1.369"/><ellipse class="el-ito-dot" cx="100.863" cy="148.220" rx="1.294" ry="1.369"/><ellipse class="el-ito-dot" cx="8.286" cy="148.220" rx="1.294" ry="1.369"/><ellipse class="el-ito-dot" cx="8.286" cy="114.085" rx="1.294" ry="1.369"/><ellipse class="el-ito-dot" cx="8.286" cy="79.949" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="53.000" cy="6.914" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="53.000" cy="43.427" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="53.000" cy="79.949" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="79.949" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="114.085" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="100.863" cy="148.220" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="148.220" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="114.085" rx="1.294" ry="1.369"/>
+        <ellipse class="el-ito-dot" cx="8.286" cy="79.949" rx="1.294" ry="1.369"/>
       </g>
       <g class="el-static" aria-hidden="true">
-        <rect class="el-legend-bg" x="66.441" y="0.554" width="39.525" height="11.678"/><text class="el-label" x="86.237" y="8.600" text-anchor="middle">PROG</text><rect class="el-legend-bg" x="0" y="41.203" width="39.525" height="11.678"/><text class="el-label" x="19.763" y="49.252" text-anchor="middle">VERB</text><rect class="el-legend-bg" x="66.441" y="41.203" width="39.525" height="11.678"/><text class="el-label" x="86.237" y="49.252" text-anchor="middle">NOUN</text><line class="el-rule" x1="12.770" y1="79.949" x2="97.670" y2="79.949"/><line class="el-rule" x1="12.770" y1="114.085" x2="97.670" y2="114.085"/><line class="el-rule" x1="12.770" y1="148.220" x2="97.670" y2="148.220"/>
+        <rect class="el-legend-bg" x="66.441" y="0.554" width="39.525" height="11.678"/>
+        <text class="el-label" x="86.237" y="8.600" text-anchor="middle">PROG</text>
+        <rect class="el-legend-bg" x="0" y="41.203" width="39.525" height="11.678"/>
+        <text class="el-label" x="19.763" y="49.252" text-anchor="middle">VERB</text>
+        <rect class="el-legend-bg" x="66.441" y="41.203" width="39.525" height="11.678"/>
+        <text class="el-label" x="86.237" y="49.252" text-anchor="middle">NOUN</text>
+        <line class="el-rule" x1="12.770" y1="79.949" x2="97.670" y2="79.949"/>
+        <line class="el-rule" x1="12.770" y1="114.085" x2="97.670" y2="114.085"/>
+        <line class="el-rule" x1="12.770" y1="148.220" x2="97.670" y2="148.220"/>
       </g>
-      <g id="comp" class="comp-el" data-lamp="comp" aria-label="COMP ACTY"><rect class="el-comp-bg" x="0" y="0.633" width="39.525" height="35.838"/><text x="19.763" y="17.900" text-anchor="middle">COMP</text><text x="19.763" y="25.000" text-anchor="middle">ACTY</text></g>
-      <g id="prog" class="el-field" transform="translate(72.763 14.148)"></g><g id="verb" class="el-field" transform="translate(6.737 54.797)"></g><g id="noun" class="el-field" transform="translate(72.763 54.797)"></g><g id="r1" class="el-field" transform="translate(0 84.441)"></g><g id="r2" class="el-field" transform="translate(0 118.576)"></g><g id="r3" class="el-field" transform="translate(0 152.712)"></g>
+      <g id="comp" class="comp-el" data-lamp="comp" aria-label="COMP ACTY">
+        <rect class="el-comp-bg" x="0" y="0.633" width="39.525" height="35.838"/>
+        <text x="19.763" y="17.900" text-anchor="middle">COMP</text>
+        <text x="19.763" y="25.000" text-anchor="middle">ACTY</text>
+      </g>
+      <g id="prog" class="el-field" transform="translate(72.763 14.148)"></g>
+      <g id="verb" class="el-field" transform="translate(6.737 54.797)"></g>
+      <g id="noun" class="el-field" transform="translate(72.763 54.797)"></g>
+      <g id="r1" class="el-field" transform="translate(0 84.441)"></g>
+      <g id="r2" class="el-field" transform="translate(0 118.576)"></g>
+      <g id="r3" class="el-field" transform="translate(0 152.712)"></g>
     </svg>
-    <button class="key k-r1c1 fn" data-key="V">VERB</button><button class="key k-r1c2" data-key="+">+</button><button class="key k-r1c3" data-key="7">7</button><button class="key k-r1c4" data-key="8">8</button><button class="key k-r1c5" data-key="9">9</button><button class="key k-r1c6 fn" data-key="C">CLR</button><button class="key k-r1c7 fn" data-key="E">ENTR</button>
-    <button class="key k-r2c1 fn" data-key="N">NOUN</button><button class="key k-r2c2" data-key="-">−</button><button class="key k-r2c3" data-key="4">4</button><button class="key k-r2c4" data-key="5">5</button><button class="key k-r2c5" data-key="6">6</button><button class="key k-r2c6 fn" data-key="P">PRO</button><button class="key k-r2c7 fn" data-key="R">RSET</button>
-    <button class="key k-r3c2" data-key="0">0</button><button class="key k-r3c3" data-key="1">1</button><button class="key k-r3c4" data-key="2">2</button><button class="key k-r3c5" data-key="3">3</button><button class="key k-r3c6 fn keyrel" data-key="K">KEY<br>REL</button>
+
+    <button class="key k-r1c1 fn" data-key="V">VERB</button>
+    <button class="key k-r1c2" data-key="+">+</button>
+    <button class="key k-r1c3" data-key="7">7</button>
+    <button class="key k-r1c4" data-key="8">8</button>
+    <button class="key k-r1c5" data-key="9">9</button>
+    <button class="key k-r1c6 fn" data-key="C">CLR</button>
+    <button class="key k-r1c7 fn" data-key="E">ENTR</button>
+
+    <button class="key k-r2c1 fn" data-key="N">NOUN</button>
+    <button class="key k-r2c2" data-key="-">−</button>
+    <button class="key k-r2c3" data-key="4">4</button>
+    <button class="key k-r2c4" data-key="5">5</button>
+    <button class="key k-r2c5" data-key="6">6</button>
+    <button class="key k-r2c6 fn" data-key="P">PRO</button>
+    <button class="key k-r2c7 fn" data-key="R">RSET</button>
+
+    <button class="key k-r3c2" data-key="0">0</button>
+    <button class="key k-r3c3" data-key="1">1</button>
+    <button class="key k-r3c4" data-key="2">2</button>
+    <button class="key k-r3c5" data-key="3">3</button>
+    <button class="key k-r3c6 fn keyrel" data-key="K">KEY<br>REL</button>
+
     <i class="fastener f1"></i><i class="fastener f2"></i><i class="fastener f3"></i><i class="fastener f4"></i>
   </section>
   <div class="app-controls" id="controls">
