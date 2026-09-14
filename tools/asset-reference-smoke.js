@@ -9,6 +9,8 @@ const ASSETS = path.join(ROOT, 'app/src/main/assets');
 const INDEX = path.join(ASSETS, 'index.html');
 const APP = path.join(ASSETS, 'app.js');
 const CORE = path.join(ASSETS, 'agc-core.js');
+const DISPLAY = path.join(ASSETS, 'dsky-display-renderer.js');
+const CLOCK = path.join(ASSETS, 'phone-clock-runtime.js');
 const DREAM_SILENCE = path.join(ASSETS, 'dream-silence.js');
 
 function assert(condition, message) {
@@ -48,18 +50,23 @@ for (const stale of [
 
 for (const required of [
     'cm-dsky-finish.css', 'cm-mode.js', 'dream-silence.js', 'dsky-keycodes.js',
+    'dsky-display-renderer.js', 'phone-clock-runtime.js',
     'runtime-transitions.js', 'hardware-fidelity.js', 'proceed-electrical.js'
 ]) {
     assert(refs.includes(required), `current CM-only index is missing required frontend asset ${required}`);
 }
 
+const displayIndex = refs.indexOf('dsky-display-renderer.js');
+const phoneClockIndex = refs.indexOf('phone-clock-runtime.js');
 const keycodesIndex = refs.indexOf('dsky-keycodes.js');
 const appIndex = refs.indexOf('app.js');
 const dreamSilenceIndex = refs.indexOf('dream-silence.js');
 const runtimeTransitionsIndex = refs.indexOf('runtime-transitions.js');
 const clockBehaviorIndex = refs.indexOf('clock-behavior.js');
-assert(keycodesIndex >= 0 && appIndex === keycodesIndex + 1,
-    'app.js must load immediately after shared dsky-keycodes.js');
+assert(displayIndex >= 0 && phoneClockIndex === displayIndex + 1,
+    'phone-clock-runtime.js must load immediately after dsky-display-renderer.js');
+assert(keycodesIndex === phoneClockIndex + 1 && appIndex === keycodesIndex + 1,
+    'display/clock/keycodes runtimes must parser-load before app.js in that order');
 assert(dreamSilenceIndex === appIndex + 1,
     'dream-silence.js must load immediately after app.js');
 assert(runtimeTransitionsIndex === dreamSilenceIndex + 1,
@@ -85,16 +92,26 @@ assert(dreamSilence.includes("playRelayBurst = () => {}"),
 assert(!dreamSilence.includes("store.set('audioTickV4'"),
     'Dream silence guard must not alter the saved relay-click preference');
 
+const display = fs.readFileSync(DISPLAY, 'utf8');
+const clock = fs.readFileSync(CLOCK, 'utf8');
 const app = fs.readFileSync(APP, 'utf8');
+assert(display.includes('function renderDigits(') && display.includes('function setLamp('),
+    'extracted display renderer is missing shared EL/lamp primitives');
+assert(clock.includes('const CLOCK_GROUPS=[') && clock.includes('function syncClockFace()'),
+    'extracted phone-clock runtime is missing relay state/queue ownership');
+assert(clock.includes('function lampTest()') && clock.includes('function v35RelayState()'),
+    'extracted phone-clock runtime is missing lamp-test/V35 presentation ownership');
 assert(app.includes("comanche055:{label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}"),
     'current app no longer defines the Comanche 055 mission');
 for (const forbidden of [
     'AGC_KEY', 'AGCDSKY_KEY_CODES', '.keyPress(', '.keyRelease(', '.proceedKey(',
     'writeIo(0o15', 'function press(', 'window.press', 'function executeClock(',
-    'PHONE CLOCK INPUT', 'entryMode='
+    'PHONE CLOCK INPUT', 'entryMode=', 'const SEG=', 'const PATH=',
+    'const DIGIT_RELAY=', 'const CLOCK_GROUPS=', 'function syncClockFace()',
+    'function lampTest()', 'clockRelayWords={}'
 ]) {
     assert(!app.includes(forbidden),
-        `app.js regained removed DSKY input/editor ownership: ${forbidden}`);
+        `app.js regained extracted input/editor/display/clock ownership: ${forbidden}`);
 }
 assert(!app.includes('Luminary099.bin'),
     'CM-only app unexpectedly references Luminary099.bin');
