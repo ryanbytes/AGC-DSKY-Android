@@ -130,6 +130,7 @@ node tools/csp-smoke.js
 node tools/frontend-smoke.js
 node tools/cm-feature-load-smoke.js
 node tools/clock-mode-behavior-smoke.js
+node tools/clock-fallback-cancel-smoke.js
 node tools/runtime-authority-smoke.js
 node tools/runtime-clock-transition-smoke.js
 node tools/dsky-input-runtime-smoke.js
