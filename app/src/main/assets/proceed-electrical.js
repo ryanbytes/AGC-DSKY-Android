@@ -13,22 +13,20 @@
   window.__DSKY_PROCEED_ELECTRICAL__ = true;
 
   const api = window.AGCDSKY;
+  const runtime = api?.runtimeTransitions;
+  if (!api || !runtime || typeof runtime.mode !== 'function' || typeof runtime.core !== 'function') return;
+
   const pro = document.querySelector('[data-key="P"]');
   let proPointer = null;
 
   function currentMode() {
-    try {
-      if (api && typeof api.appStatus === 'function') {
-        return String(api.appStatus().mode || '');
-      }
-    } catch (_) {}
-    return '';
+    try { return String(runtime.mode() || ''); }
+    catch (_) { return ''; }
   }
 
   function currentCore() {
-    try {
-      return api && typeof api.getCore === 'function' ? api.getCore() : null;
-    } catch (_) { return null; }
+    try { return runtime.core(); }
+    catch (_) { return null; }
   }
 
   function reportFailure(error) {
@@ -45,7 +43,7 @@
     proPointer = null;
     if (pro) pro.classList.remove('pressed');
     const core = currentCore();
-    if (currentMode() === 'agc' && core) {
+    if (currentMode() === runtime.modes.AGC && core) {
       try { core.proceedKey(false); }
       catch (error) { reportFailure(error); }
     }
@@ -53,7 +51,7 @@
   }
 
   function onPointerDown(event) {
-    if (currentMode() !== 'agc') return;
+    if (currentMode() !== runtime.modes.AGC) return;
     const core = currentCore();
     if (!core || typeof core.proceedKey !== 'function') return;
 
@@ -113,5 +111,5 @@
     })
   });
   window.AGCDSKY_PROCEED = controller;
-  if (api) api.proceedElectrical = controller;
+  api.proceedElectrical = controller;
 })();

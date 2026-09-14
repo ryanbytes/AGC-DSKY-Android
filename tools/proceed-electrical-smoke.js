@@ -24,6 +24,7 @@ function assert(condition, message) {
 for (const marker of [
   'window.__DSKY_PROCEED_ELECTRICAL__',
   'const api = window.AGCDSKY',
+  'const runtime = api?.runtimeTransitions',
   "document.querySelector('[data-key=\"P\"]')",
   "pro.addEventListener('pointerdown'",
   "pro.addEventListener('pointerup'",
@@ -37,6 +38,8 @@ for (const marker of [
   assert(source.includes(marker), `extracted PRO controller missing lifecycle marker: ${marker}`);
 }
 assert(!source.includes('proceedPulse('), 'physical PRO path must not use a synthetic pulse');
+assert(!source.includes('api.appStatus') && !source.includes('api.getCore'),
+  'PRO controller must consume shared runtime mode/core authority instead of interpreting app state directly');
 
 for (const forbidden of [
   "document.querySelector('[data-key=\"P\"]')",
@@ -50,11 +53,12 @@ for (const forbidden of [
     `hardware-fidelity.js retained PRO pointer/lifecycle ownership: ${forbidden}`);
 }
 
+const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
 const hardwareIndex = html.indexOf('<script src="hardware-fidelity.js"></script>');
 const proceedIndex = html.indexOf('<script src="proceed-electrical.js"></script>');
 const relayAudioIndex = html.indexOf('<script src="relay-identity-audio.js"></script>');
-assert(hardwareIndex >= 0 && proceedIndex > hardwareIndex && relayAudioIndex > proceedIndex,
-  'PRO electrical controller must load immediately after hardware-fidelity and before later relay refinements');
+assert(runtimeIndex >= 0 && hardwareIndex > runtimeIndex && proceedIndex > hardwareIndex && relayAudioIndex > proceedIndex,
+  'PRO electrical controller must load after runtime authority/hardware-fidelity and before later relay refinements');
 
 function makeEvent(pointerId) {
   return {
@@ -100,10 +104,12 @@ const documentObject = {
     documentListeners[type] = fn;
   }
 };
-const AGCDSKY = {
-  appStatus(){ return {mode}; },
-  getCore(){ return core; }
-};
+const AGCDSKY = {};
+AGCDSKY.runtimeTransitions = Object.freeze({
+  modes:Object.freeze({CLOCK:'clock',AGC_LOADING:'agc-loading',AGC:'agc'}),
+  mode(){ return mode; },
+  core(){ return core; }
+});
 const context = {
   console,
   document:documentObject,
@@ -233,4 +239,4 @@ assert(finalReleases === 5,
   `failed PRO make did not restore released level; releases=${finalReleases}`);
 
 console.log('PRO electrical smoke: PASS');
-console.log('  extracted maintained make/release, pointer ownership, cancel/hidden cleanup, CLOCK release ordering, non-AGC bypass, idempotence, and failure cleanup verified');
+console.log('  shared runtime authority, maintained make/release, pointer ownership, cancel/hidden cleanup, CLOCK release ordering, non-AGC bypass, idempotence, and failure cleanup verified');
