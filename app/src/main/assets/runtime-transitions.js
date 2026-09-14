@@ -4,13 +4,14 @@
   const api = window.AGCDSKY;
   if (!api || api.runtimeTransitions) return;
 
+  const baseEnterAgc = api.enterAgc;
+  if (typeof baseEnterAgc !== 'function') return;
+
   const MODES = Object.freeze({
     CLOCK:'clock',
     AGC_LOADING:'agc-loading',
     AGC:'agc'
   });
-  const LOAD_POLL_MS = 10;
-  const MAX_LOAD_POLLS = 2000;
 
   let transitionPromise = null;
   let transitionSerial = 0;
@@ -23,34 +24,25 @@
     return value;
   }
 
-  async function waitForAgcReady() {
-    for (let poll = 0; poll < MAX_LOAD_POLLS; poll++) {
-      const current = status();
-      if (current.mode === MODES.AGC) return current;
-      if (current.mode !== MODES.AGC_LOADING) {
-        throw new Error(`AGC transition ended in ${current.mode || 'unknown'} mode`);
-      }
-      await new Promise(resolve => setTimeout(resolve, LOAD_POLL_MS));
-    }
-    throw new Error('AGC transition timed out while loading');
-  }
-
-  function requestAgc(reason = 'runtime request') {
+  function beginAgc(reason = 'runtime request') {
     const current = status();
     if (current.mode === MODES.AGC) return Promise.resolve(current);
     if (transitionPromise) return transitionPromise;
 
+    // runtime-transitions.js loads immediately after app.js, before the event
+    // loop can run app.js's startup timeout and before the user can press the
+    // AGC control.  All normal entry points are replaced below, so seeing a
+    // loading state without our Promise is an invariant violation, not a state
+    // to paper over with another independent polling loop.
+    if (current.mode === MODES.AGC_LOADING) {
+      return Promise.reject(new Error('AGC loading state has no shared transition owner'));
+    }
+
     const serial = ++transitionSerial;
     const from = current.mode;
     transitionPromise = (async () => {
-      if (typeof api.enterAgc !== 'function') throw new Error('AGC mode API unavailable');
-      await api.enterAgc();
-      let next = status();
-      // app.js currently returns early if enterAgc() is called while another
-      // caller already owns agc-loading. Until app.js itself exposes its in-flight
-      // Promise, retain one bounded wait here rather than duplicating polls in
-      // every input layer.
-      if (next.mode === MODES.AGC_LOADING) next = await waitForAgcReady();
+      await baseEnterAgc();
+      const next = status();
       if (next.mode !== MODES.AGC) {
         throw new Error(`AGC transition ended in ${next.mode || 'unknown'} mode`);
       }
@@ -60,6 +52,14 @@
       transitionPromise = null;
     });
     return transitionPromise;
+  }
+
+  function sharedEnterAgc() {
+    return beginAgc('app enterAgc');
+  }
+
+  function requestAgc(reason = 'runtime request') {
+    return beginAgc(reason);
   }
 
   const runtime = Object.freeze({
@@ -72,6 +72,12 @@
     })
   });
 
+  // app.js is a classic script, so its global `enterAgc` identifier resolves
+  // through the window global binding at call time. Replacing both references
+  // therefore covers the already-installed AGC button/startup closures as well
+  // as later callers through AGCDSKY, without changing the underlying loader.
+  window.enterAgc = sharedEnterAgc;
+  api.enterAgc = sharedEnterAgc;
   window.AGCDSKY_RUNTIME = runtime;
   api.runtimeTransitions = runtime;
 })();
