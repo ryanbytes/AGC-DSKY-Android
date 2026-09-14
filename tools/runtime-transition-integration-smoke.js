@@ -27,6 +27,10 @@ function dispatch(bucket, type, event) {
     if (event.immediate) break;
   }
 }
+function dispatchPointer(windowListeners, documentListeners, type, event) {
+  dispatch(windowListeners, type, event);
+  if (!event.stopped && !event.immediate) dispatch(documentListeners, type, event);
+}
 function makeButton(key) {
   const classes = new Set();
   return {
@@ -146,14 +150,14 @@ async function main() {
 
   const verb = makeButton('V');
   let event = makeEvent(verb, 41);
-  dispatch(windowListeners, 'pointerdown', event);
+  dispatchPointer(windowListeners, documentListeners, 'pointerdown', event);
   assert(event.prevented && event.immediate,
     'electrical interlock did not own the physical VERB contact at window capture');
 
   // Fast tap while loading. finishPointer closes the contact immediately; the
   // shared coordinator should retain it until the already-running load ends.
   event = makeEvent(verb, 41);
-  dispatch(windowListeners, 'pointerup', event);
+  dispatchPointer(windowListeners, documentListeners, 'pointerup', event);
   let state = AGCDSKY.keyboardElectrical.state();
   assert(state.clockHandoffPending && state.cycleLatched,
     'released physical key was not retained during shared AGC startup');
@@ -184,7 +188,7 @@ async function main() {
     'joining keyboard request incorrectly replaced the owner/reason of the existing transition');
   const clockState = AGCDSKY.clockBehavior.snapshot();
   assert(!clockState.promotionInFlight && clockState.pendingKeys.length === 0,
-    'document-level fallback incorrectly participated in the window-capture electrical handoff');
+    'document-level fallback participated even though window capture stopped propagation');
 
   state = AGCDSKY.keyboardElectrical.state();
   assert(!state.clockHandoffPending && state.electricalMade && state.keyResetPending,
@@ -213,7 +217,7 @@ async function main() {
     'channel-015 electrical cycle remained latched after KEYRST');
 
   console.log('runtime transition integration smoke: PASS');
-  console.log('  extracted transition service, clock fallback isolation, dynamic electrical owner, and make/KEYRST verified');
+  console.log('  extracted transition service, window/document ownership, clock fallback isolation, and make/KEYRST verified');
 }
 
 main().catch(error => {
