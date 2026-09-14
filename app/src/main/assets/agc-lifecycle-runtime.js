@@ -1,8 +1,7 @@
 'use strict';
 
-// Authoritative AGC core/mode lifecycle. Shared session mode/mission/command
-// fields live in app-state-runtime.js; this module owns core loading and run
-// lifecycle only.
+// Authoritative AGC core/mode lifecycle. Shared session and presentation fields
+// live in app-state-runtime.js; this module owns core loading and run lifecycle.
 const lifecycleState=window.AGCDSKY_APP_STATE;
 if(!lifecycleState)throw new Error('Shared application state unavailable');
 let agcSuspendedForClock=false;
@@ -25,7 +24,7 @@ function agcAppStatus(){
     snapshot:{saved:!!meta,meta,lastAction:lastSnapshotAction,error:lastSnapshotError,lastVerify:lastSnapshotVerify,currentFingerprint:agcCore&&typeof agcCore.snapshotFingerprint==='function'?agcCore.snapshotFingerprint():null,lastAutosaveAt}};
 }
 async function enterAgc(){
-  if(dream||lifecycleState.mode==='agc-loading'||lifecycleState.mode==='agc')return;
+  if(lifecycleState.dream||lifecycleState.mode==='agc-loading'||lifecycleState.mode==='agc')return;
   cancelLampTest();
   const selected=missionSpec();
   if(agcSuspendedForClock&&agcCore&&agcLoadedMission===lifecycleState.selectedMission){
