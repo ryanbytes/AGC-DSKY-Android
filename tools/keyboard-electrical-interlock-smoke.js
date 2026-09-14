@@ -22,6 +22,7 @@ function assert(condition, message) {
 for (const marker of [
   'const runtime = api?.runtimeTransitions',
   'const input = api?.inputRuntime',
+  'typeof runtime.clockRequested',
   'typeof runtime.onBeforeClock',
   'input.keyMake(code)',
   'input.keyReset(electricalCore)',
@@ -113,6 +114,7 @@ function createAgcHarness() {
   const now = {value:0};
   const timer = makeTimers(now);
   let mode = MODES.AGC;
+  let clockPending = false;
   let beforeClockHook = null;
   let hookRegistrations = 0;
   const core = {
@@ -135,6 +137,7 @@ function createAgcHarness() {
       modes:MODES,
       mode(){ return mode; },
       core(){ return core; },
+      clockRequested(){ return clockPending; },
       async requestAgc(){ return {mode}; },
       onBeforeClock(handler){
         hookRegistrations++;
@@ -158,6 +161,7 @@ function createAgcHarness() {
   return {
     context, win, doc, calls, now, timer, core,
     setMode(value){ mode = value; },
+    setClockPending(value){ clockPending = !!value; },
     get beforeClockHook(){ return beforeClockHook; },
     get hookRegistrations(){ return hookRegistrations; }
   };
@@ -228,6 +232,7 @@ h.timer.flush();
 assert(h.context.AGCDSKY.keyboardElectrical.state().electricalMade,
   'held-key transition fixture never made channel 015');
 const beforeClock = h.calls.length;
+h.setClockPending(true);
 h.beforeClockHook({reason:'app enterClock', from:MODES.AGC});
 h.calls.push(['clock-base', h.now.value]);
 const transitionCalls = h.calls.slice(beforeClock);
@@ -241,6 +246,21 @@ assert(state.down === 0 && !state.cycleLatched && !state.electricalMade && !stat
 assert(!held.classList.contains('pressed'),
   'pre-CLOCK cleanup left the held key visually pressed');
 
+// While CLOCK intent remains pending, later physical normal keys are swallowed
+// at window capture and cannot start another channel-015 cycle.
+const suppressed = makeButton('2');
+const makesBeforeSuppressed = h.calls.filter(c => c[0] === 'make').length;
+event = makeEvent(suppressed, 21);
+dispatch(h.win, 'pointerdown', event);
+h.timer.flush();
+assert(event.prevented && event.immediate,
+  'pending-CLOCK normal key was not swallowed at window capture');
+assert(h.calls.filter(c => c[0] === 'make').length === makesBeforeSuppressed,
+  'normal key generated channel 015 after CLOCK was requested');
+assert(h.context.AGCDSKY.keyboardElectrical.state().down === 0,
+  'pending-CLOCK key created mechanical/electrical pointer ownership');
+h.setClockPending(false);
+
 async function verifyClockHandoff() {
   const win = Object.create(null);
   const doc = Object.create(null);
@@ -248,6 +268,7 @@ async function verifyClockHandoff() {
   const now = {value:0};
   const timer = makeTimers(now);
   let mode = MODES.CLOCK;
+  let clockPending = false;
   const core = {
     keyPress(code){ calls.push(['make', code, now.value]); return 1; },
     keyRelease(){ calls.push(['reset', now.value]); return true; }
@@ -269,8 +290,10 @@ async function verifyClockHandoff() {
       modes:MODES,
       mode(){ return mode; },
       core(){ return core; },
+      clockRequested(){ return clockPending; },
       async requestAgc(reason){
         calls.push(['transition-request', reason, now.value]);
+        if (clockPending) throw new Error('CLOCK pending');
         if (mode === MODES.AGC) return {mode};
         mode = MODES.AGC_LOADING;
         calls.push(['enter-agc', now.value]);
@@ -314,7 +337,7 @@ async function verifyClockHandoff() {
 
 verifyClockHandoff().then(() => {
   console.log('keyboard electrical interlock smoke: PASS');
-  console.log('  series-key exclusion, minimum KEYRST dwell, PRO bypass, centralized pre-CLOCK release, and CLOCK -> AGC first-contact handoff verified');
+  console.log('  series-key exclusion, minimum KEYRST dwell, PRO bypass, pre-CLOCK release, pending-CLOCK suppression, and CLOCK -> AGC first-contact handoff verified');
 }).catch(error => {
   console.error('keyboard electrical interlock smoke: FAIL');
   console.error(error && error.stack ? error.stack : error);
