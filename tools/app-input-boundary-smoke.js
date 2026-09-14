@@ -27,17 +27,18 @@ for (const forbidden of [
   '.proceedKey(',
   'writeIo(0o15',
   'writeIo(0o32',
-  "document.querySelectorAll('[data-key]').forEach"
+  "document.querySelectorAll('[data-key]').forEach",
+  'function press(',
+  'window.press',
+  'function executeClock(',
+  'PHONE CLOCK INPUT',
+  'entryMode='
 ]) {
-  assert(!app.includes(forbidden), `app.js regained extracted DSKY input ownership: ${forbidden}`);
+  assert(!app.includes(forbidden), `app.js regained removed DSKY input/editor ownership: ${forbidden}`);
 }
 
-assert(app.includes('function press(k){'),
-  'legacy CLOCK press helper disappeared unexpectedly');
-assert(app.includes("if(mode==='agc')return;"),
-  'legacy app press helper can still act in AGC mode');
-assert(app.includes("if(mode!=='clock')return;"),
-  'legacy app press helper is not explicitly CLOCK-scoped');
+assert(!keyboard.includes('window.press') && !keyboard.includes("typeof window.press"),
+  'physical keyboard regained legacy app press fallback');
 
 // The actual AGC electrical path must remain in the extracted owners.
 assert(keyboard.includes('const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;'),
@@ -54,4 +55,4 @@ assert(keycodes.includes('window.AGCDSKY_KEY_CODES = Object.freeze({'),
   'shared frozen keycode source is missing');
 
 console.log('app input boundary smoke: PASS');
-console.log('  app.js installs no DSKY target handler and has no AGC electrical primitives; extracted keyboard + input runtime own real DSKY input');
+console.log('  app.js has no DSKY target handler, synthetic command editor, or AGC electrical primitives; extracted keyboard + input runtime own real DSKY input');
