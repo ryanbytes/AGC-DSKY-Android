@@ -6,7 +6,8 @@
  * PRO is electrically separate from the 18-key channel-015 matrix. The AGC
  * interface exposes it as active-low input channel 032 bit 020000: held = 0,
  * released = 020000. This layer owns only physical pointer/lifecycle state;
- * dsky-input-runtime.js owns the electrical primitive.
+ * dsky-input-runtime.js owns the electrical primitive and runtime-transitions.js
+ * owns CLOCK-entry cleanup ordering.
  */
 (() => {
   if (window.__DSKY_PROCEED_ELECTRICAL__) return;
@@ -17,6 +18,7 @@
   const input = api?.inputRuntime;
   if (!api || !runtime || !input
       || typeof runtime.mode !== 'function'
+      || typeof runtime.onBeforeClock !== 'function'
       || typeof input.ready !== 'function'
       || typeof input.proceed !== 'function') return;
 
@@ -87,16 +89,10 @@
     if (document.hidden) releaseProceed();
   });
 
-  // Preserve the historical invariant that entering CLOCK releases PRO before
-  // app.js changes mode. app.js is a classic script; replacing the global
-  // enterClock binding therefore updates its already-installed callers too.
-  if (typeof window.enterClock === 'function') {
-    const baseEnterClock = window.enterClock;
-    window.enterClock = function proceedSafeEnterClock(...args) {
-      releaseProceed();
-      return baseEnterClock.apply(this, args);
-    };
-  }
+  // Runtime transition authority invokes cleanup while the AGC is still the
+  // active mode/core, guaranteeing the maintained active-low contact returns
+  // to its released level before app.js stops the core and switches to CLOCK.
+  runtime.onBeforeClock(releaseProceed);
 
   const controller = Object.freeze({
     release:releaseProceed,
