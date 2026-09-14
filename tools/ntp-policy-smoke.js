@@ -12,6 +12,8 @@ const forbid = (text, needle, label) => { if (text.includes(needle)) fail(`${lab
 const ntp = read('app/src/main/java/org/apollo/agcdsky/NtpTime.java');
 const client = read('app/src/main/java/org/apollo/agcdsky/SntpClient.java');
 const manifest = read('app/src/main/AndroidManifest.xml');
+const shell = read('app/src/main/assets/app-shell-runtime.js');
+const clock = read('app/src/main/assets/phone-clock-runtime.js');
 const app = read('app/src/main/assets/app.js');
 const sensor = read('app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java');
 
@@ -21,9 +23,12 @@ forbid(ntp + client + manifest, 'android.permission.SET_TIME', 'native NTP imple
 forbid(ntp + client, 'setTime(', 'native NTP implementation');
 requireText(manifest, 'android.permission.INTERNET', 'manifest');
 requireText(manifest, 'android.permission.ACCESS_NETWORK_STATE', 'manifest');
-requireText(app, 'function accurateTime(){return Date.now()+(Number(ntpStatus.offsetMs)||0)}', 'phone clock');
-requireText(app, 'function desiredClockDigits(){const d=accurateDate()', 'phone clock');
-requireText(app, 'nativeNtpStatus:updateNtpStatus', 'phone clock bridge');
+requireText(shell, 'function accurateTime(){return Date.now()+(Number(ntpStatus.offsetMs)||0)}', 'app shell clock');
+requireText(shell, 'function updateNtpStatus(value)', 'app shell NTP bridge');
+requireText(clock, 'function desiredClockDigits(){const d=accurateDate()', 'phone clock runtime');
+requireText(app, 'nativeNtpStatus:updateNtpStatus', 'public AGCDSKY bridge');
+forbid(app, 'function accurateTime()', 'thin app bootstrap');
+forbid(app, 'function desiredClockDigits()', 'thin app bootstrap');
 requireText(sensor, 'new TimeBridge(),"TimeBridge"', 'SensorMainActivity');
 console.log('ntp policy smoke: PASS');
-console.log('  native-only SNTP, no clock-setting privilege, outlier rejection, recovery scheduling, and corrected DSKY clock source verified');
+console.log('  native-only SNTP, no clock-setting privilege, outlier rejection, recovery scheduling, shell NTP authority, and corrected DSKY clock source verified');
