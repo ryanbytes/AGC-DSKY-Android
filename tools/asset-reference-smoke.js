@@ -46,17 +46,20 @@ for (const stale of [
         `current DSKY-only asset tree unexpectedly retains stale renderer/patch asset ${stale}`);
 }
 
-for (const required of ['cm-dsky-finish.css', 'cm-mode.js', 'dream-silence.js']) {
+for (const required of ['cm-dsky-finish.css', 'cm-mode.js', 'dream-silence.js', 'runtime-transitions.js']) {
     assert(refs.includes(required), `current CM-only index is missing required frontend asset ${required}`);
 }
 
 const appIndex = refs.indexOf('app.js');
 const dreamSilenceIndex = refs.indexOf('dream-silence.js');
+const runtimeTransitionsIndex = refs.indexOf('runtime-transitions.js');
 const clockBehaviorIndex = refs.indexOf('clock-behavior.js');
 assert(appIndex >= 0 && dreamSilenceIndex === appIndex + 1,
     'dream-silence.js must load immediately after app.js');
-assert(clockBehaviorIndex > dreamSilenceIndex,
-    'dream-silence.js must load before clock behavior and before timer callbacks can run');
+assert(runtimeTransitionsIndex === dreamSilenceIndex + 1,
+    'runtime-transitions.js must load immediately after dream-silence.js');
+assert(clockBehaviorIndex > runtimeTransitionsIndex,
+    'runtime-transitions.js must load before clock behavior and before startup timers can run');
 
 const dreamSilence = fs.readFileSync(DREAM_SILENCE, 'utf8');
 assert(dreamSilence.includes("new URLSearchParams(location.search).get('dream') === '1'"),
