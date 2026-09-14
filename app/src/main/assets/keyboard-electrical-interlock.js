@@ -26,6 +26,7 @@
   if (!api || !runtime || !input
       || typeof runtime.mode !== 'function'
       || typeof runtime.core !== 'function'
+      || typeof runtime.clockRequested !== 'function'
       || typeof runtime.requestAgc !== 'function'
       || typeof runtime.onBeforeClock !== 'function'
       || typeof input.ready !== 'function'
@@ -102,7 +103,7 @@
   }
 
   function registerElectricalMake(code) {
-    if (!input.ready()) return false;
+    if (runtime.clockRequested() || !input.ready()) return false;
     let core = null;
     try { core = runtime.core(); } catch (_) { return false; }
     if (!core) return false;
@@ -127,7 +128,7 @@
       // Blur/visibility/CLOCK cleanup may have canceled this exact physical
       // switch cycle while the AGC was loading. Never resurrect that stale
       // contact after the async transition completes.
-      if (state.cancelled || !clockHandoffPending) return;
+      if (state.cancelled || !clockHandoffPending || runtime.clockRequested()) return;
       if (currentMode() !== runtime.modes.AGC || !input.ready()) {
         throw new Error('AGC input runtime not ready after clock handoff');
       }
@@ -140,13 +141,19 @@
       if (!state.down) assertKeyResetIfReady();
     } catch (error) {
       clockHandoffPending = false;
-      console.error('DSKY clock-to-AGC key handoff failed', error);
+      if (!state.cancelled && !runtime.clockRequested()) {
+        console.error('DSKY clock-to-AGC key handoff failed', error);
+      }
       if (!state.down && allNormalKeysReleased()) clearElectricalCycle();
     }
   }
 
   function makeContact(state) {
     if (!state || !state.down || state.made) return;
+    if (runtime.clockRequested()) {
+      state.cancelled = true;
+      return;
+    }
     state.made = true;
     keySound(state.button, false);
 
@@ -272,6 +279,9 @@
     event.stopPropagation();
     event.stopImmediatePropagation();
 
+    // CLOCK intent wins over any new physical input while an already-running
+    // AGC load is merely being allowed to settle before the base mode switch.
+    if (runtime.clockRequested()) return;
     if (pointers.has(event.pointerId)) return;
     const accepted = !cycleLatched;
     if (accepted) cycleLatched = true;
