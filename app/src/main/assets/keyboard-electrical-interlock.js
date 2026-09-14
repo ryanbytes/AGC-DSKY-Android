@@ -21,6 +21,16 @@
   if (window.__DSKY_KEYBOARD_ELECTRICAL_INTERLOCK__) return;
   window.__DSKY_KEYBOARD_ELECTRICAL_INTERLOCK__ = true;
 
+  const api = window.AGCDSKY;
+  const runtime = api?.runtimeTransitions;
+  if (!api || !runtime
+      || typeof runtime.mode !== 'function'
+      || typeof runtime.core !== 'function'
+      || typeof runtime.requestAgc !== 'function'
+      || !runtime.modes) {
+    throw new Error('Shared AGC runtime authority unavailable');
+  }
+
   const FALLBACK_CONTACT_MS = 36;
   const FALLBACK_RETURN_MS = 18;
   // Best-estimate minimum electrical dwell, not a measured switch spec.
@@ -49,7 +59,7 @@
   function personality(button) {
     const key = button?.dataset?.key || '?';
     try {
-      const all = window.AGCDSKY?.hardwarePersonality?.();
+      const all = api.hardwarePersonality?.();
       const p = all?.keys?.[key];
       if (p) return p;
     } catch (_) {}
@@ -83,17 +93,13 @@
   }
 
   function currentCore() {
-    try { return window.AGCDSKY && typeof window.AGCDSKY.getCore === 'function' ? window.AGCDSKY.getCore() : null; }
+    try { return runtime.core(); }
     catch (_) { return null; }
   }
 
   function currentMode() {
-    try {
-      if (window.AGCDSKY && typeof window.AGCDSKY.appStatus === 'function') {
-        return String(window.AGCDSKY.appStatus().mode || '');
-      }
-    } catch (_) {}
-    return '';
+    try { return String(runtime.mode() || ''); }
+    catch (_) { return ''; }
   }
 
   function registerElectricalMake(core, code) {
@@ -105,28 +111,20 @@
     electricalKeyCode = code;
     electricalMade = true;
     electricalMadeAt = performance.now();
-    if (window.AGCDSKY && typeof window.AGCDSKY.scheduleAgcAutosave === 'function') {
-      window.AGCDSKY.scheduleAgcAutosave('DSKY key make');
+    if (typeof api.scheduleAgcAutosave === 'function') {
+      api.scheduleAgcAutosave('DSKY key make');
     }
     return true;
   }
 
   async function promoteClockContact(state, code) {
-    const api = window.AGCDSKY;
     try {
-      const transitions = api?.runtimeTransitions;
-      if (!api || !transitions || typeof transitions.requestAgc !== 'function' || typeof api.appStatus !== 'function') {
-        throw new Error('shared AGC transition API unavailable');
-      }
-
-      // runtime-transitions.js owns transition serialization. The electrical
-      // interlock owns the physical contact, but it must not maintain a second
-      // AGC-loading state machine. Await the shared transition before asserting
-      // the original contact onto channel 015.
-      await transitions.requestAgc('keyboard electrical contact');
+      // runtime-transitions.js owns transition serialization and mode/core
+      // authority. The electrical interlock owns only this physical contact.
+      await runtime.requestAgc('keyboard electrical contact');
 
       const core = currentCore();
-      if (!core || currentMode() !== 'agc') throw new Error('AGC core not ready after clock handoff');
+      if (!core || currentMode() !== runtime.modes.AGC) throw new Error('AGC core not ready after clock handoff');
       if (!registerElectricalMake(core, code)) throw new Error('AGC rejected clock-handoff keycode');
 
       clockHandoffPending = false;
@@ -157,7 +155,7 @@
     if (code === undefined) return;
     try {
       const modeNow = currentMode();
-      if (modeNow === 'clock' || modeNow === 'agc-loading') {
+      if (modeNow === runtime.modes.CLOCK || modeNow === runtime.modes.AGC_LOADING) {
         // The window-capture electrical layer stops propagation before the
         // document-level clock listener.  Preserve this same physical contact
         // while the shared transition coordinator gets the real AGC ready.
@@ -169,7 +167,7 @@
       }
 
       const core = currentCore();
-      if (core && modeNow === 'agc') {
+      if (core && modeNow === runtime.modes.AGC) {
         registerElectricalMake(core, code);
         return;
       }
@@ -294,8 +292,7 @@
   window.addEventListener('blur', releaseEverything, {passive:true});
   document.addEventListener('visibilitychange', () => { if (document.hidden) releaseEverything(); }, {capture:true});
 
-  window.AGCDSKY = window.AGCDSKY || {};
-  window.AGCDSKY.keyboardElectrical = Object.freeze({
+  api.keyboardElectrical = Object.freeze({
     state: () => ({
       cycleLatched,
       down:pointers.size,

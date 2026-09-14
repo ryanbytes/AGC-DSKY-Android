@@ -17,13 +17,18 @@ const KEY_CODES = Object.freeze({
   '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
   V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
 });
+const MODES = Object.freeze({CLOCK:'clock',AGC_LOADING:'agc-loading',AGC:'agc'});
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+assert(source.includes('const runtime = api?.runtimeTransitions'),
+  'keyboard must consume shared runtime authority');
+assert(!source.includes('appStatus()') && !source.includes('getCore()'),
+  'keyboard must not interpret app mode/core through direct app APIs');
+
 function installKeycodes(context) {
-  context.AGC_KEY = KEY_CODES;
   vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
   assert(context.AGCDSKY_KEY_CODES && Object.isFrozen(context.AGCDSKY_KEY_CODES),
     'shared DSKY keycode bridge did not publish a frozen table');
@@ -115,8 +120,12 @@ const context = {
 context.window = context;
 context.addEventListener = function(type, fn){ addListener(windowListeners, type, fn); };
 context.AGCDSKY = {
-  appStatus(){ return {mode:'agc'}; },
-  getCore(){ return core; },
+  runtimeTransitions:{
+    modes:MODES,
+    mode(){ return MODES.AGC; },
+    core(){ return core; },
+    async requestAgc(){ return {mode:MODES.AGC}; }
+  },
   scheduleAgcAutosave(){ calls.push(['autosave', nowMs]); },
   hardwarePersonality(){
     return {keys:{
@@ -135,7 +144,6 @@ const one = makeButton('1');
 const two = makeButton('2');
 const pro = makeButton('P');
 
-// First normal key owns the series-contact cycle.
 let e = makeEvent(one, 1);
 dispatch(windowListeners, 'pointerdown', e);
 assert(e.prevented && e.immediate, 'normal key must be owned at window capture');
@@ -145,8 +153,6 @@ assert(calls.filter(c => c[0] === 'make').length === 1,
 assert(calls.find(c => c[0] === 'make')[1] === 0o01,
   'key 1 generated the wrong DSKY keycode');
 
-// A second depressed normal key may move mechanically but the series wiring
-// must prevent another electrical code while the first cycle is latched.
 e = makeEvent(two, 2);
 dispatch(windowListeners, 'pointerdown', e);
 flushTimers();
@@ -158,15 +164,11 @@ assert(state.down === 2 && state.keys.some(k => k.key === '2' && !k.accepted),
 assert(state.minKeycodeHoldMs === 12,
   'expected 12-ms best-estimate minimum keycode dwell');
 
-// Releasing the accepted key while the blocked second key remains down must
-// not assert KEYRST yet: the physical series chain has not returned to all-up.
 e = makeEvent(one, 1);
 dispatch(windowListeners, 'pointerup', e);
 assert(calls.filter(c => c[0] === 'reset').length === 0,
   'KEYRST asserted before all normal keys were released');
 
-// Once every normal key is up the reset may still wait out the minimum input
-// dwell, but it must occur exactly once and then fully unlatch the keyboard.
 e = makeEvent(two, 2);
 dispatch(windowListeners, 'pointerup', e);
 assert(calls.filter(c => c[0] === 'reset').length === 0,
@@ -181,8 +183,6 @@ state = context.AGCDSKY.keyboardElectrical.state();
 assert(!state.cycleLatched && state.down === 0 && !state.electricalMade && !state.keyResetPending,
   'all-released keyboard did not return to its idle electrical state');
 
-// The previously blocked key can only become a coded key after that complete
-// all-up reset, on a new depression cycle.
 e = makeEvent(two, 3);
 dispatch(windowListeners, 'pointerdown', e);
 flushTimers();
@@ -197,8 +197,6 @@ flushTimers();
 assert(calls.filter(c => c[0] === 'reset').length === 2,
   'second complete key cycle did not end in KEYRST');
 
-// PRO is outside the 18-key coding matrix. The electrical interlock must not
-// consume its event or emit a channel-015 keycode; proceed-electrical.js owns it.
 e = makeEvent(pro, 9);
 dispatch(windowListeners, 'pointerdown', e);
 flushTimers();
@@ -207,9 +205,6 @@ assert(!e.prevented && !e.stopped && !e.immediate,
 assert(calls.filter(c => c[0] === 'make').length === 2,
   'PRO incorrectly generated a normal keyboard keycode');
 
-// A touchscreen fast tap makes once immediately, but KEYRST must not occur in
-// that same turn. The keycode stays asserted through the estimated D-filter
-// interval so yaAGC can sample the make just as the hardware interface did.
 const fast = makeButton('1');
 e = makeEvent(fast, 10);
 dispatch(windowListeners, 'pointerdown', e);
@@ -237,7 +232,7 @@ async function verifyClockHandoff() {
   const handoffCalls = [];
   let timerId = 1;
   let clockNow = 0;
-  let appMode = 'clock';
+  let appMode = MODES.CLOCK;
 
   const clockCore = {
     keyPress(code){ handoffCalls.push(['make', code, clockNow]); return 1; },
@@ -263,23 +258,22 @@ async function verifyClockHandoff() {
   clockContext.window = clockContext;
   clockContext.addEventListener = function(type, fn){ addListener(win, type, fn); };
   clockContext.AGCDSKY = {
-    appStatus(){ return {mode:appMode}; },
-    async enterAgc(){
-      handoffCalls.push(['enter-agc', clockNow]);
-      appMode = 'agc-loading';
-      await Promise.resolve();
-      appMode = 'agc';
-    },
-    getCore(){ return clockCore; },
     scheduleAgcAutosave(){ handoffCalls.push(['autosave', clockNow]); },
     hardwarePersonality(){
       return {keys:{V:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};
     }
   };
   clockContext.AGCDSKY.runtimeTransitions = {
+    modes:MODES,
+    mode(){ return appMode; },
+    core(){ return clockCore; },
     async requestAgc(reason){
       handoffCalls.push(['transition-request', reason, clockNow]);
-      await clockContext.AGCDSKY.enterAgc();
+      if (appMode === MODES.AGC) return {mode:appMode};
+      appMode = MODES.AGC_LOADING;
+      handoffCalls.push(['enter-agc', clockNow]);
+      await Promise.resolve();
+      appMode = MODES.AGC;
       return {mode:appMode};
     }
   };
@@ -288,9 +282,6 @@ async function verifyClockHandoff() {
   installKeycodes(clockContext);
   vm.runInContext(source, clockContext, {filename:'keyboard-electrical-interlock-clock.js'});
 
-  // Fast-tap VERB while the phone is still showing CLOCK. The electrical
-  // interlock owns window capture, so this is the regression path that prevents
-  // the later document listener from consuming the physical contact.
   const verb = makeButton('V');
   let event = makeEvent(verb, 41);
   dispatch(win, 'pointerdown', event);
@@ -305,15 +296,13 @@ async function verifyClockHandoff() {
   assert(!handoffCalls.some(c => c[0] === 'legacy-clock-press'),
     'clock key fell back into the synthetic clock command editor');
 
-  // Allow the shared transition stub and handoff continuation to complete
-  // without running the synthetic key-return/KEYRST timers.
   for (let i = 0; i < 8; i++) await Promise.resolve();
 
-  assert(appMode === 'agc', 'clock key did not promote the app to AGC mode');
+  assert(appMode === MODES.AGC, 'clock key did not promote the app to AGC mode');
   assert(handoffCalls.filter(c => c[0] === 'transition-request').length === 1,
     'clock key did not request exactly one shared AGC transition');
   assert(handoffCalls.filter(c => c[0] === 'enter-agc').length === 1,
-    'shared transition did not call enterAgc exactly once');
+    'shared transition did not begin AGC exactly once');
   const handoffMakes = handoffCalls.filter(c => c[0] === 'make');
   assert(handoffMakes.length === 1 && handoffMakes[0][1] === 0o21,
     'original VERB contact was not forwarded as Pinball keycode 021');
@@ -349,7 +338,7 @@ async function verifyClockHandoff() {
 
 verifyClockHandoff().then(() => {
   console.log('keyboard electrical interlock smoke: PASS');
-  console.log('  shared keycodes, appStatus authority, series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
+  console.log('  shared keycodes/runtime authority, series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
 }).catch(error => {
   console.error('keyboard electrical interlock smoke: FAIL');
   console.error(error && error.stack ? error.stack : error);
