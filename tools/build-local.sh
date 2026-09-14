@@ -131,6 +131,7 @@ node tools/frontend-smoke.js
 node tools/cm-feature-load-smoke.js
 node tools/clock-mode-behavior-smoke.js
 node tools/runtime-authority-smoke.js
+node tools/runtime-clock-transition-smoke.js
 node tools/dsky-input-runtime-smoke.js
 node tools/audio-recovery-smoke.js
 node tools/cheatsheet-smoke.js
