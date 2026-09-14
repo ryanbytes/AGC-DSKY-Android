@@ -19,8 +19,9 @@ function assert(condition, message) {
 }
 
 for (const marker of [
-  'if (state.cancelled || !clockHandoffPending) return',
+  'if (state.cancelled || !clockHandoffPending || runtime.clockRequested()) return',
   'state.cancelled = true',
+  'if (runtime.clockRequested()) return',
   'function releaseForClock()',
   'runtime.onBeforeClock(releaseForClock)'
 ]) {
@@ -35,6 +36,7 @@ const timers = new Map();
 let nextTimer = 1;
 let nowMs = 0;
 let mode = MODES.CLOCK;
+let clockPending = false;
 let releaseLoad = null;
 let beforeClockHook = null;
 
@@ -85,8 +87,10 @@ const AGCDSKY = {
     modes:MODES,
     mode(){ return mode; },
     core(){ return core; },
+    clockRequested(){ return clockPending; },
     requestAgc(reason){
       calls.push(['request-agc', reason, nowMs]);
+      if (clockPending) return Promise.reject(new Error('CLOCK pending'));
       if (mode === MODES.AGC) return Promise.resolve({mode});
       mode = MODES.AGC_LOADING;
       return new Promise(resolve => {
@@ -136,7 +140,7 @@ assert(typeof beforeClockHook === 'function',
   let event = makeEvent(verb, 41);
   dispatch(windowListeners, 'pointerdown', event);
   event = makeEvent(verb, 41);
-  dispatch(windowListeners, 'pointerup', event); // fast tap closes contact path and begins AGC handoff
+  dispatch(windowListeners, 'pointerup', event); // fast tap begins AGC handoff
 
   let state = AGCDSKY.keyboardElectrical.state();
   assert(mode === MODES.AGC_LOADING && state.clockHandoffPending && state.cycleLatched,
@@ -144,14 +148,24 @@ assert(typeof beforeClockHook === 'function',
   assert(calls.filter(call => call[0] === 'make').length === 0,
     'keycode was emitted before AGC became ready');
 
-  // User selects CLOCK while the AGC load is still in flight. Cleanup must
-  // cancel the pending physical cycle immediately.
+  // User selects CLOCK while the AGC load is still in flight. The coordinator
+  // marks CLOCK intent before invoking cleanup.
+  clockPending = true;
   beforeClockHook({reason:'app enterClock', from:MODES.AGC_LOADING});
   state = AGCDSKY.keyboardElectrical.state();
   assert(!state.clockHandoffPending && !state.cycleLatched && !state.electricalMade,
     'pre-CLOCK cleanup did not cancel pending first-key handoff');
   assert(!verb.classList.contains('pressed'),
     'pre-CLOCK cleanup left the key visually pressed');
+
+  // New keys during the deferred window are swallowed and never create state.
+  const later = makeButton('V');
+  event = makeEvent(later, 51);
+  dispatch(windowListeners, 'pointerdown', event);
+  assert(event.prevented && event.immediate,
+    'new key during pending CLOCK was not swallowed');
+  assert(AGCDSKY.keyboardElectrical.state().down === 0,
+    'new key during pending CLOCK created pointer ownership');
 
   // The loader can still finish, but the old VERB contact must remain dead.
   releaseLoad();
@@ -165,5 +179,5 @@ assert(typeof beforeClockHook === 'function',
     'canceled handoff re-latched keyboard electrical state after AGC load');
 
   console.log('keyboard CLOCK cancel smoke: PASS');
-  console.log('  pending CLOCK -> AGC first-key contact is canceled cleanly and cannot reappear after async AGC loading completes');
+  console.log('  pending first-key contact is canceled, later contacts are suppressed, and no ghost channel-015 make can appear after AGC loading');
 })().catch(error => fail(error && error.stack ? error.stack : String(error)));
