@@ -2,7 +2,7 @@
 
 Updated: 2026-09-14
 
-This note records the current runtime/input ownership after refactor phases 7-11. It is intentionally narrower and more current than the older phase-by-phase history in `PROGRESS.md`.
+This note records the current runtime/input ownership after refactor phases 7-12. It is intentionally narrower and more current than the older phase-by-phase history in `PROGRESS.md`.
 
 ## Current parser-ordered runtime
 
@@ -24,9 +24,9 @@ dsky-keycodes.js
   -> dream-agc.js
 ```
 
-`dsky-keycodes.js` is now parser-loaded before `app.js` and is the single frozen literal source for the 18 normal Block II DSKY/Pinball keycodes. `app.js`, the CLOCK fallback, and the physical electrical interlock all consume that same object. PRO remains intentionally absent from the table because it is a separate maintained channel-032 input.
+`dsky-keycodes.js` is the single frozen literal source for the 18 normal Block II DSKY/Pinball keycodes. The normal-key consumers are now only the CLOCK fallback and the physical electrical interlock. PRO remains intentionally absent because it is a separate maintained channel-032 input.
 
-CM feature scripts are parser-loaded from `index.html`. `cm-mode.js` no longer injects fallback feature scripts, and Relay Show is also parser-loaded with a static control.
+CM feature scripts are parser-loaded from `index.html`. `cm-mode.js` no longer injects fallback feature scripts, and Relay Show is parser-loaded with a static control.
 
 ## Ownership boundaries
 
@@ -41,9 +41,9 @@ Still owns the underlying application state and mechanisms:
 - snapshot/autosave persistence;
 - synthetic phone-clock implementation.
 
-`app.js` no longer owns a private Pinball keycode literal. It requires `window.AGCDSKY_KEY_CODES` from the parser-loaded shared module and fails immediately if that dependency is missing.
+`app.js` no longer owns or consumes normal-key Pinball codes, and it no longer calls `keyPress()`, `keyRelease()`, `proceedKey()`, or channel-015/channel-032 `writeIo()` for DSKY controls. Its legacy `press(k)` helper is explicitly CLOCK-only and returns immediately in AGC mode. Real AGC DSKY input is therefore outside the app monolith.
 
-The refactor deliberately wraps the remaining app mechanisms instead of duplicating them.
+The refactor deliberately leaves the loader, decoder, display state, and persistence mechanisms app-owned until they can be extracted without mirroring mutable state.
 
 ### `runtime-transitions.js`
 
@@ -86,7 +86,7 @@ Owns physical behavior of the 18 normal keycoded switches:
 - first-contact CLOCK -> AGC handoff;
 - retention of the exact core that accepted a make so KEYRST can release the same electrical target.
 
-It consumes `window.AGCDSKY_KEY_CODES` and does not contain its own Pinball mapping. It does not call `keyPress()`, `keyRelease()`, or channel-015 `writeIo()` directly.
+It consumes `window.AGCDSKY_KEY_CODES` and delegates channel-015 make/KEYRST to `dsky-input-runtime.js`; it does not call core electrical primitives directly.
 
 When CLOCK is selected it registers a pre-CLOCK cleanup hook. Any held channel-015 make is reset before the base CLOCK transition stops the AGC. A first-key handoff still waiting on AGC loading is canceled and cannot later reappear as a ghost keycode when the asynchronous load finishes. Blur/hidden cleanup also cancels a pending, not-yet-made handoff.
 
@@ -96,7 +96,7 @@ While `runtimeTransitions.clockRequested()` is true, new normal-key pointerdowns
 
 Owns physical pointer/lifecycle state for PRO only. The electrical make/release is delegated to `dsky-input-runtime.js`.
 
-PRO no longer wraps `window.enterClock` itself. It registers a pre-CLOCK cleanup hook with `runtime-transitions.js`, returning the maintained active-low channel-032 contact to its released level before `app.js` stops the AGC. New PRO makes are suppressed after CLOCK intent has been registered.
+PRO does not wrap `window.enterClock`. It registers a pre-CLOCK cleanup hook with `runtime-transitions.js`, returning the maintained active-low channel-032 contact to its released level before `app.js` stops the AGC. New PRO makes are suppressed after CLOCK intent has been registered.
 
 ### `clock-behavior.js`
 
@@ -104,18 +104,19 @@ Owns only the document-level CLOCK keypad fallback/queue. It uses:
 
 - the shared frozen DSKY keycode table;
 - `runtimeTransitions.requestAgc()` for promotion;
-- `dsky-input-runtime.js` for the resulting channel-015 makes.
+- `dsky-input-runtime.js` for resulting channel-015 makes.
 
 The normal CM electrical interlock normally stops physical normal-key events earlier at window capture.
 
-The fallback queue also registers a pre-CLOCK cleanup hook. CLOCK intent clears queued contacts and advances a promotion epoch so an older asynchronous drain cannot emit a stale keycode or erase a later fresh queue. New fallback contacts during pending CLOCK are consumed but not queued, and expected cancellation does not generate an error report or autosave.
+The fallback queue registers a pre-CLOCK cleanup hook. CLOCK intent clears queued contacts and advances a promotion epoch so an older asynchronous drain cannot emit a stale keycode or erase a later fresh queue. New fallback contacts during pending CLOCK are consumed but not queued, and expected cancellation does not generate an error report or autosave.
 
 ## Current regression gates
 
 The canonical local build gate includes dedicated checks for these boundaries:
 
-- `dsky-keycode-consistency-smoke.js` — the shared frozen Pinball table is canonical, loads before `app.js`, and no consumer regains a duplicate literal;
-- `asset-reference-smoke.js` — parser order and required packaged assets;
+- `app-input-boundary-smoke.js` — `app.js` is CLOCK-only for legacy press handling and cannot regain normal-key/PRO electrical primitives;
+- `dsky-keycode-consistency-smoke.js` — the shared frozen Pinball table is canonical and only extracted normal-key consumers use it;
+- `asset-reference-smoke.js` — parser order, required packaged assets, and app input-ownership exclusions;
 - `runtime-authority-smoke.js` — transition/input ownership, pending-CLOCK contract, and forbidden direct primitives;
 - `runtime-clock-transition-smoke.js` — direct/API CLOCK semantics, pre-CLOCK cleanup hooks, AGC-load serialization, diagnostics, and partial-harness behavior;
 - `dsky-input-runtime-smoke.js` — key make, KEYRST, retained-core release, PRO levels, channel-015 zero rejection;
@@ -129,13 +130,15 @@ The canonical local build gate includes dedicated checks for these boundaries:
 
 ## Remaining major boundaries
 
-The duplicate keycode seam is closed. The next useful `app.js` extractions are the remaining synthetic/legacy input fallback behavior and additional runtime/display state that can be moved without duplicating the authoritative channel decoder.
+The duplicate keycode seam and app-owned AGC normal-key fallback are closed. The next useful `app.js` seam is the old DOM `[data-key]` pointer listener and CLOCK command editor. In live AGC mode the extracted keyboard/PRO owners capture earlier, and in CLOCK mode the extracted CLOCK fallback normally captures first, so that app listener should be treated as a separate cleanup/extraction candidate rather than removed without a dedicated regression gate.
+
+After that, likely extraction candidates are display/runtime helpers that can move without duplicating the authoritative channel decoder or snapshot state.
 
 The channel decoder, snapshot model, actual AGC loader, and display backing state should remain app-owned until an extraction can preserve one authoritative state path rather than adding adapters that mirror mutable state.
 
 ## Verification limits for this refactor environment
 
-Focused source/connector checks have been used for the extracted transition/input services and Phase 11 keycode migration. The Phase 11 repository diff confirms the atomic `app.js` replacement changed only the private keycode block: two added lines and four removed lines.
+Focused source/connector checks have been used for the extracted transition/input services and Phase 11-12 app edits. The Phase 11 atomic `app.js` keycode migration was verified as a six-line diff, and the Phase 12 app-input change was verified as a seven-line diff in one file.
 
 The complete recursive checkout, Android SDK/Gradle build, APK verification, Pixel device smoke, and Fire-device smoke have not been run for these phase branches in this environment.
 
