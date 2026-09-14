@@ -5,19 +5,28 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const source = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/clock-behavior.js'), 'utf8');
+const transitionSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/runtime-transitions.js'), 'utf8');
+const clockSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/clock-behavior.js'), 'utf8');
 const fail = message => { console.error('CLOCK MODE BEHAVIOR FAIL: ' + message); process.exit(1); };
 
 for (const marker of [
   "AGC_LOADING:'agc-loading'",
-  "requestAgc('clock keypad handoff')",
+  'function requestAgc(',
   'await api.enterAgc()',
   'await waitForAgcReady()',
-  'core.keyPress(code)',
-  "scheduleAgcAutosave('clock keypad handoff')",
   'api.runtimeTransitions = runtime'
 ]) {
-  if (!source.includes(marker)) fail('missing transition-controller marker: ' + marker);
+  if (!transitionSource.includes(marker)) fail('missing runtime-transition marker: ' + marker);
+}
+for (const marker of [
+  "requestAgc('clock keypad fallback')",
+  'core.keyPress(code)',
+  "scheduleAgcAutosave('clock keypad handoff')",
+  'api.clockBehavior = clockBehavior'
+]) {
+  if (!clockSource.includes(marker)) fail('missing clock-fallback marker: ' + marker);
 }
 for (const forbidden of [
   '[data-lamp="comp"]',
@@ -26,9 +35,11 @@ for (const forbidden of [
   'startClockCompBurst',
   'scheduleClockCompIdle'
 ]) {
-  if (source.includes(forbidden)) fail('clock COMP ACTY synthesis must remain disabled: ' + forbidden);
+  if (clockSource.includes(forbidden)) fail('clock COMP ACTY synthesis must remain disabled: ' + forbidden);
 }
-if (/fetch\s*\(/.test(source) || /XMLHttpRequest/.test(source)) fail('clock behavior must not be tied to network activity');
+if (/fetch\s*\(/.test(transitionSource + clockSource) || /XMLHttpRequest/.test(transitionSource + clockSource)) {
+  fail('clock transition behavior must not be tied to network activity');
+}
 
 function createHarness(initialMode = 'clock') {
   let mode = initialMode;
@@ -60,7 +71,9 @@ function createHarness(initialMode = 'clock') {
     clearTimeout(){},
     Promise
   };
-  vm.runInNewContext(source, context, {filename:'clock-behavior.js'});
+  vm.createContext(context);
+  vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
+  vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
   return {
     AGCDSKY, windowObject, handlers, timers, keyPresses,
     get mode(){ return mode; }, set mode(value){ mode = value; },
@@ -98,16 +111,24 @@ async function flush(count = 20) {
   if (fresh.keyPresses.length !== 1 || fresh.keyPresses[0] !== 0o21) fail('original VERB key was not forwarded to the AGC');
   if (fresh.AGCDSKY.savedReason !== 'clock keypad handoff') fail('handoff did not schedule AGC autosave');
   if (fresh.timers.length !== 1 || fresh.timers[0].delay !== 90) fail('only keypad press animation timer should remain');
-  const snapshot = fresh.AGCDSKY.runtimeTransitions.snapshot();
-  if (snapshot.mode !== 'agc' || snapshot.transitionInFlight || snapshot.promotionInFlight || snapshot.pendingKeys.length) {
+
+  const runtimeSnapshot = fresh.AGCDSKY.runtimeTransitions.snapshot();
+  if (runtimeSnapshot.mode !== 'agc' || runtimeSnapshot.transitionInFlight) {
     fail('runtime transition snapshot did not settle cleanly');
   }
-  if (!snapshot.lastTransition || snapshot.lastTransition.from !== 'clock' || snapshot.lastTransition.to !== 'agc') {
-    fail('runtime transition did not record clock -> AGC');
+  if (!runtimeSnapshot.lastTransition
+      || runtimeSnapshot.lastTransition.from !== 'clock'
+      || runtimeSnapshot.lastTransition.to !== 'agc'
+      || runtimeSnapshot.lastTransition.reason !== 'clock keypad fallback') {
+    fail('runtime transition did not record the fallback clock -> AGC handoff');
+  }
+  const clockSnapshot = fresh.AGCDSKY.clockBehavior.snapshot();
+  if (clockSnapshot.promotionInFlight || clockSnapshot.pendingKeys.length) {
+    fail('clock fallback queue did not settle cleanly');
   }
 
-  // Multiple contacts while the first transition is awaiting the core must be
-  // serialized through one enterAgc call and delivered in contact order.
+  // Multiple fallback contacts while the first transition is awaiting the core
+  // must be serialized through one transition and delivered in contact order.
   const queued = createHarness();
   let releaseLoad;
   queued.setEnterImpl(() => {
@@ -117,19 +138,28 @@ async function flush(count = 20) {
   press(queued, 'V');
   press(queued, 'N');
   await flush(2);
-  if (queued.AGCDSKY.runtimeTransitions.snapshot().pendingKeys.join(',') !== 'V,N') {
+  const duringRuntime = queued.AGCDSKY.runtimeTransitions.snapshot();
+  const duringClock = queued.AGCDSKY.clockBehavior.snapshot();
+  if (!duringRuntime.transitionInFlight || !duringClock.promotionInFlight) {
+    fail('queued-contact handoff was not marked in flight');
+  }
+  if (duringClock.pendingKeys.join(',') !== 'V,N') {
     fail('concurrent keypad contacts were not queued in order');
   }
   releaseLoad();
   await flush();
   if (queued.keyPresses.join(',') !== `${0o21},${0o37}`) fail('queued keypad contacts were not forwarded in order');
+  if (queued.AGCDSKY.clockBehavior.snapshot().pendingKeys.length) fail('queued keypad contacts were not drained');
 
-  // If AGC loading was already started by another caller, keypad promotion
-  // waits for that transition instead of dropping the first DSKY contact.
+  // If AGC loading was already started by another caller, the shared runtime
+  // service performs the one bounded readiness wait; the clock layer does not.
   const loading = createHarness('agc-loading');
   loading.setEnterImpl(async () => {});
   press(loading, 'V');
   await flush(3);
+  if (!loading.AGCDSKY.runtimeTransitions.snapshot().transitionInFlight) {
+    fail('pre-existing AGC load was not joined by the shared runtime service');
+  }
   const poll = loading.timers.find(timer => timer.delay === 10);
   if (!poll) fail('pre-existing AGC load did not enter bounded readiness wait');
   loading.mode = 'agc';
@@ -140,5 +170,5 @@ async function flush(count = 20) {
   }
 
   console.log('Clock mode behavior: PASS');
-  console.log('  serialized clock->AGC promotion, queued first keys, and pre-existing load handoff verified');
+  console.log('  extracted runtime coordinator, fallback key queue, and pre-existing load handoff verified');
 })().catch(error => fail(error.stack || String(error)));
