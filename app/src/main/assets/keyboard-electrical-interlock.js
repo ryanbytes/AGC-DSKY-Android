@@ -124,6 +124,10 @@
       // authority; dsky-input-runtime.js owns channel-015 electrical access.
       await runtime.requestAgc('keyboard electrical contact');
 
+      // Blur/visibility/CLOCK cleanup may have canceled this exact physical
+      // switch cycle while the AGC was loading. Never resurrect that stale
+      // contact after the async transition completes.
+      if (state.cancelled || !clockHandoffPending) return;
       if (currentMode() !== runtime.modes.AGC || !input.ready()) {
         throw new Error('AGC input runtime not ready after clock handoff');
       }
@@ -229,6 +233,7 @@
   function clearPointers() {
     for (const state of Array.from(pointers.values())) {
       clearTimeout(state.timer);
+      state.cancelled = true;
       state.down = false;
       state.button.classList.remove('pressed');
       try { state.button.releasePointerCapture(state.pointerId); } catch (_) {}
@@ -238,6 +243,10 @@
 
   function releaseEverything() {
     clearPointers();
+    if (clockHandoffPending && !electricalMade) {
+      clearElectricalCycle();
+      return;
+    }
     assertKeyResetIfReady();
   }
 
@@ -268,7 +277,7 @@
     if (accepted) cycleLatched = true;
     const p = personality(button);
     const state = {
-      button, pointerId:event.pointerId, down:true, accepted, made:false, timer:0
+      button, pointerId:event.pointerId, down:true, accepted, made:false, cancelled:false, timer:0
     };
     pointers.set(event.pointerId, state);
     button.classList.add('pressed');
