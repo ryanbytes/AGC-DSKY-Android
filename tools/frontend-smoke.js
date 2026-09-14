@@ -362,26 +362,27 @@ async function main() {
         'mode status must identify Comanche055');
 
     // Normal DSKY keys must reach AGC only through the extracted window-capture
-    // electrical owner. app.js still has a CLOCK-only target listener, but the
-    // physical AGC path stops propagation before that legacy helper can run.
+    // electrical owner. Keep this contact held until CLOCK transition so this
+    // broad harness also verifies pre-CLOCK KEYRST without simulating the
+    // dedicated keyboard smoke's 12-ms physical-release dwell.
     const key1 = fresh.keyElements.find((element) => element.dataset.key === '1');
-    assert(key1 && typeof fresh.windowListeners.pointerdown === 'function'
-        && typeof fresh.windowListeners.pointerup === 'function',
-        'extracted physical DSKY keyboard listeners must be installed');
+    assert(key1 && typeof fresh.windowListeners.pointerdown === 'function',
+        'extracted physical DSKY keyboard listener must be installed');
     const down = pointerEvent(key1, 41);
     fresh.windowListeners.pointerdown(down);
     assert(down.prevented && down.immediate,
         'physical AGC key was not exclusively captured at window capture');
     assert(core.keyCodes.includes(0o01),
         'physical DSKY digit 1 did not route keycode 01 through the extracted input path');
-    const up = pointerEvent(key1, 41);
-    fresh.windowListeners.pointerup(up);
-    assert(core.keyReleaseCount === 1,
-        'physical DSKY digit 1 did not end with exactly one KEYRST');
+    assert(core.keyReleaseCount === 0,
+        'held physical DSKY key unexpectedly released before CLOCK transition');
 
-    // Clock mode suspends the same running AGC and saves a snapshot. Returning
-    // to AGC resumes that same core rather than reloading another rope.
+    // Clock mode must first release the held channel-015 contact, then suspend
+    // the same running AGC and save a snapshot. Returning to AGC resumes that
+    // same core rather than reloading another rope.
     fresh.elements.clock.listeners.click();
+    assert(core.keyReleaseCount === 1,
+        'CLOCK transition did not KEYRST the held physical DSKY key exactly once');
     assert(!core.running, 'clock mode must suspend the AGC core');
     assert(fresh.storage.get('runMode') === 'clock',
         'clock mode must persist runMode=clock');
@@ -430,7 +431,7 @@ async function main() {
         'DreamService page must stay display-only');
 
     console.log('frontend/source smoke: PASS');
-    console.log('  CM-only startup, extracted DSKY make/KEYRST, snapshot suspend/resume, visibility lifecycle, clock persistence, and dream isolation verified');
+    console.log('  CM-only startup, extracted DSKY make/pre-CLOCK KEYRST, snapshot suspend/resume, visibility lifecycle, clock persistence, and dream isolation verified');
 }
 
 main().catch((error) => {
