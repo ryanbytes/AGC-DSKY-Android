@@ -456,7 +456,6 @@ document.addEventListener('pointerup',()=>clearTimeout(holdTimer),{passive:true}
 document.addEventListener('pointercancel',()=>clearTimeout(holdTimer),{passive:true});
 document.addEventListener('visibilitychange',()=>setAppVisible(!document.hidden));
 addEventListener('pagehide',()=>{if(mode==='agc'&&agcCore){agcCore.stop();saveAgcState('page hide')}});
-document.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();b.classList.add('pressed');press(b.dataset.key);setTimeout(()=>b.classList.remove('pressed'),90)}));
 $('dim').addEventListener('click',()=>{dim=!dim;applyDim();showControls()});
 $('dreambright').addEventListener('click',()=>{cycleDreamMode();showControls()});
 $('sound').addEventListener('click',()=>{ensureAudio();tickSound=!tickSound;applyTickSound();if(tickSound)playRelayBurst(1);showControls()});
