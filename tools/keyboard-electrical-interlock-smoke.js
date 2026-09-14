@@ -9,6 +9,10 @@ const keycodeSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/dsky-keycodes.js'),
   'utf8'
 );
+const inputSource = fs.readFileSync(
+  path.resolve(__dirname, '../app/src/main/assets/dsky-input-runtime.js'),
+  'utf8'
+);
 const source = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/keyboard-electrical-interlock.js'),
   'utf8'
@@ -25,13 +29,25 @@ function assert(condition, message) {
 
 assert(source.includes('const runtime = api?.runtimeTransitions'),
   'keyboard must consume shared runtime authority');
+assert(source.includes('const input = api?.inputRuntime'),
+  'keyboard must consume shared input runtime');
 assert(!source.includes('appStatus()') && !source.includes('getCore()'),
   'keyboard must not interpret app mode/core through direct app APIs');
+for (const forbidden of ['.keyPress(', '.keyRelease(', 'writeIo(0o15']) {
+  assert(!source.includes(forbidden),
+    `keyboard must not bypass input runtime with electrical primitive: ${forbidden}`);
+}
 
 function installKeycodes(context) {
   vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
   assert(context.AGCDSKY_KEY_CODES && Object.isFrozen(context.AGCDSKY_KEY_CODES),
     'shared DSKY keycode bridge did not publish a frozen table');
+}
+
+function installInputRuntime(context) {
+  vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
+  assert(context.AGCDSKY_INPUT === context.AGCDSKY.inputRuntime,
+    'shared input runtime did not publish one controller reference');
 }
 
 function makeButton(key) {
@@ -138,6 +154,7 @@ context.AGCDSKY = {
 
 vm.createContext(context);
 installKeycodes(context);
+installInputRuntime(context);
 vm.runInContext(source, context, {filename:'keyboard-electrical-interlock.js'});
 
 const one = makeButton('1');
@@ -280,6 +297,7 @@ async function verifyClockHandoff() {
 
   vm.createContext(clockContext);
   installKeycodes(clockContext);
+  installInputRuntime(clockContext);
   vm.runInContext(source, clockContext, {filename:'keyboard-electrical-interlock-clock.js'});
 
   const verb = makeButton('V');
@@ -338,7 +356,7 @@ async function verifyClockHandoff() {
 
 verifyClockHandoff().then(() => {
   console.log('keyboard electrical interlock smoke: PASS');
-  console.log('  shared keycodes/runtime authority, series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
+  console.log('  shared keycodes/runtime/input authority, series chain, KEYRST dwell, PRO bypass, fast tap, and shared CLOCK -> AGC first-key handoff verified');
 }).catch(error => {
   console.error('keyboard electrical interlock smoke: FAIL');
   console.error(error && error.stack ? error.stack : error);
