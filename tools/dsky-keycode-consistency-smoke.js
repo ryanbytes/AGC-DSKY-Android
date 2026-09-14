@@ -33,7 +33,7 @@ function assertCanonical(map, label){
   if (Object.prototype.hasOwnProperty.call(map, 'P')) fail(`${label} incorrectly includes PRO in channel 015`);
 }
 
-// dsky-keycodes.js is now the only literal Pinball map in the packaged frontend.
+// dsky-keycodes.js is the only literal Pinball map in the packaged frontend.
 const context = {window:null, Object};
 context.window = context;
 vm.createContext(context);
@@ -42,23 +42,26 @@ const shared = context.AGCDSKY_KEY_CODES;
 if (!shared || !Object.isFrozen(shared)) fail('shared DSKY keycode table is missing or mutable');
 assertCanonical(shared, 'shared table');
 
-for (const marker of [
-  'const AGC_KEY=window.AGCDSKY_KEY_CODES;',
-  "if(!AGC_KEY)throw new Error('Shared DSKY keycode table unavailable')"
+// app.js has exited normal-key ownership entirely. It must not regain either a
+// keycode-table reference or a private literal; physical AGC keys are owned by
+// keyboard-electrical-interlock.js and clock fallback uses the shared map.
+for (const forbidden of [
+  'AGC_KEY',
+  'AGCDSKY_KEY_CODES',
+  "'1':0o01",
+  'V:0o21',
+  'N:0o37'
 ]) {
-  if (!appSource.includes(marker)) fail(`app.js does not require shared DSKY keycodes: ${marker}`);
-}
-if (/const\s+AGC_KEY\s*=\s*\{/.test(appSource)
-    || appSource.includes("'1':0o01")
-    || appSource.includes('V:0o21')
-    || appSource.includes('N:0o37')) {
-  fail('app.js regained a private Pinball keycode literal');
+  if (appSource.includes(forbidden)) fail(`app.js regained normal-key code ownership: ${forbidden}`);
 }
 
 const keycodesIndex = html.indexOf('<script src="dsky-keycodes.js"></script>');
 const appIndex = html.indexOf('<script src="app.js"></script>');
-if (keycodesIndex < 0 || appIndex < 0 || keycodesIndex > appIndex) {
-  fail('dsky-keycodes.js must parser-load before app.js');
+const clockIndex = html.indexOf('<script src="clock-behavior.js"></script>');
+const keyboardIndex = html.indexOf('<script src="keyboard-electrical-interlock.js"');
+if (keycodesIndex < 0 || appIndex < 0 || keycodesIndex > appIndex
+    || clockIndex < keycodesIndex || keyboardIndex < keycodesIndex) {
+  fail('shared DSKY keycodes must parser-load before all normal-key consumers');
 }
 
 const consumers = [
@@ -88,4 +91,4 @@ for (const forbidden of [
 }
 
 console.log('DSKY keycode consistency smoke: PASS');
-console.log('  dsky-keycodes.js is the single frozen Pinball map consumed by app, clock fallback, and the electrical interlock; PRO remains separate');
+console.log('  dsky-keycodes.js is the single frozen Pinball map; only clock fallback and the electrical interlock consume it; app and PRO remain outside normal-key mapping');
