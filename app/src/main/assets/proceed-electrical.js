@@ -22,8 +22,7 @@
         return String(api.appStatus().mode || '');
       }
     } catch (_) {}
-    try { return typeof mode !== 'undefined' ? String(mode) : ''; }
-    catch (_) { return ''; }
+    return '';
   }
 
   function currentCore() {
