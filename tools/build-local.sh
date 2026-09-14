@@ -138,6 +138,7 @@ node tools/display-layout-smoke.js
 node tools/el-widget-smoke.js
 node tools/solar-model-smoke.js
 node tools/agc-core-smoke.js
+node tools/proceed-electrical-smoke.js
 node tools/native-diagnostic-smoke.js
 node tools/dsky-mapping-smoke.js
 node tools/dsky-keycode-consistency-smoke.js
