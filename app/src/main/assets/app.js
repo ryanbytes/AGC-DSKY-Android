@@ -169,8 +169,6 @@ function enterClock(status=clockTimeLabel(),preserveAgc=false){
   $('agc').textContent='AGC MODE';$('mode').textContent=status;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
 }
 
-const AGC_KEY=window.AGCDSKY_KEY_CODES;
-if(!AGC_KEY)throw new Error('Shared DSKY keycode table unavailable');
 const RELAY_DIGIT={0:' ',21:'0',3:'1',25:'2',27:'3',15:'4',30:'5',28:'6',19:'7',29:'8',31:'9'};
 const agcDisplay={
   prog:[' ',' '],verb:[' ',' '],noun:[' ',' '],
@@ -343,7 +341,10 @@ function setAppVisible(visible){
   if(agcPausedForVisibility){agcPausedForVisibility=false;agcCore.start(1)}
 }
 function press(k){
-  if(mode==='agc'){if(k==='P')return;const code=AGC_KEY[k];if(code!==undefined){agcCore.keyPress(code);scheduleAgcAutosave('DSKY key')}return}
+  // Real AGC normal-key contacts are exclusively owned by the extracted
+  // electrical interlock/input runtime. Keep this legacy helper CLOCK-only so
+  // it cannot create an unpaired channel-015 make behind that authority.
+  if(mode==='agc')return;
   if(mode!=='clock')return;
   if(k==='V'){if(entryMode==='N'&&entry.length)noun=entry.padStart(2,'0').slice(-2);entryMode='V';entry='';set2('verb','  ');return}
   if(k==='N'){if(entryMode==='V'&&entry.length)verb=entry.padStart(2,'0').slice(-2);entryMode='N';entry='';set2('noun','  ');return}
