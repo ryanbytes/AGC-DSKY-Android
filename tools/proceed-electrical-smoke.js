@@ -5,8 +5,13 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const source = fs.readFileSync(
-  path.resolve(__dirname, '../app/src/main/assets/hardware-fidelity.js'), 'utf8');
+const ROOT = path.resolve(__dirname, '..');
+const SOURCE = path.join(ROOT, 'app/src/main/assets/proceed-electrical.js');
+const HARDWARE = path.join(ROOT, 'app/src/main/assets/hardware-fidelity.js');
+const INDEX = path.join(ROOT, 'app/src/main/assets/index.html');
+const source = fs.readFileSync(SOURCE, 'utf8');
+const hardware = fs.readFileSync(HARDWARE, 'utf8');
+const html = fs.readFileSync(INDEX, 'utf8');
 
 function fail(message) {
   console.error('PRO ELECTRICAL SMOKE FAIL: ' + message);
@@ -16,27 +21,40 @@ function assert(condition, message) {
   if (!condition) fail(message);
 }
 
-const startMarker = '// AGC PRO is a maintained contact, not a 120-ms synthetic pulse.';
-const endMarker = '// Seed the physical latch model and AGC-facing renderer';
-const start = source.indexOf(startMarker);
-const end = source.indexOf(endMarker, start);
-assert(start >= 0 && end > start, 'could not isolate the PRO maintained-contact block');
-const proSource = source.slice(start, end);
-
 for (const marker of [
+  'window.__DSKY_PROCEED_ELECTRICAL__',
+  'const api = window.AGCDSKY',
   "document.querySelector('[data-key=\"P\"]')",
   "pro.addEventListener('pointerdown'",
   "pro.addEventListener('pointerup'",
   "pro.addEventListener('pointercancel'",
   "document.addEventListener('visibilitychange'",
-  'agcCore.proceedKey(true)',
-  'agcCore.proceedKey(false)',
-  'const enterClockBeforeProceedGuard = enterClock',
-  'releaseProceed();'
+  'core.proceedKey(true)',
+  'core.proceedKey(false)',
+  'window.enterClock = function proceedSafeEnterClock',
+  'api.proceedElectrical = controller'
 ]) {
-  assert(proSource.includes(marker), `PRO block missing lifecycle marker: ${marker}`);
+  assert(source.includes(marker), `extracted PRO controller missing lifecycle marker: ${marker}`);
 }
-assert(!proSource.includes('proceedPulse('), 'physical PRO path must not use a synthetic pulse');
+assert(!source.includes('proceedPulse('), 'physical PRO path must not use a synthetic pulse');
+
+for (const forbidden of [
+  "document.querySelector('[data-key=\"P\"]')",
+  'proPointer',
+  'releaseProceed',
+  'proceedKey(true)',
+  'proceedKey(false)',
+  'hardwareEnterClock'
+]) {
+  assert(!hardware.includes(forbidden),
+    `hardware-fidelity.js retained PRO pointer/lifecycle ownership: ${forbidden}`);
+}
+
+const hardwareIndex = html.indexOf('<script src="hardware-fidelity.js"></script>');
+const proceedIndex = html.indexOf('<script src="proceed-electrical.js"></script>');
+const relayAudioIndex = html.indexOf('<script src="relay-identity-audio.js"></script>');
+assert(hardwareIndex >= 0 && proceedIndex > hardwareIndex && relayAudioIndex > proceedIndex,
+  'PRO electrical controller must load immediately after hardware-fidelity and before later relay refinements');
 
 function makeEvent(pointerId) {
   return {
@@ -59,7 +77,10 @@ const pro = {
     add(name){ classes.add(name); },
     remove(name){ classes.delete(name); }
   },
-  addEventListener(type, fn){ proListeners[type] = fn; },
+  addEventListener(type, fn){
+    if (proListeners[type]) fail(`duplicate PRO ${type} listener installed`);
+    proListeners[type] = fn;
+  },
   setPointerCapture(pointerId){ calls.push(['capture', pointerId]); }
 };
 const core = {
@@ -74,20 +95,38 @@ const failures = [];
 const documentObject = {
   hidden:false,
   querySelector(selector){ return selector === '[data-key="P"]' ? pro : null; },
-  addEventListener(type, fn){ documentListeners[type] = fn; }
+  addEventListener(type, fn){
+    if (documentListeners[type]) fail(`duplicate document ${type} listener installed`);
+    documentListeners[type] = fn;
+  }
+};
+const AGCDSKY = {
+  appStatus(){ return {mode}; },
+  getCore(){ return core; }
 };
 const context = {
   console,
   document:documentObject,
-  mode,
-  agcCore:core,
+  AGCDSKY,
   agcFailure(error){ failures.push(String(error && error.message || error)); },
-  enterClock(...args){ baseEnterClockCalls++; calls.push(['enterClock', ...args]); return 'clock-result'; },
+  __baseEnterClock(...args){
+    baseEnterClockCalls++;
+    calls.push(['enterClock', ...args]);
+    mode = 'clock';
+    return 'clock-result';
+  },
   window:null
 };
 context.window = context;
 vm.createContext(context);
-vm.runInContext(proSource, context, {filename:'hardware-fidelity-pro-block.js'});
+
+// Match production classic-script semantics. app.js declares enterClock and
+// installs closures before this later script replaces the global binding.
+vm.runInContext(`
+  function enterClock(...args) { return __baseEnterClock(...args); }
+  window.existingClockCaller = (...args) => enterClock(...args);
+`, context, {filename:'app-enter-clock-prelude.js'});
+vm.runInContext(source, context, {filename:'proceed-electrical.js'});
 
 assert(typeof proListeners.pointerdown === 'function'
   && typeof proListeners.pointerup === 'function'
@@ -95,6 +134,13 @@ assert(typeof proListeners.pointerdown === 'function'
   'PRO pointer listeners were not installed');
 assert(typeof documentListeners.visibilitychange === 'function',
   'PRO visibility release listener was not installed');
+assert(context.AGCDSKY_PROCEED === AGCDSKY.proceedElectrical,
+  'global and AGCDSKY PRO controller references differ');
+assert(AGCDSKY.proceedElectrical.state().held === false,
+  'PRO controller did not initialize released');
+
+// Re-running the classic script must be idempotent.
+vm.runInContext(source, context, {filename:'proceed-electrical-second-load.js'});
 
 let event = makeEvent(41);
 proListeners.pointerdown(event);
@@ -104,6 +150,9 @@ assert(calls.filter(call => call[0] === 'proceed' && call[1] === true).length ==
   'PRO pointerdown did not assert exactly one maintained contact');
 assert(calls.some(call => call[0] === 'capture' && call[1] === 41),
   'PRO pointer capture was not requested');
+assert(AGCDSKY.proceedElectrical.state().held
+  && AGCDSKY.proceedElectrical.state().pointerId === 41,
+  'PRO diagnostic state did not record the owning pointer');
 
 // A second pointer cannot steal the maintained contact.
 event = makeEvent(42);
@@ -125,6 +174,7 @@ assert(event.prevented && event.immediate, 'owning PRO pointer-up was not captur
 assert(calls.filter(call => call[0] === 'proceed' && call[1] === false).length === 1,
   'owning pointer-up did not release PRO exactly once');
 assert(!classes.has('pressed'), 'PRO presentation remained pressed after release');
+assert(!AGCDSKY.proceedElectrical.state().held, 'PRO diagnostic state remained held after release');
 
 // Cancel and hidden-page lifecycle both release a held contact.
 event = makeEvent(51);
@@ -142,20 +192,23 @@ assert(calls.filter(call => call[0] === 'proceed' && call[1] === false).length =
   'hidden-page transition did not release PRO');
 documentObject.hidden = false;
 
-// Entering CLOCK must release first, then call the original transition.
+// An app.js closure created before extraction must still resolve the replaced
+// classic-script global binding. PRO must release before the base transition
+// changes mode to CLOCK.
+mode = 'agc';
 event = makeEvent(71);
 proListeners.pointerdown(event);
 const beforeClock = calls.length;
-const result = context.enterClock('test-clock', true);
+const result = context.existingClockCaller('test-clock', true);
 const after = calls.slice(beforeClock);
 assert(result === 'clock-result' && baseEnterClockCalls === 1,
   'PRO enterClock wrapper did not preserve the original transition result');
 assert(after.length >= 2 && after[0][0] === 'proceed' && after[0][1] === false
   && after[1][0] === 'enterClock',
   'enterClock did not release PRO before changing mode');
+assert(mode === 'clock', 'base CLOCK transition did not execute');
 
 // Outside AGC mode PRO must be ignored and left for non-AGC presentation paths.
-context.mode = 'clock';
 const pressesBeforeClockMode = calls.filter(call => call[0] === 'proceed' && call[1] === true).length;
 event = makeEvent(81);
 proListeners.pointerdown(event);
@@ -163,10 +216,10 @@ assert(!event.prevented && !event.immediate,
   'PRO was swallowed outside AGC mode');
 assert(calls.filter(call => call[0] === 'proceed' && call[1] === true).length === pressesBeforeClockMode,
   'PRO asserted channel 032 outside AGC mode');
-context.mode = 'agc';
 
 // A failed electrical make must clear local ownership, restore released level,
 // and report the failure through the existing AGC error path.
+mode = 'agc';
 throwOnPress = true;
 event = makeEvent(91);
 proListeners.pointerdown(event);
@@ -174,9 +227,10 @@ throwOnPress = false;
 assert(failures.length === 1 && failures[0] === 'synthetic PRO failure',
   'failed PRO make did not reach agcFailure');
 assert(!classes.has('pressed'), 'failed PRO make left the key visually held');
+assert(!AGCDSKY.proceedElectrical.state().held, 'failed PRO make left controller ownership latched');
 const finalReleases = calls.filter(call => call[0] === 'proceed' && call[1] === false).length;
 assert(finalReleases === 5,
   `failed PRO make did not restore released level; releases=${finalReleases}`);
 
 console.log('PRO electrical smoke: PASS');
-console.log('  maintained make/release, pointer ownership, cancel/hidden cleanup, CLOCK release ordering, non-AGC bypass, and failure cleanup verified');
+console.log('  extracted maintained make/release, pointer ownership, cancel/hidden cleanup, CLOCK release ordering, non-AGC bypass, idempotence, and failure cleanup verified');
