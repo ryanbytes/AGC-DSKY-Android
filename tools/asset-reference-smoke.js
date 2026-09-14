@@ -53,17 +53,17 @@ for (const required of [
     assert(refs.includes(required), `current CM-only index is missing required frontend asset ${required}`);
 }
 
+const keycodesIndex = refs.indexOf('dsky-keycodes.js');
 const appIndex = refs.indexOf('app.js');
 const dreamSilenceIndex = refs.indexOf('dream-silence.js');
-const keycodesIndex = refs.indexOf('dsky-keycodes.js');
 const runtimeTransitionsIndex = refs.indexOf('runtime-transitions.js');
 const clockBehaviorIndex = refs.indexOf('clock-behavior.js');
-assert(appIndex >= 0 && dreamSilenceIndex === appIndex + 1,
+assert(keycodesIndex >= 0 && appIndex === keycodesIndex + 1,
+    'app.js must load immediately after shared dsky-keycodes.js');
+assert(dreamSilenceIndex === appIndex + 1,
     'dream-silence.js must load immediately after app.js');
-assert(keycodesIndex === dreamSilenceIndex + 1,
-    'dsky-keycodes.js must load immediately after dream-silence.js');
-assert(runtimeTransitionsIndex === keycodesIndex + 1,
-    'runtime-transitions.js must load immediately after dsky-keycodes.js');
+assert(runtimeTransitionsIndex === dreamSilenceIndex + 1,
+    'runtime-transitions.js must load immediately after dream-silence.js');
 assert(clockBehaviorIndex > runtimeTransitionsIndex,
     'runtime-transitions.js must load before clock behavior and before startup timers can run');
 
@@ -88,6 +88,10 @@ assert(!dreamSilence.includes("store.set('audioTickV4'"),
 const app = fs.readFileSync(APP, 'utf8');
 assert(app.includes("comanche055:{label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}"),
     'current app no longer defines the Comanche 055 mission');
+assert(app.includes('const AGC_KEY=window.AGCDSKY_KEY_CODES;'),
+    'app.js no longer consumes the parser-loaded shared DSKY keycode table');
+assert(!/const\s+AGC_KEY\s*=\s*\{/.test(app),
+    'app.js regained a private DSKY keycode literal');
 assert(!app.includes('Luminary099.bin'),
     'CM-only app unexpectedly references Luminary099.bin');
 
