@@ -139,6 +139,7 @@ node tools/solar-model-smoke.js
 node tools/agc-core-smoke.js
 node tools/native-diagnostic-smoke.js
 node tools/dsky-mapping-smoke.js
+node tools/dsky-keycode-consistency-smoke.js
 node tools/flight-hardware-ui-smoke.js
 node tools/key-mechanical-spec-smoke.js
 node tools/keyboard-electrical-interlock-smoke.js
