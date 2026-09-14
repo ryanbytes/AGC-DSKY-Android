@@ -1,0 +1,4 @@
+[submodule "vendor/webAGC"]
+	path = vendor/webAGC
+	url = https://github.com/michaelfranzl/webAGC.git
+	branch = main
