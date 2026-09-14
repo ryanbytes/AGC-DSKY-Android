@@ -24,6 +24,15 @@
     return value;
   }
 
+  function mode() {
+    return status().mode;
+  }
+
+  function core() {
+    if (typeof api.getCore !== 'function') throw new Error('AGC runtime core API unavailable');
+    return api.getCore();
+  }
+
   function beginAgc(reason = 'runtime request') {
     const current = status();
     if (current.mode === MODES.AGC) return Promise.resolve(current);
@@ -80,9 +89,11 @@
 
   const runtime = Object.freeze({
     modes:MODES,
+    mode,
+    core,
     requestAgc,
     snapshot:() => ({
-      mode:status().mode,
+      mode:mode(),
       transitionInFlight:!!transitionPromise,
       lastTransition:lastTransition ? {...lastTransition} : null
     })

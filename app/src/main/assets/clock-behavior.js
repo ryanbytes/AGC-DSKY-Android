@@ -4,27 +4,25 @@
   const api = window.AGCDSKY;
   const transitions = api?.runtimeTransitions;
   const AGC_KEY = window.AGCDSKY_KEY_CODES;
-  if (!api || !transitions || typeof transitions.requestAgc !== 'function' || !AGC_KEY) return;
+  if (!api || !transitions
+      || typeof transitions.requestAgc !== 'function'
+      || typeof transitions.mode !== 'function'
+      || typeof transitions.core !== 'function'
+      || !AGC_KEY) return;
 
   // This layer owns only the document-level CLOCK keypad fallback. The live
   // CM electrical interlock normally captures physical normal keys earlier at
   // window capture and uses the same shared runtime transition service/key map.
+  // Runtime mode/core authority also stays in runtime-transitions.js so this
+  // fallback cannot grow a second appStatus/getCore interpretation.
   const pendingKeys = [];
   let promotionPromise = null;
-
-  function status() {
-    if (typeof api.appStatus !== 'function') throw new Error('AGC runtime status API unavailable');
-    const value = api.appStatus();
-    if (!value || typeof value.mode !== 'string') throw new Error('AGC runtime returned invalid mode state');
-    return value;
-  }
 
   async function drainClockInput() {
     try {
       await transitions.requestAgc('clock keypad fallback');
-      const core = api.getCore && api.getCore();
-      const current = status();
-      if (!core || current.mode !== transitions.modes.AGC) {
+      const core = transitions.core();
+      if (!core || transitions.mode() !== transitions.modes.AGC) {
         throw new Error('AGC core unavailable after clock keypad handoff');
       }
       while (pendingKeys.length) {
@@ -52,9 +50,9 @@
   document.addEventListener('pointerdown', event => {
     const key = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
     if (!key) return;
-    let current;
-    try { current = status(); } catch (_) { return; }
-    if (current.mode !== transitions.modes.CLOCK && current.mode !== transitions.modes.AGC_LOADING) return;
+    let currentMode;
+    try { currentMode = transitions.mode(); } catch (_) { return; }
+    if (currentMode !== transitions.modes.CLOCK && currentMode !== transitions.modes.AGC_LOADING) return;
 
     // Before the CM electrical interlock is dynamically installed, this keeps
     // app.js's synthetic clock editor from consuming a normal DSKY contact.
@@ -70,7 +68,7 @@
     isPromoting:() => !!promotionPromise,
     pendingCount:() => pendingKeys.length,
     snapshot:() => ({
-      mode:status().mode,
+      mode:transitions.mode(),
       promotionInFlight:!!promotionPromise,
       pendingKeys:pendingKeys.slice()
     })
