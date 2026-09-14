@@ -23,6 +23,7 @@ for (const marker of [
   'window.__DSKY_PROCEED_ELECTRICAL__',
   'const runtime = api?.runtimeTransitions',
   'const input = api?.inputRuntime',
+  'typeof runtime.clockRequested',
   'typeof runtime.onBeforeClock',
   "document.querySelector('[data-key=\"P\"]')",
   "pro.addEventListener('pointerdown'",
@@ -79,6 +80,7 @@ const classes = new Set();
 const calls = [];
 const failures = [];
 let mode = 'agc';
+let clockPending = false;
 let throwOnPress = false;
 let beforeClockHook = null;
 let beforeClockRegistrations = 0;
@@ -115,6 +117,7 @@ const AGCDSKY = {
     modes:MODES,
     mode(){ return mode; },
     core(){ return core; },
+    clockRequested(){ return clockPending; },
     onBeforeClock(handler){
       beforeClockRegistrations++;
       beforeClockHook = handler;
@@ -198,8 +201,10 @@ mode = MODES.AGC;
 event = makeEvent(71);
 proListeners.pointerdown(event);
 const beforeClock = calls.length;
+clockPending = true;
 beforeClockHook({reason:'app enterClock', from:MODES.AGC});
 const result = context.__baseEnterClock('test-clock', true);
+clockPending = false;
 const after = calls.slice(beforeClock);
 assert(result === 'clock-result', 'base CLOCK transition result changed');
 assert(after.length >= 2
@@ -208,7 +213,21 @@ assert(after.length >= 2
   'shared pre-CLOCK hook did not release PRO before the base transition');
 assert(mode === MODES.CLOCK, 'base CLOCK transition did not execute');
 
+// New PRO makes are suppressed after CLOCK intent has been registered, even if
+// the underlying app mode is still AGC while a deferred transition settles.
+mode = MODES.AGC;
+clockPending = true;
+const makesBeforePending = calls.filter(call => call[0] === 'proceed' && call[1] === true).length;
+event = makeEvent(75);
+proListeners.pointerdown(event);
+assert(!event.prevented && !event.immediate,
+  'suppressed PRO make should be left to the inert legacy path');
+assert(calls.filter(call => call[0] === 'proceed' && call[1] === true).length === makesBeforePending,
+  'PRO asserted channel 032 after CLOCK was requested');
+clockPending = false;
+
 // Outside AGC mode PRO remains available to non-AGC presentation paths.
+mode = MODES.CLOCK;
 const pressesBeforeClockMode = calls.filter(call => call[0] === 'proceed' && call[1] === true).length;
 event = makeEvent(81);
 proListeners.pointerdown(event);
@@ -230,4 +249,4 @@ assert(calls.filter(call => call[0] === 'proceed' && call[1] === false).length =
   'failed PRO make did not restore released level');
 
 console.log('PRO electrical smoke: PASS');
-console.log('  shared runtime/input authority, maintained contact, lifecycle cleanup, centralized CLOCK release ordering, idempotence, and failure cleanup verified');
+console.log('  maintained contact, lifecycle cleanup, centralized CLOCK release ordering, pending-CLOCK suppression, idempotence, and failure cleanup verified');
