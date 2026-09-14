@@ -59,7 +59,7 @@ assert(appIndex >= 0 && dreamSilenceIndex === appIndex + 1,
 assert(runtimeTransitionsIndex === dreamSilenceIndex + 1,
     'runtime-transitions.js must load immediately after dream-silence.js');
 assert(clockBehaviorIndex > runtimeTransitionsIndex,
-    'runtime-transitions.js must load before clock behavior and before timer callbacks can run');
+    'runtime-transitions.js must load before clock behavior and before startup timers can run');
 
 const dreamSilence = fs.readFileSync(DREAM_SILENCE, 'utf8');
 assert(dreamSilence.includes("new URLSearchParams(location.search).get('dream') === '1'"),
