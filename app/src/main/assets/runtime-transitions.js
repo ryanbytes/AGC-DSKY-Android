@@ -31,7 +31,7 @@
 
     // runtime-transitions.js loads immediately after app.js, before the event
     // loop can run app.js's startup timeout and before the user can press the
-    // AGC control.  All normal entry points are replaced below, so seeing a
+    // AGC control. All normal entry points are replaced below, so seeing a
     // loading state without our Promise is an invariant violation, not a state
     // to paper over with another independent polling loop.
     if (current.mode === MODES.AGC_LOADING) {
@@ -43,10 +43,17 @@
     transitionPromise = (async () => {
       await baseEnterAgc();
       const next = status();
-      if (next.mode !== MODES.AGC) {
-        throw new Error(`AGC transition ended in ${next.mode || 'unknown'} mode`);
-      }
-      lastTransition = Object.freeze({serial, from, to:next.mode, reason});
+      // app.js historically catches its own load/runtime failure and returns to
+      // clock mode. Preserve that behavior for the AGC button/startup caller:
+      // the shared entry Promise resolves with the final state instead of
+      // inventing a new unhandled rejection at this wrapper layer.
+      lastTransition = Object.freeze({
+        serial,
+        from,
+        to:next.mode,
+        reason,
+        ready:next.mode === MODES.AGC
+      });
       return next;
     })().finally(() => {
       transitionPromise = null;
@@ -59,7 +66,15 @@
   }
 
   function requestAgc(reason = 'runtime request') {
-    return beginAgc(reason);
+    // Keyboard/fallback callers require a ready AGC because they must inject a
+    // key immediately after this awaits. Give them a checked derived Promise
+    // without changing the underlying app-entry Promise's failure semantics.
+    return beginAgc(reason).then(next => {
+      if (next.mode !== MODES.AGC) {
+        throw new Error(`AGC transition ended in ${next.mode || 'unknown'} mode`);
+      }
+      return next;
+    });
   }
 
   const runtime = Object.freeze({
