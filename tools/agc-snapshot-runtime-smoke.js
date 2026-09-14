@@ -4,7 +4,8 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets');
 const source=fs.readFileSync(path.join(ASSETS,'agc-snapshot-runtime.js'),'utf8');
-const app=fs.readFileSync(path.join(ASSETS,'app.js'),'utf8');
+const shell=fs.readFileSync(path.join(ASSETS,'app-shell-runtime.js'),'utf8');
+const api=fs.readFileSync(path.join(ASSETS,'agc-api-runtime.js'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 const storage=new Map(),store={get:k=>storage.has(k)?storage.get(k):null,set(k,v){storage.set(k,String(v));return true},remove:k=>storage.delete(k)};
 let applied=null,renderCount=0,startCount=0,stopCount=0,importCount=0,serial=0;
@@ -26,7 +27,8 @@ vm.runInContext("scheduleAgcAutosave('DSKY key make')",context);assert(timers.le
 assert(JSON.parse(storage.get('agcSnapshotMetaV1')).reason==='autosave: DSKY key make','autosave reason changed');
 assert(vm.runInContext('clearSavedAgcState()',context)===true&&!storage.has('agcSnapshotV1')&&!storage.has('agcSnapshotMetaV1'),'snapshot clear failed');
 context.mode='clock';assert(vm.runInContext("saveAgcState('manual')",context)===false,'snapshot save must be rejected outside AGC mode');
-for(const token of ['SNAPSHOT_KEY','function saveAgcState(','function restoreSavedAgcState(','function verifySnapshotRoundTrip(','function scheduleAgcAutosave(']){assert(source.includes(token),`snapshot runtime missing ${token}`);assert(!app.includes(token),`app.js regained snapshot persistence ownership: ${token}`)}
+for(const token of ['SNAPSHOT_KEY','function saveAgcState(','function restoreSavedAgcState(','function verifySnapshotRoundTrip(','function scheduleAgcAutosave(']){assert(source.includes(token),`snapshot runtime missing ${token}`);assert(!shell.includes(token)&&!api.includes(token),`non-snapshot runtime regained snapshot ownership: ${token}`)}
 for(const forbidden of ['new AgcCore(','async function enterAgc(','function decodeChannel10('])assert(!source.includes(forbidden),`snapshot runtime crossed authority boundary: ${forbidden}`);
+assert(!fs.existsSync(path.join(ASSETS,'app.js')),'legacy app.js unexpectedly exists');
 console.log('AGC snapshot runtime smoke: PASS');
-console.log('  save/metadata, restore, clear, round-trip verification, autosave debounce, and mode gating verified');
+console.log('  save/metadata, restore, clear, round-trip verification, autosave debounce, mode gating, and ownership separation verified');
