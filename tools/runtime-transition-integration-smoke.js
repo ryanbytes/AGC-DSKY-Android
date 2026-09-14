@@ -63,11 +63,16 @@ async function flushMicrotasks(count = 12) {
 
 async function main() {
   const appIndex = html.indexOf('<script src="app.js"></script>');
+  const dreamSilenceIndex = html.indexOf('<script src="dream-silence.js"></script>');
   const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
   const clockIndex = html.indexOf('<script src="clock-behavior.js"></script>');
   const cmIndex = html.indexOf('<script src="cm-mode.js"></script>');
-  assert(appIndex >= 0 && runtimeIndex > appIndex && clockIndex > runtimeIndex && cmIndex > clockIndex,
-    'script order must be app -> runtime transitions -> clock fallback -> CM dynamic features');
+  assert(appIndex >= 0
+      && dreamSilenceIndex > appIndex
+      && runtimeIndex > dreamSilenceIndex
+      && clockIndex > runtimeIndex
+      && cmIndex > clockIndex,
+    'script order must be app -> dream silence -> runtime transitions -> clock fallback -> CM dynamic features');
   assert(!transitionSource.includes('waitForAgcReady') && !transitionSource.includes('LOAD_POLL_MS'),
     'shared transition service must not retain an independent loading poll loop');
 
