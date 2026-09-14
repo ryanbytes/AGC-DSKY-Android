@@ -68,6 +68,8 @@ async function main() {
   const cmIndex = html.indexOf('<script src="cm-mode.js"></script>');
   assert(appIndex >= 0 && runtimeIndex > appIndex && clockIndex > runtimeIndex && cmIndex > clockIndex,
     'script order must be app -> runtime transitions -> clock fallback -> CM dynamic features');
+  assert(!transitionSource.includes('waitForAgcReady') && !transitionSource.includes('LOAD_POLL_MS'),
+    'shared transition service must not retain an independent loading poll loop');
 
   const windowListeners = Object.create(null);
   const documentListeners = Object.create(null);
@@ -124,6 +126,8 @@ async function main() {
   };
   context.window = context;
   context.addEventListener = function(type, fn){ addListener(windowListeners, type, fn); };
+  context.enterAgc = AGCDSKY.enterAgc;
+  const originalEnterAgc = context.enterAgc;
 
   vm.createContext(context);
   vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
@@ -131,6 +135,8 @@ async function main() {
     'runtime transition service did not publish on AGCDSKY');
   assert(context.AGCDSKY_RUNTIME === AGCDSKY.runtimeTransitions,
     'global and AGCDSKY transition service references differ');
+  assert(context.enterAgc !== originalEnterAgc && AGCDSKY.enterAgc === context.enterAgc,
+    'runtime service did not replace both global/API AGC entry references');
 
   vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
   assert(AGCDSKY.clockBehavior,
@@ -140,13 +146,13 @@ async function main() {
   assert(AGCDSKY.keyboardElectrical,
     'keyboard electrical interlock did not initialize');
 
-  // Start AGC loading from a non-keyboard caller. The physical keyboard must
-  // join this one authoritative transition rather than calling enterAgc again
-  // or maintaining its own loading poll loop.
-  const existingTransition = AGCDSKY.runtimeTransitions.requestAgc('external startup');
+  // Simulate app.js's already-installed AGC button/startup closure calling the
+  // global binding first. The physical keyboard must join this exact Promise;
+  // no second loader call and no readiness polling are allowed.
+  const existingTransition = context.enterAgc();
   await flushMicrotasks(2);
-  assert(mode === 'agc-loading', 'external transition did not enter agc-loading');
-  assert(enterCount === 1, 'external transition did not call enterAgc exactly once');
+  assert(mode === 'agc-loading', 'direct app transition did not enter agc-loading');
+  assert(enterCount === 1, 'direct app transition did not call the underlying enterAgc exactly once');
 
   const verb = makeButton('V');
   let event = makeEvent(verb, 41);
@@ -155,16 +161,18 @@ async function main() {
     'electrical interlock did not own the physical VERB contact at window capture');
 
   // Fast tap while loading. finishPointer closes the contact immediately; the
-  // shared coordinator should retain it until the already-running load ends.
+  // shared Promise should retain it until the already-running app load ends.
   event = makeEvent(verb, 41);
   dispatchPointer(windowListeners, documentListeners, 'pointerup', event);
   let state = AGCDSKY.keyboardElectrical.state();
   assert(state.clockHandoffPending && state.cycleLatched,
     'released physical key was not retained during shared AGC startup');
   assert(enterCount === 1,
-    'keyboard started a second AGC transition instead of joining the existing one');
+    'keyboard started a second AGC transition instead of joining the direct app transition');
   assert(!calls.some(call => call[0] === 'legacy-clock-press'),
     'physical key leaked into the obsolete synthetic clock editor');
+  assert(!Array.from(timers.values()).some(timer => timer.due - nowMs === 10),
+    'physical handoff unexpectedly started readiness polling');
 
   resolveLoad();
   await existingTransition;
@@ -172,7 +180,7 @@ async function main() {
 
   assert(mode === 'agc', 'shared transition did not finish in AGC mode');
   assert(enterCount === 1,
-    'shared transition called enterAgc more than once');
+    'shared transition called the underlying enterAgc more than once');
   const makes = calls.filter(call => call[0] === 'make');
   assert(makes.length === 1 && makes[0][1] === 0o21,
     'original VERB contact was not forwarded as Pinball keycode 021');
@@ -184,8 +192,8 @@ async function main() {
     'shared transition remained marked in flight after completion');
   assert(transitionState.lastTransition && transitionState.lastTransition.to === 'agc',
     'shared transition diagnostics did not record AGC completion');
-  assert(transitionState.lastTransition.reason === 'external startup',
-    'joining keyboard request incorrectly replaced the owner/reason of the existing transition');
+  assert(transitionState.lastTransition.reason === 'app enterAgc',
+    'keyboard join incorrectly replaced direct app transition ownership');
   const clockState = AGCDSKY.clockBehavior.snapshot();
   assert(!clockState.promotionInFlight && clockState.pendingKeys.length === 0,
     'document-level fallback participated even though window capture stopped propagation');
@@ -217,7 +225,7 @@ async function main() {
     'channel-015 electrical cycle remained latched after KEYRST');
 
   console.log('runtime transition integration smoke: PASS');
-  console.log('  extracted transition service, window/document ownership, clock fallback isolation, and make/KEYRST verified');
+  console.log('  direct app entry, window/document ownership, physical join, no polling, and make/KEYRST verified');
 }
 
 main().catch(error => {
