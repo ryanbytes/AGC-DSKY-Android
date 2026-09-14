@@ -2,6 +2,32 @@
 
 Last updated: 2026-09-13
 
+## 2026-09-13 native ambient-light brightness
+
+The interactive Android Activity now has an optional native ambient-light brightness path. `AmbientBrightnessController` reads Android `Sensor.TYPE_LIGHT` and changes only the Activity window's physical screen brightness; it does not synthesize DSKY lamps, alter AGC channels, or modify relay/electrical state.
+
+Current behavior:
+
+- ambient brightness defaults enabled and persists its on/off preference locally;
+- the light sensor is optional (`android.hardware.sensor.light` with `required="false"`) and needs no runtime permission;
+- 0 lx maps to a 20% screen-brightness floor and approximately 1000 lx reaches full output through the same logarithmic response used by the PWA model;
+- readings are smoothed with a 72% prior / 28% new factor and small brightness deltas are suppressed to avoid visible sensor jitter;
+- the controls panel exposes `AUTO BRIGHTNESS`, including live rounded lux while active;
+- devices without a light sensor show `AUTO BRIGHTNESS NO SENSOR` and remain on Android/system brightness;
+- disabling the feature, pausing the Activity, or destroying it restores `screenBrightness=-1`, handing control back to Android;
+- the existing `PANEL DIMMER` remains a separate simulated/display control, and DreamService keeps its existing DIM/BRIGHT/SOLAR policy.
+
+`tools/ambient-brightness-smoke.js` checks the optional-sensor manifest contract, native window-brightness path, restore-to-system behavior, logarithmic mapping, smoothing constants, lifecycle/bridge wiring, UI asset references, and the 0-lx/1000-lx endpoints.
+
+Observed in this execution environment:
+
+- `app/src/main/assets/ambient-brightness.js` passed `node --check`;
+- `tools/ambient-brightness-smoke.js` passed `node --check`;
+- `node tools/ambient-brightness-smoke.js` passed against the staged edited sources;
+- GitHub compare confirmed the feature commit changes only the intended manifest, Activity, controller, frontend control/script, and smoke-test files.
+
+These are source-level checks only. The Android SDK/Gradle recursive checkout is still unavailable in this execution environment, so the canonical Android build, APK verification, and physical light-sensor behavior on Pixel/Fire hardware have **not** been run for this revision.
+
 ## 2026-09-13 WebAudio renderer recovery
 
 A regular-phone prototype report from Android 17 / Chromium WebView 151 showed Chromium's native WebAudio renderer diagnostic:
@@ -261,7 +287,9 @@ For the current drawing/relay revision plus the 2026-09-12 CLOCK→AGC input rep
 - [x] CLOCK→AGC first-key behavior is encoded in the canonical keyboard-interlock regression gate;
 - [x] WebAudio renderer recovery is encoded in `tools/audio-recovery-smoke.js` and wired into the canonical local build gate;
 - [x] the staged audio-recovery source smoke passed in this execution environment;
+- [x] ambient-light brightness has a dedicated source smoke and that smoke passed against the staged edited sources;
 - [x] current host/source and real-Comanche WASM checks above passed for the earlier 2026-09-11 drawing/relay state;
+- [ ] native ambient-light brightness has been built and exercised on a physical light-sensor device;
 - [ ] the updated CLOCK→AGC keyboard-interlock smoke has been executed against the 2026-09-12 repair revision;
 - [ ] canonical `tools/build-local.sh` has been run successfully for this exact revision;
 - [ ] current regular APK has been installed/device-smoked;
