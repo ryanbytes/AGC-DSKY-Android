@@ -17,14 +17,16 @@ function assert(condition, message) {
 }
 
 for (const marker of [
-  'const baseEnterClock = window.enterClock',
-  'const baseApiEnterClock = api.enterClock',
+  'const baseEnterClock = typeof window.enterClock',
+  'const baseApiEnterClock = typeof api.enterClock',
+  'const clockEntryAvailable',
   'function onBeforeClock(handler)',
   'function sharedEnterClock(...args)',
   'function sharedApiEnterClock(...args)',
   'window.enterClock = sharedEnterClock',
   'api.enterClock = sharedApiEnterClock',
-  'lastClockTransition'
+  'lastClockTransition',
+  'clockEntryWrapped:clockEntryAvailable'
 ]) {
   assert(source.includes(marker), `runtime transition source missing CLOCK marker: ${marker}`);
 }
@@ -65,6 +67,8 @@ vm.runInContext(source, context, {filename:'runtime-transitions.js'});
 assert(context.enterClock !== oldGlobal, 'global CLOCK entry was not wrapped');
 assert(AGCDSKY.enterClock !== oldApi, 'AGCDSKY CLOCK entry was not wrapped');
 assert(AGCDSKY.runtimeTransitions, 'runtime transition service was not published');
+assert(AGCDSKY.runtimeTransitions.snapshot().clockEntryWrapped === true,
+  'production-style CLOCK surfaces were not marked wrapped');
 
 let hooks = 0;
 const seen = [];
@@ -101,5 +105,27 @@ unsubscribe();
 assert(AGCDSKY.runtimeTransitions.snapshot().beforeClockHooks === 0,
   'CLOCK cleanup-hook unsubscribe failed');
 
+// Partial AGC-only harnesses must still get mode/core/input authority and the
+// cleanup-hook registry even when they intentionally omit CLOCK entry surfaces.
+let partialMode = 'clock';
+const partialApi = {
+  appStatus(){ return {mode:partialMode}; },
+  getCore(){ return {}; },
+  async enterAgc(){ partialMode = 'agc'; }
+};
+const partial = {AGCDSKY:partialApi, console, window:null};
+partial.window = partial;
+partial.enterAgc = partialApi.enterAgc;
+vm.createContext(partial);
+vm.runInContext(source, partial, {filename:'runtime-transitions-partial.js'});
+assert(partialApi.runtimeTransitions,
+  'AGC-only harness did not initialize shared runtime authority');
+assert(partialApi.runtimeTransitions.snapshot().clockEntryWrapped === false,
+  'AGC-only harness incorrectly reported CLOCK entry wrapping');
+let partialHooks = 0;
+partialApi.runtimeTransitions.onBeforeClock(() => { partialHooks++; });
+assert(partialApi.runtimeTransitions.snapshot().beforeClockHooks === 1 && partialHooks === 0,
+  'AGC-only harness could not register dormant CLOCK cleanup hooks');
+
 console.log('runtime CLOCK transition smoke: PASS');
-console.log('  global arguments, AGCDSKY preserveAgc semantics, one-shot cleanup hooks, unsubscribe, and CLOCK diagnostics verified');
+console.log('  global arguments, AGCDSKY preserveAgc semantics, cleanup hooks, diagnostics, and AGC-only harness compatibility verified');
