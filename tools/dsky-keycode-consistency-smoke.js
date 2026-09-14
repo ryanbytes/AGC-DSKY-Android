@@ -53,13 +53,28 @@ for (const marker of [
 }
 const consumers = [
   ['clock-behavior.js', clockSource, 'const AGC_KEY = window.AGCDSKY_KEY_CODES;'],
-  ['keyboard-electrical-interlock.js', keyboardSource, 'const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;'],
-  ['flight-hardware-ui.js', flightUiSource, 'const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;']
+  ['keyboard-electrical-interlock.js', keyboardSource, 'const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;']
 ];
 for (const [file, source, marker] of consumers) {
   if (!source.includes(marker)) fail(`${file} does not consume the shared DSKY keycode table`);
   if (source.includes("'1':0o01") || source.includes('V:0o21') || source.includes('N:0o37')) {
     fail(`${file} still contains a duplicate Pinball keycode table`);
+  }
+}
+
+// flight-hardware-ui.js now owns presentation personality only. A keycode-table
+// dependency there would mean the removed document-level channel-015 path was
+// being reintroduced instead of keeping the electrical interlock authoritative.
+for (const forbidden of [
+  'AGCDSKY_KEY_CODES',
+  'DSKY_KEY_CODE',
+  'NORMAL_KEY_CHANNEL',
+  "'1':0o01",
+  'V:0o21',
+  'N:0o37'
+]) {
+  if (flightUiSource.includes(forbidden)) {
+    fail(`flight-hardware-ui.js regained electrical keycode ownership: ${forbidden}`);
   }
 }
 
@@ -83,4 +98,4 @@ for (const key of expected) {
 if (Object.prototype.hasOwnProperty.call(shared, 'P')) fail('shared table incorrectly includes PRO');
 
 console.log('DSKY keycode consistency smoke: PASS');
-console.log('  app.js is the one Pinball-map source; clock, electrical interlock, and flight UI consume one frozen copy; PRO remains separate');
+console.log('  app.js is the one Pinball-map source; clock fallback and the single electrical interlock consume one frozen copy; flight UI is presentation-only; PRO remains separate');
