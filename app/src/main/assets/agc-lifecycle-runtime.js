@@ -1,47 +1,50 @@
 'use strict';
 
-// Authoritative AGC core/mode lifecycle. app.js retains app configuration,
-// NTP/control wiring, and publishes the public AGCDSKY facade.
+// Authoritative AGC core/mode lifecycle. Shared session mode/mission/command
+// fields live in app-state-runtime.js; this module owns core loading and run
+// lifecycle only.
+const appState=window.AGCDSKY_APP_STATE;
+if(!appState)throw new Error('Shared application state unavailable');
 let agcSuspendedForClock=false;
 let agcCore=null,agcLoadedMission='',appVisible=!document.hidden,agcPausedForVisibility=false;
 
 function enterClock(status=clockTimeLabel(),preserveAgc=false){
   cancelLampTest();
-  const canResume=preserveAgc&&mode==='agc'&&agcCore&&agcLoadedMission===selectedMission;
+  const canResume=preserveAgc&&appState.mode==='agc'&&agcCore&&agcLoadedMission===appState.selectedMission;
   if(agcCore)agcCore.stop();
   if(canResume)saveAgcState('suspend for clock');
   agcSuspendedForClock=!!canResume;
-  agcPausedForVisibility=false;mode='clock';rememberRunMode('clock');
-  $('agc').textContent='AGC MODE';$('mode').textContent=status;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
+  agcPausedForVisibility=false;appState.mode='clock';rememberRunMode('clock');
+  $('agc').textContent='AGC MODE';$('mode').textContent=status;clearLamps();set2('prog','00');appState.verb='16';appState.noun='65';show(appState.verb,appState.noun);stopClockQueue();syncClockFace();
 }
 function agcAppStatus(){
   const meta=savedSnapshotInfo();
-  return {mode,mission:selectedMission,missionLabel:missionSpec().label,loadedMission:agcLoadedMission,coreLoaded:!!agcCore,
+  return {mode:appState.mode,mission:appState.selectedMission,missionLabel:missionSpec().label,loadedMission:agcLoadedMission,coreLoaded:!!agcCore,
     coreRunning:!!(agcCore&&agcCore.running),coreVersion:agcCore?agcCore.version():'not loaded',appVisible,
     channels:{ch011:agcCh11,ch013:agcCh13,ch0163:agcCh163},display:JSON.parse(JSON.stringify(agcDisplay)),
     snapshot:{saved:!!meta,meta,lastAction:lastSnapshotAction,error:lastSnapshotError,lastVerify:lastSnapshotVerify,currentFingerprint:agcCore&&typeof agcCore.snapshotFingerprint==='function'?agcCore.snapshotFingerprint():null,lastAutosaveAt}};
 }
 async function enterAgc(){
-  if(dream||mode==='agc-loading'||mode==='agc')return;
+  if(dream||appState.mode==='agc-loading'||appState.mode==='agc')return;
   cancelLampTest();
   const selected=missionSpec();
-  if(agcSuspendedForClock&&agcCore&&agcLoadedMission===selectedMission){
-    mode='agc';agcSuspendedForClock=false;rememberRunMode('agc');$('agc').textContent='AGC MODE';$('mode').textContent=`${selected.label} · ${agcCore.version()}`;renderAgcSnapshot();
+  if(agcSuspendedForClock&&agcCore&&agcLoadedMission===appState.selectedMission){
+    appState.mode='agc';agcSuspendedForClock=false;rememberRunMode('agc');$('agc').textContent='AGC MODE';$('mode').textContent=`${selected.label} · ${agcCore.version()}`;renderAgcSnapshot();
     if(appVisible){agcCore.start(1);agcPausedForVisibility=false}else{agcPausedForVisibility=true}
     return;
   }
-  mode='agc-loading';stopClockQueue();$('agc').textContent='...';$('mode').textContent=`LOADING ${selected.label} · AGC`;resetAgcFace();
+  appState.mode='agc-loading';stopClockQueue();$('agc').textContent='...';$('mode').textContent=`LOADING ${selected.label} · AGC`;resetAgcFace();
   try{
-    if(!agcCore||agcLoadedMission!==selectedMission){
+    if(!agcCore||agcLoadedMission!==appState.selectedMission){
       if(agcCore)agcCore.stop();
       agcCore=new AgcCore({onChannelUpdate:onAgcChannel,onError:agcFailure});
       await agcCore.load({wasmUrl:'yaAGC.wasm',ropeUrl:selected.rope});
-      agcLoadedMission=selectedMission;
+      agcLoadedMission=appState.selectedMission;
     }else{
       agcCore.reset();agcCore.configureInputMasks();
     }
     const restored=restoreSavedAgcState();
-    mode='agc';agcSuspendedForClock=false;rememberRunMode('agc');$('agc').textContent='AGC MODE';$('mode').textContent=`${selected.label} · ${agcCore.version()}${restored?' · STATE RESTORED':''}`;
+    appState.mode='agc';agcSuspendedForClock=false;rememberRunMode('agc');$('agc').textContent='AGC MODE';$('mode').textContent=`${selected.label} · ${agcCore.version()}${restored?' · STATE RESTORED':''}`;
     if(restored)renderAgcSnapshot();
     if(appVisible){agcCore.start(1);agcPausedForVisibility=false}else{agcPausedForVisibility=true}
   }catch(error){agcFailure(error)}
@@ -51,7 +54,7 @@ function agcFailure(error){
 }
 function setAppVisible(visible){
   appVisible=!!visible;
-  if(mode!=='agc'||!agcCore)return;
+  if(appState.mode!=='agc'||!agcCore)return;
   if(!appVisible){
     if(agcCore.running){agcCore.stop();agcPausedForVisibility=true}
     saveAgcState('app background');
