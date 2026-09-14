@@ -28,7 +28,10 @@ for (const marker of [
   'function status()',
   'function mode()',
   'function core()',
+  'function clockRequested()',
+  'let clockRequestPending = false',
   'requestAgc,',
+  'clockRequested,',
   'function onBeforeClock(handler)',
   'const clockEntryAvailable',
   'function sharedEnterClock(...args)',
@@ -66,6 +69,7 @@ assert(!input.includes('window.enterClock ='),
 for (const [file, source] of consumers) {
   assert(source.includes('runtimeTransitions'), `${file} does not consume shared runtime authority`);
   assert(source.includes('inputRuntime'), `${file} does not consume shared input runtime`);
+  assert(source.includes('clockRequested'), `${file} does not honor pending CLOCK intent`);
   assert(!source.includes('api.appStatus('), `${file} regained direct api.appStatus() ownership`);
   assert(!source.includes('api.getCore('), `${file} regained direct api.getCore() ownership`);
   assert(!source.includes('window.AGCDSKY.appStatus('), `${file} regained direct window.AGCDSKY.appStatus() ownership`);
@@ -76,8 +80,11 @@ for (const [file, source] of consumers) {
   }
 }
 
+const clock = consumers.find(([file]) => file === 'clock-behavior.js')[1];
 const proceed = consumers.find(([file]) => file === 'proceed-electrical.js')[1];
 const keyboard = consumers.find(([file]) => file === 'keyboard-electrical-interlock.js')[1];
+assert(clock.includes('transitions.onBeforeClock(cancelClockInput)'),
+  'clock fallback queue must cancel through shared pre-CLOCK transition cleanup');
 assert(proceed.includes('runtime.onBeforeClock(releaseProceed)'),
   'PRO must release through shared pre-CLOCK transition cleanup');
 assert(keyboard.includes('runtime.onBeforeClock(releaseForClock)'),
@@ -93,4 +100,4 @@ for (const file of ['clock-behavior.js', 'proceed-electrical.js', 'keyboard-elec
 }
 
 console.log('runtime authority smoke: PASS');
-console.log('  AGC/CLOCK transition ownership is centralized in runtime-transitions; channel-015/032 primitives are centralized in dsky-input-runtime');
+console.log('  AGC/CLOCK transition intent is centralized in runtime-transitions; channel-015/032 primitives are centralized in dsky-input-runtime; all input owners honor pending CLOCK');
