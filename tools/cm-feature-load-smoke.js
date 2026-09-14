@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'app/src/main/assets/index.html'), 'utf8');
@@ -11,6 +12,9 @@ const cm = fs.readFileSync(path.join(root, 'app/src/main/assets/cm-mode.js'), 'u
 function fail(message) {
   console.error('CM FEATURE LOAD FAIL: ' + message);
   process.exit(1);
+}
+function assert(condition, message) {
+  if (!condition) fail(message);
 }
 
 const features = [
@@ -47,8 +51,88 @@ if (!cm.includes("script.src = 'relay-show.js'")) fail('cm-mode.js lost dynamic 
 const keyboardIndex = html.indexOf('data-feature="keyboard-electrical-interlock"');
 const closingBody = html.indexOf('</body>');
 if (keyboardIndex < 0 || keyboardIndex >= closingBody) {
-  fail('keyboard electrical interlock is not parser-loaded before the page becomes interactive');
+  fail('keyboard electrical interlock is not parser-loaded before the page completes');
 }
 
+// Execute cm-mode.js against a minimal DOM that reflects the parser-loaded
+// feature tags. Its deferred load callback must see every static marker and
+// append no duplicate hardware script; Relay Show remains the sole dynamic
+// script because its button/script pair is intentionally created together.
+const loadHandlers = [];
+const appendedScripts = [];
+const insertedButtons = [];
+const classes = new Set();
+const storage = new Map();
+const controls = {
+  insertBefore(node){ insertedButtons.push(node); node.parentNode = controls; },
+  appendChild(node){ insertedButtons.push(node); node.parentNode = controls; }
+};
+const display = {id:'display', parentNode:controls};
+
+function parserHasFeature(feature) {
+  return html.includes(`<script src="${feature}.js" data-feature="${feature}"></script>`);
+}
+
+const documentObject = {
+  readyState:'loading',
+  body:{
+    classList:{add(name){ classes.add(name); }},
+    appendChild(node){
+      if (node && node.tagName === 'SCRIPT') appendedScripts.push(node);
+      node.parentNode = this;
+      return node;
+    }
+  },
+  querySelector(selector){
+    const match = selector.match(/^script\[data-feature="([^"]+)"\]$/);
+    return match && parserHasFeature(match[1]) ? {dataset:{feature:match[1]}} : null;
+  },
+  getElementById(id){
+    if (id === 'controls') return controls;
+    if (id === 'display') return display;
+    if (id === 'relay-show') return insertedButtons.find(node => node.id === 'relay-show') || null;
+    return null;
+  },
+  createElement(tag){
+    return {tagName:String(tag).toUpperCase(), dataset:{}, id:'', textContent:'', parentNode:null};
+  }
+};
+const context = {
+  console,
+  document:documentObject,
+  localStorage:{setItem(key,value){ storage.set(String(key), String(value)); }},
+  AGCDSKY:{},
+  window:null,
+  addEventListener(type, fn, options){
+    if (type === 'load') loadHandlers.push({fn, options});
+  }
+};
+context.window = context;
+vm.createContext(context);
+vm.runInContext(cm, context, {filename:'cm-mode.js'});
+
+assert(classes.has('spacecraft-cm'), 'cm-mode.js did not apply the CM body class synchronously');
+assert(storage.get('agcMission') === 'comanche055', 'cm-mode.js did not lock the Comanche mission');
+assert(typeof context.AGCDSKY.applyCmMode === 'function', 'cm-mode.js did not publish applyCmMode');
+assert(loadHandlers.length === 1, `expected one CM load callback, found ${loadHandlers.length}`);
+assert(loadHandlers[0].options && loadHandlers[0].options.once === true,
+  'CM load callback must remain one-shot');
+
+loadHandlers[0].fn();
+const scriptSources = appendedScripts.map(node => node.src);
+for (const feature of features) {
+  assert(!scriptSources.includes(`${feature}.js`),
+    `cm-mode.js duplicated parser-loaded ${feature}.js at window load`);
+}
+assert(scriptSources.length === 1 && scriptSources[0] === 'relay-show.js',
+  `expected only dynamic relay-show.js after load, got: ${scriptSources.join(', ') || 'none'}`);
+assert(insertedButtons.filter(node => node.id === 'relay-show').length === 1,
+  'Relay Show control was not created exactly once');
+
+// A second direct apply must be harmless and continue locking CM mission state.
+context.AGCDSKY.applyCmMode();
+assert(classes.has('spacecraft-cm') && storage.get('agcMission') === 'comanche055',
+  'repeat CM-mode application changed the locked CM state');
+
 console.log('CM feature load smoke: PASS');
-console.log('  hardware/personality/interlock layers load deterministically; cm-mode fallback cannot duplicate them; Relay Show remains dynamic');
+console.log('  parser-loaded hardware layers are ordered and skipped by the load fallback; only Relay Show is injected dynamically');
