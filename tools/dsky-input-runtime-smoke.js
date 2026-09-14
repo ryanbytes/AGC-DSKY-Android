@@ -23,6 +23,7 @@ for (const marker of [
   'function keyMake(code)',
   'function keyReset(coreOverride = null)',
   'function proceed(pressed)',
+  'value <= 0',
   'core.keyPress(value)',
   'core.keyRelease()',
   'core.proceedKey(!!pressed)',
@@ -75,6 +76,11 @@ assert(calls.length === 1 && calls[0][0] === 'make' && calls[0][1] === 0o21,
   'VERB keycode did not reach the core unchanged');
 
 rejected = false;
+try { AGCDSKY.inputRuntime.keyMake(0); } catch (_) { rejected = true; }
+assert(rejected && calls.length === 1,
+  'channel-015 zero was accepted as a key make instead of remaining KEYRST-only');
+
+rejected = false;
 try { AGCDSKY.inputRuntime.keyMake(0o40); } catch (_) { rejected = true; }
 assert(rejected && calls.length === 1,
   'out-of-range channel-015 keycode was not rejected before core access');
@@ -111,4 +117,4 @@ assert(AGCDSKY.inputRuntime === prior,
   'second input-runtime load replaced the published controller');
 
 console.log('DSKY input runtime smoke: PASS');
-console.log('  AGC gating, key make, KEYRST, retained-core release, PRO maintained contact, keycode validation, and idempotence verified');
+console.log('  AGC gating, positive key makes, KEYRST-only zero, retained-core release, PRO maintained contact, keycode validation, and idempotence verified');
