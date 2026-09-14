@@ -1,6 +1,31 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14
+
+## 2026-09-14 DSKY runtime refactor phase 1
+
+The current `a16c019` privacy-clean baseline was re-audited before refactoring rather than assuming the older architecture notes still described the packaged page. The active `index.html` loads `clock-behavior.js` for CLOCK -> AGC keypad promotion and `hardware-fidelity.js` for the maintained PRO/channel-032 path. It does **not** currently load the repository's `flight-hardware-ui.js` or `keyboard-electrical-interlock.js` files. Their standalone tests remain useful, but their presence in the tree is not proof that their behavior is packaged. The 2026-09-12 electrical-interlock section below is therefore historical context, not current-package verification.
+
+Phase 1 deliberately does not enable those dormant input layers or rewrite `app.js`. Instead it makes the currently packaged CLOCK -> AGC transition path deterministic and inspectable while preserving the existing CM-only runtime contract:
+
+- `clock-behavior.js` now owns one serialized `requestAgc()` transition path for keypad-triggered promotion;
+- keypad contacts that arrive while the first promotion is still loading remain queued and are forwarded to channel `015` in contact order after the core is ready;
+- if another caller has already placed the app in `agc-loading`, the keypad path waits for that existing transition instead of dropping the first DSKY key;
+- the readiness wait is bounded to 2,000 polls at 10 ms rather than waiting forever;
+- failed/non-AGC transitions clear the pending key queue and retain the existing console diagnostic;
+- `AGCDSKY.runtimeTransitions` / `AGCDSKY_RUNTIME` expose transition diagnostics and a copied pending-key snapshot without exposing mutable queue state;
+- synthetic CLOCK-mode COMP ACTY remains forbidden;
+- AGC execution, channel decoding, relay state, PRO semantics, snapshots, and WebAssembly startup remain untouched in this phase.
+
+`tools/clock-mode-behavior-smoke.js` was strengthened to cover ordinary first-key promotion, ordered multiple contacts during one load, and a key arriving during a pre-existing `agc-loading` transition. The smoke previously existed outside the canonical gate; `tools/build-local.sh` now executes it immediately after `frontend-smoke.js`.
+
+Observed in this execution environment for the staged Phase-1 source/test contents:
+
+- `clock-behavior.js` passed `node --check`;
+- `clock-mode-behavior-smoke.js` passed `node --check`;
+- the strengthened clock-mode behavior smoke passed all three transition cases.
+
+These are source-level results only. The canonical `tools/build-local.sh`, Gradle build, APK verification, and Android device smokes have **not** been run for this branch in this environment. The existing Android SDK/recursive-checkout limitations below still apply. The next acceptance step is the canonical local build on a machine with the required SDK/toolchain, followed by the current regular-phone device gate.
 
 ## 2026-09-13 WebAudio renderer recovery
 
