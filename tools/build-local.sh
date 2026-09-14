@@ -148,6 +148,7 @@ node tools/dsky-keycode-consistency-smoke.js
 node tools/flight-hardware-ui-smoke.js
 node tools/key-mechanical-spec-smoke.js
 node tools/keyboard-electrical-interlock-smoke.js
+node tools/keyboard-clock-cancel-smoke.js
 node tools/rset-flightpath-smoke.js
 node tools/runtime-transition-integration-smoke.js
 node tools/lighting-rheostat-stop-smoke.js
