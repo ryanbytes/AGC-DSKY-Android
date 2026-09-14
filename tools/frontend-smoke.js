@@ -14,6 +14,8 @@ const vm = require('vm');
 const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'app/src/main/assets');
 const APP_JS = path.join(ASSETS, 'app.js');
+const DISPLAY_RENDERER_JS = path.join(ASSETS, 'dsky-display-renderer.js');
+const PHONE_CLOCK_RUNTIME_JS = path.join(ASSETS, 'phone-clock-runtime.js');
 const KEYCODES_JS = path.join(ASSETS, 'dsky-keycodes.js');
 const RUNTIME_TRANSITIONS_JS = path.join(ASSETS, 'runtime-transitions.js');
 const INPUT_RUNTIME_JS = path.join(ASSETS, 'dsky-input-runtime.js');
@@ -169,6 +171,7 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
         JSON,
         Object,
         Promise,
+        Set,
         performance: { now: () => 0 },
         setInterval: () => 1,
         clearInterval: () => {},
@@ -179,6 +182,8 @@ function createEnvironment({ search = '', initialStorage = {} } = {}) {
     context.window = context;
 
     vm.createContext(context);
+    vm.runInContext(fs.readFileSync(DISPLAY_RENDERER_JS, 'utf8'), context, { filename: 'dsky-display-renderer.js' });
+    vm.runInContext(fs.readFileSync(PHONE_CLOCK_RUNTIME_JS, 'utf8'), context, { filename: 'phone-clock-runtime.js' });
     vm.runInContext(fs.readFileSync(KEYCODES_JS, 'utf8'), context, { filename: 'dsky-keycodes.js' });
     vm.runInContext(fs.readFileSync(APP_JS, 'utf8'), context, { filename: 'app.js' });
     vm.runInContext(fs.readFileSync(RUNTIME_TRANSITIONS_JS, 'utf8'), context, { filename: 'runtime-transitions.js' });
@@ -261,6 +266,8 @@ function checkSourceInvariants() {
     assert(html.includes('controls-layout.css'),
         'responsive controls stylesheet missing from index.html');
     const coreIndex = html.indexOf('<script src="agc-core.js"></script>');
+    const displayIndex = html.indexOf('<script src="dsky-display-renderer.js"></script>');
+    const clockRuntimeIndex = html.indexOf('<script src="phone-clock-runtime.js"></script>');
     const keycodesIndex = html.indexOf('<script src="dsky-keycodes.js"></script>');
     const appIndex = html.indexOf('<script src="app.js"></script>');
     const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
@@ -269,22 +276,28 @@ function checkSourceInvariants() {
     const keyboardIndex = html.indexOf('<script src="keyboard-electrical-interlock.js"');
     const diagnosticsIndex = html.indexOf('<script src="diagnostics.js"></script>');
     assert(coreIndex >= 0
-        && keycodesIndex > coreIndex
+        && displayIndex > coreIndex
+        && clockRuntimeIndex > displayIndex
+        && keycodesIndex > clockRuntimeIndex
         && appIndex > keycodesIndex
         && runtimeIndex > appIndex
         && inputIndex > runtimeIndex
         && phoneIndex > inputIndex
         && keyboardIndex > inputIndex
         && diagnosticsIndex > phoneIndex,
-        'current shared-keycode/app/runtime/input/phone/keyboard script order is invalid');
+        'current display/clock/keycode/app/runtime/input/phone/keyboard script order is invalid');
     for (const removed of ['runtime-debug.js', 'app-refine.js', 'v35-audio-refine.js', 'spacecraft-panels.js']) {
         assert(!html.includes(`src="${removed}"`), `removed/stale script is loaded: ${removed}`);
     }
 
     const appSource = fs.readFileSync(APP_JS, 'utf8');
-    for (const forbidden of ['AGC_KEY', 'AGCDSKY_KEY_CODES', '.keyPress(', '.keyRelease(', '.proceedKey(', 'writeIo(0o15']) {
+    for (const forbidden of [
+        'AGC_KEY', 'AGCDSKY_KEY_CODES', '.keyPress(', '.keyRelease(', '.proceedKey(', 'writeIo(0o15',
+        'const SEG=', 'const PATH=', 'const DIGIT_RELAY=', 'const CLOCK_GROUPS=',
+        'function syncClockFace()', 'function lampTest()'
+    ]) {
         assert(!appSource.includes(forbidden),
-            `app.js regained extracted DSKY input ownership: ${forbidden}`);
+            `app.js regained extracted DSKY input/display/clock ownership: ${forbidden}`);
     }
 
     const sensorActivity = fs.readFileSync(SENSOR_ACTIVITY, 'utf8');
@@ -345,8 +358,6 @@ function pointerEvent(target, pointerId) {
 async function main() {
     checkSourceInvariants();
 
-    // A fresh non-dream install defaults to the real CM AGC unless the user
-    // explicitly chose clock mode previously.
     const fresh = createEnvironment();
     await flushAsync();
     const core = fresh.context.AGCDSKY.getCore();
@@ -360,11 +371,9 @@ async function main() {
         'fresh AGC mode must persist runMode=agc');
     assert(fresh.elements.mode.textContent.includes('COMANCHE055'),
         'mode status must identify Comanche055');
+    assert(fresh.elements.r1.innerHTML.includes('el-glyph'),
+        'extracted display/clock runtime did not render the initial phone-clock face');
 
-    // Normal DSKY keys must reach AGC only through the extracted window-capture
-    // electrical owner. Keep this contact held until CLOCK transition so this
-    // broad harness also verifies pre-CLOCK KEYRST without simulating the
-    // dedicated keyboard smoke's 12-ms physical-release dwell.
     const key1 = fresh.keyElements.find((element) => element.dataset.key === '1');
     assert(key1 && typeof fresh.windowListeners.pointerdown === 'function',
         'extracted physical DSKY keyboard listener must be installed');
@@ -377,9 +386,6 @@ async function main() {
     assert(core.keyReleaseCount === 0,
         'held physical DSKY key unexpectedly released before CLOCK transition');
 
-    // Clock mode must first release the held channel-015 contact, then suspend
-    // the same running AGC and save a snapshot. Returning to AGC resumes that
-    // same core rather than reloading another rope.
     fresh.elements.clock.listeners.click();
     assert(core.keyReleaseCount === 1,
         'CLOCK transition did not KEYRST the held physical DSKY key exactly once');
@@ -399,7 +405,6 @@ async function main() {
     assert(fresh.storage.get('runMode') === 'agc',
         'AGC resume must persist runMode=agc');
 
-    // Native visibility transitions pause/save and resume the same core.
     const exportsBeforeHide = core.exportCount;
     fresh.context.AGCDSKY.setAppVisible(false);
     assert(!core.running, 'hidden app must pause the AGC core');
@@ -408,7 +413,6 @@ async function main() {
     fresh.context.AGCDSKY.setAppVisible(true);
     assert(core.running, 'visible app must resume the same AGC core');
 
-    // Explicitly remembered clock mode must suppress automatic AGC startup.
     const clockOnly = createEnvironment({ initialStorage: { runMode: 'clock' } });
     await flushAsync();
     assert(clockOnly.context.AGCDSKY.getCore() === null,
@@ -416,8 +420,6 @@ async function main() {
     assert(clockOnly.context.AGCDSKY.appStatus().mode === 'clock',
         'remembered clock mode must stay in clock mode');
 
-    // DreamService page is always phone-clock/display-only and must never boot
-    // the AGC even if the saved interactive run mode is AGC.
     const dream = createEnvironment({
         search: '?dream=1&clock=1&display=1',
         initialStorage: { runMode: 'agc' }
@@ -431,7 +433,7 @@ async function main() {
         'DreamService page must stay display-only');
 
     console.log('frontend/source smoke: PASS');
-    console.log('  CM-only startup, extracted DSKY make/pre-CLOCK KEYRST, snapshot suspend/resume, visibility lifecycle, clock persistence, and dream isolation verified');
+    console.log('  extracted display/clock runtime boot, CM AGC startup, physical DSKY input, snapshots, visibility, clock persistence, and dream isolation verified');
 }
 
 main().catch((error) => {
