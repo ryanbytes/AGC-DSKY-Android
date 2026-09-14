@@ -26,7 +26,8 @@ for (const forbidden of [
   '.keyRelease(',
   '.proceedKey(',
   'writeIo(0o15',
-  'writeIo(0o32'
+  'writeIo(0o32',
+  "document.querySelectorAll('[data-key]').forEach"
 ]) {
   assert(!app.includes(forbidden), `app.js regained extracted DSKY input ownership: ${forbidden}`);
 }
@@ -53,4 +54,4 @@ assert(keycodes.includes('window.AGCDSKY_KEY_CODES = Object.freeze({'),
   'shared frozen keycode source is missing');
 
 console.log('app input boundary smoke: PASS');
-console.log('  app.js is CLOCK-only for legacy press handling; AGC normal-key electrical ownership remains in keyboard-electrical-interlock + dsky-input-runtime');
+console.log('  app.js installs no DSKY target handler and has no AGC electrical primitives; extracted keyboard + input runtime own real DSKY input');
