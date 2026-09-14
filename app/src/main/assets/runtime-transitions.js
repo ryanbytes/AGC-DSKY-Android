@@ -24,6 +24,7 @@
   let transitionPromise = null;
   let transitionSerial = 0;
   let lastTransition = null;
+  let deferredClockPromise = null;
   let clockTransitionSerial = 0;
   let lastClockTransition = null;
   const beforeClockHooks = new Set();
@@ -111,19 +112,40 @@
     }
   }
 
-  function sharedEnterClock(...args) {
-    if (!clockEntryAvailable) throw new Error('CLOCK runtime entry API unavailable');
-    const from = mode();
-    runBeforeClock('app enterClock', from);
-    const result = baseEnterClock.apply(this, args);
+  function finishClock(thisArg, args, requestedFrom, deferred) {
+    const executedFrom = mode();
+    const result = baseEnterClock.apply(thisArg, args);
     const next = status();
     lastClockTransition = Object.freeze({
       serial:++clockTransitionSerial,
-      from,
+      from:requestedFrom,
+      executedFrom,
       to:next.mode,
-      reason:'app enterClock'
+      reason:'app enterClock',
+      deferred:!!deferred
     });
     return result;
+  }
+
+  function sharedEnterClock(...args) {
+    if (!clockEntryAvailable) throw new Error('CLOCK runtime entry API unavailable');
+    const from = mode();
+    // Release physical input immediately when CLOCK is requested. If an AGC
+    // load is already in flight, app.js cannot cancel it safely; defer only the
+    // underlying CLOCK mode switch until that owned load settles so its async
+    // completion cannot overwrite the user's CLOCK request.
+    runBeforeClock('app enterClock', from);
+    if (transitionPromise) {
+      if (deferredClockPromise) return deferredClockPromise;
+      const activeTransition = transitionPromise;
+      const thisArg = this;
+      deferredClockPromise = activeTransition
+        .catch(() => null)
+        .then(() => finishClock(thisArg, args, from, true))
+        .finally(() => { deferredClockPromise = null; });
+      return deferredClockPromise;
+    }
+    return finishClock(this, args, from, false);
   }
 
   // AGCDSKY.enterClock() in app.js is intentionally a no-argument convenience
@@ -144,6 +166,7 @@
     snapshot:() => ({
       mode:mode(),
       transitionInFlight:!!transitionPromise,
+      clockTransitionInFlight:!!deferredClockPromise,
       lastTransition:lastTransition ? {...lastTransition} : null,
       lastClockTransition:lastClockTransition ? {...lastClockTransition} : null,
       beforeClockHooks:beforeClockHooks.size,
