@@ -10,11 +10,19 @@ The effective input/transition ownership is now documented as follows:
 
 - `keyboard-electrical-interlock.js` owns the 18 normal keycoded switches at **window capture** and preserves the series-key / KEYRST electrical model;
 - `hardware-fidelity.js` owns the maintained PRO contact on channel `032`;
-- `runtime-transitions.js` loads immediately after `app.js` and owns one shared CLOCK -> AGC in-flight Promise exposed through `AGCDSKY.runtimeTransitions` / `AGCDSKY_RUNTIME`;
+- `runtime-transitions.js` loads synchronously after `app.js` and the required `dream-silence.js` guard, then owns one shared CLOCK -> AGC in-flight Promise exposed through `AGCDSKY.runtimeTransitions` / `AGCDSKY_RUNTIME`;
 - `runtime-transitions.js` replaces both the classic-script global `enterAgc` binding and `AGCDSKY.enterAgc` with the same serialized wrapper, so app startup, the AGC button, clock fallback input, and the electrical interlock all join the same transition;
 - `clock-behavior.js` now owns only the document-level clock keypad fallback/queue and consumes the shared transition service;
 - `app.js` remains the authoritative underlying AGC loader, channel decoder, display-state owner, and snapshot owner;
 - once the electrical interlock is dynamically installed, physical normal-key events are stopped at window capture before the document-level clock fallback can see them.
+
+The packaged synchronous script order for this slice is deliberately:
+
+```text
+app.js -> dream-silence.js -> runtime-transitions.js -> clock-behavior.js -> ... -> cm-mode.js
+```
+
+`dream-silence.js` remains immediately after `app.js` because the existing asset gate requires that safety guard before any later frontend layer. `runtime-transitions.js` still runs in the same script turn, before app startup timers or user input can execute.
 
 Phase 1 removes duplicate AGC-loading coordination while preserving the existing CM-only behavior:
 
@@ -24,25 +32,28 @@ Phase 1 removes duplicate AGC-loading coordination while preserving the existing
 - `keyboard-electrical-interlock.js` awaits `runtimeTransitions.requestAgc('keyboard electrical contact')` and only then asserts the original Pinball keycode on channel `015`;
 - a fast touchscreen release during loading still preserves the physical cycle until the make is delivered and the minimum KEYRST dwell completes;
 - queued document-level fallback contacts remain ordered and are forwarded after AGC readiness;
+- direct AGC-button/startup entry preserves `app.js` failure compatibility: if the loader catches an error and falls back to clock, the app-entry Promise resolves with that final state, while keyboard/fallback callers get a derived rejection because they require a ready AGC before injecting a key;
 - transition diagnostics return copied state rather than mutable production structures;
 - synthetic CLOCK-mode COMP ACTY remains forbidden;
 - AGC/WASM startup ordering, channel mappings, relay state, PRO semantics, snapshot format, and display rendering are unchanged by this phase.
 
-Regression coverage was tightened in three places:
+Regression coverage was tightened in four places:
 
-- `tools/clock-mode-behavior-smoke.js` covers ordinary fallback promotion, ordered fallback contacts during one load, and a direct app/startup-style `enterAgc` call followed by a keypad join with no polling or second loader start;
+- `tools/clock-mode-behavior-smoke.js` covers ordinary fallback promotion, ordered fallback contacts during one load, a direct app/startup-style `enterAgc` call followed by a keypad join with no polling or second loader start, and app-load failure compatibility;
 - `tools/keyboard-electrical-interlock-smoke.js` treats the shared transition API as the handoff contract while retaining the series-chain, PRO-bypass, fast-tap, and KEYRST checks;
-- `tools/runtime-transition-integration-smoke.js` checks script order, installs the extracted transition service plus clock fallback and electrical interlock together, propagates pointer events from window to document unless actually stopped, and requires a physical VERB fast-tap during a direct app AGC load to join one transition, generate one Pinball `021` make, avoid the clock fallback/legacy editor, avoid readiness polling, and end with one KEYRST.
+- `tools/runtime-transition-integration-smoke.js` checks script order, installs the extracted transition service plus clock fallback and electrical interlock together, propagates pointer events from window to document unless actually stopped, and requires a physical VERB fast-tap during a direct app AGC load to join one transition, generate one Pinball `021` make, avoid the clock fallback/legacy editor, avoid readiness polling, and end with one KEYRST;
+- `tools/asset-reference-smoke.js` now requires `runtime-transitions.js` to be packaged and locks the exact `app.js -> dream-silence.js -> runtime-transitions.js` ordering.
 
-All three are wired into `tools/build-local.sh`. The clock behavior smoke existed previously but was not part of the canonical build gate; Phase 1 added it, and the new integration smoke is adjacent to the electrical-interlock gate.
+The transition smokes are wired into `tools/build-local.sh`. The clock behavior smoke existed previously but was not part of the canonical build gate; Phase 1 added it, and the new integration smoke is adjacent to the electrical-interlock gate.
 
-Observed in this execution environment:
+Observed in this execution environment against source fetched from the current refactor branch:
 
-- staged copies matching the current `runtime-transitions.js` and `clock-behavior.js` logic passed `node --check`;
-- a staged shared-entry check confirmed direct app entry and a later runtime request receive the same Promise and start the underlying loader once;
-- a staged physical handoff check confirmed window-capture ownership, no document fallback participation, no 10 ms readiness polling, one Pinball `021` make, and one KEYRST.
+- current `runtime-transitions.js`, `clock-behavior.js`, and `keyboard-electrical-interlock.js` passed `node --check` in a reconstructed minimal source tree;
+- current transition/clock production source passed scenarios for ordinary first-key handoff, ordered fallback queuing, direct app-load joining with no second loader/poll loop, and app-load failure compatibility;
+- current electrical production source passed the physical fast-tap handoff scenario: window-capture ownership, no document fallback participation, no 10 ms readiness polling, one Pinball `021` make, one KEYRST, and no latched channel-015 cycle;
+- the execution container still cannot resolve `github.com`, so a complete recursive checkout and the repository's exact full smoke scripts cannot be executed directly in that container.
 
-These are source-level staged results only. The complete current smoke files have **not** been executed from a full checkout at the exact branch HEAD. The canonical `tools/build-local.sh`, Gradle regular/Fire builds, APK verification, and Android/WebView/device smokes also have **not** been run for this branch in this environment. The Android SDK/recursive-checkout limitations below still apply. No device/runtime claim is upgraded from these source checks.
+These are source-level checks against the current fetched production files, not a canonical full-repository build. `bash tools/build-local.sh`, Gradle regular/Fire builds, APK verification, and Android/WebView/device smokes have **not** been run for this branch in this environment. The Android SDK/recursive-checkout limitations below still apply. No device/runtime claim is upgraded from these source checks.
 
 ## 2026-09-13 WebAudio renderer recovery
 
