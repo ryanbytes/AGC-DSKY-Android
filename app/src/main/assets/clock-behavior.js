@@ -8,6 +8,8 @@
   if (!api || !transitions || !input
       || typeof transitions.requestAgc !== 'function'
       || typeof transitions.mode !== 'function'
+      || typeof transitions.clockRequested !== 'function'
+      || typeof transitions.onBeforeClock !== 'function'
       || typeof input.ready !== 'function'
       || typeof input.keyMake !== 'function'
       || !AGC_KEY) return;
@@ -19,32 +21,48 @@
   // second app/runtime/core interpretation.
   const pendingKeys = [];
   let promotionPromise = null;
+  let promotionEpoch = 0;
 
-  async function drainClockInput() {
+  function cancelClockInput() {
+    pendingKeys.length = 0;
+    promotionEpoch++;
+    promotionPromise = null;
+  }
+
+  async function drainClockInput(epoch) {
     try {
       await transitions.requestAgc('clock keypad fallback');
+      if (epoch !== promotionEpoch || transitions.clockRequested()) return;
       if (transitions.mode() !== transitions.modes.AGC || !input.ready()) {
         throw new Error('AGC input runtime unavailable after clock keypad handoff');
       }
-      while (pendingKeys.length) {
+      while (pendingKeys.length && epoch === promotionEpoch && !transitions.clockRequested()) {
         const next = pendingKeys.shift();
         const code = AGC_KEY[next];
         if (code !== undefined) input.keyMake(code);
       }
-      if (typeof api.scheduleAgcAutosave === 'function') {
+      if (epoch === promotionEpoch && !transitions.clockRequested()
+          && typeof api.scheduleAgcAutosave === 'function') {
         api.scheduleAgcAutosave('clock keypad handoff');
       }
     } catch (error) {
-      pendingKeys.length = 0;
-      console.error('Clock-to-AGC keypad handoff', error);
+      if (epoch === promotionEpoch && !transitions.clockRequested()) {
+        pendingKeys.length = 0;
+        console.error('Clock-to-AGC keypad handoff', error);
+      }
     } finally {
-      promotionPromise = null;
+      // A canceled old drain must never clear a newer promotion Promise.
+      if (epoch === promotionEpoch) promotionPromise = null;
     }
   }
 
   function promoteClockInput(key) {
+    if (transitions.clockRequested()) return Promise.resolve(false);
     pendingKeys.push(key);
-    if (!promotionPromise) promotionPromise = drainClockInput();
+    if (!promotionPromise) {
+      const epoch = promotionEpoch;
+      promotionPromise = drainClockInput(epoch);
+    }
     return promotionPromise;
   }
 
@@ -59,18 +77,27 @@
     // interlock owns window capture first and stops propagation before here.
     event.preventDefault();
     event.stopPropagation();
+    if (transitions.clockRequested()) return;
     key.classList.add('pressed');
     setTimeout(() => key.classList.remove('pressed'), 90);
     void promoteClockInput(key.dataset.key);
   }, {capture:true, passive:false});
 
+  // If CLOCK is selected while a fallback promotion is awaiting AGC readiness,
+  // invalidate that queue immediately. Its async continuation may still settle,
+  // but the epoch check prevents any stale keycode or autosave from reappearing.
+  transitions.onBeforeClock(cancelClockInput);
+
   const clockBehavior = Object.freeze({
     promoteClockInput,
+    cancel:cancelClockInput,
     isPromoting:() => !!promotionPromise,
     pendingCount:() => pendingKeys.length,
     snapshot:() => ({
       mode:transitions.mode(),
+      clockRequested:transitions.clockRequested(),
       promotionInFlight:!!promotionPromise,
+      promotionEpoch,
       pendingKeys:pendingKeys.slice()
     })
   });
