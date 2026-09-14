@@ -8,7 +8,7 @@ const MISSIONS=Object.freeze({
 let selectedMission='comanche055'; store.set('agcMission','comanche055');
 const restoreAgcOnLoad=!dream&&store.get('runMode')!=='clock';
 let dreamMode=store.get('dreamMode')||(oldDreamBright?'bright':'dim');
-let entryMode='',entry='',verb='16',noun='65',mode='clock',
+let verb='16',noun='65',mode='clock',
     dim=store.get('dim')==='1',
     tickSound=store.get('audioTickV4')!=='0',
     displayOnly=dream||store.get('displayOnly')==='1',
@@ -154,7 +154,6 @@ function lampTest(){
     lampTestActive=false;clearLamps();set2('prog','00');verb='16';noun='65';show(verb,noun);stopClockQueue();syncClockFace();
   },V35_TEST_MS);
 }
-function executeClock(){if(verb==='35'){$('mode').textContent='V35 · REAL AGC MODE REQUIRED';return}if(verb==='16'&&noun==='65'){mode='clock';$('mode').textContent=clockTimeLabel();stopClockQueue();syncClockFace();return}$('mode').textContent=`V${verb} N${noun} · PHONE CLOCK INPUT`}
 
 function missionSpec(){return MISSIONS[selectedMission]}
 function applyMissionButton(){const b=$('mission');if(b)b.textContent=missionSpec().short}
@@ -339,21 +338,6 @@ function setAppVisible(visible){
     return;
   }
   if(agcPausedForVisibility){agcPausedForVisibility=false;agcCore.start(1)}
-}
-function press(k){
-  // Real AGC normal-key contacts are exclusively owned by the extracted
-  // electrical interlock/input runtime. Keep this legacy helper CLOCK-only so
-  // it cannot create an unpaired channel-015 make behind that authority.
-  if(mode==='agc')return;
-  if(mode!=='clock')return;
-  if(k==='V'){if(entryMode==='N'&&entry.length)noun=entry.padStart(2,'0').slice(-2);entryMode='V';entry='';set2('verb','  ');return}
-  if(k==='N'){if(entryMode==='V'&&entry.length)verb=entry.padStart(2,'0').slice(-2);entryMode='N';entry='';set2('noun','  ');return}
-  if(k==='C'){entry='';if(entryMode==='V')set2('verb','  ');else if(entryMode==='N')set2('noun','  ');return}
-  if(k==='R'){cancelLampTest();mode='clock';verb='16';noun='65';set2('prog','00');show(verb,noun);clearLamps();stopClockQueue();syncClockFace();return}
-  if(k==='K'){setLamp('keyrel',false);return}
-  if(k==='P'){setLamp('prog',!document.querySelector('[data-lamp="prog"]').classList.contains('on'));return}
-  if(k==='E'){if(entryMode==='V'&&entry.length)verb=entry.padStart(2,'0').slice(-2);if(entryMode==='N'&&entry.length)noun=entry.padStart(2,'0').slice(-2);entryMode='';entry='';show(verb,noun);executeClock();return}
-  if(/^\d$/.test(k)&&entryMode){entry=(entry+k).slice(-2);if(entryMode==='V')set2('verb',entry.padEnd(2,' '));else set2('noun',entry.padEnd(2,' '))}
 }
 
 // Solar brightness is computed locally from the saved latitude/longitude.
