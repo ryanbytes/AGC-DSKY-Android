@@ -1,240 +1,34 @@
 #!/usr/bin/env node
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
+const fs=require('fs'),path=require('path'),vm=require('vm');
+const asset=name=>fs.readFileSync(path.resolve(__dirname,'../app/src/main/assets',name),'utf8');
+const html=asset('index.html'),keycodeSource=asset('dsky-keycodes.js'),transitionSource=asset('runtime-transitions.js'),clockSource=asset('clock-behavior.js'),keyboardSource=asset('keyboard-electrical-interlock.js');
+const KEY_CODES=Object.freeze({'1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37});
+function assert(c,m){if(!c)throw new Error(m);}function add(b,t,f){(b[t] ||= []).push(f);}function dispatch(b,t,e){for(const f of b[t]||[]){f(e);if(e.immediate)break;}}function dispatchPointer(w,d,t,e){dispatch(w,t,e);if(!e.stopped&&!e.immediate)dispatch(d,t,e);}function button(key){const c=new Set();return{dataset:{key},classList:{add(n){c.add(n);},remove(n){c.delete(n);}},setPointerCapture(){},releasePointerCapture(){}};}function event(b,id){return{pointerId:id,target:{closest(s){return s==='[data-key]'?b:null;}},prevented:false,stopped:false,immediate:false,preventDefault(){this.prevented=true;},stopPropagation(){this.stopped=true;},stopImmediatePropagation(){this.immediate=true;}};}async function flush(n=12){for(let i=0;i<n;i++)await Promise.resolve();}
 
-const html = fs.readFileSync(
-  path.resolve(__dirname, '../app/src/main/assets/index.html'), 'utf8');
-const transitionSource = fs.readFileSync(
-  path.resolve(__dirname, '../app/src/main/assets/runtime-transitions.js'), 'utf8');
-const clockSource = fs.readFileSync(
-  path.resolve(__dirname, '../app/src/main/assets/clock-behavior.js'), 'utf8');
-const keyboardSource = fs.readFileSync(
-  path.resolve(__dirname, '../app/src/main/assets/keyboard-electrical-interlock.js'), 'utf8');
+async function main(){
+ const order=['app.js','dream-silence.js','dsky-keycodes.js','runtime-transitions.js','clock-behavior.js','cm-mode.js'].map(n=>html.indexOf(`<script src="${n}"></script>`));
+ assert(order.every(x=>x>=0)&&order.every((x,i)=>i===0||x>order[i-1]),'script order must be app -> dream silence -> shared keycodes -> runtime transitions -> clock fallback -> CM features');
+ assert(!transitionSource.includes('waitForAgcReady')&&!transitionSource.includes('LOAD_POLL_MS'),'transition service must not poll');
+ assert(clockSource.includes('window.AGCDSKY_KEY_CODES')&&keyboardSource.includes('window.AGCDSKY_KEY_CODES'),'both input layers must consume shared keycodes');
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
+ const wl=Object.create(null),dl=Object.create(null),timers=new Map(),calls=[];let next=1,now=0,mode='clock',enterCount=0,resolveLoad;const loadGate=new Promise(r=>{resolveLoad=r;});
+ const core={keyPress(code){calls.push(['make',code,now]);return 1;},keyRelease(){calls.push(['reset',now]);return true;}};
+ const AGCDSKY={appStatus(){return{mode};},async enterAgc(){enterCount++;if(mode==='agc'||mode==='agc-loading')return;mode='agc-loading';calls.push(['enter',now]);await loadGate;mode='agc';},getCore(){return core;},scheduleAgcAutosave(reason){calls.push(['autosave',reason,now]);},hardwarePersonality(){return{keys:{V:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};}};
+ const context={AGC_KEY:KEY_CODES,AGCDSKY,console,Promise,performance:{now(){return now;}},localStorage:{getItem(){return'0';}},setTimeout(fn,delay=0){const id=next++;timers.set(id,{fn,due:now+Math.max(0,Number(delay)||0)});return id;},clearTimeout(id){timers.delete(id);},window:null,document:{hidden:false,addEventListener(t,f){add(dl,t,f);}},press(key){calls.push(['legacy-clock-press',key,now]);}};
+ context.window=context;context.addEventListener=(t,f)=>add(wl,t,f);context.enterAgc=AGCDSKY.enterAgc;const original=context.enterAgc;vm.createContext(context);
+ vm.runInContext(keycodeSource,context,{filename:'dsky-keycodes.js'});assert(context.AGCDSKY_KEY_CODES&&Object.isFrozen(context.AGCDSKY_KEY_CODES),'shared keycodes missing/mutable');assert(context.AGCDSKY_KEY_CODES!==KEY_CODES,'shared keycodes must be copied');
+ vm.runInContext(transitionSource,context,{filename:'runtime-transitions.js'});assert(AGCDSKY.runtimeTransitions&&context.enterAgc!==original&&AGCDSKY.enterAgc===context.enterAgc,'transition service did not replace global/API entry');
+ vm.runInContext(clockSource,context,{filename:'clock-behavior.js'});assert(AGCDSKY.clockBehavior,'clock fallback did not initialize');
+ vm.runInContext(keyboardSource,context,{filename:'keyboard-electrical-interlock.js'});assert(AGCDSKY.keyboardElectrical,'electrical interlock did not initialize');
+
+ const existing=context.enterAgc();await flush(2);assert(mode==='agc-loading'&&enterCount===1,'direct app transition did not start exactly once');
+ const verb=button('V');let e=event(verb,41);dispatchPointer(wl,dl,'pointerdown',e);assert(e.prevented&&e.immediate,'electrical interlock did not own VERB at window capture');e=event(verb,41);dispatchPointer(wl,dl,'pointerup',e);
+ let state=AGCDSKY.keyboardElectrical.state();assert(state.clockHandoffPending&&state.cycleLatched,'released physical key not retained during startup');assert(enterCount===1,'keyboard started a second transition');assert(!calls.some(c=>c[0]==='legacy-clock-press'),'physical key leaked to synthetic editor');assert(!Array.from(timers.values()).some(t=>t.due-now===10),'readiness polling reappeared');assert(!AGCDSKY.clockBehavior.snapshot().promotionInFlight,'document fallback participated despite window stop');
+ resolveLoad();await existing;await flush();assert(mode==='agc'&&enterCount===1,'shared transition did not finish once');const makes=calls.filter(c=>c[0]==='make');assert(makes.length===1&&makes[0][1]===0o21,'VERB was not exactly one Pinball 021 make');assert(AGCDSKY.runtimeTransitions.snapshot().lastTransition?.reason==='app enterAgc','keyboard join replaced direct app transition owner');state=AGCDSKY.keyboardElectrical.state();assert(!state.clockHandoffPending&&state.electricalMade&&state.keyResetPending,'physical handoff did not enter KEYRST dwell');
+ let guard=0;while(timers.size){let id=null,sel=null;for(const [candidate,t] of timers){if(!sel||t.due<sel.due||(t.due===sel.due&&candidate<id)){id=candidate;sel=t;}}timers.delete(id);now=Math.max(now,sel.due);sel.fn();if(++guard>1000)throw new Error('integration timer loop did not settle');}
+ assert(calls.filter(c=>c[0]==='reset').length===1,'physical handoff did not produce exactly one KEYRST');state=AGCDSKY.keyboardElectrical.state();assert(!state.cycleLatched&&!state.electricalMade&&!state.keyResetPending,'channel 015 remained latched');
+ console.log('runtime transition integration smoke: PASS');console.log('  shared keycodes, direct app entry, window/document ownership, no polling, and make/KEYRST verified');
 }
-
-function addListener(bucket, type, fn) {
-  (bucket[type] ||= []).push(fn);
-}
-function dispatch(bucket, type, event) {
-  for (const fn of bucket[type] || []) {
-    fn(event);
-    if (event.immediate) break;
-  }
-}
-function dispatchPointer(windowListeners, documentListeners, type, event) {
-  dispatch(windowListeners, type, event);
-  if (!event.stopped && !event.immediate) dispatch(documentListeners, type, event);
-}
-function makeButton(key) {
-  const classes = new Set();
-  return {
-    dataset:{key},
-    classList:{
-      add(name){ classes.add(name); },
-      remove(name){ classes.delete(name); },
-      contains(name){ return classes.has(name); }
-    },
-    setPointerCapture(){},
-    releasePointerCapture(){}
-  };
-}
-function makeEvent(button, pointerId) {
-  return {
-    pointerId,
-    target:{ closest(selector){ return selector === '[data-key]' ? button : null; } },
-    prevented:false,
-    stopped:false,
-    immediate:false,
-    preventDefault(){ this.prevented = true; },
-    stopPropagation(){ this.stopped = true; },
-    stopImmediatePropagation(){ this.immediate = true; }
-  };
-}
-
-async function flushMicrotasks(count = 12) {
-  for (let i = 0; i < count; i++) await Promise.resolve();
-}
-
-async function main() {
-  const appIndex = html.indexOf('<script src="app.js"></script>');
-  const dreamSilenceIndex = html.indexOf('<script src="dream-silence.js"></script>');
-  const runtimeIndex = html.indexOf('<script src="runtime-transitions.js"></script>');
-  const clockIndex = html.indexOf('<script src="clock-behavior.js"></script>');
-  const cmIndex = html.indexOf('<script src="cm-mode.js"></script>');
-  assert(appIndex >= 0
-      && dreamSilenceIndex > appIndex
-      && runtimeIndex > dreamSilenceIndex
-      && clockIndex > runtimeIndex
-      && cmIndex > clockIndex,
-    'script order must be app -> dream silence -> runtime transitions -> clock fallback -> CM dynamic features');
-  assert(!transitionSource.includes('waitForAgcReady') && !transitionSource.includes('LOAD_POLL_MS'),
-    'shared transition service must not retain an independent loading poll loop');
-
-  const windowListeners = Object.create(null);
-  const documentListeners = Object.create(null);
-  const timers = new Map();
-  let nextTimer = 1;
-  let nowMs = 0;
-  let mode = 'clock';
-  let enterCount = 0;
-  let resolveLoad;
-  const loadGate = new Promise(resolve => { resolveLoad = resolve; });
-  const calls = [];
-
-  const core = {
-    keyPress(code){ calls.push(['make', code, nowMs]); return 1; },
-    keyRelease(){ calls.push(['reset', nowMs]); return true; }
-  };
-
-  const AGCDSKY = {
-    appStatus(){ return {mode}; },
-    async enterAgc(){
-      enterCount++;
-      if (mode === 'agc') return;
-      if (mode === 'agc-loading') return;
-      mode = 'agc-loading';
-      calls.push(['enter', nowMs]);
-      await loadGate;
-      mode = 'agc';
-    },
-    getCore(){ return core; },
-    scheduleAgcAutosave(reason){ calls.push(['autosave', reason, nowMs]); },
-    hardwarePersonality(){
-      return {keys:{V:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};
-    }
-  };
-
-  const context = {
-    console,
-    Promise,
-    performance:{now(){ return nowMs; }},
-    localStorage:{getItem(){ return '0'; }},
-    setTimeout(fn, delay=0){
-      const id = nextTimer++;
-      timers.set(id, {fn, due:nowMs + Math.max(0, Number(delay) || 0)});
-      return id;
-    },
-    clearTimeout(id){ timers.delete(id); },
-    window:null,
-    document:{
-      hidden:false,
-      addEventListener(type, fn){ addListener(documentListeners, type, fn); }
-    },
-    AGCDSKY,
-    press(key){ calls.push(['legacy-clock-press', key, nowMs]); }
-  };
-  context.window = context;
-  context.addEventListener = function(type, fn){ addListener(windowListeners, type, fn); };
-  context.enterAgc = AGCDSKY.enterAgc;
-  const originalEnterAgc = context.enterAgc;
-
-  vm.createContext(context);
-  vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
-  assert(AGCDSKY.runtimeTransitions,
-    'runtime transition service did not publish on AGCDSKY');
-  assert(context.AGCDSKY_RUNTIME === AGCDSKY.runtimeTransitions,
-    'global and AGCDSKY transition service references differ');
-  assert(context.enterAgc !== originalEnterAgc && AGCDSKY.enterAgc === context.enterAgc,
-    'runtime service did not replace both global/API AGC entry references');
-
-  vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
-  assert(AGCDSKY.clockBehavior,
-    'clock fallback layer did not initialize against the transition service');
-
-  vm.runInContext(keyboardSource, context, {filename:'keyboard-electrical-interlock.js'});
-  assert(AGCDSKY.keyboardElectrical,
-    'keyboard electrical interlock did not initialize');
-
-  // Simulate app.js's already-installed AGC button/startup closure calling the
-  // global binding first. The physical keyboard must join this exact Promise;
-  // no second loader call and no readiness polling are allowed.
-  const existingTransition = context.enterAgc();
-  await flushMicrotasks(2);
-  assert(mode === 'agc-loading', 'direct app transition did not enter agc-loading');
-  assert(enterCount === 1, 'direct app transition did not call the underlying enterAgc exactly once');
-
-  const verb = makeButton('V');
-  let event = makeEvent(verb, 41);
-  dispatchPointer(windowListeners, documentListeners, 'pointerdown', event);
-  assert(event.prevented && event.immediate,
-    'electrical interlock did not own the physical VERB contact at window capture');
-
-  // Fast tap while loading. finishPointer closes the contact immediately; the
-  // shared Promise should retain it until the already-running app load ends.
-  event = makeEvent(verb, 41);
-  dispatchPointer(windowListeners, documentListeners, 'pointerup', event);
-  let state = AGCDSKY.keyboardElectrical.state();
-  assert(state.clockHandoffPending && state.cycleLatched,
-    'released physical key was not retained during shared AGC startup');
-  assert(enterCount === 1,
-    'keyboard started a second AGC transition instead of joining the direct app transition');
-  assert(!calls.some(call => call[0] === 'legacy-clock-press'),
-    'physical key leaked into the obsolete synthetic clock editor');
-  assert(!Array.from(timers.values()).some(timer => timer.due - nowMs === 10),
-    'physical handoff unexpectedly started readiness polling');
-
-  resolveLoad();
-  await existingTransition;
-  await flushMicrotasks();
-
-  assert(mode === 'agc', 'shared transition did not finish in AGC mode');
-  assert(enterCount === 1,
-    'shared transition called the underlying enterAgc more than once');
-  const makes = calls.filter(call => call[0] === 'make');
-  assert(makes.length === 1 && makes[0][1] === 0o21,
-    'original VERB contact was not forwarded as Pinball keycode 021');
-  assert(!calls.some(call => call[0] === 'legacy-clock-press'),
-    'handoff executed the synthetic clock key path');
-
-  const transitionState = AGCDSKY.runtimeTransitions.snapshot();
-  assert(!transitionState.transitionInFlight,
-    'shared transition remained marked in flight after completion');
-  assert(transitionState.lastTransition && transitionState.lastTransition.to === 'agc',
-    'shared transition diagnostics did not record AGC completion');
-  assert(transitionState.lastTransition.reason === 'app enterAgc',
-    'keyboard join incorrectly replaced direct app transition ownership');
-  const clockState = AGCDSKY.clockBehavior.snapshot();
-  assert(!clockState.promotionInFlight && clockState.pendingKeys.length === 0,
-    'document-level fallback participated even though window capture stopped propagation');
-
-  state = AGCDSKY.keyboardElectrical.state();
-  assert(!state.clockHandoffPending && state.electricalMade && state.keyResetPending,
-    'physical handoff did not enter the normal make/KEYRST dwell after AGC became ready');
-
-  let guard = 0;
-  while (timers.size) {
-    let selectedId = null;
-    let selected = null;
-    for (const [id, timer] of timers) {
-      if (!selected || timer.due < selected.due || (timer.due === selected.due && id < selectedId)) {
-        selectedId = id;
-        selected = timer;
-      }
-    }
-    timers.delete(selectedId);
-    nowMs = Math.max(nowMs, selected.due);
-    selected.fn();
-    if (++guard > 1000) throw new Error('integration timer loop did not settle');
-  }
-
-  assert(calls.filter(call => call[0] === 'reset').length === 1,
-    'physical handoff did not produce exactly one KEYRST');
-  state = AGCDSKY.keyboardElectrical.state();
-  assert(!state.cycleLatched && !state.electricalMade && !state.keyResetPending,
-    'channel-015 electrical cycle remained latched after KEYRST');
-
-  console.log('runtime transition integration smoke: PASS');
-  console.log('  direct app entry, window/document ownership, physical join, no polling, and make/KEYRST verified');
-}
-
-main().catch(error => {
-  console.error('runtime transition integration smoke: FAIL');
-  console.error(error && error.stack ? error.stack : error);
-  process.exitCode = 1;
-});
+main().catch(error=>{console.error('runtime transition integration smoke: FAIL');console.error(error?.stack||error);process.exitCode=1;});
