@@ -25,6 +25,7 @@
   let transitionSerial = 0;
   let lastTransition = null;
   let deferredClockPromise = null;
+  let clockRequestPending = false;
   let clockTransitionSerial = 0;
   let lastClockTransition = null;
   const beforeClockHooks = new Set();
@@ -43,6 +44,10 @@
   function core() {
     if (typeof api.getCore !== 'function') throw new Error('AGC runtime core API unavailable');
     return api.getCore();
+  }
+
+  function clockRequested() {
+    return clockRequestPending;
   }
 
   function beginAgc(reason = 'runtime request') {
@@ -88,10 +93,18 @@
   }
 
   function requestAgc(reason = 'runtime request') {
+    // Once CLOCK has been requested, no new input handoff may join an AGC load
+    // that is only being allowed to finish so CLOCK can take ownership safely.
+    if (clockRequestPending) {
+      return Promise.reject(new Error('AGC transition rejected because CLOCK is pending'));
+    }
     // Keyboard/fallback callers require a ready AGC because they must inject a
     // key immediately after this awaits. Give them a checked derived Promise
     // without changing the underlying app-entry Promise's failure semantics.
     return beginAgc(reason).then(next => {
+      if (clockRequestPending) {
+        throw new Error('AGC transition completed after CLOCK was requested');
+      }
       if (next.mode !== MODES.AGC) {
         throw new Error(`AGC transition ended in ${next.mode || 'unknown'} mode`);
       }
@@ -129,23 +142,32 @@
 
   function sharedEnterClock(...args) {
     if (!clockEntryAvailable) throw new Error('CLOCK runtime entry API unavailable');
+    if (deferredClockPromise) return deferredClockPromise;
+
     const from = mode();
-    // Release physical input immediately when CLOCK is requested. If an AGC
-    // load is already in flight, app.js cannot cancel it safely; defer only the
-    // underlying CLOCK mode switch until that owned load settles so its async
-    // completion cannot overwrite the user's CLOCK request.
+    // Mark CLOCK intent before cleanup so input layers can suppress any new
+    // contact while an active AGC load is being allowed to finish.
+    clockRequestPending = true;
     runBeforeClock('app enterClock', from);
+
     if (transitionPromise) {
-      if (deferredClockPromise) return deferredClockPromise;
       const activeTransition = transitionPromise;
       const thisArg = this;
       deferredClockPromise = activeTransition
         .catch(() => null)
         .then(() => finishClock(thisArg, args, from, true))
-        .finally(() => { deferredClockPromise = null; });
+        .finally(() => {
+          deferredClockPromise = null;
+          clockRequestPending = false;
+        });
       return deferredClockPromise;
     }
-    return finishClock(this, args, from, false);
+
+    try {
+      return finishClock(this, args, from, false);
+    } finally {
+      clockRequestPending = false;
+    }
   }
 
   // AGCDSKY.enterClock() in app.js is intentionally a no-argument convenience
@@ -161,12 +183,14 @@
     modes:MODES,
     mode,
     core,
+    clockRequested,
     requestAgc,
     onBeforeClock,
     snapshot:() => ({
       mode:mode(),
       transitionInFlight:!!transitionPromise,
       clockTransitionInFlight:!!deferredClockPromise,
+      clockRequested:clockRequestPending,
       lastTransition:lastTransition ? {...lastTransition} : null,
       lastClockTransition:lastClockTransition ? {...lastClockTransition} : null,
       beforeClockHooks:beforeClockHooks.size,
