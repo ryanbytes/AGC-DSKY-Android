@@ -15,7 +15,6 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'app/src/main/assets');
-const appSource = fs.readFileSync(path.join(ASSETS, 'app.js'), 'utf8');
 const keycodesSource = fs.readFileSync(path.join(ASSETS, 'dsky-keycodes.js'), 'utf8');
 const transitionsSource = fs.readFileSync(path.join(ASSETS, 'runtime-transitions.js'), 'utf8');
 const inputSource = fs.readFileSync(path.join(ASSETS, 'dsky-input-runtime.js'), 'utf8');
@@ -30,14 +29,15 @@ function assert(condition, message) {
   if (!condition) fail(message);
 }
 
-const mapMatch = appSource.match(/const\s+AGC_KEY\s*=\s*(\{[^}]+\})/s);
-assert(mapMatch, 'app.js legacy keycode table missing');
-const appMap = vm.runInNewContext(`(${mapMatch[1]})`, Object.create(null));
-assert(appMap.R === 0o22, `RSET app keycode is ${String(appMap.R)}, expected octal 022`);
-assert(!Object.prototype.hasOwnProperty.call(appMap, 'P'), 'PRO leaked into the normal keycode table');
+const mapContext = {window:null, Object};
+mapContext.window = mapContext;
+vm.createContext(mapContext);
+vm.runInContext(keycodesSource,mapContext,{filename:'dsky-keycodes.js'});
+const sharedMap = mapContext.AGCDSKY_KEY_CODES;
+assert(sharedMap && Object.isFrozen(sharedMap), 'shared keycode table missing or mutable');
+assert(sharedMap.R === 0o22, `RSET shared keycode is ${String(sharedMap.R)}, expected octal 022`);
+assert(!Object.prototype.hasOwnProperty.call(sharedMap, 'P'), 'PRO leaked into the normal keycode table');
 
-// Neither physical input layer may directly manipulate display/error state or
-// bypass the shared channel-015 input runtime.
 for (const [file, source] of [
   ['keyboard-electrical-interlock.js', keyboardSource],
   ['clock-behavior.js', clockSource]
@@ -154,8 +154,6 @@ async function main() {
   vm.runInContext(keyboardSource,context,{filename:'keyboard-electrical-interlock.js'});
   assert(AGCDSKY.keyboardElectrical, 'physical electrical interlock did not initialize');
 
-  // CLOCK -> AGC: a fast physical RSET release while Comanche is loading must
-  // retain the same switch cycle and deliver code 022 after the shared load.
   const rset=makeButton('R');
   let event=makeEvent(rset,41);
   dispatchPointer(win,doc,'pointerdown',event);
