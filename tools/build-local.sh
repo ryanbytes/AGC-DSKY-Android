@@ -128,6 +128,7 @@ node tools/ntp-policy-smoke.js
 node tools/fire-home-setup-smoke.js
 node tools/csp-smoke.js
 node tools/frontend-smoke.js
+node tools/cm-feature-load-smoke.js
 node tools/clock-mode-behavior-smoke.js
 node tools/audio-recovery-smoke.js
 node tools/cheatsheet-smoke.js
@@ -137,6 +138,7 @@ node tools/display-layout-smoke.js
 node tools/el-widget-smoke.js
 node tools/solar-model-smoke.js
 node tools/agc-core-smoke.js
+node tools/proceed-electrical-smoke.js
 node tools/native-diagnostic-smoke.js
 node tools/dsky-mapping-smoke.js
 node tools/dsky-keycode-consistency-smoke.js

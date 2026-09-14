@@ -73,21 +73,37 @@ for (const marker of [
 for (const forbidden of ['decodeChannel10(', 'agcCore.stop(', 'agcCore.reset(', 'resetAgcFace('])
   no(ui, forbidden, 'lighting bus demo state isolation');
 
+// flight-hardware-ui.js now owns presentation personality only. It still
+// prepares deterministic key travel/contact/sound values consumed by the real
+// electrical interlock, but must never capture normal key events or touch
+// channel 015 itself.
 for (const marker of [
-  "const NORMAL_KEY_CHANNEL = 0o15",
   "const KEY_CONTACT_BASE_MS = 36",
+  "const KEY_RETURN_SOUND_BASE_MS = 18",
   "const HARDWARE_SEED_KEY = 'dskyHardwareUnitSeedV1'",
-  "document.addEventListener('pointerdown', onKeyDown, {capture:true, passive:false})",
-  "event.stopImmediatePropagation()",
-  "button.dataset.key === 'P'",
-  "core.keyPress(code)",
-  "core.writeIo(NORMAL_KEY_CHANNEL, 0)",
-  "document.addEventListener('visibilitychange'",
-  "window.addEventListener('blur', releaseAllKeys",
+  "contactMs: Number(vary(KEY_CONTACT_BASE_MS",
+  "returnSoundMs: Number(vary(KEY_RETURN_SOUND_BASE_MS",
+  "makePitch: Number(vary(520",
+  "returnPitch: Number(vary(330",
   "--key-travel",
-  "keySound(button, false)",
-  "keySound(button, true)"
-]) req(ui, marker, 'mechanical held-key model');
+  "function prepareKeys()",
+  "window.AGCDSKY.hardwarePersonality = () => ({"
+]) req(ui, marker, 'key presentation personality');
+for (const forbidden of [
+  'NORMAL_KEY_CHANNEL',
+  'DSKY_KEY_CODE',
+  'function fireKeyContact(',
+  'function onKeyDown(',
+  'function releaseAgcKey(',
+  'function releaseKey(',
+  'function releaseAllKeys(',
+  "document.addEventListener('pointerdown'",
+  "document.addEventListener('pointerup'",
+  "document.addEventListener('pointercancel'",
+  'core.keyPress(code)',
+  'core.writeIo(0o15',
+  'keyState = new Map()'
+]) no(ui, forbidden, 'presentation layer electrical ownership');
 
 // Manufacturing variation is source-bounded, not arbitrary. R-700 supplies the
 // assembled stroke/contact geometry; drawing 2004941 supplies the only bounded
@@ -120,10 +136,10 @@ for (const marker of [
 ]) req(keySpec, marker, 'source-backed key mechanics');
 no(keySpec, "vary(KEY_CONTACT_BASE_MS", 'key contact timing must not masquerade as manufacturing tolerance');
 
-// The electrical layer owns all 18 keycoded switches at window capture. The
-// first depression latches the keyboard cycle; overlapping keys can move but
-// cannot produce another code. KEYRST waits for all normal keys to return and,
-// for touchscreen-fast taps, for the explicitly estimated D-input dwell.
+// The electrical layer is the sole owner of all 18 keycoded switches at window
+// capture. The first depression latches the keyboard cycle; overlapping keys
+// can move but cannot produce another code. KEYRST waits for all normal keys to
+// return and, for touchscreen-fast taps, for the estimated D-input dwell.
 for (const marker of [
   "window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false})",
   "if (!button || button.dataset.key === 'P') return null",
@@ -145,7 +161,7 @@ for (const marker of [
   "agcCore.proceedKey(true)",
   "agcCore.proceedKey(false)"
 ]) req(hw, marker, 'PRO / standby path');
-no(ui, "P:0o", 'normal-key map must exclude PRO');
+no(ui, "P:0o", 'presentation layer must not define a normal-key map including PRO');
 
 for (const marker of [
   "part:'MS24367-713'",
@@ -180,4 +196,4 @@ req(ui, "oldDim.hidden = true", 'retired whole-panel dimmer');
 req(ui, "document.body.classList.remove('dim')", 'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');
-console.log('  rheostat stop, source-bounded key mechanics/force policy, series-contact KEYRST, dedicated PRO, and three-bulb annunciators gated');
+console.log('  lighting/personality presentation remains isolated; electrical interlock is the single normal-key owner; dedicated PRO and three-bulb annunciators gated');
