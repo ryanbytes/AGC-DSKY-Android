@@ -4,48 +4,106 @@
   const api = window.AGCDSKY;
   if (!api) return;
 
-  // Clock mode remains visually passive. COMP ACTY is not synthesized here;
-  // once the real AGC is active, app.js owns that lamp from channel 011.
+  // This layer coordinates mode promotion caused by DSKY keypad input. It does
+  // not own AGC execution or display state; app.js remains the state authority.
+  // Keeping promotion here gives every clock-key handoff one serialized path,
+  // including the case where another caller has already started AGC loading.
+  const MODES = Object.freeze({
+    CLOCK:'clock',
+    AGC_LOADING:'agc-loading',
+    AGC:'agc'
+  });
   const AGC_KEY = Object.freeze({
     '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
     V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
   });
+  const LOAD_POLL_MS = 10;
+  const MAX_LOAD_POLLS = 2000;
+
   const pendingKeys = [];
-  let promoting = false;
+  let transitionPromise = null;
+  let promotionPromise = null;
+  let transitionSerial = 0;
+  let lastTransition = null;
 
-  async function promoteClockInput(key) {
-    pendingKeys.push(key);
-    if (promoting) return;
-    promoting = true;
+  function status() {
+    if (typeof api.appStatus !== 'function') throw new Error('AGC runtime status API unavailable');
+    const value = api.appStatus();
+    if (!value || typeof value.mode !== 'string') throw new Error('AGC runtime returned invalid mode state');
+    return value;
+  }
 
-    try {
+  async function waitForAgcReady() {
+    for (let poll = 0; poll < MAX_LOAD_POLLS; poll++) {
+      const current = status();
+      if (current.mode === MODES.AGC) return current;
+      if (current.mode !== MODES.AGC_LOADING) {
+        throw new Error(`AGC transition ended in ${current.mode || 'unknown'} mode`);
+      }
+      await new Promise(resolve => setTimeout(resolve, LOAD_POLL_MS));
+    }
+    throw new Error('AGC transition timed out while loading');
+  }
+
+  function requestAgc(reason = 'runtime request') {
+    const current = status();
+    if (current.mode === MODES.AGC) return Promise.resolve(current);
+    if (transitionPromise) return transitionPromise;
+
+    const serial = ++transitionSerial;
+    const from = current.mode;
+    transitionPromise = (async () => {
+      if (typeof api.enterAgc !== 'function') throw new Error('AGC mode API unavailable');
       await api.enterAgc();
+      let next = status();
+      if (next.mode === MODES.AGC_LOADING) next = await waitForAgcReady();
+      if (next.mode !== MODES.AGC) {
+        throw new Error(`AGC transition ended in ${next.mode || 'unknown'} mode`);
+      }
+      lastTransition = Object.freeze({serial, from, to:next.mode, reason});
+      return next;
+    })().finally(() => {
+      transitionPromise = null;
+    });
+    return transitionPromise;
+  }
+
+  async function drainClockInput() {
+    try {
+      await requestAgc('clock keypad handoff');
       const core = api.getCore && api.getCore();
-      const status = api.appStatus();
-      if (!core || status.mode !== 'agc') {
-        pendingKeys.length = 0;
-        return;
+      const current = status();
+      if (!core || current.mode !== MODES.AGC) {
+        throw new Error('AGC core unavailable after clock keypad handoff');
       }
       while (pendingKeys.length) {
         const next = pendingKeys.shift();
         const code = AGC_KEY[next];
         if (code !== undefined) core.keyPress(code);
       }
-      if (typeof api.scheduleAgcAutosave === 'function') api.scheduleAgcAutosave('clock keypad handoff');
+      if (typeof api.scheduleAgcAutosave === 'function') {
+        api.scheduleAgcAutosave('clock keypad handoff');
+      }
     } catch (error) {
       pendingKeys.length = 0;
       console.error('Clock-to-AGC keypad handoff', error);
     } finally {
-      promoting = false;
+      promotionPromise = null;
     }
+  }
+
+  function promoteClockInput(key) {
+    pendingKeys.push(key);
+    if (!promotionPromise) promotionPromise = drainClockInput();
+    return promotionPromise;
   }
 
   document.addEventListener('pointerdown', event => {
     const key = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
     if (!key) return;
-    let mode = '';
-    try { mode = api.appStatus().mode; } catch (_) { return; }
-    if (mode !== 'clock' && mode !== 'agc-loading') return;
+    let current;
+    try { current = status(); } catch (_) { return; }
+    if (current.mode !== MODES.CLOCK && current.mode !== MODES.AGC_LOADING) return;
 
     // Stop app.js's local clock-entry handler from consuming the key. Other
     // capture listeners on document still receive the completed user gesture.
@@ -53,12 +111,21 @@
     event.stopPropagation();
     key.classList.add('pressed');
     setTimeout(() => key.classList.remove('pressed'), 90);
-    promoteClockInput(key.dataset.key);
+    void promoteClockInput(key.dataset.key);
   }, {capture:true, passive:false});
 
-  window.AGCDSKY_CLOCK_BEHAVIOR = {
+  const runtime = Object.freeze({
+    modes:MODES,
+    requestAgc,
     promoteClockInput,
-    isPromoting: () => promoting,
-    pendingCount: () => pendingKeys.length
-  };
+    snapshot:() => ({
+      mode:status().mode,
+      transitionInFlight:!!transitionPromise,
+      promotionInFlight:!!promotionPromise,
+      pendingKeys:pendingKeys.slice(),
+      lastTransition:lastTransition ? {...lastTransition} : null
+    })
+  });
+  window.AGCDSKY_RUNTIME = runtime;
+  api.runtimeTransitions = runtime;
 })();
