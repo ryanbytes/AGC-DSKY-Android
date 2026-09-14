@@ -122,10 +122,10 @@
         throw new Error('shared AGC transition API unavailable');
       }
 
-      // clock-behavior.js owns transition serialization.  The electrical
+      // runtime-transitions.js owns transition serialization. The electrical
       // interlock owns the physical contact, but it must not maintain a second
-      // AGC-loading poll/state machine.  Await the shared transition before
-      // asserting the original contact onto channel 015.
+      // AGC-loading state machine. Await the shared transition before asserting
+      // the original contact onto channel 015.
       await transitions.requestAgc('keyboard electrical contact');
 
       const core = currentCore();
