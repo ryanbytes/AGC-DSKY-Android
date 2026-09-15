@@ -20,23 +20,21 @@ const KEY_CODES = Object.freeze({
 });
 
 for (const marker of [
-  'const baseEnterAgc = api.enterAgc',
+  'const baseEnterAgc = typeof window.enterAgc',
   'function beginAgc(',
-  'await baseEnterAgc()',
+  'await baseEnterAgc.call(window)',
   'if (transitionPromise) return transitionPromise',
   'ready:next.mode === MODES.AGC',
   'window.enterAgc = sharedEnterAgc',
-  'api.enterAgc = sharedEnterAgc',
+  'publicApiDelegates:true',
   'api.runtimeTransitions = runtime'
 ]) {
   if (!transitionSource.includes(marker)) fail('missing runtime-transition marker: ' + marker);
 }
 for (const forbidden of [
-  'waitForAgcReady',
-  'LOAD_POLL_MS',
-  'MAX_LOAD_POLLS'
+  'waitForAgcReady','LOAD_POLL_MS','MAX_LOAD_POLLS','api.enterAgc =','api.enterClock ='
 ]) {
-  if (transitionSource.includes(forbidden)) fail('runtime transition service still contains polling fallback: ' + forbidden);
+  if (transitionSource.includes(forbidden)) fail('runtime transition service contains obsolete ownership/polling marker: ' + forbidden);
 }
 for (const marker of [
   'const AGC_KEY = window.AGCDSKY_KEY_CODES;',
@@ -52,11 +50,7 @@ if (clockSource.includes('.keyPress(') || clockSource.includes('writeIo(0o15')) 
   fail('clock fallback must not bypass the shared input runtime');
 }
 for (const forbidden of [
-  '[data-lamp="comp"]',
-  'Math.random',
-  'randomBetween',
-  'startClockCompBurst',
-  'scheduleClockCompIdle'
+  '[data-lamp="comp"]','Math.random','randomBetween','startClockCompBurst','scheduleClockCompIdle'
 ]) {
   if (clockSource.includes(forbidden)) fail('clock COMP ACTY synthesis must remain disabled: ' + forbidden);
 }
@@ -70,7 +64,7 @@ function createHarness(initialMode = 'clock') {
   let enterCount = 0;
   let enterImpl = async () => {
     enterCount++;
-    if (mode === 'agc-loading') return;
+    if (mode === 'agc' || mode === 'agc-loading') return;
     mode = 'agc-loading';
     await Promise.resolve();
     mode = 'agc';
@@ -78,10 +72,13 @@ function createHarness(initialMode = 'clock') {
   const keyPresses = [];
   const handlers = {};
   const timers = [];
-  const core = {keyPress(code){ keyPresses.push(code); }};
+  const core = {
+    keyPress(code){ keyPresses.push(code); return 1; },
+    keyRelease(){ return true; },
+    proceedKey(){ return 1; }
+  };
   const AGCDSKY = {
     appStatus(){ return {mode}; },
-    enterAgc(){ return enterImpl(); },
     getCore(){ return core; },
     scheduleAgcAutosave(reason){ AGCDSKY.savedReason = reason; }
   };
@@ -96,16 +93,39 @@ function createHarness(initialMode = 'clock') {
     window:null
   };
   context.window = context;
-  context.enterAgc = AGCDSKY.enterAgc;
-  const baseEnterAgc = context.enterAgc;
+  context.__baseEnterAgc = () => enterImpl();
+  context.__baseEnterClock = () => { mode = 'clock'; return {mode}; };
   vm.createContext(context);
+  vm.runInContext(`
+    function enterAgc(){ return __baseEnterAgc(); }
+    function enterClock(){ return __baseEnterClock(); }
+    AGCDSKY.enterAgc=function(){
+      const runtime=window.AGCDSKY_RUNTIME;
+      return runtime&&typeof runtime.enterAgc==='function'
+        ? runtime.enterAgc('public AGCDSKY.enterAgc')
+        : enterAgc();
+    };
+    AGCDSKY.enterClock=function(){
+      const runtime=window.AGCDSKY_RUNTIME;
+      return runtime&&typeof runtime.enterClock==='function'
+        ? runtime.enterClock('CLOCK',true,'public AGCDSKY.enterClock')
+        : enterClock('CLOCK',true);
+    };
+  `, context);
+  const publicEnterAgc = AGCDSKY.enterAgc;
+  const publicEnterClock = AGCDSKY.enterClock;
+  const baseGlobalEnterAgc = context.enterAgc;
+
   vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
   if (!context.AGCDSKY_KEY_CODES || !Object.isFrozen(context.AGCDSKY_KEY_CODES)) {
-    fail('shared DSKY keycode bridge did not publish a frozen table');
+    fail('shared DSKY keycode table did not publish a frozen table');
   }
   vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
-  if (context.enterAgc === baseEnterAgc || context.AGCDSKY.enterAgc !== context.enterAgc) {
-    fail('runtime service did not replace both global/API AGC entry references');
+  if (AGCDSKY.enterAgc !== publicEnterAgc || AGCDSKY.enterClock !== publicEnterClock) {
+    fail('runtime service replaced stable public transition methods');
+  }
+  if (context.enterAgc === baseGlobalEnterAgc) {
+    fail('runtime service did not wrap the classic global AGC compatibility entry');
   }
   vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
   if (context.AGCDSKY_INPUT !== context.AGCDSKY.inputRuntime) {
@@ -154,7 +174,7 @@ async function flush(count = 20) {
   if (fresh.timers.length !== 1 || fresh.timers[0].delay !== 90) fail('only keypad press animation timer should remain');
 
   const runtimeSnapshot = fresh.AGCDSKY.runtimeTransitions.snapshot();
-  if (runtimeSnapshot.mode !== 'agc' || runtimeSnapshot.transitionInFlight) {
+  if (runtimeSnapshot.mode !== 'agc' || runtimeSnapshot.transitionInFlight || !runtimeSnapshot.publicApiDelegates) {
     fail('runtime transition snapshot did not settle cleanly');
   }
   if (!runtimeSnapshot.lastTransition
@@ -199,11 +219,13 @@ async function flush(count = 20) {
     loading.mode = 'agc-loading';
     return new Promise(resolve => { releaseDirectLoad = () => { loading.mode = 'agc'; resolve(); }; });
   });
-  const directPromise = loading.context.enterAgc();
+  const oldPublicEnter = loading.AGCDSKY.enterAgc;
+  const directPromise = loading.AGCDSKY.enterAgc();
   await flush(2);
   if (loading.mode !== 'agc-loading' || directStarts !== 1) {
-    fail('direct app AGC entry did not start one shared transition');
+    fail('public AGC entry did not start one shared transition');
   }
+  if (loading.AGCDSKY.enterAgc !== oldPublicEnter) fail('public AGC method identity changed during transition');
   press(loading, 'V');
   await flush(3);
   if (directStarts !== 1) fail('keypad handoff restarted the underlying AGC loader');
@@ -212,13 +234,13 @@ async function flush(count = 20) {
   await directPromise;
   await flush();
   if (loading.keyPresses.length !== 1 || loading.keyPresses[0] !== 0o21) {
-    fail('key was dropped while direct app AGC loading was already in flight');
+    fail('key was dropped while public AGC loading was already in flight');
   }
   const directSnapshot = loading.AGCDSKY.runtimeTransitions.snapshot();
   if (!directSnapshot.lastTransition
-      || directSnapshot.lastTransition.reason !== 'app enterAgc'
+      || directSnapshot.lastTransition.reason !== 'public AGCDSKY.enterAgc'
       || directSnapshot.lastTransition.ready !== true) {
-    fail('direct app transition ownership was not retained when keypad joined');
+    fail('public transition ownership was not retained when keypad joined');
   }
 
   const failed = createHarness();
@@ -229,13 +251,13 @@ async function flush(count = 20) {
       finishFailure = () => { failed.mode = 'clock'; resolve(); };
     });
   });
-  const appFailurePromise = failed.context.enterAgc();
+  const appFailurePromise = failed.AGCDSKY.enterAgc();
   const requiredAgcPromise = failed.AGCDSKY.runtimeTransitions.requestAgc('keyboard readiness test');
   await flush(2);
   finishFailure();
   const appFailureResult = await appFailurePromise;
   if (!appFailureResult || appFailureResult.mode !== 'clock') {
-    fail('direct app entry no longer resolves with app.js clock fallback state');
+    fail('public app entry no longer resolves with lifecycle clock fallback state');
   }
   let readinessRejected = false;
   try {
@@ -243,14 +265,15 @@ async function flush(count = 20) {
   } catch (error) {
     readinessRejected = /ended in clock mode/.test(String(error && error.message || error));
   }
-  if (!readinessRejected) fail('AGC-required caller did not reject after app.js fell back to clock');
+  if (!readinessRejected) fail('AGC-required caller did not reject after lifecycle fell back to clock');
   const failedSnapshot = failed.AGCDSKY.runtimeTransitions.snapshot();
   if (!failedSnapshot.lastTransition
       || failedSnapshot.lastTransition.to !== 'clock'
+      || failedSnapshot.lastTransition.reason !== 'public AGCDSKY.enterAgc'
       || failedSnapshot.lastTransition.ready !== false) {
-    fail('failed app transition diagnostics did not preserve clock fallback outcome');
+    fail('failed public transition diagnostics did not preserve clock fallback outcome');
   }
 
   console.log('Clock mode behavior: PASS');
-  console.log('  shared keycodes/runtime/input entry, fallback queue, no polling, and app-failure compatibility verified');
+  console.log('  stable public API, shared keycodes/runtime/input entry, fallback queue, no polling, and lifecycle-failure compatibility verified');
 })().catch(error => fail(error.stack || String(error)));
