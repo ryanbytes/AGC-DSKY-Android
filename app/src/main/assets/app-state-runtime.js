@@ -28,11 +28,12 @@
   window.AGCDSKY_APP_STATE = state;
 
   // A browser classic-script bare identifier resolves through the Window
-  // object when no global lexical binding shadows it. Keep legacy consumers
-  // live without creating a second mutable state source.
+  // object when no global lexical binding shadows it. Keep only state names
+  // that still have tracked legacy consumers; migrated audio code reads state
+  // explicitly and no longer receives a tickSound compatibility global.
   for (const name of [
     'mode','selectedMission','verb','noun','dream','dreamMode','dim',
-    'tickSound','displayOnly','ntpStatus'
+    'displayOnly','ntpStatus'
   ]) {
     Object.defineProperty(window, name, {
       configurable:true,
