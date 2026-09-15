@@ -34,21 +34,21 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
   transform:translateZ(1px);
 }
 
-/* Recesses move slightly opposite the viewer. The tiny planar offset remains
-   visible even on older WebViews that flatten nested 3D stacking contexts. */
+/* Recesses move slightly opposite the viewer. Pixel offsets are computed in
+   JavaScript so Android WebView never has to evaluate CSS multiplication. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-well,
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .display-well{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * -.55px),
-    calc(var(--dsky-parallax-y) * -.55px),
+    var(--dsky-recess-x,0px),
+    var(--dsky-recess-y,0px),
     0
   );
 }
 
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-grid{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * .65px),
-    calc(var(--dsky-parallax-y) * .65px),
+    var(--dsky-ann-x,0px),
+    var(--dsky-ann-y,0px),
     8px
   );
   transform-style:preserve-3d;
@@ -67,8 +67,8 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-so
    rides in front. The counter-motion is intentionally strong on phone screens. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .elpanel{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * -1.70px),
-    calc(var(--dsky-parallax-y) * -1.55px),
+    var(--dsky-el-x,0px),
+    var(--dsky-el-y,0px),
     -18px
   );
   transform-style:preserve-3d;
@@ -83,8 +83,8 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
   z-index:5;
   pointer-events:none;
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * 2.40px),
-    calc(var(--dsky-parallax-y) * 2.15px),
+    var(--dsky-glass-x,0px),
+    var(--dsky-glass-y,0px),
     34px
   );
   background:
@@ -101,8 +101,8 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
    its virtual Z height rather than receiving a second fake press animation. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * 1.25px),
-    calc(var(--dsky-parallax-y) * 1.25px),
+    var(--dsky-key-x,0px),
+    var(--dsky-key-y,0px),
     22px
   );
   transform-style:preserve-3d;
@@ -111,16 +111,16 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key{
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key:active,
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key.pressed{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * .72px),
-    calc(var(--dsky-parallax-y) * .72px),
+    var(--dsky-key-pressed-x,0px),
+    var(--dsky-key-pressed-y,0px),
     5px
   ) translateY(var(--key-travel,.42vmin));
 }
 
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * .45px),
-    calc(var(--dsky-parallax-y) * .45px),
+    var(--dsky-fastener-x,0px),
+    var(--dsky-fastener-y,0px),
     6px
   );
 }
@@ -155,8 +155,8 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
     radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.18),rgba(220,237,228,.045) 22%,transparent 47%),
     linear-gradient(180deg,rgba(255,255,255,.035),transparent 16%,transparent 76%,rgba(0,0,0,.085));
   box-shadow:
-    inset calc(var(--dsky-parallax-x) * 1.15px) calc(var(--dsky-parallax-y) * 1.10px) .60vmin rgba(0,0,0,.42),
-    inset calc(var(--dsky-parallax-x) * -.55px) calc(var(--dsky-parallax-y) * -.50px) .32vmin rgba(255,255,255,.16),
+    inset var(--dsky-glass-shadow-dark-x,0px) var(--dsky-glass-shadow-dark-y,0px) .60vmin rgba(0,0,0,.42),
+    inset var(--dsky-glass-shadow-light-x,0px) var(--dsky-glass-shadow-light-y,0px) .32vmin rgba(255,255,255,.16),
     inset 0 0 .18vmin rgba(255,255,255,.14),
     inset 0 0 .85vmin rgba(0,0,0,.12);
   opacity:.82;
@@ -168,10 +168,9 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
   pointer-events:none;
   border:.10vmin solid rgba(205,218,209,.16);
   box-shadow:
-    inset calc(var(--dsky-parallax-x) * .95px) calc(var(--dsky-parallax-y) * .90px) .36vmin rgba(0,0,0,.40),
-    inset calc(var(--dsky-parallax-x) * -.40px) calc(var(--dsky-parallax-y) * -.36px) .24vmin rgba(255,255,255,.13);
+    inset var(--dsky-edge-dark-x,0px) var(--dsky-edge-dark-y,0px) .36vmin rgba(0,0,0,.40),
+    inset var(--dsky-edge-light-x,0px) var(--dsky-edge-light-y,0px) .24vmin rgba(255,255,255,.13);
 }
-
 
 /* Screen-only is the full-handset EL presentation, not a flat accessibility
    mode. Keep Dream flat, but preserve a conspicuous phosphor-vs-glass depth
@@ -189,8 +188,8 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel{
   transform:
     translate(-50%,-50%)
     translate3d(
-      calc(var(--dsky-parallax-x) * -2.65px),
-      calc(var(--dsky-parallax-y) * -2.40px),
+      var(--dsky-fs-el-x,0px),
+      var(--dsky-fs-el-y,0px),
       -28px
     )!important;
   transform-style:preserve-3d!important;
@@ -205,8 +204,8 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen{
   transform:
     translate(-50%,-50%)
     translate3d(
-      calc(var(--dsky-parallax-x) * 3.60px),
-      calc(var(--dsky-parallax-y) * 3.25px),
+      var(--dsky-fs-glass-x,0px),
+      var(--dsky-fs-glass-y,0px),
       42px
     )!important;
   z-index:9!important;
@@ -216,14 +215,14 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen{
     radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.23),rgba(220,237,228,.055) 20%,transparent 46%),
     linear-gradient(180deg,rgba(255,255,255,.040),transparent 15%,transparent 76%,rgba(0,0,0,.11))!important;
   box-shadow:
-    inset calc(var(--dsky-parallax-x) * 1.55px) calc(var(--dsky-parallax-y) * 1.45px) .78vmin rgba(0,0,0,.52),
-    inset calc(var(--dsky-parallax-x) * -.72px) calc(var(--dsky-parallax-y) * -.66px) .42vmin rgba(255,255,255,.20),
+    inset var(--dsky-fs-shadow-dark-x,0px) var(--dsky-fs-shadow-dark-y,0px) .78vmin rgba(0,0,0,.52),
+    inset var(--dsky-fs-shadow-light-x,0px) var(--dsky-fs-shadow-light-y,0px) .42vmin rgba(255,255,255,.20),
     inset 0 0 .22vmin rgba(255,255,255,.18),
     inset 0 0 1.0vmin rgba(0,0,0,.16)!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen::before{
   border:.12vmin solid rgba(215,228,219,.20)!important;
   box-shadow:
-    inset calc(var(--dsky-parallax-x) * 1.30px) calc(var(--dsky-parallax-y) * 1.20px) .48vmin rgba(0,0,0,.52),
-    inset calc(var(--dsky-parallax-x) * -.55px) calc(var(--dsky-parallax-y) * -.48px) .30vmin rgba(255,255,255,.18)!important;
+    inset var(--dsky-fs-edge-dark-x,0px) var(--dsky-fs-edge-dark-y,0px) .48vmin rgba(0,0,0,.52),
+    inset var(--dsky-fs-edge-light-x,0px) var(--dsky-fs-edge-light-y,0px) .30vmin rgba(255,255,255,.18)!important;
 }
