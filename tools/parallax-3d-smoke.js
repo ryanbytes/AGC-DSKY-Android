@@ -29,7 +29,11 @@ for(const token of [
   'height:49.0204%',
   '@media (prefers-reduced-motion:reduce)',
   'body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel',
-  'body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen'
+  'body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen',
+  'var(--dsky-el-x,0px)',
+  'var(--dsky-glass-x,0px)',
+  'var(--dsky-fs-el-x,0px)',
+  'var(--dsky-fs-glass-x,0px)'
 ]) assert(css.includes(token),`parallax CSS missing ${token}`);
 for(const mode of [':not(.dream)',':not(.display-only)'])
   assert(css.includes(mode),`parallax CSS does not exclude ${mode}`);
@@ -44,6 +48,8 @@ for(const token of [
   "api.nativePhoneQuaternion = wrapped",
   "'native-quaternion'",
   "nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS",
+  "setPx('--dsky-fs-el-x'",
+  "setPx('--dsky-fs-glass-x'",
   "{passive:true}",
   "body.classList.contains('dream')",
   "body.classList.contains('display-only')",
@@ -79,15 +85,10 @@ const sensor=Number((js.match(/MAX_SENSOR_DELTA_DEG\s*=\s*([0-9.]+)/)||[])[1]);
 assert(Number.isFinite(rx)&&rx>=3&&rx<=5,'X parallax tilt must stay in visible 3–5 degree envelope');
 assert(Number.isFinite(ry)&&ry>=3&&ry<=5,'Y parallax tilt must stay in visible 3–5 degree envelope');
 assert(Number.isFinite(sensor)&&sensor>=6&&sensor<=10,'sensor response must reach full parallax within 6–10 degrees');
-assert(css.includes('calc(var(--dsky-parallax-x) * 1.25px)'),'key foreground separation is too weak');
-assert(css.includes('calc(var(--dsky-parallax-x) * -.55px)'),'recess counter-parallax is too weak');
-assert(css.includes('calc(var(--dsky-parallax-x) * -1.70px)'),'EL phosphor counter-parallax is too weak');
-assert(css.includes('calc(var(--dsky-parallax-x) * 2.40px)'),'EL glass foreground parallax is too weak');
-assert(css.includes('calc(var(--dsky-parallax-x) * -2.65px)'),'fullscreen EL phosphor counter-parallax is too weak');
-assert(css.includes('calc(var(--dsky-parallax-x) * 3.60px)'),'fullscreen EL glass foreground parallax is too weak');
+assert(!/calc\(var\(--dsky-parallax-[xy]\)\s*\*/.test(css),'WebView-unsafe CSS multiplication returned to parallax layer');
 assert(css.includes('.el-glass-sheen::before'),'EL glass edge occlusion layer missing');
 assert(!css.includes('animation:'),'parallax layer must not introduce autonomous looping animation');
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  visible tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
-console.log('  native Android quaternion drives parallax; WebView orientation remains fallback; screen-only EL stays active');
+console.log('  native Android quaternion drives WebView-safe pixel offsets; screen-only EL stays active');
