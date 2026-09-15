@@ -1,6 +1,33 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-14
+Last updated: 2026-09-15
+
+## 2026-09-15 DSKY parallax repair / runtime refactor phase 32
+
+Physical testing reported that the DSKY still showed no visible motion parallax. The source audit found two independent blockers rather than a tuning-only problem:
+
+- `SensorMainActivity` supplies high-rate Android rotation-vector data through `AGCDSKY.nativePhoneQuaternion(...)`, while `parallax-3d.js` listened only for browser `deviceorientation`; Chromium WebView therefore had no guaranteed sensor path into the presentation layer even though the app IMU path itself was active;
+- FULL DSKY DISPLAY uses the persisted `display-only` presentation state, and the parallax JavaScript/CSS explicitly disabled itself whenever that class was present.
+
+Phase 32 repairs both paths without changing AGC, relay, key, channel, or IMU semantics:
+
+- `parallax-3d.js` now observes the already-installed `AGCDSKY.nativePhoneQuaternion` bridge with a transparent wrapper; the presentation observer runs in a guarded `try` and the original bridge is still called exactly once with the original receiver/arguments and its return value is preserved;
+- the native quaternion is normalized and display-rotation corrected with the same screen-axis convention used by the IMU path, then compared with a private parallax reference quaternion so the visual effect is relative to the handset pose rather than tied to AGC CDU state;
+- FULL DSKY DISPLAY now remains parallax-enabled;
+- `parallax-3d.css` preserves the existing display-only `translate(-50%,-29.57%)` crop/position transform and appends the parallax rotations instead of overwriting the display geometry;
+- the maximum panel rotation remains restrained at 1.55 degrees X / 1.80 degrees Y, while the layer-translation scale increases from 1.8 to 4.2 so the recessed wells, EL glass, and foreground hardware separate visibly on a high-density phone display;
+- Dream, screen-only, and reduced-motion presentations remain flat;
+- `tools/parallax-3d-smoke.js` now guards script order, native-bridge passthrough, FULL DSKY DISPLAY crop preservation, the visible-but-bounded translation scale, and runs the production controller in a minimal VM/DOM model with an Android-shaped quaternion input.
+
+Observed in this execution environment:
+
+- the exact edited `parallax-3d.js` passed `node --check`;
+- a production-controller VM probe delivered identity followed by an 8-degree native X-axis quaternion and observed `source=native`, `targetX=0.586666...`, `--dsky-parallax-x=2.464`, and `--dsky-tilt-y=1.056deg`;
+- that same probe verified the wrapped native bridge was called exactly once for each sample with unchanged arguments and return value;
+- runtime policy in the probe keeps parallax enabled with `display-only` and disables it with `screen-only`;
+- GitHub source inspection confirmed `phone-icdu.js` loads before `parallax-3d.js`, and the display-only base geometry is `translate(-50%,-29.57%)` in `style.css`.
+
+These are source/VM checks, not an Android build or physical-device verification. The execution container still cannot resolve GitHub through its shell and does not contain the complete recursive checkout/Android SDK build environment, so `bash tools/build-local.sh`, Gradle regular/Fire builds, APK verification, and a real-phone parallax check have **not** been run for phase 32. The physical phone remains the acceptance gate for whether the repaired effect is perceptually correct.
 
 ## 2026-09-14 DSKY runtime refactor phase 30
 
