@@ -1,5 +1,7 @@
 'use strict';
 (() => {
+  const screenState=window.AGCDSKY_APP_STATE;
+  if(!screenState)throw new Error('Shared application state unavailable');
   const params=new URLSearchParams(location.search),isDream=params.get('dream')==='1',key='screenOnly';
   let enabled=isDream;
   if(!isDream){try{enabled=localStorage.getItem(key)==='1'}catch(_){}}
@@ -18,9 +20,9 @@
     if(isDream){try{if(window.DreamBridge&&DreamBridge.finishDream)DreamBridge.finishDream()}catch(_){};return}
     enabled=false;apply();if(typeof showControls==='function')showControls();
   }
-  function toggleTick(){if(!enabled)return;try{ensureAudio();tickSound=!tickSound;applyTickSound();if(tickSound)playRelayBurst(1)}catch(_){} }
+  function toggleTick(){if(!enabled)return;try{ensureAudio();screenState.tickSound=!screenState.tickSound;applyTickSound();if(screenState.tickSound)playRelayBurst(1)}catch(_){} }
 
-  // Capture-phase handler prevents app.js's older DISPLAY listener from also
+  // Capture-phase handler prevents the app shell's DISPLAY listener from also
   // enabling the cropped faceplate mode on the same tap.
   if(displayButton)displayButton.addEventListener('click',(event)=>{
     event.preventDefault();event.stopImmediatePropagation();
