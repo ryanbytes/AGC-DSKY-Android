@@ -71,8 +71,11 @@ assert(Number.isFinite(ry)&&ry>=3&&ry<=5,'Y parallax tilt must stay in visible 3
 assert(Number.isFinite(sensor)&&sensor>=6&&sensor<=10,'sensor response must reach full parallax within 6–10 degrees');
 assert(css.includes('calc(var(--dsky-parallax-x) * 1.25px)'),'key foreground separation is too weak');
 assert(css.includes('calc(var(--dsky-parallax-x) * -.55px)'),'recess counter-parallax is too weak');
+assert(css.includes('calc(var(--dsky-parallax-x) * -1.70px)'),'EL phosphor counter-parallax is too weak');
+assert(css.includes('calc(var(--dsky-parallax-x) * 2.40px)'),'EL glass foreground parallax is too weak');
+assert(css.includes('.el-glass-sheen::before'),'EL glass edge occlusion layer missing');
 assert(!css.includes('animation:'),'parallax layer must not introduce autonomous looping animation');
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  visible tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
-console.log('  stronger recess, annunciator, EL glass and key depth retained within presentation-only boundary');
+console.log('  strong EL phosphor/glass separation, recess, annunciator and key depth retained within presentation-only boundary');
