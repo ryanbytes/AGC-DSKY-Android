@@ -7,9 +7,11 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'app/src/main/assets');
-const app = fs.readFileSync(path.join(ASSETS, 'app.js'), 'utf8');
+const shell = fs.readFileSync(path.join(ASSETS, 'app-shell-runtime.js'), 'utf8');
+const api = fs.readFileSync(path.join(ASSETS, 'agc-api-runtime.js'), 'utf8');
 const clock = fs.readFileSync(path.join(ASSETS, 'phone-clock-runtime.js'), 'utf8');
 const display = fs.readFileSync(path.join(ASSETS, 'agc-display-runtime.js'), 'utf8');
+const geometry = fs.readFileSync(path.join(ASSETS, 'dsky-geometry.js'), 'utf8');
 const keycodesSource = fs.readFileSync(path.join(ASSETS, 'dsky-keycodes.js'), 'utf8');
 const relayAudio = fs.readFileSync(path.join(ASSETS, 'relay-audio-refine.js'), 'utf8');
 const relayMatrix = fs.readFileSync(path.join(ASSETS, 'dsky-relay-matrix.js'), 'utf8');
@@ -86,8 +88,13 @@ assert(display.includes('const relay=(value>>11)&0o17,b=(value>>10)&1,c=(value>>
 assert(display.includes('if(relay>=1&&relay<=12)'), 'channel 010 must retain all 12 relay banks');
 assert(display.includes('popcount11(prior^low11)'), 'AGC relay sounds must derive from changed low-11 bistable relays');
 assert(clock.includes('CLOCK_SETTLE_MS=20'), 'Block II relay settle interval must remain 20 ms');
-assert(!app.includes('function decodeChannel10(value)') && !app.includes('const RELAY_DIGIT='),
-  'app.js regained AGC display/mapping ownership');
+assert(!fs.existsSync(path.join(ASSETS,'app.js')), 'legacy app.js unexpectedly exists');
+for (const [name,source] of [['app-shell-runtime.js',shell],['agc-api-runtime.js',api]]) {
+  assert(!source.includes('function decodeChannel10(') && !source.includes('const RELAY_DIGIT='),
+    `${name} regained AGC display/mapping ownership`);
+}
+assert(display.includes('const displayState=window.AGCDSKY_APP_STATE;'),'AGC display runtime is not bound to shared app state');
+assert(geometry.includes('const geometryState=window.AGCDSKY_APP_STATE;'),'DSKY geometry is not bound to shared app state');
 assert(relayAudio.includes('count = Math.max(0, Math.min(11'), 'relay audio must cap bank transition to 11 relays');
 assert(relayAudio.includes('for (let i = 0; i < count; i++) emitTick'), 'relay audio must emit one transient per changed relay');
 assert(relayAudio.includes('mechanical pull-in scatter only, not serialized relay drive'),
@@ -134,4 +141,4 @@ for (const snippet of [
 ]) assert(display.includes(snippet),`channel 0163 mapping missing: ${snippet}`);
 
 console.log('DSKY mapping smoke: PASS');
-console.log('  shared keycodes, phone-clock relay encoding, authoritative AGC decoder, CM annunciators, K1-K5 matrix, and channel mappings verified');
+console.log('  extracted display/clock runtimes, shared keycodes, CM annunciators, K1-K5 matrix, and channel mappings verified');
