@@ -89,6 +89,7 @@
   const isFn=value=>typeof value==='function';
   compat.readonly('agcDisplay',()=>agcDisplayValue);
   compat.readonly('agcRelayWords',()=>agcRelayWordsValue);
+  compat.readonly('RELAY_DIGIT',()=>RELAY_DIGIT);
   relayDigitSlot=compat.mutable('relayDigit',relayDigitImpl,isFn);
   compat.accessor('agcCh11',()=>agcCh11Value,next=>{agcCh11Value=Number(next)||0});
   compat.accessor('agcCh13',()=>agcCh13Value,next=>{agcCh13Value=Number(next)||0});
