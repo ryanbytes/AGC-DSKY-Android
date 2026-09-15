@@ -17,7 +17,8 @@ function makeHarness({dream=false,hidden=false}={}){
   const soundButton={textContent:'RELAY CLICKS ON'},storage=new Map();
   const shell={store:{get:k=>storage.get(k)||null,set(k,v){storage.set(k,String(v));return true}},element:id=>id==='sound'?soundButton:null};
   const environment={tickLevel:()=>1};
-  const context={console,window:null,globalThis:null,document:{hidden,getElementById:id=>id==='sound'?soundButton:null,addEventListener(){}},AGCDSKY_SHELL:shell,AGCDSKY_ENVIRONMENT:environment,AudioContext:FakeAudioContext,webkitAudioContext:undefined,DebugBridge:{report(detail){reports.push(String(detail))}},Promise,WeakSet,Map,Object,Number,String,Math,Error,TypeError,setTimeout(fn){const id=++timerId;scheduled.set(id,fn);return id},clearTimeout(id){scheduled.delete(id)}};
+  const clock={stopQueue(){}};
+  const context={console,window:null,globalThis:null,document:{hidden,getElementById:id=>id==='sound'?soundButton:null,addEventListener(){}},AGCDSKY_SHELL:shell,AGCDSKY_ENVIRONMENT:environment,AGCDSKY_CLOCK:clock,AudioContext:FakeAudioContext,webkitAudioContext:undefined,DebugBridge:{report(detail){reports.push(String(detail))}},Promise,WeakSet,Map,Object,Number,String,Math,Error,TypeError,setTimeout(fn){const id=++timerId;scheduled.set(id,fn);return id},clearTimeout(id){scheduled.delete(id)}};
   context.window=context;context.globalThis=context;vm.createContext(context);
   for(const name of ['app-state-runtime.js','relay-audio-runtime.js'])new vm.Script(read(name),{filename:name}).runInContext(context);
   const state=context.AGCDSKY_APP_STATE;state.dream=dream;state.tickSound=true;state.appVisible=!hidden;
