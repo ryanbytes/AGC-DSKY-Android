@@ -55,11 +55,6 @@
     const current = status();
     if (current.mode === MODES.AGC) return Promise.resolve(current);
     if (transitionPromise) return transitionPromise;
-
-    // All production AGC entry surfaces resolve through this coordinator before
-    // the event loop can deliver user input. A loading state without the owned
-    // Promise therefore signals a broken transition invariant; do not create a
-    // second independent polling/loader path.
     if (current.mode === MODES.AGC_LOADING) {
       return Promise.reject(new Error('AGC loading state has no shared transition owner'));
     }
@@ -69,8 +64,6 @@
     transitionPromise = (async () => {
       await baseEnterAgc();
       const next = status();
-      // The lifecycle layer catches its own load/runtime failure and may return
-      // to CLOCK. Preserve that contract for normal app/public entry callers.
       lastTransition = Object.freeze({
         serial,
         from,
@@ -85,15 +78,8 @@
     return transitionPromise;
   }
 
-  // Public/app entry preserves lifecycle failure semantics. Physical input
-  // callers use requestAgc() below because they require a definitely-ready core
-  // immediately after awaiting the transition.
   function enterAgc(reason = 'runtime enterAgc') {
     return beginAgc(reason);
-  }
-
-  function sharedEnterAgc() {
-    return beginAgc('global enterAgc');
   }
 
   function requestAgc(reason = 'runtime request') {
@@ -169,10 +155,6 @@
     return coordinateClock([statusLabel, preserveAgc], reason);
   }
 
-  function sharedEnterClock(...args) {
-    return coordinateClock(args, 'global enterClock');
-  }
-
   const runtime = Object.freeze({
     modes:MODES,
     mode,
@@ -191,14 +173,11 @@
       lastClockTransition:lastClockTransition ? {...lastClockTransition} : null,
       beforeClockHooks:beforeClockHooks.size,
       lifecycleService:true,
-      publicApiDelegates:true
+      publicApiDelegates:true,
+      classicTransitionGlobals:false
     })
   });
 
-  // Temporary compatibility shims for any remaining classic-script callers.
-  // Normal application paths use AGCDSKY/AGCDSKY_LIFECYCLE explicitly.
-  window.enterAgc = sharedEnterAgc;
-  window.enterClock = sharedEnterClock;
   window.AGCDSKY_RUNTIME = runtime;
   api.runtimeTransitions = runtime;
 })();

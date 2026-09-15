@@ -43,4 +43,4 @@ window.AGCDSKY={
   ntpStatus:()=>({...apiState.ntpStatus}),
   nativeNtpStatus:updateNtpStatus
 };
-initializeAppShell();
+initializeAppShell(window.AGCDSKY);

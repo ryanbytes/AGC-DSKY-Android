@@ -39,8 +39,15 @@ function cycleMission(){shellState.selectedMission='comanche055';store.set('agcM
 function showControls(){if(shellState.dream||shellState.displayOnly)return;document.body.classList.add('controls-visible');clearTimeout(controlsTimer);controlsTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),5500)}
 
 let appShellInitialized=false;
-function initializeAppShell(){
+function initializeAppShell(api){
   if(appShellInitialized)return false;
+  if(!api
+      || typeof api.enterAgc!=='function'
+      || typeof api.enterClock!=='function'
+      || typeof api.setAppVisible!=='function'
+      || typeof api.saveAgcState!=='function'){
+    throw new Error('Application API unavailable during shell initialization');
+  }
   appShellInitialized=true;
   let holdTimer=0;
   document.addEventListener('pointerdown',e=>{
@@ -51,14 +58,14 @@ function initializeAppShell(){
   },{passive:true});
   document.addEventListener('pointerup',()=>clearTimeout(holdTimer),{passive:true});
   document.addEventListener('pointercancel',()=>clearTimeout(holdTimer),{passive:true});
-  document.addEventListener('visibilitychange',()=>setAppVisible(!document.hidden));
-  addEventListener('pagehide',()=>{const core=shellCore();if(shellState.mode==='agc'&&core){core.stop();saveAgcState('page hide')}});
+  document.addEventListener('visibilitychange',()=>api.setAppVisible(!document.hidden));
+  addEventListener('pagehide',()=>{const core=shellCore();if(shellState.mode==='agc'&&core){core.stop();api.saveAgcState('page hide')}});
   $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;applyDim();showControls()});
   $('dreambright').addEventListener('click',()=>{cycleDreamMode();showControls()});
   $('sound').addEventListener('click',()=>{ensureAudio();shellState.tickSound=!shellState.tickSound;applyTickSound();if(shellState.tickSound)playRelayBurst(1);showControls()});
   $('display').addEventListener('click',()=>{shellState.displayOnly=true;applyDisplayOnly()});
-  $('agc').addEventListener('click',()=>{enterAgc();showControls()});
-  $('clock').addEventListener('click',()=>{enterClock(clockTimeLabel(),true);showControls()});
+  $('agc').addEventListener('click',()=>{void api.enterAgc();showControls()});
+  $('clock').addEventListener('click',()=>{void api.enterClock();showControls()});
   document.addEventListener('pointerdown',()=>{if(shellState.tickSound)ensureAudio()},{passive:true});
 
   document.body.classList.toggle('dream',shellState.dream);
@@ -69,9 +76,9 @@ function initializeAppShell(){
   loadNativeNtpStatus();applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(shellState.verb,shellState.noun);syncClockFace();
   setInterval(tick,20);
   setInterval(loadNativeNtpStatus,60000);
-  setInterval(()=>{const core=shellCore();if(shellState.mode==='agc'&&core&&core.running&&shellState.appVisible&&Date.now()-lastAutosaveAt>15000)saveAgcState('periodic autosave')},5000);
+  setInterval(()=>{const core=shellCore();if(shellState.mode==='agc'&&core&&core.running&&shellState.appVisible&&Date.now()-lastAutosaveAt>15000)api.saveAgcState('periodic autosave')},5000);
   if(!shellState.dream&&!restoreAgcOnLoad)rememberRunMode('clock');
-  if(restoreAgcOnLoad)setTimeout(()=>enterAgc(),0);
+  if(restoreAgcOnLoad)setTimeout(()=>{void api.enterAgc()},0);
   if(shellState.dream){
     updateDreamEnvironment();setInterval(updateDreamEnvironment,15000);
     const pos=[[0,0],[3,-2],[-3,2],[2,3],[-2,-3],[1,-1]],dsky=$('dsky');let i=0;
