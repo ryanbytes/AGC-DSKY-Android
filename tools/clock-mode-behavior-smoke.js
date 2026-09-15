@@ -20,19 +20,21 @@ const KEY_CODES = Object.freeze({
 });
 
 for (const marker of [
-  'const baseEnterAgc = typeof window.enterAgc',
+  'const lifecycle = api.lifecycle;',
+  'const baseEnterAgc = lifecycle.enterAgc;',
   'function beginAgc(',
-  'await baseEnterAgc.call(window)',
+  'await baseEnterAgc()',
   'if (transitionPromise) return transitionPromise',
   'ready:next.mode === MODES.AGC',
-  'window.enterAgc = sharedEnterAgc',
+  'classicTransitionGlobals:false',
   'publicApiDelegates:true',
   'api.runtimeTransitions = runtime'
 ]) {
   if (!transitionSource.includes(marker)) fail('missing runtime-transition marker: ' + marker);
 }
 for (const forbidden of [
-  'waitForAgcReady','LOAD_POLL_MS','MAX_LOAD_POLLS','api.enterAgc =','api.enterClock ='
+  'waitForAgcReady','LOAD_POLL_MS','MAX_LOAD_POLLS','api.enterAgc =','api.enterClock =',
+  'window.enterAgc','window.enterClock','sharedEnterAgc','sharedEnterClock'
 ]) {
   if (transitionSource.includes(forbidden)) fail('runtime transition service contains obsolete ownership/polling marker: ' + forbidden);
 }
@@ -77,7 +79,12 @@ function createHarness(initialMode = 'clock') {
     keyRelease(){ return true; },
     proceedKey(){ return 1; }
   };
+  const lifecycle = {
+    enterAgc(){ return enterImpl(); },
+    enterClock(){ mode = 'clock'; return {mode}; }
+  };
   const AGCDSKY = {
+    lifecycle,
     appStatus(){ return {mode}; },
     getCore(){ return core; },
     scheduleAgcAutosave(reason){ AGCDSKY.savedReason = reason; }
@@ -93,29 +100,22 @@ function createHarness(initialMode = 'clock') {
     window:null
   };
   context.window = context;
-  context.__baseEnterAgc = () => enterImpl();
-  context.__baseEnterClock = () => { mode = 'clock'; return {mode}; };
-  vm.createContext(context);
-  vm.runInContext(`
-    function enterAgc(){ return __baseEnterAgc(); }
-    function enterClock(){ return __baseEnterClock(); }
-    AGCDSKY.enterAgc=function(){
-      const runtime=window.AGCDSKY_RUNTIME;
-      return runtime&&typeof runtime.enterAgc==='function'
-        ? runtime.enterAgc('public AGCDSKY.enterAgc')
-        : enterAgc();
-    };
-    AGCDSKY.enterClock=function(){
-      const runtime=window.AGCDSKY_RUNTIME;
-      return runtime&&typeof runtime.enterClock==='function'
-        ? runtime.enterClock('CLOCK',true,'public AGCDSKY.enterClock')
-        : enterClock('CLOCK',true);
-    };
-  `, context);
+  AGCDSKY.enterAgc=function(){
+    const runtime=context.AGCDSKY_RUNTIME;
+    return runtime&&typeof runtime.enterAgc==='function'
+      ? runtime.enterAgc('public AGCDSKY.enterAgc')
+      : lifecycle.enterAgc();
+  };
+  AGCDSKY.enterClock=function(){
+    const runtime=context.AGCDSKY_RUNTIME;
+    return runtime&&typeof runtime.enterClock==='function'
+      ? runtime.enterClock('CLOCK',true,'public AGCDSKY.enterClock')
+      : lifecycle.enterClock('CLOCK',true);
+  };
   const publicEnterAgc = AGCDSKY.enterAgc;
   const publicEnterClock = AGCDSKY.enterClock;
-  const baseGlobalEnterAgc = context.enterAgc;
 
+  vm.createContext(context);
   vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
   if (!context.AGCDSKY_KEY_CODES || !Object.isFrozen(context.AGCDSKY_KEY_CODES)) {
     fail('shared DSKY keycode table did not publish a frozen table');
@@ -124,8 +124,8 @@ function createHarness(initialMode = 'clock') {
   if (AGCDSKY.enterAgc !== publicEnterAgc || AGCDSKY.enterClock !== publicEnterClock) {
     fail('runtime service replaced stable public transition methods');
   }
-  if (context.enterAgc === baseGlobalEnterAgc) {
-    fail('runtime service did not wrap the classic global AGC compatibility entry');
+  if (context.enterAgc !== undefined || context.enterClock !== undefined) {
+    fail('runtime service published classic transition globals');
   }
   vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
   if (context.AGCDSKY_INPUT !== context.AGCDSKY.inputRuntime) {
@@ -174,7 +174,7 @@ async function flush(count = 20) {
   if (fresh.timers.length !== 1 || fresh.timers[0].delay !== 90) fail('only keypad press animation timer should remain');
 
   const runtimeSnapshot = fresh.AGCDSKY.runtimeTransitions.snapshot();
-  if (runtimeSnapshot.mode !== 'agc' || runtimeSnapshot.transitionInFlight || !runtimeSnapshot.publicApiDelegates) {
+  if (runtimeSnapshot.mode !== 'agc' || runtimeSnapshot.transitionInFlight || !runtimeSnapshot.publicApiDelegates || runtimeSnapshot.classicTransitionGlobals) {
     fail('runtime transition snapshot did not settle cleanly');
   }
   if (!runtimeSnapshot.lastTransition
@@ -275,5 +275,5 @@ async function flush(count = 20) {
   }
 
   console.log('Clock mode behavior: PASS');
-  console.log('  stable public API, shared keycodes/runtime/input entry, fallback queue, no polling, and lifecycle-failure compatibility verified');
+  console.log('  stable public API, lifecycle-backed shared transition/input entry, fallback queue, no polling/globals, and lifecycle-failure compatibility verified');
 })().catch(error => fail(error.stack || String(error)));
