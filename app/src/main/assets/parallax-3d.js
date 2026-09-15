@@ -3,9 +3,10 @@
 /*
  * Lightweight presentation-only parallax controller.
  *
+ * - native Android quaternion: primary motion source in the packaged app
+ * - device orientation: browser/PWA fallback
  * - fine pointer: follows the cursor over the DSKY
  * - touch: samples the contact position without consuming the event
- * - device orientation: relative motion from the first sensor sample
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
  * - Dream/display-only/reduced-motion: flat and inactive; screen-only keeps EL depth
  *
@@ -17,6 +18,7 @@
 
   const dsky = document.getElementById('dsky');
   if (!dsky || !document.body) return;
+  const api = window.AGCDSKY = window.AGCDSKY || {};
 
   let glassSheen = dsky.querySelector('.el-glass-sheen');
   if (!glassSheen) {
@@ -38,6 +40,7 @@
   const MAX_ROTATE_Y_DEG = 4.20;
   const MAX_ROTATE_X_DEG = 3.60;
   const MAX_SENSOR_DELTA_DEG = 8;
+  const NATIVE_PRIORITY_MS = 600;
 
   let targetX = STATIC_X;
   let targetY = STATIC_Y;
@@ -46,6 +49,9 @@
   let frameId = 0;
   let source = 'static';
   let orientationBase = null;
+  let nativeBaseQ = null;
+  let nativeDisplayAngle = null;
+  let nativeSeenAt = 0;
   let touchReleaseTimer = 0;
 
   function clamp(value, min, max) {
@@ -122,6 +128,80 @@
     };
   }
 
+  function qMul(a, b) {
+    return [
+      a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
+      a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+      a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
+      a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0]
+    ];
+  }
+
+  function qNorm(q) {
+    const n = Math.hypot(q[0], q[1], q[2], q[3]) || 1;
+    return q.map(v => v / n);
+  }
+
+  function qConj(q) {
+    return [q[0], -q[1], -q[2], -q[3]];
+  }
+
+  function qScreenRotation(angleDeg) {
+    const half = (-angleDeg * Math.PI / 180) / 2;
+    return [Math.cos(half), 0, 0, Math.sin(half)];
+  }
+
+  function screenAdjustedQuaternion(w, x, y, z, displayAngle) {
+    const angle = Number.isFinite(Number(displayAngle))
+      ? ((Number(displayAngle) % 360) + 360) % 360
+      : 0;
+    let q = qNorm([Number(w), Number(x), Number(y), Number(z)]);
+    q = qNorm(qMul(q, qScreenRotation(angle)));
+    return {q, angle};
+  }
+
+  function eulerXY(q) {
+    const [w,x,y,z] = q;
+    const sinr = 2 * (w*x + y*z);
+    const cosr = 1 - 2 * (x*x + y*y);
+    const roll = Math.atan2(sinr, cosr) * 180 / Math.PI;
+    const pitch = Math.asin(clamp(2 * (w*y - z*x), -1, 1)) * 180 / Math.PI;
+    return [roll, pitch];
+  }
+
+  function onNativeQuaternion(w, x, y, z, displayAngle = 0) {
+    if (!presentationAllowed()) return;
+    if (![w,x,y,z].map(Number).every(Number.isFinite)) return;
+    const sample = screenAdjustedQuaternion(w, x, y, z, displayAngle);
+    const now = performance.now();
+    if (!nativeBaseQ || nativeDisplayAngle !== sample.angle || now - nativeSeenAt > 1500) {
+      nativeBaseQ = sample.q;
+      nativeDisplayAngle = sample.angle;
+      nativeSeenAt = now;
+      return;
+    }
+    nativeSeenAt = now;
+    const rel = qNorm(qMul(qConj(nativeBaseQ), sample.q));
+    const [roll, pitch] = eulerXY(rel);
+    const dx = clamp(pitch / MAX_SENSOR_DELTA_DEG, -1, 1);
+    const dy = clamp(roll / MAX_SENSOR_DELTA_DEG, -1, 1);
+    if (Math.abs(dx) < 0.006 && Math.abs(dy) < 0.006) return;
+    setTarget(dx, dy, 'native-quaternion');
+  }
+
+  function installNativeQuaternionTap() {
+    const prior = api.nativePhoneQuaternion;
+    if (typeof prior !== 'function' || prior.__dskyParallaxWrapped) return false;
+    const wrapped = function(w,x,y,z,displayAngle) {
+      prior.call(api, w,x,y,z,displayAngle);
+      try { onNativeQuaternion(w,x,y,z,displayAngle); } catch (_) {}
+    };
+    try { Object.defineProperty(wrapped, '__dskyParallaxWrapped', {value:true}); }
+    catch (_) { wrapped.__dskyParallaxWrapped = true; }
+    api.nativePhoneQuaternion = wrapped;
+    return true;
+  }
+
   function onPointerMove(event) {
     if (!finePointer || !finePointer.matches || !presentationAllowed()) return;
     const p = pointToNormalized(event.clientX, event.clientY, 1.0);
@@ -143,6 +223,7 @@
 
   function onDeviceOrientation(event) {
     if (!presentationAllowed()) return;
+    if (performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS) return;
     const beta = Number(event.beta);
     const gamma = Number(event.gamma);
     if (!Number.isFinite(beta) || !Number.isFinite(gamma)) return;
@@ -153,11 +234,13 @@
     const dx = clamp((gamma - orientationBase.gamma) / MAX_SENSOR_DELTA_DEG, -1, 1);
     const dy = clamp((beta - orientationBase.beta) / MAX_SENSOR_DELTA_DEG, -1, 1);
     if (Math.abs(dx) < 0.012 && Math.abs(dy) < 0.012) return;
-    setTarget(dx, dy * 0.90, 'orientation');
+    setTarget(dx, dy * 0.90, 'deviceorientation');
   }
 
   function flatten() {
     orientationBase = null;
+    nativeBaseQ = null;
+    nativeDisplayAngle = null;
     targetX = presentationAllowed() ? STATIC_X : 0;
     targetY = presentationAllowed() ? STATIC_Y : 0;
     scheduleFrame();
@@ -167,6 +250,7 @@
   dsky.addEventListener('pointerdown', onPointerDown, {passive:true});
   dsky.addEventListener('pointerleave', onPointerLeave, {passive:true});
   window.addEventListener('deviceorientation', onDeviceOrientation, {passive:true});
+  installNativeQuaternionTap();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       targetX = 0;
@@ -190,10 +274,12 @@
   const controller = Object.freeze({
     enabled:() => presentationAllowed(),
     source:() => source,
+    nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS,
     reset:() => setTarget(STATIC_X, STATIC_Y, 'static'),
     state:() => Object.freeze({
       enabled:presentationAllowed(),
       source,
+      nativeActive:performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS,
       x:currentX,
       y:currentY,
       targetX,
@@ -201,7 +287,7 @@
     })
   });
   window.AGCDSKY_PARALLAX = controller;
-  if (window.AGCDSKY) window.AGCDSKY.parallax3d = controller;
+  api.parallax3d = controller;
 
   setPresentationClass();
   apply();
