@@ -1,6 +1,6 @@
 # DSKY core runtime service graph
 
-Date: 2026-09-14
+Date: 2026-09-15
 Branch: `refactor/dsky-core-service-graph`
 
 ## Scope
@@ -10,25 +10,29 @@ This refactor converts the core DSKY runtime from parser-global cross-module cal
 The production dependency direction is now:
 
 ```text
-AGCDSKY_RENDERER
-      |
-      +--> AGCDSKY_ENVIRONMENT --> AGCDSKY_AUDIO
+AGCDSKY_APP_STATE / AGCDSKY_CORE_SESSION
+              |
+        AGCDSKY_COMPAT
+              |
+       AGCDSKY_RENDERER
+              |
+      +-------+-----------------------+
       |                               |
-      +-------------------------------+
-                      |
-          +-----------+-----------+
-          |                       |
-    AGCDSKY_CLOCK           AGCDSKY_DISPLAY
-                                  |
-                           AGCDSKY_SNAPSHOT
-                                  |
-            shell + renderer + clock + display + snapshot
-                                  |
-                         AGCDSKY_LIFECYCLE
-                                  |
-                         AGCDSKY_SERVICES
-                                  |
-                              AGCDSKY
+AGCDSKY_ENVIRONMENT ------------> AGCDSKY_AUDIO
+                                      |
+                          +-----------+-----------+
+                          |                       |
+                    AGCDSKY_CLOCK           AGCDSKY_DISPLAY
+                                                  |
+                                           AGCDSKY_SNAPSHOT
+                                                  |
+                    shell + renderer + clock + display + snapshot
+                                                  |
+                                         AGCDSKY_LIFECYCLE
+                                                  |
+                                         AGCDSKY_SERVICES
+                                                  |
+                                              AGCDSKY
 ```
 
 `AGCDSKY_SERVICES` is the frozen public service-graph root. `AGCDSKY` remains the application facade and keeps stable transition-method identity while `runtime-transitions.js` provides transition serialization after publication.
@@ -40,25 +44,37 @@ AGCDSKY_RENDERER
 - `AGCDSKY_ENVIRONMENT`: dim/Dream/solar presentation state and solar calculations.
 - `AGCDSKY_AUDIO`: relay-contact audio entry points and current audio context.
 - `AGCDSKY_CLOCK`: synthetic PHONE CLOCK relay state, queue, V35 lamp-test presentation, and clock rendering.
-- `AGCDSKY_DISPLAY`: real AGC output channels, relay/display state, rendering, and UI snapshot state.
+- `AGCDSKY_DISPLAY`: real AGC output channels, relay/display state, rendering, relay-code decoding, and UI snapshot state.
 - `AGCDSKY_SNAPSHOT`: AGC snapshot persistence, restore, verification, autosave, and snapshot diagnostics.
 - `AGCDSKY_LIFECYCLE`: AGC core construction/loading, CLOCK suspension, same-core resume, visibility lifecycle, and composed application status.
 
-The public API now routes channel output through `AGCDSKY_DISPLAY`, snapshot calls through `AGCDSKY_SNAPSHOT`, time/NTP calls through `AGCDSKY_SHELL`, and lifecycle calls through `AGCDSKY_LIFECYCLE`.
+The public API routes channel output through `AGCDSKY_DISPLAY`, snapshot calls through `AGCDSKY_SNAPSHOT`, time/NTP calls through `AGCDSKY_SHELL`, and lifecycle calls through `AGCDSKY_LIFECYCLE`.
 
-## Compatibility boundary retained on purpose
+## Audited compatibility boundary
 
-This change does **not** remove every classic-script binding from the entire frontend.
+The late hardware/presentation stack is intentionally parser ordered. It contains source-backed fidelity layers that refine an already-established primitive, for example:
 
-The late hardware/presentation stack still contains compatibility consumers and refinements, notably `dsky-geometry.js`, `hardware-fidelity.js`, and the relay/audio personality layers. For example, `dsky-geometry.js` replaces `glyph`, `renderDigits`, and `renderReg` after the base renderer loads, while hardware fidelity still consumes the classic clock relay structures.
+- `dsky-geometry.js` replaces `glyph`, `signGlyph`, `renderDigits`, and `renderReg`;
+- `dsky-relay-matrix.js` replaces `relayDigit` for all 32 K1-K5 contact states;
+- `hardware-fidelity.js` wraps AGC channel decoders, AGC reset, PHONE CLOCK queue/cancel/lamp-test behavior, and relay audio;
+- relay identity/visual/personality layers successively wrap `emitTick`, channel-010 presentation, and crew-facing render primitives;
+- `background-audio-guard.js` wraps audio acquisition/output and snapshot UI restoration.
 
-To preserve that behavior during this core-runtime conversion:
+Those assignments are no longer free-floating implementation ownership. `app-state-runtime.js` creates one frozen `AGCDSKY_COMPAT` registry before the service stack loads. Renderer, audio, clock, and display services register the historical names as accessor-backed slots owned by the service that defines the primitive.
 
-- renderer and audio services use dynamic wrappers that resolve the current classic binding at call time;
-- the core runtime consumes only the named services;
-- the late compatibility surface remains a separate future refactor target rather than being mixed into this change.
+A late assignment such as:
 
-This distinction is important: the core graph is explicit, but the entire late fidelity stack is not yet free of classic bindings.
+```js
+emitTick = wrappedEmitTick;
+decodeChannel10 = hardwareDecodeChannel10;
+renderDigits = apolloRenderDigits;
+```
+
+therefore updates a versioned slot. Calls through `AGCDSKY_AUDIO`, `AGCDSKY_DISPLAY`, `AGCDSKY_CLOCK`, or `AGCDSKY_RENDERER` immediately dispatch through the current slot implementation. Parser order and middleware composition are preserved without requiring the core graph to rediscover ambient function bindings.
+
+The compatibility registry does **not** mirror application fields such as `mode`, `verb`, `tickSound`, `agcCore`, or visibility state onto `window`. Those remain exclusively in `AGCDSKY_APP_STATE` and `AGCDSKY_CORE_SESSION`.
+
+Read-only compatibility accessors are used for structures that late layers only consume (`DIGIT_RELAY`, `CLOCK_GROUPS`, `SEG`, relay backing objects). Mutable slots are used only where a late layer is known to replace the primitive. `relayDigit` is deliberately mutable because `dsky-relay-matrix.js` installs the schematic 32-state decoder after the base decimal mapping.
 
 ## Behavior intended to remain unchanged
 
@@ -70,19 +86,22 @@ This distinction is important: the core graph is explicit, but the entire late f
 - PHONE CLOCK synthetic relay/V35 behavior is unchanged.
 - snapshot schema remains schema 1.
 - CLOCK suspension still saves resumable state and AGC return resumes the same loaded core when valid.
-- Dream mode remains isolated from real AGC startup.
+- Dream mode remains isolated from real AGC startup and relay audio.
 - classic `window.enterAgc` / `window.enterClock` transition globals remain absent.
+- the 20-ms settled relay-bank boundary in `hardware-fidelity.js` remains authoritative.
 
 ## Regression gates
 
-The canonical source gate now includes `tools/core-service-graph-smoke.js`. Existing shell, API, renderer, phone-clock, AGC-display, snapshot, lifecycle, frontend, NTP, V35, output-path, and authority tests were updated to exercise the explicit services rather than reconstructing removed ambient dependencies.
+`tools/core-service-graph-smoke.js` now verifies both the frozen service graph and the single compatibility boundary. Renderer, audio, phone-clock, and AGC-display smokes perform behavioral late-replacement checks and require the corresponding compatibility version to increment.
 
-A stale `device-v35-policy-smoke.js` dependency on deleted `app.js` was also removed. The policy gate now reads the current display/lifecycle/API service stack.
+Mapping/V35/output-path gates read the current service-owned names rather than deleted `app.js` or pre-refactor global implementations. The mapping gate also verifies that `relayDigit` remains a mutable display-owned slot so the schematic relay matrix can install its 32-state decoder without throwing under strict mode.
 
-The service-graph gates use bare-call detection where needed, so `foo()` is rejected as an ambient dependency while `service.foo()` remains valid. This avoids false failures from naïve substring matching.
+State-ownership gates continue to reject Window mirrors for application/core fields. The presence of `Object.defineProperty` is allowed only as part of the named `AGCDSKY_COMPAT` registry used for service-owned compatibility slots.
+
+The service-graph gates use bare-call detection where needed, so `foo()` is rejected as an ambient core dependency while `service.foo()` remains valid.
 
 ## Verification boundary
 
-The branch records source-level regression gates and the canonical local build wiring. The full `tools/build-local.sh` Gradle/APK/device path must still be run from a complete recursive checkout with the required Android SDK and pinned `vendor/webAGC` submodule.
+The branch records source-level regression gates and the canonical local build wiring. The full `tools/build-local.sh` Gradle/APK/device path still must be run from a complete recursive checkout with the required Android SDK and pinned `vendor/webAGC` submodule.
 
 Do not treat source inspection alone as proof that the current regular or Fire APK builds or passes device smoke testing.

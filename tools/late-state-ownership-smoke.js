@@ -4,15 +4,9 @@ const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 const explicit=[
-  ['app-shell-runtime.js','shellState'],
-  ['dsky-geometry.js','geometryState'],
-  ['hardware-fidelity.js','fidelityState'],
-  ['background-audio-guard.js','guardState'],
-  ['relay-show.js','showState'],
-  ['screen-only.js','screenState'],
-  ['dream-agc.js','dreamState'],
-  ['relay-identity-audio.js','identityState'],
-  ['relay-visual-coupling.js','visualState']
+  ['app-shell-runtime.js','shellState'],['dsky-geometry.js','geometryState'],['hardware-fidelity.js','fidelityState'],
+  ['background-audio-guard.js','guardState'],['relay-show.js','showState'],['screen-only.js','screenState'],
+  ['dream-agc.js','dreamState'],['relay-identity-audio.js','identityState'],['relay-visual-coupling.js','visualState']
 ];
 for(const [name,alias] of explicit){const source=read(name);assert(source.includes(alias)&&source.includes('window.AGCDSKY_APP_STATE'),`${name} is not an explicit shared-state consumer`)}
 const shell=read('app-shell-runtime.js'),geometry=read('dsky-geometry.js'),hardware=read('hardware-fidelity.js'),guard=read('background-audio-guard.js'),show=read('relay-show.js'),screen=read('screen-only.js'),dream=read('dream-agc.js'),identity=read('relay-identity-audio.js'),visual=read('relay-visual-coupling.js'),snapshot=read('agc-snapshot-runtime.js'),life=read('agc-lifecycle-runtime.js'),api=read('agc-api-runtime.js');
@@ -37,7 +31,10 @@ assert(visual.includes('!visualState.tickSound'),'relay visual layer does not re
 for(const [name,source,alias] of [['snapshot',snapshot,'snapshotCore'],['lifecycle',life,'lifecycleCore'],['API',api,'apiCore'],['relay show',show,'showCore'],['Dream AGC',dream,'dreamCore']])assert(source.includes(alias)&&source.includes('window.AGCDSKY_CORE_SESSION'),`${name} does not bind explicit core session`);
 const appState=read('app-state-runtime.js');
 assert(appState.includes('window.AGCDSKY_CORE_SESSION = Object.seal({'),'core session bootstrap is missing or unsealed');
-assert(!appState.includes('Object.defineProperty(window'),'state bootstrap Window compatibility bridge still present');
-assert(!appState.includes('for (const name of ['),'state bootstrap compatibility-name loop still present');
+assert(appState.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,describe});'),'audited compatibility registry missing');
+assert(appState.includes('Object.defineProperty(window, name'),'compatibility registry accessor boundary missing');
+for(const name of ['mode','selectedMission','verb','noun','dream','dreamMode','dim','tickSound','displayOnly','appVisible','ntpStatus','agcCore','agcLoadedMission','agcSuspendedForClock','agcPausedForVisibility']){
+  assert(!appState.includes(`mutable('${name}'`)&&!appState.includes(`accessor('${name}'`),`state field ${name} must not be registered as a compatibility alias`);
+}
 console.log('late state ownership smoke: PASS');
-console.log('  shell/geometry/presentation layers use explicit app state; lifecycle/snapshot/API/show/Dream use explicit core session; no legacy field bridge remains');
+console.log('  app/core state remains explicit; late classic fidelity names are isolated behind the audited service-slot compatibility registry');
