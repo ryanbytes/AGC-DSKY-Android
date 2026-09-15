@@ -50,6 +50,12 @@ for(const token of [
   "nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS",
   "setPx('--dsky-fs-el-x'",
   "setPx('--dsky-fs-glass-x'",
+  "const elPanel = document.getElementById('elpanel')",
+  "const phosphorX = -x * 24.0",
+  "const glassX = x * 34.0",
+  "elPanel.style.setProperty(",
+  "glassSheen.style.setProperty(",
+  "'important'",
   "{passive:true}",
   "body.classList.contains('dream')",
   "body.classList.contains('display-only')",
@@ -62,6 +68,8 @@ const allowedBody=js.match(/function presentationAllowed\(\) \{([\s\S]*?)\n  \}/
 assert(!allowedBody.includes("classList.contains('screen-only')"),'screen-only must keep parallax enabled outside Dream mode');
 assert(js.indexOf('installNativeQuaternionTap();')>js.indexOf("window.addEventListener('deviceorientation'"),'native quaternion wrapper must install after fallback listener registration');
 assert(js.includes('performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS'),'native quaternion must suppress WebView orientation fallback while active');
+assert(js.includes("elPanel.style.setProperty(\n        'transform'"),'fullscreen phosphor must use direct inline transform');
+assert(js.includes("glassSheen.style.setProperty(\n        'transform'"),'fullscreen glass must use direct inline transform');
 
 for(const forbidden of [
   'preventDefault(',
@@ -91,4 +99,4 @@ assert(!css.includes('animation:'),'parallax layer must not introduce autonomous
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  visible tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
-console.log('  native Android quaternion drives WebView-safe pixel offsets; screen-only EL stays active');
+console.log('  fullscreen EL bypasses stylesheet transforms with direct inline !important phosphor/glass motion');
