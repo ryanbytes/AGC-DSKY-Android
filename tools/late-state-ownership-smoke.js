@@ -31,10 +31,10 @@ assert(visual.includes('!visualState.tickSound'),'relay visual layer does not re
 for(const [name,source,alias] of [['snapshot',snapshot,'snapshotCore'],['lifecycle',life,'lifecycleCore'],['API',api,'apiCore'],['relay show',show,'showCore'],['Dream AGC',dream,'dreamCore']])assert(source.includes(alias)&&source.includes('window.AGCDSKY_CORE_SESSION'),`${name} does not bind explicit core session`);
 const appState=read('app-state-runtime.js');
 assert(appState.includes('window.AGCDSKY_CORE_SESSION = Object.seal({'),'core session bootstrap is missing or unsealed');
-assert(appState.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,describe});'),'audited compatibility registry missing');
+assert(appState.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,replace,describe});'),'audited compatibility registry/replacement API missing');
 assert(appState.includes('Object.defineProperty(window, name'),'compatibility registry accessor boundary missing');
 for(const name of ['mode','selectedMission','verb','noun','dream','dreamMode','dim','tickSound','displayOnly','appVisible','ntpStatus','agcCore','agcLoadedMission','agcSuspendedForClock','agcPausedForVisibility']){
   assert(!appState.includes(`mutable('${name}'`)&&!appState.includes(`accessor('${name}'`),`state field ${name} must not be registered as a compatibility alias`);
 }
 console.log('late state ownership smoke: PASS');
-console.log('  app/core state remains explicit; late classic fidelity names are isolated behind the audited service-slot compatibility registry');
+console.log('  app/core state remains explicit; late fidelity slots are isolated behind the audited compatibility registry and explicit replacement API');

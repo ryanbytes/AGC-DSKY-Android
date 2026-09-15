@@ -109,9 +109,15 @@
       if (!entry) throw new Error(`Unknown compatibility name: ${name}`);
       return entry.get();
     }
+    function replace(name, next, reason = 'explicit replacement') {
+      const entry = entries.get(name);
+      if (!entry) throw new Error(`Unknown compatibility name: ${name}`);
+      if (typeof entry.set !== 'function') throw new TypeError(`Compatibility name is read-only: ${name}`);
+      return entry.set(next, reason);
+    }
     function describe() {
       return Array.from(entries, ([name,entry]) => ({name,kind:entry.kind,version:entry.version()}));
     }
-    window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,describe});
+    window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,replace,describe});
   }
 })();

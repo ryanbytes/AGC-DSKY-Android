@@ -5,12 +5,16 @@
 //
 // Block II display channel 010 selects one of 12 banks of 11 bistable relays.
 // The 11 relay bits in the selected bank are commanded together; they are not
-// electrically stepped one-at-a-time.  app.js passes the Hamming distance of
-// the old/new low-11 latch states, so this layer emits one mechanical transient
-// for every armature that actually changes state.  The tiny time offsets below
-// represent mechanical pull-in scatter only, not serialized relay drive.
+// electrically stepped one-at-a-time. The Hamming distance of the old/new
+// low-11 latch states is therefore rendered as mechanically scattered relay
+// motion, not serialized electrical drive.
 (() => {
-  if (typeof emitTick !== 'function' || typeof ensureAudio !== 'function') return;
+  const compat=window.AGCDSKY_COMPAT;
+  const audio=window.AGCDSKY_AUDIO;
+  const environment=window.AGCDSKY_ENVIRONMENT;
+  if(!compat||!audio||!environment)throw new Error('Relay audio service graph unavailable');
+  const fallbackEmitTick=compat.get('emitTick');
+  if(typeof fallbackEmitTick!=='function')throw new Error('Base relay tick unavailable');
 
   let clickSerial = 0;
 
@@ -69,39 +73,38 @@
     return buffer;
   }
 
-  emitTick = function recreatedDskyRelayClick(ctx, when = ctx.currentTime, strength = 1) {
+  function recreatedDskyRelayClick(ctx, when = ctx.currentTime, strength = 1) {
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
     const seed = 0x4d534b59 ^ (++clickSerial * 0x9e3779b9);
     source.buffer = buildRelayBuffer(ctx, seed);
     gain.gain.setValueAtTime(0.0001, when);
-    gain.gain.linearRampToValueAtTime(0.43 * tickLevel * strength, when + 0.00008);
+    gain.gain.linearRampToValueAtTime(0.43 * environment.tickLevel() * strength, when + 0.00008);
     gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.0060);
     source.connect(gain);
     gain.connect(ctx.destination);
     source.start(when);
     source.stop(when + 0.010);
-  };
-
-  if (typeof playRelayBurst === 'function') {
-    playRelayBurst = function recreatedRelayBankClicks(count) {
-      const ctx = ensureAudio();
-      count = Math.max(0, Math.min(11, Math.trunc(Number(count) || 0)));
-      if (!ctx || count < 1) return;
-      const go = () => {
-        const base = ctx.currentTime + 0.002;
-        const spreadMs = typeof RELAY_CLICK_SPREAD_MS === 'number'
-          ? Math.max(0, RELAY_CLICK_SPREAD_MS)
-          : 2.5;
-        const rnd = xorshift32(0x44534b59 ^ (++clickSerial * 0x45d9f3b));
-        const offsets = [];
-        for (let i = 0; i < count; i++) offsets.push((rnd() + 1) * 0.5 * spreadMs / 1000);
-        offsets.sort((a, b) => a - b);
-        const strength = Math.min(1.02, 0.82 + Math.min(count, 11) * 0.018);
-        for (let i = 0; i < count; i++) emitTick(ctx, base + offsets[i], strength);
-      };
-      if (ctx.state === 'running') go();
-      else ctx.resume().then(go).catch(() => {});
-    };
   }
+  compat.replace('emitTick',recreatedDskyRelayClick,'recreated dry DSKY relay click');
+
+  function recreatedRelayBankClicks(count) {
+    const ctx = audio.ensure();
+    count = Math.max(0, Math.min(11, Math.trunc(Number(count) || 0)));
+    if (!ctx || count < 1) return;
+    const go = () => {
+      const base = ctx.currentTime + 0.002;
+      const spreadValue=compat.get('RELAY_CLICK_SPREAD_MS');
+      const spreadMs = typeof spreadValue === 'number' ? Math.max(0, spreadValue) : 2.5;
+      const rnd = xorshift32(0x44534b59 ^ (++clickSerial * 0x45d9f3b));
+      const offsets = [];
+      for (let i = 0; i < count; i++) offsets.push((rnd() + 1) * 0.5 * spreadMs / 1000);
+      offsets.sort((a, b) => a - b);
+      const strength = Math.min(1.02, 0.82 + Math.min(count, 11) * 0.018);
+      for (let i = 0; i < count; i++) audio.emitTick(ctx, base + offsets[i], strength);
+    };
+    if (ctx.state === 'running') go();
+    else ctx.resume().then(go).catch(() => {});
+  }
+  compat.replace('playRelayBurst',recreatedRelayBankClicks,'recreated parallel relay-bank clicks');
 })();
