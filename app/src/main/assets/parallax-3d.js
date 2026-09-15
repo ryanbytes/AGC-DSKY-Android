@@ -5,9 +5,11 @@
  *
  * - fine pointer: follows the cursor over the DSKY
  * - touch: samples the contact position without consuming the event
- * - device orientation: relative motion from the first sensor sample
+ * - browser device orientation: relative motion from the first sensor sample
+ * - Android WebView: observes the existing native rotation-vector bridge without
+ *   changing the arguments, return value, or AGC/IMU behavior of that bridge
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
- * - Dream/display-only/screen-only/reduced-motion: flat and inactive
+ * - Dream/screen-only/reduced-motion: flat and inactive
  *
  * No AGC, relay, channel, keycode, or persistence state is touched here.
  */
@@ -17,6 +19,8 @@
 
   const dsky = document.getElementById('dsky');
   if (!dsky || !document.body) return;
+
+  const api = window.AGCDSKY = window.AGCDSKY || {};
 
   let glassSheen = dsky.querySelector('.el-glass-sheen');
   if (!glassSheen) {
@@ -38,6 +42,7 @@
   const MAX_ROTATE_Y_DEG = 1.80;
   const MAX_ROTATE_X_DEG = 1.55;
   const MAX_SENSOR_DELTA_DEG = 12;
+  const PARALLAX_TRANSLATION = 4.20;
 
   let targetX = STATIC_X;
   let targetY = STATIC_Y;
@@ -46,6 +51,8 @@
   let frameId = 0;
   let source = 'static';
   let orientationBase = null;
+  let nativeQuaternionBase = null;
+  let nativeDisplayAngle = null;
   let touchReleaseTimer = 0;
 
   function clamp(value, min, max) {
@@ -56,7 +63,6 @@
     if (reduceMotion && reduceMotion.matches) return false;
     const body = document.body;
     return !body.classList.contains('dream')
-      && !body.classList.contains('display-only')
       && !body.classList.contains('screen-only');
   }
 
@@ -70,8 +76,8 @@
     const y = allowed ? currentY : 0;
     const tiltX = -y * MAX_ROTATE_X_DEG;
     const tiltY = x * MAX_ROTATE_Y_DEG;
-    const parallaxX = x * 1.8;
-    const parallaxY = y * 1.8;
+    const parallaxX = x * PARALLAX_TRANSLATION;
+    const parallaxY = y * PARALLAX_TRANSLATION;
     const lightX = 50 + x * 16;
     const lightY = 45 + y * 14;
     const shadowX = -x * 3.2;
@@ -157,8 +163,86 @@
     setTarget(dx * 0.72, dy * 0.62, 'orientation');
   }
 
+  function qNorm(q) {
+    const n = Math.hypot(q[0], q[1], q[2], q[3]);
+    if (!(n > 1e-9)) return null;
+    return [q[0]/n, q[1]/n, q[2]/n, q[3]/n];
+  }
+
+  function qMul(a, b) {
+    return [
+      a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
+      a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+      a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
+      a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0]
+    ];
+  }
+
+  function qConj(q) {
+    return [q[0], -q[1], -q[2], -q[3]];
+  }
+
+  function qAxisZ(angleRad) {
+    const h = angleRad / 2;
+    return [Math.cos(h), 0, 0, Math.sin(h)];
+  }
+
+  function rollPitchDegrees(q) {
+    const [w,x,y,z] = q;
+    const roll = Math.atan2(2*(w*x + y*z), 1 - 2*(x*x + y*y));
+    const pitch = Math.asin(clamp(2*(w*y - z*x), -1, 1));
+    const scale = 180 / Math.PI;
+    return [roll * scale, pitch * scale];
+  }
+
+  // SensorMainActivity already sends a high-rate Android rotation-vector
+  // quaternion to AGCDSKY.nativePhoneQuaternion(). Observe that same bridge so
+  // parallax works in WebView even when Chromium never emits DeviceOrientation.
+  // The wrapped function is still called exactly once with its original this,
+  // arguments, and return value.
+  function onNativeQuaternion(w, x, y, z, displayAngle = 0) {
+    if (!presentationAllowed()) return;
+    const values = [Number(w), Number(x), Number(y), Number(z)];
+    if (!values.every(Number.isFinite)) return;
+    const angle = Number.isFinite(Number(displayAngle))
+      ? ((Number(displayAngle) % 360) + 360) % 360
+      : 0;
+    let q = qNorm(values);
+    if (!q) return;
+    q = qNorm(qMul(q, qAxisZ(-angle * Math.PI / 180)));
+    if (!q) return;
+
+    if (!nativeQuaternionBase || nativeDisplayAngle !== angle) {
+      nativeQuaternionBase = q;
+      nativeDisplayAngle = angle;
+      return;
+    }
+
+    const rel = qNorm(qMul(qConj(nativeQuaternionBase), q));
+    if (!rel) return;
+    const [roll, pitch] = rollPitchDegrees(rel);
+    const dx = clamp(roll / MAX_SENSOR_DELTA_DEG, -1, 1);
+    const dy = clamp(pitch / MAX_SENSOR_DELTA_DEG, -1, 1);
+    if (Math.abs(dx) < 0.010 && Math.abs(dy) < 0.010) return;
+    setTarget(dx * 0.88, dy * 0.78, 'native');
+  }
+
+  function installNativeQuaternionObserver() {
+    const original = api.nativePhoneQuaternion;
+    if (typeof original !== 'function' || original.__dskyParallaxObserved) return false;
+    const observed = function dskyParallaxNativeQuaternion(...args) {
+      try { onNativeQuaternion(...args); } catch (_) {}
+      return original.apply(this, args);
+    };
+    Object.defineProperty(observed, '__dskyParallaxObserved', {value:true});
+    api.nativePhoneQuaternion = observed;
+    return true;
+  }
+
   function flatten() {
     orientationBase = null;
+    nativeQuaternionBase = null;
+    nativeDisplayAngle = null;
     targetX = presentationAllowed() ? STATIC_X : 0;
     targetY = presentationAllowed() ? STATIC_Y : 0;
     scheduleFrame();
@@ -188,13 +272,16 @@
     new MutationObserver(flatten).observe(document.body, {attributes:true, attributeFilter:['class']});
   }
 
+  const nativeBridgeObserved = installNativeQuaternionObserver();
   const controller = Object.freeze({
     enabled:() => presentationAllowed(),
     source:() => source,
+    nativeBridgeObserved:() => nativeBridgeObserved,
     reset:() => setTarget(STATIC_X, STATIC_Y, 'static'),
     state:() => Object.freeze({
       enabled:presentationAllowed(),
       source,
+      nativeBridgeObserved,
       x:currentX,
       y:currentY,
       targetX,
@@ -202,7 +289,7 @@
     })
   });
   window.AGCDSKY_PARALLAX = controller;
-  if (window.AGCDSKY) window.AGCDSKY.parallax3d = controller;
+  api.parallax3d = controller;
 
   setPresentationClass();
   apply();
