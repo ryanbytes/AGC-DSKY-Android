@@ -63,12 +63,13 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-so
   transform:translateZ(-.6px);
 }
 
-/* The active EL substrate sits behind a thin front-glass reflection plane. */
+/* The active EL phosphor sits visibly behind the bezel while the cover glass
+   rides in front. The counter-motion is intentionally strong on phone screens. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .elpanel{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * 1.05px),
-    calc(var(--dsky-parallax-y) * 1.05px),
-    14px
+    calc(var(--dsky-parallax-x) * -1.70px),
+    calc(var(--dsky-parallax-y) * -1.55px),
+    -18px
   );
   transform-style:preserve-3d;
   will-change:transform;
@@ -82,9 +83,9 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
   z-index:5;
   pointer-events:none;
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * 1.35px),
-    calc(var(--dsky-parallax-y) * 1.35px),
-    20px
+    calc(var(--dsky-parallax-x) * 2.40px),
+    calc(var(--dsky-parallax-y) * 2.15px),
+    34px
   );
   background:
     radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.13),rgba(225,242,234,.035) 22%,transparent 47%),
@@ -150,12 +151,23 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
 }
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
   background:
-    linear-gradient(112deg,transparent 5%,rgba(255,255,255,.018) 23%,rgba(255,255,255,.12) 29%,rgba(255,255,255,.022) 35%,transparent 48%),
-    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.11),rgba(220,237,228,.025) 24%,transparent 48%),
-    linear-gradient(180deg,rgba(255,255,255,.025),transparent 18%,transparent 78%,rgba(0,0,0,.055));
+    linear-gradient(112deg,transparent 4%,rgba(255,255,255,.025) 20%,rgba(255,255,255,.24) 28%,rgba(255,255,255,.040) 35%,transparent 48%),
+    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.18),rgba(220,237,228,.045) 22%,transparent 47%),
+    linear-gradient(180deg,rgba(255,255,255,.035),transparent 16%,transparent 76%,rgba(0,0,0,.085));
   box-shadow:
-    inset .06vmin .06vmin .10vmin rgba(255,255,255,.10),
-    inset -.08vmin -.10vmin .18vmin rgba(0,0,0,.16),
-    inset 0 0 .7vmin rgba(0,0,0,.08);
-  opacity:.52;
+    inset calc(var(--dsky-parallax-x) * 1.15px) calc(var(--dsky-parallax-y) * 1.10px) .60vmin rgba(0,0,0,.42),
+    inset calc(var(--dsky-parallax-x) * -.55px) calc(var(--dsky-parallax-y) * -.50px) .32vmin rgba(255,255,255,.16),
+    inset 0 0 .18vmin rgba(255,255,255,.14),
+    inset 0 0 .85vmin rgba(0,0,0,.12);
+  opacity:.82;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border:.10vmin solid rgba(205,218,209,.16);
+  box-shadow:
+    inset calc(var(--dsky-parallax-x) * .95px) calc(var(--dsky-parallax-y) * .90px) .36vmin rgba(0,0,0,.40),
+    inset calc(var(--dsky-parallax-x) * -.40px) calc(var(--dsky-parallax-y) * -.36px) .24vmin rgba(255,255,255,.13);
 }
