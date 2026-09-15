@@ -6,7 +6,7 @@
  * reduced-motion presentations remain flat and stable.
  */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) #app{
-  perspective:1050px;
+  perspective:680px;
   perspective-origin:50% 48%;
 }
 
@@ -39,17 +39,17 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-well,
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .display-well{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * -.22px),
-    calc(var(--dsky-parallax-y) * -.22px),
+    calc(var(--dsky-parallax-x) * -.55px),
+    calc(var(--dsky-parallax-y) * -.55px),
     0
   );
 }
 
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-grid{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * .38px),
-    calc(var(--dsky-parallax-y) * .38px),
-    3px
+    calc(var(--dsky-parallax-x) * .65px),
+    calc(var(--dsky-parallax-y) * .65px),
+    8px
   );
   transform-style:preserve-3d;
 }
@@ -66,9 +66,9 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-so
 /* The active EL substrate sits behind a thin front-glass reflection plane. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .elpanel{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * .68px),
-    calc(var(--dsky-parallax-y) * .68px),
-    6px
+    calc(var(--dsky-parallax-x) * 1.05px),
+    calc(var(--dsky-parallax-y) * 1.05px),
+    14px
   );
   transform-style:preserve-3d;
   will-change:transform;
@@ -82,9 +82,9 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
   z-index:5;
   pointer-events:none;
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * 1.02px),
-    calc(var(--dsky-parallax-y) * 1.02px),
-    9px
+    calc(var(--dsky-parallax-x) * 1.35px),
+    calc(var(--dsky-parallax-y) * 1.35px),
+    20px
   );
   background:
     radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.13),rgba(225,242,234,.035) 22%,transparent 47%),
@@ -100,9 +100,9 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
    its virtual Z height rather than receiving a second fake press animation. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * .92px),
-    calc(var(--dsky-parallax-y) * .92px),
-    10px
+    calc(var(--dsky-parallax-x) * 1.25px),
+    calc(var(--dsky-parallax-y) * 1.25px),
+    22px
   );
   transform-style:preserve-3d;
   will-change:transform;
@@ -110,17 +110,17 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key{
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key:active,
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key.pressed{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * .54px),
-    calc(var(--dsky-parallax-y) * .54px),
-    3px
+    calc(var(--dsky-parallax-x) * .72px),
+    calc(var(--dsky-parallax-y) * .72px),
+    5px
   ) translateY(var(--key-travel,.42vmin));
 }
 
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
   transform:translate3d(
-    calc(var(--dsky-parallax-x) * .22px),
-    calc(var(--dsky-parallax-y) * .22px),
-    2px
+    calc(var(--dsky-parallax-x) * .45px),
+    calc(var(--dsky-parallax-y) * .45px),
+    6px
   );
 }
 
@@ -137,4 +137,25 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
     will-change:auto!important;
   }
   body.parallax-3d .dsky{filter:none!important}
+}
+
+/* Photographic response refinement: the moving highlight is broad and weak on
+   the matte painted casting, while the EL cover has a narrower glass reflection. */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
+  background:
+    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.090),rgba(255,255,255,.024) 22%,transparent 47%),
+    radial-gradient(ellipse at calc(var(--dsky-light-x) + 14%) calc(var(--dsky-light-y) + 38%),rgba(255,255,255,.018),transparent 34%),
+    linear-gradient(118deg,rgba(255,255,255,.030),transparent 30%,rgba(0,0,0,.025) 72%,rgba(255,255,255,.014));
+  mix-blend-mode:soft-light;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
+  background:
+    linear-gradient(112deg,transparent 5%,rgba(255,255,255,.018) 23%,rgba(255,255,255,.12) 29%,rgba(255,255,255,.022) 35%,transparent 48%),
+    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.11),rgba(220,237,228,.025) 24%,transparent 48%),
+    linear-gradient(180deg,rgba(255,255,255,.025),transparent 18%,transparent 78%,rgba(0,0,0,.055));
+  box-shadow:
+    inset .06vmin .06vmin .10vmin rgba(255,255,255,.10),
+    inset -.08vmin -.10vmin .18vmin rgba(0,0,0,.16),
+    inset 0 0 .7vmin rgba(0,0,0,.08);
+  opacity:.52;
 }

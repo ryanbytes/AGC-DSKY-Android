@@ -14,7 +14,7 @@ const dreamIndex=html.indexOf('<script src="dream-agc.js"></script>');
 assert(parallaxIndex>=0&&dreamIndex>parallaxIndex,'parallax presentation must initialize before final Dream readiness layer');
 
 for(const token of [
-  'perspective:1050px',
+  'perspective:680px',
   'rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y))',
   '.ann-well',
   '.display-well',
@@ -39,9 +39,9 @@ for(const token of [
   "dsky.addEventListener('pointerdown'",
   "window.addEventListener('deviceorientation'",
   "{passive:true}",
-  "document.body.classList.contains('dream')",
-  "document.body.classList.contains('display-only')",
-  "document.body.classList.contains('screen-only')",
+  "body.classList.contains('dream')",
+  "body.classList.contains('display-only')",
+  "body.classList.contains('screen-only')",
   "glassSheen.className = 'el-glass-sheen'",
   'window.AGCDSKY_PARALLAX = controller',
   'window.AGCDSKY.parallax3d = controller'
@@ -65,10 +65,14 @@ for(const forbidden of [
 
 const rx=Number((js.match(/MAX_ROTATE_X_DEG\s*=\s*([0-9.]+)/)||[])[1]);
 const ry=Number((js.match(/MAX_ROTATE_Y_DEG\s*=\s*([0-9.]+)/)||[])[1]);
-assert(Number.isFinite(rx)&&rx>0&&rx<=2,'X parallax tilt escaped restrained <=2 degree envelope');
-assert(Number.isFinite(ry)&&ry>0&&ry<=2,'Y parallax tilt escaped restrained <=2 degree envelope');
+const sensor=Number((js.match(/MAX_SENSOR_DELTA_DEG\s*=\s*([0-9.]+)/)||[])[1]);
+assert(Number.isFinite(rx)&&rx>=3&&rx<=5,'X parallax tilt must stay in visible 3–5 degree envelope');
+assert(Number.isFinite(ry)&&ry>=3&&ry<=5,'Y parallax tilt must stay in visible 3–5 degree envelope');
+assert(Number.isFinite(sensor)&&sensor>=6&&sensor<=10,'sensor response must reach full parallax within 6–10 degrees');
+assert(css.includes('calc(var(--dsky-parallax-x) * 1.25px)'),'key foreground separation is too weak');
+assert(css.includes('calc(var(--dsky-parallax-x) * -.55px)'),'recess counter-parallax is too weak');
 assert(!css.includes('animation:'),'parallax layer must not introduce autonomous looping animation');
 
 console.log('parallax 3D smoke: PASS');
-console.log(`  restrained tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg`);
-console.log('  panel recess, annunciators, EL glass, key depth, passive input, and flat Dream/reduced-motion modes verified');
+console.log(`  visible tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
+console.log('  stronger recess, annunciator, EL glass and key depth retained within presentation-only boundary');

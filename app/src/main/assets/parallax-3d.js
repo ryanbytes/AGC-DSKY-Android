@@ -33,11 +33,11 @@
     ? matchMedia('(hover: hover) and (pointer: fine)')
     : null;
 
-  const STATIC_X = 0.055;
-  const STATIC_Y = -0.040;
-  const MAX_ROTATE_Y_DEG = 1.80;
-  const MAX_ROTATE_X_DEG = 1.55;
-  const MAX_SENSOR_DELTA_DEG = 12;
+  const STATIC_X = 0.075;
+  const STATIC_Y = -0.055;
+  const MAX_ROTATE_Y_DEG = 4.20;
+  const MAX_ROTATE_X_DEG = 3.60;
+  const MAX_SENSOR_DELTA_DEG = 8;
 
   let targetX = STATIC_X;
   let targetY = STATIC_Y;
@@ -70,12 +70,12 @@
     const y = allowed ? currentY : 0;
     const tiltX = -y * MAX_ROTATE_X_DEG;
     const tiltY = x * MAX_ROTATE_Y_DEG;
-    const parallaxX = x * 1.8;
-    const parallaxY = y * 1.8;
-    const lightX = 50 + x * 16;
-    const lightY = 45 + y * 14;
-    const shadowX = -x * 3.2;
-    const shadowY = 5.0 - y * 1.8;
+    const parallaxX = x * 3.8;
+    const parallaxY = y * 3.8;
+    const lightX = 50 + x * 28;
+    const lightY = 45 + y * 24;
+    const shadowX = -x * 7.0;
+    const shadowY = 6.0 - y * 3.2;
 
     dsky.style.setProperty('--dsky-tilt-x', `${tiltX.toFixed(3)}deg`);
     dsky.style.setProperty('--dsky-tilt-y', `${tiltY.toFixed(3)}deg`);
@@ -98,8 +98,8 @@
     const allowed = presentationAllowed();
     const tx = allowed ? targetX : 0;
     const ty = allowed ? targetY : 0;
-    currentX += (tx - currentX) * 0.18;
-    currentY += (ty - currentY) * 0.18;
+    currentX += (tx - currentX) * 0.24;
+    currentY += (ty - currentY) * 0.24;
     if (Math.abs(tx - currentX) < 0.0008) currentX = tx;
     if (Math.abs(ty - currentY) < 0.0008) currentY = ty;
     setPresentationClass();
@@ -125,17 +125,17 @@
 
   function onPointerMove(event) {
     if (!finePointer || !finePointer.matches || !presentationAllowed()) return;
-    const p = pointToNormalized(event.clientX, event.clientY, 0.82);
+    const p = pointToNormalized(event.clientX, event.clientY, 1.0);
     if (p) setTarget(p.x, p.y, 'pointer');
   }
 
   function onPointerDown(event) {
     if ((finePointer && finePointer.matches) || !presentationAllowed()) return;
-    const p = pointToNormalized(event.clientX, event.clientY, 0.32);
+    const p = pointToNormalized(event.clientX, event.clientY, 0.70);
     if (!p) return;
     setTarget(p.x, p.y, 'touch');
     clearTimeout(touchReleaseTimer);
-    touchReleaseTimer = setTimeout(() => setTarget(STATIC_X, STATIC_Y, 'static'), 850);
+    touchReleaseTimer = setTimeout(() => setTarget(STATIC_X, STATIC_Y, 'static'), 1300);
   }
 
   function onPointerLeave() {
@@ -154,7 +154,7 @@
     const dx = clamp((gamma - orientationBase.gamma) / MAX_SENSOR_DELTA_DEG, -1, 1);
     const dy = clamp((beta - orientationBase.beta) / MAX_SENSOR_DELTA_DEG, -1, 1);
     if (Math.abs(dx) < 0.012 && Math.abs(dy) < 0.012) return;
-    setTarget(dx * 0.72, dy * 0.62, 'orientation');
+    setTarget(dx, dy * 0.90, 'orientation');
   }
 
   function flatten() {
