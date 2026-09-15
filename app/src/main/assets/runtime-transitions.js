@@ -3,14 +3,18 @@
 
   const api = window.AGCDSKY;
   if (!api || api.runtimeTransitions) return;
+  const lifecycle = api.lifecycle;
+  if (!lifecycle
+      || typeof lifecycle.enterAgc !== 'function'
+      || typeof lifecycle.enterClock !== 'function') {
+    throw new Error('AGC lifecycle service unavailable');
+  }
 
-  // Capture the lifecycle implementation before installing compatibility
-  // wrappers. The public AGCDSKY facade dynamically delegates to this runtime
-  // after publication, so the facade itself never needs to be replaced.
-  const baseEnterAgc = typeof window.enterAgc === 'function' ? window.enterAgc : api.enterAgc;
-  if (typeof baseEnterAgc !== 'function') return;
-  const baseEnterClock = typeof window.enterClock === 'function' ? window.enterClock : null;
-  const clockEntryAvailable = typeof baseEnterClock === 'function';
+  // The transition coordinator owns serialization; lifecycle owns the actual
+  // core/mode mutation. Public AGCDSKY methods dynamically delegate here after
+  // publication and retain stable function identity.
+  const baseEnterAgc = lifecycle.enterAgc;
+  const baseEnterClock = lifecycle.enterClock;
 
   const MODES = Object.freeze({
     CLOCK:'clock',
@@ -63,7 +67,7 @@
     const serial = ++transitionSerial;
     const from = current.mode;
     transitionPromise = (async () => {
-      await baseEnterAgc.call(window);
+      await baseEnterAgc();
       const next = status();
       // The lifecycle layer catches its own load/runtime failure and may return
       // to CLOCK. Preserve that contract for normal app/public entry callers.
@@ -120,9 +124,9 @@
     }
   }
 
-  function finishClock(thisArg, args, requestedFrom, deferred, reason) {
+  function finishClock(args, requestedFrom, deferred, reason) {
     const executedFrom = mode();
-    const result = baseEnterClock.apply(thisArg, args);
+    const result = baseEnterClock(...args);
     const next = status();
     lastClockTransition = Object.freeze({
       serial:++clockTransitionSerial,
@@ -135,8 +139,7 @@
     return result;
   }
 
-  function coordinateClock(thisArg, args, reason = 'runtime enterClock') {
-    if (!clockEntryAvailable) throw new Error('CLOCK runtime entry API unavailable');
+  function coordinateClock(args, reason = 'runtime enterClock') {
     if (deferredClockPromise) return deferredClockPromise;
 
     const from = mode();
@@ -147,7 +150,7 @@
       const activeTransition = transitionPromise;
       deferredClockPromise = activeTransition
         .catch(() => null)
-        .then(() => finishClock(thisArg, args, from, true, reason))
+        .then(() => finishClock(args, from, true, reason))
         .finally(() => {
           deferredClockPromise = null;
           clockRequestPending = false;
@@ -156,18 +159,18 @@
     }
 
     try {
-      return finishClock(thisArg, args, from, false, reason);
+      return finishClock(args, from, false, reason);
     } finally {
       clockRequestPending = false;
     }
   }
 
   function enterClock(statusLabel, preserveAgc = false, reason = 'runtime enterClock') {
-    return coordinateClock(window, [statusLabel, preserveAgc], reason);
+    return coordinateClock([statusLabel, preserveAgc], reason);
   }
 
   function sharedEnterClock(...args) {
-    return coordinateClock(this, args, 'global enterClock');
+    return coordinateClock(args, 'global enterClock');
   }
 
   const runtime = Object.freeze({
@@ -187,16 +190,15 @@
       lastTransition:lastTransition ? {...lastTransition} : null,
       lastClockTransition:lastClockTransition ? {...lastClockTransition} : null,
       beforeClockHooks:beforeClockHooks.size,
-      clockEntryWrapped:clockEntryAvailable,
+      lifecycleService:true,
       publicApiDelegates:true
     })
   });
 
-  // Keep classic-script global entrypoints as compatibility shims for the shell
-  // and older presentation layers. The public AGCDSKY methods are stable
-  // wrappers that discover AGCDSKY_RUNTIME at call time and are not rewritten.
+  // Temporary compatibility shims for any remaining classic-script callers.
+  // Normal application paths use AGCDSKY/AGCDSKY_LIFECYCLE explicitly.
   window.enterAgc = sharedEnterAgc;
-  if (clockEntryAvailable) window.enterClock = sharedEnterClock;
+  window.enterClock = sharedEnterClock;
   window.AGCDSKY_RUNTIME = runtime;
   api.runtimeTransitions = runtime;
 })();
