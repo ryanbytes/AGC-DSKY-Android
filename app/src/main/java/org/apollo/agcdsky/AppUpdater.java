@@ -1,5 +1,6 @@
 package org.apollo.agcdsky;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +14,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 
 import org.json.JSONArray;
@@ -25,7 +27,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
+import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -40,8 +46,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 final class AppUpdater {
     private static final String RELEASE_API = "https://api.github.com/repos/ryanbytes/AGC-DSKY-Android/releases/latest";
     private static final long CHECK_INTERVAL_MS = 12L * 60L * 60L * 1000L;
+    private static final long RETRY_INTERVAL_MS = 30L * 60L * 1000L;
     private static final String PREFS = "self_update";
     private static final String PREF_LAST_CHECK = "last_check_ms";
+    private static final String PREF_LAST_ATTEMPT = "last_attempt_ms";
     private static final String PREF_PENDING = "pending_apk";
     private static final String PREF_PENDING_SHA256 = "pending_sha256";
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
@@ -60,8 +68,11 @@ final class AppUpdater {
                 SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
                 long now = System.currentTimeMillis();
                 if (now - prefs.getLong(PREF_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return;
-                prefs.edit().putLong(PREF_LAST_CHECK, now).apply();
+                if (now - prefs.getLong(PREF_LAST_ATTEMPT, 0L) < RETRY_INTERVAL_MS) return;
+                prefs.edit().putLong(PREF_LAST_ATTEMPT, now).apply();
                 Release release = fetchLatestRelease();
+                prefs.edit().putLong(PREF_LAST_CHECK, System.currentTimeMillis()).remove(PREF_LAST_ATTEMPT).apply();
+                cancelRetry(context);
                 if (release == null || compareVersion(release.version, BuildConfig.VERSION_NAME) <= 0) return;
                 String apkName = "fire".equals(BuildConfig.FLAVOR) ? "app-fire-release.apk" : "app-regular-release.apk";
                 Asset apk = release.find(apkName);
@@ -84,11 +95,42 @@ final class AppUpdater {
                 prefs.edit().putString(PREF_PENDING, candidate.getAbsolutePath()).putString(PREF_PENDING_SHA256, expectedSha256).apply();
                 requestInstallPermissionOrInstall(context, candidate);
             } catch (Exception error) {
-                DebugReporter.appendNativeError(context, "Updater: " + error);
+                if (isTransientNetworkFailure(error)) scheduleRetry(context);
+                else DebugReporter.appendNativeError(context, "Updater: " + error);
             } finally {
                 RUNNING.set(false);
             }
         });
+    }
+
+    private static boolean isTransientNetworkFailure(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current instanceof UnknownHostException
+                    || current instanceof ConnectException
+                    || current instanceof NoRouteToHostException
+                    || current instanceof SocketTimeoutException) return true;
+        }
+        return false;
+    }
+
+    private static PendingIntent retryIntent(Context context) {
+        Intent intent = new Intent(context, UpdateCheckReceiver.class).setAction(UpdateCheckReceiver.ACTION_CHECK);
+        return PendingIntent.getBroadcast(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static void scheduleRetry(Context context) {
+        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (alarm == null) return;
+        long when = SystemClock.elapsedRealtime() + RETRY_INTERVAL_MS;
+        PendingIntent pending = retryIntent(context);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME, when, pending);
+        else alarm.set(AlarmManager.ELAPSED_REALTIME, when, pending);
+    }
+
+    private static void cancelRetry(Context context) {
+        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (alarm != null) alarm.cancel(retryIntent(context));
     }
 
     static boolean resumePendingInstall(Context context) {
