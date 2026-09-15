@@ -1,9 +1,12 @@
 'use strict';
 
 // Display-environment state shared by interactive and DreamService modes.
-// User/session presentation settings live in app-state-runtime.js.
+// Core consumers use AGCDSKY_ENVIRONMENT; classic bindings remain for late
+// compatibility layers during the broader refactor.
 const environmentState=window.AGCDSKY_APP_STATE;
+const environmentShell=window.AGCDSKY_SHELL;
 if(!environmentState)throw new Error('Shared application state unavailable');
+if(!environmentShell)throw new Error('Application shell service unavailable');
 let tickLevel=1,solarFactor=0;
 const DAY_MS=86400000,J1970=2440588,J2000=2451545,J0=.0009,RAD=Math.PI/180,SOLAR_FADE_HALF_MS=30*60*1000;
 function toJulian(date){return date.valueOf()/DAY_MS-.5+J1970}
@@ -24,9 +27,9 @@ function solarTimes(date,lat,lng){
 }
 function smoothstep(a,b,x){const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)}
 function currentSolarFactor(){
-  const lat=parseFloat(store.get('solarLat')),lon=parseFloat(store.get('solarLon'));
+  const lat=parseFloat(environmentShell.store.get('solarLat')),lon=parseFloat(environmentShell.store.get('solarLon'));
   if(!Number.isFinite(lat)||!Number.isFinite(lon))return 0;
-  const now=typeof accurateDate==='function'?accurateDate():new Date(),times=solarTimes(now,lat,lon);
+  const now=environmentShell.accurateDate(),times=solarTimes(now,lat,lon);
   if(!times)return 0;
   const half=SOLAR_FADE_HALF_MS,t=now.getTime(),rise=times.sunrise.getTime(),set=times.sunset.getTime();
   if(t<rise-half||t>set+half)return 0;
@@ -35,17 +38,17 @@ function currentSolarFactor(){
   return 1-smoothstep(set-half,set+half,t);
 }
 function requestSolarLocation(){
-  if(!navigator.geolocation){$('mode').textContent='SOLAR LOCATION UNAVAILABLE';environmentState.dreamMode='dim';applyDreamMode();return}
-  $('mode').textContent='REQUESTING LOCAL SOLAR POSITION';
+  if(!navigator.geolocation){environmentShell.element('mode').textContent='SOLAR LOCATION UNAVAILABLE';environmentState.dreamMode='dim';applyDreamMode();return}
+  environmentShell.element('mode').textContent='REQUESTING LOCAL SOLAR POSITION';
   navigator.geolocation.getCurrentPosition(p=>{
-    store.set('solarLat',String(p.coords.latitude));store.set('solarLon',String(p.coords.longitude));
-    environmentState.dreamMode='solar';applyDreamMode();$('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE';
+    environmentShell.store.set('solarLat',String(p.coords.latitude));environmentShell.store.set('solarLon',String(p.coords.longitude));
+    environmentState.dreamMode='solar';applyDreamMode();environmentShell.element('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE';
   },()=>{
-    environmentState.dreamMode='dim';applyDreamMode();$('mode').textContent='SOLAR NEEDS LOCATION PERMISSION';
+    environmentState.dreamMode='dim';applyDreamMode();environmentShell.element('mode').textContent='SOLAR NEEDS LOCATION PERMISSION';
   },{enableHighAccuracy:false,maximumAge:2592000000,timeout:12000});
 }
 function applyDim(){
-  if(!environmentState.dream){document.body.classList.toggle('dim',environmentState.dim);$('dsky').style.filter='';store.set('dim',environmentState.dim?'1':'0')}
+  if(!environmentState.dream){document.body.classList.toggle('dim',environmentState.dim);environmentShell.element('dsky').style.filter='';environmentShell.store.set('dim',environmentState.dim?'1':'0')}
 }
 function setDreamWindowBrightness(v){try{if(window.DreamBridge&&DreamBridge.setBrightness)DreamBridge.setBrightness(v)}catch(e){}}
 function updateDreamEnvironment(){
@@ -54,20 +57,33 @@ function updateDreamEnvironment(){
   else if(environmentState.dreamMode==='solar')solarFactor=currentSolarFactor();
   else solarFactor=0;
   const visual=.20+.80*solarFactor,sat=.62+.38*solarFactor;
-  $('dsky').style.filter=`brightness(${visual.toFixed(3)}) saturate(${sat.toFixed(3)})`;
+  environmentShell.element('dsky').style.filter=`brightness(${visual.toFixed(3)}) saturate(${sat.toFixed(3)})`;
   tickLevel=.08+.92*solarFactor;
   setDreamWindowBrightness(.05+.80*solarFactor);
 }
 function applyDreamMode(){
-  store.set('dreamMode',environmentState.dreamMode);store.set('dreamBright',environmentState.dreamMode==='bright'?'1':'0');
-  const b=$('dreambright');if(b)b.textContent=environmentState.dreamMode==='solar'?'DREAM BRIGHTNESS AUTO':'DREAM BRIGHTNESS '+environmentState.dreamMode.toUpperCase();
+  environmentShell.store.set('dreamMode',environmentState.dreamMode);environmentShell.store.set('dreamBright',environmentState.dreamMode==='bright'?'1':'0');
+  const b=environmentShell.element('dreambright');if(b)b.textContent=environmentState.dreamMode==='solar'?'DREAM BRIGHTNESS AUTO':'DREAM BRIGHTNESS '+environmentState.dreamMode.toUpperCase();
   if(environmentState.dream)updateDreamEnvironment();
 }
 function cycleDreamMode(){
   if(environmentState.dreamMode==='dim'){environmentState.dreamMode='bright';applyDreamMode()}
   else if(environmentState.dreamMode==='bright'){
-    const have=Number.isFinite(parseFloat(store.get('solarLat')))&&Number.isFinite(parseFloat(store.get('solarLon')));
-    if(have){environmentState.dreamMode='solar';applyDreamMode();$('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE'}else requestSolarLocation();
+    const have=Number.isFinite(parseFloat(environmentShell.store.get('solarLat')))&&Number.isFinite(parseFloat(environmentShell.store.get('solarLon')));
+    if(have){environmentState.dreamMode='solar';applyDreamMode();environmentShell.element('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE'}else requestSolarLocation();
   }else{environmentState.dreamMode='dim';applyDreamMode()}
 }
-function applyDisplayOnly(){document.body.classList.toggle('display-only',environmentState.displayOnly);if(!environmentState.dream)store.set('displayOnly',environmentState.displayOnly?'1':'0');const b=$('display');if(b)b.textContent=environmentState.displayOnly?'EXIT FULL DSKY DISPLAY':'FULL DSKY DISPLAY'}
+function applyDisplayOnly(){document.body.classList.toggle('display-only',environmentState.displayOnly);if(!environmentState.dream)environmentShell.store.set('displayOnly',environmentState.displayOnly?'1':'0');const b=environmentShell.element('display');if(b)b.textContent=environmentState.displayOnly?'EXIT FULL DSKY DISPLAY':'FULL DSKY DISPLAY'}
+
+window.AGCDSKY_ENVIRONMENT=Object.freeze({
+  solarTimes,
+  currentSolarFactor,
+  requestSolarLocation,
+  applyDim,
+  updateDreamEnvironment,
+  applyDreamMode,
+  cycleDreamMode,
+  applyDisplayOnly,
+  tickLevel:()=>tickLevel,
+  solarFactor:()=>solarFactor
+});

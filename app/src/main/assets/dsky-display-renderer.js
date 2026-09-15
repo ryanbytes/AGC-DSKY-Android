@@ -1,8 +1,8 @@
 'use strict';
 
-// Shared electroluminescent DSKY rendering primitives. These remain classic-
-// script globals because the app and later hardware-fidelity layers share one
-// physical display surface and must not maintain parallel render state.
+// Shared electroluminescent DSKY rendering primitives. The classic bindings are
+// retained as a compatibility surface for late hardware/geometry layers, while
+// core runtimes consume the explicit renderer service below.
 const SEG={0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',8:'abcdefg',9:'abcdfg'};
 const PATH={
   a:'M1.62 1.28 L11.72 1.28 L12.32 1.84 L11.70 2.42 L1.60 2.42 L1.02 1.84 Z',
@@ -25,7 +25,20 @@ function signGlyph(sign){
 }
 function renderDigits(el,text){let out='';String(text).split('').forEach((ch,i)=>out+=glyph(ch,i*14));el.innerHTML=out}
 function renderReg(el,text){text=String(text);let out=signGlyph(text[0]);text.slice(1).split('').forEach((ch,i)=>out+=glyph(ch,7+i*14));el.innerHTML=out}
-function set2(id,text){renderDigits($(id),String(text).padEnd(2,' ').slice(0,2))}
-function setReg(id,sign,digits){renderReg($(id),(sign||' ')+String(digits).padEnd(5,' ').slice(0,5))}
+function set2(id,text){renderDigits(document.getElementById(id),String(text).padEnd(2,' ').slice(0,2))}
+function setReg(id,sign,digits){renderReg(document.getElementById(id),(sign||' ')+String(digits).padEnd(5,' ').slice(0,5))}
 function setLamp(name,on){const x=document.querySelector(`[data-lamp="${name}"]`);if(x)x.classList.toggle('on',!!on)}
 function clearLamps(){document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.remove('on'));document.body.classList.remove('vn-flash-off','el-off')}
+
+// Dynamic wrappers deliberately resolve the current classic binding at call
+// time. dsky-geometry.js replaces glyph/renderDigits/renderReg later in parser
+// order; the service therefore follows that source-backed renderer refinement
+// instead of capturing stale pre-geometry function objects.
+window.AGCDSKY_RENDERER=Object.freeze({
+  renderDigits:(...args)=>renderDigits(...args),
+  renderReg:(...args)=>renderReg(...args),
+  set2:(...args)=>set2(...args),
+  setReg:(...args)=>setReg(...args),
+  setLamp:(...args)=>setLamp(...args),
+  clearLamps:(...args)=>clearLamps(...args)
+});

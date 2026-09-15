@@ -1,14 +1,35 @@
 'use strict';
 
-// Public application API/bootstrap. Lifecycle implementation is published by
-// AGCDSKY_LIFECYCLE; once runtime-transitions.js loads, public transition calls
-// dynamically delegate to that coordinator without replacing API functions.
+// Public application facade/bootstrap. This is the root of the explicit core
+// service graph; public transition methods retain stable identity and delegate
+// to runtime-transitions.js once that coordinator is published.
 const apiState=window.AGCDSKY_APP_STATE;
 const apiCore=window.AGCDSKY_CORE_SESSION;
+const apiShell=window.AGCDSKY_SHELL;
+const apiRenderer=window.AGCDSKY_RENDERER;
+const apiEnvironment=window.AGCDSKY_ENVIRONMENT;
+const apiAudio=window.AGCDSKY_AUDIO;
+const apiClock=window.AGCDSKY_CLOCK;
+const apiDisplay=window.AGCDSKY_DISPLAY;
+const apiSnapshot=window.AGCDSKY_SNAPSHOT;
 const apiLifecycle=window.AGCDSKY_LIFECYCLE;
 if(!apiState)throw new Error('Shared application state unavailable');
 if(!apiCore)throw new Error('Shared AGC core session unavailable');
-if(!apiLifecycle)throw new Error('AGC lifecycle service unavailable');
+for(const [name,service] of Object.entries({shell:apiShell,renderer:apiRenderer,environment:apiEnvironment,audio:apiAudio,clock:apiClock,display:apiDisplay,snapshot:apiSnapshot,lifecycle:apiLifecycle})){
+  if(!service)throw new Error(`AGC ${name} service unavailable`);
+}
+
+const apiServices=Object.freeze({
+  shell:apiShell,
+  renderer:apiRenderer,
+  environment:apiEnvironment,
+  audio:apiAudio,
+  clock:apiClock,
+  display:apiDisplay,
+  snapshot:apiSnapshot,
+  lifecycle:apiLifecycle
+});
+window.AGCDSKY_SERVICES=apiServices;
 
 function publicEnterAgc(){
   const runtime=window.AGCDSKY_RUNTIME;
@@ -17,7 +38,7 @@ function publicEnterAgc(){
     : apiLifecycle.enterAgc();
 }
 function publicEnterClock(){
-  const status=clockTimeLabel();
+  const status=apiShell.clockTimeLabel();
   const runtime=window.AGCDSKY_RUNTIME;
   return runtime&&typeof runtime.enterClock==='function'
     ? runtime.enterClock(status,true,'public AGCDSKY.enterClock')
@@ -25,22 +46,23 @@ function publicEnterClock(){
 }
 
 window.AGCDSKY={
+  services:apiServices,
   lifecycle:apiLifecycle,
-  agcChannel:onAgcChannel,
+  agcChannel:apiDisplay.onChannel,
   getCore:()=>apiCore.core,
   setAppVisible:apiLifecycle.setAppVisible,
   getMission:()=>apiState.selectedMission,
   enterClock:publicEnterClock,
   enterAgc:publicEnterAgc,
   appStatus:apiLifecycle.status,
-  saveAgcState,
-  clearSavedAgcState,
-  savedSnapshotInfo,
-  verifySnapshotRoundTrip,
-  scheduleAgcAutosave,
-  accurateTime,
-  accurateDate,
+  saveAgcState:apiSnapshot.save,
+  clearSavedAgcState:apiSnapshot.clear,
+  savedSnapshotInfo:apiSnapshot.savedInfo,
+  verifySnapshotRoundTrip:apiSnapshot.verifyRoundTrip,
+  scheduleAgcAutosave:apiSnapshot.scheduleAutosave,
+  accurateTime:apiShell.accurateTime,
+  accurateDate:apiShell.accurateDate,
   ntpStatus:()=>({...apiState.ntpStatus}),
-  nativeNtpStatus:updateNtpStatus
+  nativeNtpStatus:apiShell.updateNtpStatus
 };
-initializeAppShell(window.AGCDSKY);
+apiShell.initialize(window.AGCDSKY,apiServices);

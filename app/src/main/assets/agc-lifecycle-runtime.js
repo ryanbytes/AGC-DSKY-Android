@@ -1,54 +1,62 @@
 'use strict';
 
-// Authoritative AGC core/mode lifecycle. Shared session/presentation fields
-// live in AGCDSKY_APP_STATE; mutable core lifecycle fields live in the separate
-// sealed AGCDSKY_CORE_SESSION object. The implementation is private to this
-// module and is published only through the frozen AGCDSKY_LIFECYCLE service.
+// Authoritative AGC core/mode lifecycle. It composes explicit shell, renderer,
+// clock, display, and snapshot services rather than relying on parser-global
+// helper names. Core/session mutation remains private to this module.
 (() => {
   const lifecycleState=window.AGCDSKY_APP_STATE;
   const lifecycleCore=window.AGCDSKY_CORE_SESSION;
+  const lifecycleShell=window.AGCDSKY_SHELL;
+  const lifecycleRenderer=window.AGCDSKY_RENDERER;
+  const lifecycleClock=window.AGCDSKY_CLOCK;
+  const lifecycleDisplay=window.AGCDSKY_DISPLAY;
+  const lifecycleSnapshot=window.AGCDSKY_SNAPSHOT;
   if(!lifecycleState)throw new Error('Shared application state unavailable');
   if(!lifecycleCore)throw new Error('Shared AGC core session unavailable');
+  if(!lifecycleShell)throw new Error('Application shell service unavailable');
+  if(!lifecycleRenderer)throw new Error('DSKY renderer service unavailable');
+  if(!lifecycleClock)throw new Error('Phone clock service unavailable');
+  if(!lifecycleDisplay)throw new Error('AGC display service unavailable');
+  if(!lifecycleSnapshot)throw new Error('AGC snapshot service unavailable');
   if(window.AGCDSKY_LIFECYCLE)return;
 
-  function enterClock(status=clockTimeLabel(),preserveAgc=false){
-    cancelLampTest();
+  function enterClock(status=lifecycleShell.clockTimeLabel(),preserveAgc=false){
+    lifecycleClock.cancelLampTest();
     const canResume=preserveAgc&&lifecycleState.mode==='agc'&&lifecycleCore.core&&lifecycleCore.loadedMission===lifecycleState.selectedMission;
     if(lifecycleCore.core)lifecycleCore.core.stop();
-    if(canResume)saveAgcState('suspend for clock');
+    if(canResume)lifecycleSnapshot.save('suspend for clock');
     lifecycleCore.suspendedForClock=!!canResume;
-    lifecycleCore.pausedForVisibility=false;lifecycleState.mode='clock';rememberRunMode('clock');
-    $('agc').textContent='AGC MODE';$('mode').textContent=status;clearLamps();set2('prog','00');lifecycleState.verb='16';lifecycleState.noun='65';show(lifecycleState.verb,lifecycleState.noun);stopClockQueue();syncClockFace();
+    lifecycleCore.pausedForVisibility=false;lifecycleState.mode='clock';lifecycleShell.rememberRunMode('clock');
+    lifecycleShell.element('agc').textContent='AGC MODE';lifecycleShell.element('mode').textContent=status;lifecycleRenderer.clearLamps();lifecycleRenderer.set2('prog','00');lifecycleState.verb='16';lifecycleState.noun='65';lifecycleShell.show(lifecycleState.verb,lifecycleState.noun);lifecycleClock.stopQueue();lifecycleClock.syncFace();
   }
   function status(){
-    const meta=savedSnapshotInfo(),core=lifecycleCore.core;
-    return {mode:lifecycleState.mode,mission:lifecycleState.selectedMission,missionLabel:missionSpec().label,loadedMission:lifecycleCore.loadedMission,coreLoaded:!!core,
+    const display=lifecycleDisplay.status(),snapshot=lifecycleSnapshot.status(),core=lifecycleCore.core;
+    return {mode:lifecycleState.mode,mission:lifecycleState.selectedMission,missionLabel:lifecycleShell.missionSpec().label,loadedMission:lifecycleCore.loadedMission,coreLoaded:!!core,
       coreRunning:!!(core&&core.running),coreVersion:core?core.version():'not loaded',appVisible:lifecycleState.appVisible,
-      channels:{ch011:agcCh11,ch013:agcCh13,ch0163:agcCh163},display:JSON.parse(JSON.stringify(agcDisplay)),
-      snapshot:{saved:!!meta,meta,lastAction:lastSnapshotAction,error:lastSnapshotError,lastVerify:lastSnapshotVerify,currentFingerprint:core&&typeof core.snapshotFingerprint==='function'?core.snapshotFingerprint():null,lastAutosaveAt}};
+      channels:{...display.channels},display:display.display,snapshot};
   }
   async function enterAgc(){
     if(lifecycleState.dream||lifecycleState.mode==='agc-loading'||lifecycleState.mode==='agc')return;
-    cancelLampTest();
-    const selected=missionSpec();
+    lifecycleClock.cancelLampTest();
+    const selected=lifecycleShell.missionSpec();
     if(lifecycleCore.suspendedForClock&&lifecycleCore.core&&lifecycleCore.loadedMission===lifecycleState.selectedMission){
-      lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;rememberRunMode('agc');$('agc').textContent='AGC MODE';$('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}`;renderAgcSnapshot();
+      lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;lifecycleShell.rememberRunMode('agc');lifecycleShell.element('agc').textContent='AGC MODE';lifecycleShell.element('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}`;lifecycleDisplay.renderSnapshot();
       if(lifecycleState.appVisible){lifecycleCore.core.start(1);lifecycleCore.pausedForVisibility=false}else{lifecycleCore.pausedForVisibility=true}
       return;
     }
-    lifecycleState.mode='agc-loading';stopClockQueue();$('agc').textContent='...';$('mode').textContent=`LOADING ${selected.label} · AGC`;resetAgcFace();
+    lifecycleState.mode='agc-loading';lifecycleClock.stopQueue();lifecycleShell.element('agc').textContent='...';lifecycleShell.element('mode').textContent=`LOADING ${selected.label} · AGC`;lifecycleDisplay.resetFace();
     try{
       if(!lifecycleCore.core||lifecycleCore.loadedMission!==lifecycleState.selectedMission){
         if(lifecycleCore.core)lifecycleCore.core.stop();
-        lifecycleCore.core=new AgcCore({onChannelUpdate:onAgcChannel,onError:fail});
+        lifecycleCore.core=new AgcCore({onChannelUpdate:lifecycleDisplay.onChannel,onError:fail});
         await lifecycleCore.core.load({wasmUrl:'yaAGC.wasm',ropeUrl:selected.rope});
         lifecycleCore.loadedMission=lifecycleState.selectedMission;
       }else{
         lifecycleCore.core.reset();lifecycleCore.core.configureInputMasks();
       }
-      const restored=restoreSavedAgcState();
-      lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;rememberRunMode('agc');$('agc').textContent='AGC MODE';$('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}${restored?' · STATE RESTORED':''}`;
-      if(restored)renderAgcSnapshot();
+      const restored=lifecycleSnapshot.restore();
+      lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;lifecycleShell.rememberRunMode('agc');lifecycleShell.element('agc').textContent='AGC MODE';lifecycleShell.element('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}${restored?' · STATE RESTORED':''}`;
+      if(restored)lifecycleDisplay.renderSnapshot();
       if(lifecycleState.appVisible){lifecycleCore.core.start(1);lifecycleCore.pausedForVisibility=false}else{lifecycleCore.pausedForVisibility=true}
     }catch(error){fail(error)}
   }
@@ -60,7 +68,7 @@
     if(lifecycleState.mode!=='agc'||!lifecycleCore.core)return;
     if(!lifecycleState.appVisible){
       if(lifecycleCore.core.running){lifecycleCore.core.stop();lifecycleCore.pausedForVisibility=true}
-      saveAgcState('app background');
+      lifecycleSnapshot.save('app background');
       return;
     }
     if(lifecycleCore.pausedForVisibility){lifecycleCore.pausedForVisibility=false;lifecycleCore.core.start(1)}

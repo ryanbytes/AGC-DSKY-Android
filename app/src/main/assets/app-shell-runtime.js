@@ -1,8 +1,8 @@
 'use strict';
 
-// Application shell/configuration authority. Subsystem implementations live in
-// dedicated runtime files; mutable cross-runtime session fields live in
-// app-state-runtime.js instead of implicit classic-script globals.
+// Application shell/configuration authority. Core runtimes consume the explicit
+// AGCDSKY_SHELL service; classic helper bindings remain temporarily available to
+// late presentation/fidelity layers until that separate compatibility pass.
 const shellState=window.AGCDSKY_APP_STATE;
 if(!shellState)throw new Error('Shared application state unavailable');
 const q=new URLSearchParams(location.search);
@@ -23,7 +23,12 @@ const restoreAgcOnLoad=!shellState.dream&&store.get('runMode')!=='clock';
 let controlsTimer=0;
 
 function shellCore(){const session=window.AGCDSKY_CORE_SESSION;return session?session.core:null}
-function show(v,n){shellState.verb=v;shellState.noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
+function show(v,n){
+  shellState.verb=v;shellState.noun=n;
+  const renderer=window.AGCDSKY_RENDERER;
+  if(renderer){renderer.set2('verb',v.padStart(2,' '));renderer.set2('noun',n.padStart(2,' '));return}
+  if(typeof set2==='function'){set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
+}
 
 function accurateTime(){return Date.now()+(Number(shellState.ntpStatus.offsetMs)||0)}
 function accurateDate(){return new Date(accurateTime())}
@@ -35,24 +40,33 @@ function missionSpec(){return MISSIONS[shellState.selectedMission]}
 function applyMissionButton(){const b=$('mission');if(b)b.textContent=missionSpec().short}
 function rememberRunMode(next){if(!shellState.dream)store.set('runMode',next)}
 function cycleMission(){shellState.selectedMission='comanche055';store.set('agcMission','comanche055');applyMissionButton()}
-
 function showControls(){if(shellState.dream||shellState.displayOnly)return;document.body.classList.add('controls-visible');clearTimeout(controlsTimer);controlsTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),5500)}
 
 let appShellInitialized=false;
-function initializeAppShell(api){
+function initializeAppShell(api,services){
   if(appShellInitialized)return false;
+  const renderer=services&&services.renderer;
+  const environment=services&&services.environment;
+  const audio=services&&services.audio;
+  const clock=services&&services.clock;
+  const snapshot=services&&services.snapshot;
   if(!api
       || typeof api.enterAgc!=='function'
       || typeof api.enterClock!=='function'
       || typeof api.setAppVisible!=='function'
-      || typeof api.saveAgcState!=='function'){
-    throw new Error('Application API unavailable during shell initialization');
+      || typeof api.saveAgcState!=='function'
+      || !renderer||typeof renderer.set2!=='function'||typeof renderer.clearLamps!=='function'
+      || !environment||typeof environment.applyDim!=='function'||typeof environment.updateDreamEnvironment!=='function'
+      || !audio||typeof audio.ensure!=='function'||typeof audio.applySetting!=='function'||typeof audio.playBurst!=='function'
+      || !clock||typeof clock.tick!=='function'||typeof clock.syncFace!=='function'
+      || !snapshot||typeof snapshot.lastAutosaveAt!=='function'){
+    throw new Error('Application service graph unavailable during shell initialization');
   }
   appShellInitialized=true;
   let holdTimer=0;
   document.addEventListener('pointerdown',e=>{
     if(shellState.dream)return;
-    if(shellState.displayOnly){holdTimer=setTimeout(()=>{shellState.displayOnly=false;applyDisplayOnly();showControls()},1800);return}
+    if(shellState.displayOnly){holdTimer=setTimeout(()=>{shellState.displayOnly=false;environment.applyDisplayOnly();showControls()},1800);return}
     if(e.target.closest('[data-key],.app-controls'))return;
     holdTimer=setTimeout(showControls,620);
   },{passive:true});
@@ -60,29 +74,45 @@ function initializeAppShell(api){
   document.addEventListener('pointercancel',()=>clearTimeout(holdTimer),{passive:true});
   document.addEventListener('visibilitychange',()=>api.setAppVisible(!document.hidden));
   addEventListener('pagehide',()=>{const core=shellCore();if(shellState.mode==='agc'&&core){core.stop();api.saveAgcState('page hide')}});
-  $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;applyDim();showControls()});
-  $('dreambright').addEventListener('click',()=>{cycleDreamMode();showControls()});
-  $('sound').addEventListener('click',()=>{ensureAudio();shellState.tickSound=!shellState.tickSound;applyTickSound();if(shellState.tickSound)playRelayBurst(1);showControls()});
-  $('display').addEventListener('click',()=>{shellState.displayOnly=true;applyDisplayOnly()});
+  $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;environment.applyDim();showControls()});
+  $('dreambright').addEventListener('click',()=>{environment.cycleDreamMode();showControls()});
+  $('sound').addEventListener('click',()=>{audio.ensure();shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)audio.playBurst(1);showControls()});
+  $('display').addEventListener('click',()=>{shellState.displayOnly=true;environment.applyDisplayOnly()});
   $('agc').addEventListener('click',()=>{void api.enterAgc();showControls()});
   $('clock').addEventListener('click',()=>{void api.enterClock();showControls()});
-  document.addEventListener('pointerdown',()=>{if(shellState.tickSound)ensureAudio()},{passive:true});
+  document.addEventListener('pointerdown',()=>{if(shellState.tickSound)audio.ensure()},{passive:true});
 
   document.body.classList.toggle('dream',shellState.dream);
   if(!shellState.dream&&!shellState.displayOnly&&store.get('hinted')!=='1'){
     document.body.classList.add('first-run');
     setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200);
   }
-  loadNativeNtpStatus();applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(shellState.verb,shellState.noun);syncClockFace();
-  setInterval(tick,20);
+  loadNativeNtpStatus();environment.applyDim();environment.applyDreamMode();environment.applyDisplayOnly();audio.applySetting();applyMissionButton();renderer.clearLamps();renderer.set2('prog','00');show(shellState.verb,shellState.noun);clock.syncFace();
+  setInterval(clock.tick,20);
   setInterval(loadNativeNtpStatus,60000);
-  setInterval(()=>{const core=shellCore();if(shellState.mode==='agc'&&core&&core.running&&shellState.appVisible&&Date.now()-lastAutosaveAt>15000)api.saveAgcState('periodic autosave')},5000);
+  setInterval(()=>{const core=shellCore();if(shellState.mode==='agc'&&core&&core.running&&shellState.appVisible&&Date.now()-snapshot.lastAutosaveAt()>15000)api.saveAgcState('periodic autosave')},5000);
   if(!shellState.dream&&!restoreAgcOnLoad)rememberRunMode('clock');
   if(restoreAgcOnLoad)setTimeout(()=>{void api.enterAgc()},0);
   if(shellState.dream){
-    updateDreamEnvironment();setInterval(updateDreamEnvironment,15000);
+    environment.updateDreamEnvironment();setInterval(environment.updateDreamEnvironment,15000);
     const pos=[[0,0],[3,-2],[-3,2],[2,3],[-2,-3],[1,-1]],dsky=$('dsky');let i=0;
     setInterval(()=>{const p=pos[i++%pos.length];dsky.style.setProperty('--drift-x',p[0]+'px');dsky.style.setProperty('--drift-y',p[1]+'px')},60000);
   }
   return true;
 }
+
+window.AGCDSKY_SHELL=Object.freeze({
+  element:$,
+  store,
+  show,
+  accurateTime,
+  accurateDate,
+  clockTimeLabel,
+  updateNtpStatus,
+  loadNativeNtpStatus,
+  missionSpec,
+  rememberRunMode,
+  cycleMission,
+  showControls,
+  initialize:initializeAppShell
+});
