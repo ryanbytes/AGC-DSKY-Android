@@ -2,7 +2,9 @@
 
 // Public application facade/bootstrap. This is the root of the explicit core
 // service graph; public transition methods retain stable identity and delegate
-// to runtime-transitions.js once that coordinator is published.
+// to runtime-transitions.js once that coordinator is published. Late hardware,
+// recovery, and presentation services are resolved dynamically, never patched
+// onto the facade after bootstrap.
 const apiState=window.AGCDSKY_APP_STATE;
 const apiCore=window.AGCDSKY_CORE_SESSION;
 const apiShell=window.AGCDSKY_SHELL;
@@ -15,54 +17,20 @@ const apiSnapshot=window.AGCDSKY_SNAPSHOT;
 const apiLifecycle=window.AGCDSKY_LIFECYCLE;
 if(!apiState)throw new Error('Shared application state unavailable');
 if(!apiCore)throw new Error('Shared AGC core session unavailable');
-for(const [name,service] of Object.entries({shell:apiShell,renderer:apiRenderer,environment:apiEnvironment,audio:apiAudio,clock:apiClock,display:apiDisplay,snapshot:apiSnapshot,lifecycle:apiLifecycle})){
-  if(!service)throw new Error(`AGC ${name} service unavailable`);
-}
+for(const [name,service] of Object.entries({shell:apiShell,renderer:apiRenderer,environment:apiEnvironment,audio:apiAudio,clock:apiClock,display:apiDisplay,snapshot:apiSnapshot,lifecycle:apiLifecycle}))if(!service)throw new Error(`AGC ${name} service unavailable`);
 
-const apiServices=Object.freeze({
-  shell:apiShell,
-  renderer:apiRenderer,
-  environment:apiEnvironment,
-  audio:apiAudio,
-  clock:apiClock,
-  display:apiDisplay,
-  snapshot:apiSnapshot,
-  lifecycle:apiLifecycle
-});
+const apiServices=Object.freeze({shell:apiShell,renderer:apiRenderer,environment:apiEnvironment,audio:apiAudio,clock:apiClock,display:apiDisplay,snapshot:apiSnapshot,lifecycle:apiLifecycle});
 window.AGCDSKY_SERVICES=apiServices;
 
-function publicEnterAgc(){
-  const runtime=window.AGCDSKY_RUNTIME;
-  return runtime&&typeof runtime.enterAgc==='function'
-    ? runtime.enterAgc('public AGCDSKY.enterAgc')
-    : apiLifecycle.enterAgc();
-}
-function publicEnterClock(){
-  const status=apiShell.clockTimeLabel();
-  const runtime=window.AGCDSKY_RUNTIME;
-  return runtime&&typeof runtime.enterClock==='function'
-    ? runtime.enterClock(status,true,'public AGCDSKY.enterClock')
-    : apiLifecycle.enterClock(status,true);
-}
+function publicEnterAgc(){const runtime=window.AGCDSKY_RUNTIME;return runtime&&typeof runtime.enterAgc==='function'?runtime.enterAgc('public AGCDSKY.enterAgc'):apiLifecycle.enterAgc()}
+function publicEnterClock(){const status=apiShell.clockTimeLabel(),runtime=window.AGCDSKY_RUNTIME;return runtime&&typeof runtime.enterClock==='function'?runtime.enterClock(status,true,'public AGCDSKY.enterClock'):apiLifecycle.enterClock(status,true)}
+function publicHardware(){const service=window.AGCDSKY_HARDWARE;return service&&typeof service.snapshot==='function'?service.snapshot():null}
+function publicAudioStatus(){const service=window.AGCDSKY_AUDIO_RECOVERY;return service&&typeof service.status==='function'?service.status():{state:apiAudio.context()?apiAudio.context().state:'none',failures:0,circuitOpen:false}}
+const publicRelayShow=Object.freeze({
+  start:(...args)=>{const service=window.AGCDSKY_RELAY_SHOW;if(!service||typeof service.start!=='function')return false;return service.start(...args)},
+  stop:(...args)=>{const service=window.AGCDSKY_RELAY_SHOW;if(!service||typeof service.stop!=='function')return false;return service.stop(...args)},
+  active:()=>{const service=window.AGCDSKY_RELAY_SHOW;return !!(service&&typeof service.active==='function'&&service.active())}
+});
 
-window.AGCDSKY={
-  services:apiServices,
-  lifecycle:apiLifecycle,
-  agcChannel:apiDisplay.onChannel,
-  getCore:()=>apiCore.core,
-  setAppVisible:apiLifecycle.setAppVisible,
-  getMission:()=>apiState.selectedMission,
-  enterClock:publicEnterClock,
-  enterAgc:publicEnterAgc,
-  appStatus:apiLifecycle.status,
-  saveAgcState:apiSnapshot.save,
-  clearSavedAgcState:apiSnapshot.clear,
-  savedSnapshotInfo:apiSnapshot.savedInfo,
-  verifySnapshotRoundTrip:apiSnapshot.verifyRoundTrip,
-  scheduleAgcAutosave:apiSnapshot.scheduleAutosave,
-  accurateTime:apiShell.accurateTime,
-  accurateDate:apiShell.accurateDate,
-  ntpStatus:()=>({...apiState.ntpStatus}),
-  nativeNtpStatus:apiShell.updateNtpStatus
-};
+window.AGCDSKY={services:apiServices,lifecycle:apiLifecycle,agcChannel:apiDisplay.onChannel,getCore:()=>apiCore.core,setAppVisible:apiLifecycle.setAppVisible,getMission:()=>apiState.selectedMission,enterClock:publicEnterClock,enterAgc:publicEnterAgc,appStatus:apiLifecycle.status,saveAgcState:apiSnapshot.save,clearSavedAgcState:apiSnapshot.clear,savedSnapshotInfo:apiSnapshot.savedInfo,verifySnapshotRoundTrip:apiSnapshot.verifyRoundTrip,scheduleAgcAutosave:apiSnapshot.scheduleAutosave,accurateTime:apiShell.accurateTime,accurateDate:apiShell.accurateDate,ntpStatus:()=>({...apiState.ntpStatus}),nativeNtpStatus:apiShell.updateNtpStatus,hardware:publicHardware,audioStatus:publicAudioStatus,relayShow:publicRelayShow};
 apiShell.initialize(window.AGCDSKY,apiServices);

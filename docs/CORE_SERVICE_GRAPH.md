@@ -1,107 +1,132 @@
-# DSKY core runtime service graph
+# DSKY runtime service graph
 
 Date: 2026-09-15
 Branch: `refactor/dsky-core-service-graph`
 
 ## Scope
 
-This refactor converts the core DSKY runtime from parser-global cross-module calls to an explicit frozen service graph. It is intentionally one architectural change rather than a sequence of small extraction phases.
+The frontend runtime now has explicit ownership from application bootstrap through the late Block II hardware/presentation stack. Parser order remains significant where a late layer intentionally decorates a service implementation, but application modules no longer reach sideways through bare mutable helper bindings or patch public API methods.
 
-The production dependency direction is now:
+Core dependency direction:
 
 ```text
 AGCDSKY_APP_STATE / AGCDSKY_CORE_SESSION
+             |
+       AGCDSKY_COMPAT
+             |
+    +--------+---------+
+    |                  |
+AGCDSKY_SHELL     AGCDSKY_RENDERER
+    |                  |
+AGCDSKY_ENVIRONMENT    |
+    |                  |
+AGCDSKY_AUDIO <--------+
+    |                  |
+    +----> AGCDSKY_CLOCK
+    |
+    +----> AGCDSKY_DISPLAY
               |
-        AGCDSKY_COMPAT
+        AGCDSKY_SNAPSHOT
               |
-       AGCDSKY_RENDERER
+        AGCDSKY_LIFECYCLE
               |
-      +-------+-----------------------+
-      |                               |
-AGCDSKY_ENVIRONMENT ------------> AGCDSKY_AUDIO
-                                      |
-                          +-----------+-----------+
-                          |                       |
-                    AGCDSKY_CLOCK           AGCDSKY_DISPLAY
-                                                  |
-                                           AGCDSKY_SNAPSHOT
-                                                  |
-                    shell + renderer + clock + display + snapshot
-                                                  |
-                                         AGCDSKY_LIFECYCLE
-                                                  |
-                                         AGCDSKY_SERVICES
-                                                  |
-                                              AGCDSKY
+        AGCDSKY_SERVICES
+              |
+            AGCDSKY
 ```
 
-`AGCDSKY_SERVICES` is the frozen public service-graph root. `AGCDSKY` remains the application facade and keeps stable transition-method identity while `runtime-transitions.js` provides transition serialization after publication.
+Late physical/presentation services build on that graph:
 
-## Service ownership
+```text
+AGCDSKY_DISPLAY + AGCDSKY_CLOCK + AGCDSKY_AUDIO
+                    |
+             AGCDSKY_HARDWARE
+                    |
+          DSKY_RELAY_AUDIO
+                    |
+          DSKY_RELAY_VISUAL
+                    |
+   DSKY_RELAY_STRETCH_STABILITY
 
-- `AGCDSKY_RENDERER`: EL digit/register rendering and annunciator primitives.
-- `AGCDSKY_SHELL`: configuration, persistent store, mission lock, NTP-adjusted application time, shell controls, and startup bootstrap.
-- `AGCDSKY_ENVIRONMENT`: dim/Dream/solar presentation state and solar calculations.
-- `AGCDSKY_AUDIO`: relay-contact audio entry points and current audio context.
-- `AGCDSKY_CLOCK`: synthetic PHONE CLOCK relay state, queue, V35 lamp-test presentation, and clock rendering.
-- `AGCDSKY_DISPLAY`: real AGC output channels, relay/display state, rendering, relay-code decoding, and UI snapshot state.
-- `AGCDSKY_SNAPSHOT`: AGC snapshot persistence, restore, verification, autosave, and snapshot diagnostics.
-- `AGCDSKY_LIFECYCLE`: AGC core construction/loading, CLOCK suspension, same-core resume, visibility lifecycle, and composed application status.
-
-The public API routes channel output through `AGCDSKY_DISPLAY`, snapshot calls through `AGCDSKY_SNAPSHOT`, time/NTP calls through `AGCDSKY_SHELL`, and lifecycle calls through `AGCDSKY_LIFECYCLE`.
-
-## Audited compatibility boundary
-
-The late hardware/presentation stack is intentionally parser ordered. It contains source-backed fidelity layers that refine an already-established primitive, for example:
-
-- `dsky-geometry.js` replaces `glyph`, `signGlyph`, `renderDigits`, and `renderReg`;
-- `dsky-relay-matrix.js` replaces `relayDigit` for all 32 K1-K5 contact states;
-- `hardware-fidelity.js` wraps AGC channel decoders, AGC reset, PHONE CLOCK queue/cancel/lamp-test behavior, and relay audio;
-- relay identity/visual/personality layers successively wrap `emitTick`, channel-010 presentation, and crew-facing render primitives;
-- `background-audio-guard.js` wraps audio acquisition/output and snapshot UI restoration.
-
-Those assignments are no longer free-floating implementation ownership. `app-state-runtime.js` creates one frozen `AGCDSKY_COMPAT` registry before the service stack loads. Renderer, audio, clock, and display services register the historical names as accessor-backed slots owned by the service that defines the primitive.
-
-A late assignment such as:
-
-```js
-emitTick = wrappedEmitTick;
-decodeChannel10 = hardwareDecodeChannel10;
-renderDigits = apolloRenderDigits;
+AGCDSKY_AUDIO ---> AGCDSKY_AUDIO_RECOVERY
+AGCDSKY_HARDWARE ---> AGCDSKY_RELAY_SHOW
 ```
 
-therefore updates a versioned slot. Calls through `AGCDSKY_AUDIO`, `AGCDSKY_DISPLAY`, `AGCDSKY_CLOCK`, or `AGCDSKY_RENDERER` immediately dispatch through the current slot implementation. Parser order and middleware composition are preserved without requiring the core graph to rediscover ambient function bindings.
+## Ownership
 
-The compatibility registry does **not** mirror application fields such as `mode`, `verb`, `tickSound`, `agcCore`, or visibility state onto `window`. Those remain exclusively in `AGCDSKY_APP_STATE` and `AGCDSKY_CORE_SESSION`.
+- `AGCDSKY_RENDERER`: EL glyph/register/annunciator primitives.
+- `AGCDSKY_SHELL`: persistent configuration, NTP-adjusted time, controls and startup.
+- `AGCDSKY_ENVIRONMENT`: dim/Dream/solar presentation state.
+- `AGCDSKY_AUDIO`: relay audio implementation entry points and AudioContext ownership.
+- `AGCDSKY_CLOCK`: PHONE CLOCK backing digits/relay words, queue and V35 entry points.
+- `AGCDSKY_DISPLAY`: real AGC channel state, relay words, relay-word projection, UI snapshot reconstruction and raw-channel state.
+- `AGCDSKY_SNAPSHOT`: schema-1 persistence, restore, verification and autosave.
+- `AGCDSKY_LIFECYCLE`: AGC load/run/suspend/resume and visibility lifecycle.
+- `AGCDSKY_HARDWARE`: 120/20/40-ms relay timing, physical latch state, auxiliary relays, V35 sequence, hardware diagnostics, diagnostic extensions and settled-paint policy.
+- `AGCDSKY_AUDIO_RECOVERY`: WebAudio failure recovery/circuit breaker only. It no longer owns AGC display/snapshot reconstruction.
+- `AGCDSKY_RELAY_SHOW`: presentation choreography over the final physical relay handlers, with explicit task/state restoration.
 
-Read-only compatibility accessors are used for structures that late layers only consume (`DIGIT_RELAY`, `CLOCK_GROUPS`, `SEG`, relay backing objects). Mutable slots are used only where a late layer is known to replace the primitive. `relayDigit` is deliberately mutable because `dsky-relay-matrix.js` installs the schematic 32-state decoder after the base decimal mapping.
+## Compatibility boundary
 
-## Behavior intended to remain unchanged
+`AGCDSKY_COMPAT` is retained as one audited adapter for historical parser-visible names. Core services register owned slots with `mutable`, `accessor` or `readonly`. Late layers that deliberately decorate an implementation use `get()` and `replace(name, implementation, reason)`.
 
-- CM / Comanche 055 remains the only mission configuration.
-- `yaAGC.wasm` and `Comanche055.bin` inputs are unchanged.
-- channel `015` normal-key / KEYRST behavior is unchanged.
-- PRO remains a separate level-sensitive channel `032` input.
-- channel `010`, `011`, `013`, and `0163` display/discrete decoding is unchanged.
-- PHONE CLOCK synthetic relay/V35 behavior is unchanged.
+The Window accessors remain so external/debug/legacy code can still observe or replace documented compatibility names, but production late modules no longer perform bare assignments such as `emitTick = ...`, `decodeChannel10 = ...`, `set2 = ...`, or `lampTest = ...`.
+
+The completed late stack uses explicit registration:
+
+- drawing geometry replaces renderer slots through `AGCDSKY_COMPAT`;
+- schematic K1-K5 decoding replaces the display-owned `relayDigit` slot;
+- hardware fidelity replaces channel/clock/V35 implementation slots and publishes `AGCDSKY_HARDWARE`;
+- relay identity, visual timing, stretched stability and perceptual audio compose through service APIs and compatibility replacement slots;
+- background audio recovery wraps only audio slots;
+- Relay Show reads/writes state through shell/audio/clock/display/snapshot/hardware services plus audited clock compatibility state.
+
+No late module needs to replace `AGCDSKY.hardware`, `AGCDSKY.audioStatus`, global `setTimeout`, or another module's public service object. The public facade publishes stable dynamic delegates for hardware diagnostics, audio recovery status and Relay Show.
+
+## Display/snapshot authority
+
+`AGCDSKY_DISPLAY` now owns one relay-word projection function for normal channel 010 decode, hardware-settled relay commits, diagnostics and snapshot reconstruction. Snapshot restore reconstructs the visible DSKY from authoritative relay words rather than copying an independent display projection.
+
+This also fixes the previous duplicate background-guard row-3 reconstruction path: Block II relay row 3 maps C to `R2[4]` and D to `R3[0]`, and that mapping now exists in one place.
+
+## Hardware timing invariants
+
+The refactor intentionally preserves the physical model:
+
+- T4RUPT display cadence: 120 ms.
+- selected latching relay bank settle boundary: 20 ms.
+- dirty-bank start spacing: 40 ms.
+- PHONE CLOCK V35 hold: 5 seconds.
+- V/N flash quantum: 320 ms, four phases.
+- Comanche V35 relay 12: octal `0650`.
+- synthetic plus rows: 2, 5 and 7.
+
+Normal PHONE CLOCK hardware commits update physical/backing relay state at 20 ms but render from `clockDigits`; they no longer transiently paint the AGC display projection. STRETCHED mode suppresses only the crew-facing settled paint through an explicit hardware policy while physical latch timing remains unchanged.
+
+## Behavior preserved
+
+- CM / Comanche 055 only.
+- `yaAGC.wasm` and `Comanche055.bin` unchanged.
+- normal keys use channel `015` plus KEYRST.
+- PRO remains level-sensitive channel `032`.
+- channels `010`, `011`, `013`, `0163` retain their Block II mappings.
 - snapshot schema remains schema 1.
-- CLOCK suspension still saves resumable state and AGC return resumes the same loaded core when valid.
-- Dream mode remains isolated from real AGC startup and relay audio.
-- classic `window.enterAgc` / `window.enterClock` transition globals remain absent.
-- the 20-ms settled relay-bank boundary in `hardware-fidelity.js` remains authoritative.
+- CLOCK suspension saves resumable state and AGC return resumes the same loaded core when valid.
+- Dream mode never starts real AGC.
+- classic `window.enterAgc` / `window.enterClock` globals remain absent.
 
 ## Regression gates
 
-`tools/core-service-graph-smoke.js` now verifies both the frozen service graph and the single compatibility boundary. Renderer, audio, phone-clock, and AGC-display smokes perform behavioral late-replacement checks and require the corresponding compatibility version to increment.
-
-Mapping/V35/output-path gates read the current service-owned names rather than deleted `app.js` or pre-refactor global implementations. The mapping gate also verifies that `relayDigit` remains a mutable display-owned slot so the schematic relay matrix can install its 32-state decoder without throwing under strict mode.
-
-State-ownership gates continue to reject Window mirrors for application/core fields. The presence of `Object.defineProperty` is allowed only as part of the named `AGCDSKY_COMPAT` registry used for service-owned compatibility slots.
-
-The service-graph gates use bare-call detection where needed, so `foo()` is rejected as an ambient core dependency while `service.foo()` remains valid.
+The canonical local build runs the core service, fidelity compatibility, and late-service boundary gates. The late boundary gate rejects direct production assignments to owned compatibility implementations and rejects public-API/global-timer monkey-patching. Dedicated tests cover WebAudio recovery, V35 policy/model, relay output mapping, and stretched visual monotonicity under the new service contracts.
 
 ## Verification boundary
 
-The branch records source-level regression gates and the canonical local build wiring. The full `tools/build-local.sh` Gradle/APK/device path still must be run from a complete recursive checkout with the required Android SDK and pinned `vendor/webAGC` submodule.
+Source syntax and targeted Node smoke tests can be run independently. The authoritative build remains:
 
-Do not treat source inspection alone as proof that the current regular or Fire APK builds or passes device smoke testing.
+```bash
+bash tools/build-local.sh
+```
+
+That command requires a complete recursive checkout, JDK 17+, Node 18+, stable Gradle 9.5+, Android compile SDK 37, Build Tools 36.0.0, and the pinned `vendor/webAGC` submodule at `0575ea7a1231e3948bae7d2c22a6ac146da0c38d`.
+
+Source inspection or isolated smoke execution is not proof that the regular/Fire APKs assemble or pass device tests; the full local build/device path must still be run from that environment.
