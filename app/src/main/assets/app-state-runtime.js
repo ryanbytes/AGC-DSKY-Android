@@ -15,6 +15,7 @@
     dim:false,
     tickSound:true,
     displayOnly:false,
+    appVisible:!document.hidden,
     ntpStatus:{
       server:'time.cloudflare.com',
       offsetMs:0,
