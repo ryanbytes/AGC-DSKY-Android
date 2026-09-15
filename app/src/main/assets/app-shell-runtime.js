@@ -22,6 +22,7 @@ store.set('agcMission','comanche055');
 const restoreAgcOnLoad=!shellState.dream&&store.get('runMode')!=='clock';
 let controlsTimer=0;
 
+function shellCore(){const session=window.AGCDSKY_CORE_SESSION;return session?session.core:null}
 function show(v,n){shellState.verb=v;shellState.noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
 
 function accurateTime(){return Date.now()+(Number(shellState.ntpStatus.offsetMs)||0)}
@@ -51,7 +52,7 @@ function initializeAppShell(){
   document.addEventListener('pointerup',()=>clearTimeout(holdTimer),{passive:true});
   document.addEventListener('pointercancel',()=>clearTimeout(holdTimer),{passive:true});
   document.addEventListener('visibilitychange',()=>setAppVisible(!document.hidden));
-  addEventListener('pagehide',()=>{if(shellState.mode==='agc'&&agcCore){agcCore.stop();saveAgcState('page hide')}});
+  addEventListener('pagehide',()=>{const core=shellCore();if(shellState.mode==='agc'&&core){core.stop();saveAgcState('page hide')}});
   $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;applyDim();showControls()});
   $('dreambright').addEventListener('click',()=>{cycleDreamMode();showControls()});
   $('sound').addEventListener('click',()=>{ensureAudio();shellState.tickSound=!shellState.tickSound;applyTickSound();if(shellState.tickSound)playRelayBurst(1);showControls()});
@@ -68,7 +69,7 @@ function initializeAppShell(){
   loadNativeNtpStatus();applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(shellState.verb,shellState.noun);syncClockFace();
   setInterval(tick,20);
   setInterval(loadNativeNtpStatus,60000);
-  setInterval(()=>{if(shellState.mode==='agc'&&agcCore&&agcCore.running&&shellState.appVisible&&Date.now()-lastAutosaveAt>15000)saveAgcState('periodic autosave')},5000);
+  setInterval(()=>{const core=shellCore();if(shellState.mode==='agc'&&core&&core.running&&shellState.appVisible&&Date.now()-lastAutosaveAt>15000)saveAgcState('periodic autosave')},5000);
   if(!shellState.dream&&!restoreAgcOnLoad)rememberRunMode('clock');
   if(restoreAgcOnLoad)setTimeout(()=>enterAgc(),0);
   if(shellState.dream){
