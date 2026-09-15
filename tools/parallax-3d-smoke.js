@@ -27,9 +27,11 @@ for(const token of [
   'top:5.1075%',
   'width:33.125%',
   'height:49.0204%',
-  '@media (prefers-reduced-motion:reduce)'
+  '@media (prefers-reduced-motion:reduce)',
+  'body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel',
+  'body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen'
 ]) assert(css.includes(token),`parallax CSS missing ${token}`);
-for(const mode of [':not(.dream)',':not(.display-only)',':not(.screen-only)'])
+for(const mode of [':not(.dream)',':not(.display-only)'])
   assert(css.includes(mode),`parallax CSS does not exclude ${mode}`);
 
 for(const token of [
@@ -41,11 +43,13 @@ for(const token of [
   "{passive:true}",
   "body.classList.contains('dream')",
   "body.classList.contains('display-only')",
-  "body.classList.contains('screen-only')",
   "glassSheen.className = 'el-glass-sheen'",
   'window.AGCDSKY_PARALLAX = controller',
   'window.AGCDSKY.parallax3d = controller'
 ]) assert(js.includes(token),`parallax controller missing ${token}`);
+
+const allowedBody=js.match(/function presentationAllowed\(\) \{([\s\S]*?)\n  \}/)?.[1]||'';
+assert(!allowedBody.includes("classList.contains('screen-only')"),'screen-only must keep parallax enabled outside Dream mode');
 
 for(const forbidden of [
   'preventDefault(',
@@ -73,9 +77,11 @@ assert(css.includes('calc(var(--dsky-parallax-x) * 1.25px)'),'key foreground sep
 assert(css.includes('calc(var(--dsky-parallax-x) * -.55px)'),'recess counter-parallax is too weak');
 assert(css.includes('calc(var(--dsky-parallax-x) * -1.70px)'),'EL phosphor counter-parallax is too weak');
 assert(css.includes('calc(var(--dsky-parallax-x) * 2.40px)'),'EL glass foreground parallax is too weak');
+assert(css.includes('calc(var(--dsky-parallax-x) * -2.65px)'),'fullscreen EL phosphor counter-parallax is too weak');
+assert(css.includes('calc(var(--dsky-parallax-x) * 3.60px)'),'fullscreen EL glass foreground parallax is too weak');
 assert(css.includes('.el-glass-sheen::before'),'EL glass edge occlusion layer missing');
 assert(!css.includes('animation:'),'parallax layer must not introduce autonomous looping animation');
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  visible tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
-console.log('  strong EL phosphor/glass separation, recess, annunciator and key depth retained within presentation-only boundary');
+console.log('  screen-only EL retains strong phosphor/glass separation while Dream remains flat');
