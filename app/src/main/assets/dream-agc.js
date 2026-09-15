@@ -1,7 +1,9 @@
 'use strict';
 (() => {
   const dreamState = window.AGCDSKY_APP_STATE;
+  const dreamCore = window.AGCDSKY_CORE_SESSION;
   if (!dreamState) throw new Error('Shared application state unavailable');
+  if (!dreamCore) throw new Error('Shared AGC core session unavailable');
   const params = new URLSearchParams(location.search);
   const dreamAgc = params.get('dream') === '1' && params.get('agc') === '1';
   if (!dreamAgc) return;
@@ -29,7 +31,7 @@
       if (!payload || payload.schema !== 1 || payload.mission !== dreamState.selectedMission || !payload.core) {
         return false;
       }
-      agcCore.importSnapshot(payload.core);
+      dreamCore.core.importSnapshot(payload.core);
       applySnapshotUi(payload.ui);
       return true;
     } catch (error) {
@@ -40,7 +42,7 @@
 
   function failDreamAgc(error) {
     console.error('Dream AGC core stopped', error);
-    try { if (agcCore) agcCore.stop(); } catch (_) {}
+    try { if (dreamCore.core) dreamCore.core.stop(); } catch (_) {}
     dreamState.mode = 'dream-agc-error';
     stopClockQueue();
     resetAgcFace();
@@ -56,21 +58,21 @@
 
     try {
       const selected = missionSpec();
-      // The dream owns a separate core. It may clone the last saved interactive
-      // state, but it never saves back, changes runMode, or alters the live app.
-      if (agcCore) agcCore.stop();
-      agcCore = new AgcCore({
+      // The dream owns this page's core session. It may clone the last saved
+      // interactive AGC state, but it never saves back or changes runMode.
+      if (dreamCore.core) dreamCore.core.stop();
+      dreamCore.core = new AgcCore({
         onChannelUpdate: routeDreamChannel,
         onError: failDreamAgc
       });
-      await agcCore.load({ wasmUrl: 'yaAGC.wasm', ropeUrl: selected.rope });
-      agcLoadedMission = dreamState.selectedMission;
+      await dreamCore.core.load({ wasmUrl: 'yaAGC.wasm', ropeUrl: selected.rope });
+      dreamCore.loadedMission = dreamState.selectedMission;
       const restored = restoreDreamClone();
       dreamState.mode = 'dream-agc';
       if (restored) renderAgcSnapshot();
       const status = $('mode');
-      if (status) status.textContent = `${selected.label} · DREAM · ${agcCore.version()}${restored ? ' · STATE CLONED' : ''}`;
-      if (!document.hidden) agcCore.start(1);
+      if (status) status.textContent = `${selected.label} · DREAM · ${dreamCore.core.version()}${restored ? ' · STATE CLONED' : ''}`;
+      if (!document.hidden) dreamCore.core.start(1);
       else stoppedForVisibility = true;
     } catch (error) {
       failDreamAgc(error);
@@ -78,20 +80,20 @@
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (!agcCore || (dreamState.mode !== 'dream-agc' && dreamState.mode !== 'dream-agc-loading')) return;
+    if (!dreamCore.core || (dreamState.mode !== 'dream-agc' && dreamState.mode !== 'dream-agc-loading')) return;
     if (document.hidden) {
-      if (agcCore.running) {
-        agcCore.stop();
+      if (dreamCore.core.running) {
+        dreamCore.core.stop();
         stoppedForVisibility = true;
       }
     } else if (stoppedForVisibility && dreamState.mode === 'dream-agc') {
       stoppedForVisibility = false;
-      agcCore.start(1);
+      dreamCore.core.start(1);
     }
   });
 
   addEventListener('pagehide', () => {
-    try { if (agcCore) agcCore.stop(); } catch (_) {}
+    try { if (dreamCore.core) dreamCore.core.stop(); } catch (_) {}
   });
 
   startDreamAgc();
