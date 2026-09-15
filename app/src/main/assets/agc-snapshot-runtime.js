@@ -40,11 +40,11 @@ function verifySnapshotRoundTrip(){
     const snap=agcCore.exportSnapshot(),before=snap.fingerprint||agcCore.snapshotFingerprint?.();
     agcCore.importSnapshot(snap);applySnapshotUi(ui);const after=agcCore.snapshotFingerprint?.();
     const ok=!before||before===after;lastSnapshotVerify={ok,before,after,timestamp:Date.now()};
-    if(wasRunning&&appVisible)agcCore.start(1);renderAgcSnapshot();
+    if(wasRunning&&snapshotState.appVisible)agcCore.start(1);renderAgcSnapshot();
     return {...lastSnapshotVerify};
   }catch(error){
     lastSnapshotVerify={ok:false,error:String(error&&error.message||error),timestamp:Date.now()};
-    if(wasRunning&&appVisible&&!agcCore.running)agcCore.start(1);
+    if(wasRunning&&snapshotState.appVisible&&!agcCore.running)agcCore.start(1);
     return {...lastSnapshotVerify};
   }
 }
