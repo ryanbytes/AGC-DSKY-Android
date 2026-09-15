@@ -171,3 +171,59 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
     inset calc(var(--dsky-parallax-x) * .95px) calc(var(--dsky-parallax-y) * .90px) .36vmin rgba(0,0,0,.40),
     inset calc(var(--dsky-parallax-x) * -.40px) calc(var(--dsky-parallax-y) * -.36px) .24vmin rgba(255,255,255,.13);
 }
+
+
+/* Screen-only is the full-handset EL presentation, not a flat accessibility
+   mode. Keep Dream flat, but preserve a conspicuous phosphor-vs-glass depth
+   cue when the user expands the EL face to the whole screen. */
+body.parallax-3d.screen-only:not(.dream):not(.display-only) #app{
+  perspective:520px!important;
+  perspective-origin:50% 50%!important;
+}
+body.parallax-3d.screen-only:not(.dream):not(.display-only) .dsky{
+  transform:translate(-50%,-50%)!important;
+  transform-style:preserve-3d!important;
+  will-change:transform!important;
+}
+body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel{
+  transform:
+    translate(-50%,-50%)
+    translate3d(
+      calc(var(--dsky-parallax-x) * -2.65px),
+      calc(var(--dsky-parallax-y) * -2.40px),
+      -28px
+    )!important;
+  transform-style:preserve-3d!important;
+  will-change:transform!important;
+}
+body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen{
+  display:block!important;
+  left:50%!important;
+  top:50%!important;
+  width:min(100vw,calc(100vh * 106 / 182.356))!important;
+  height:min(100vh,calc(100vw * 182.356 / 106))!important;
+  transform:
+    translate(-50%,-50%)
+    translate3d(
+      calc(var(--dsky-parallax-x) * 3.60px),
+      calc(var(--dsky-parallax-y) * 3.25px),
+      42px
+    )!important;
+  z-index:9!important;
+  opacity:.90!important;
+  background:
+    linear-gradient(112deg,transparent 2%,rgba(255,255,255,.025) 17%,rgba(255,255,255,.30) 27%,rgba(255,255,255,.055) 36%,transparent 49%),
+    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.23),rgba(220,237,228,.055) 20%,transparent 46%),
+    linear-gradient(180deg,rgba(255,255,255,.040),transparent 15%,transparent 76%,rgba(0,0,0,.11))!important;
+  box-shadow:
+    inset calc(var(--dsky-parallax-x) * 1.55px) calc(var(--dsky-parallax-y) * 1.45px) .78vmin rgba(0,0,0,.52),
+    inset calc(var(--dsky-parallax-x) * -.72px) calc(var(--dsky-parallax-y) * -.66px) .42vmin rgba(255,255,255,.20),
+    inset 0 0 .22vmin rgba(255,255,255,.18),
+    inset 0 0 1.0vmin rgba(0,0,0,.16)!important;
+}
+body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen::before{
+  border:.12vmin solid rgba(215,228,219,.20)!important;
+  box-shadow:
+    inset calc(var(--dsky-parallax-x) * 1.30px) calc(var(--dsky-parallax-y) * 1.20px) .48vmin rgba(0,0,0,.52),
+    inset calc(var(--dsky-parallax-x) * -.55px) calc(var(--dsky-parallax-y) * -.48px) .30vmin rgba(255,255,255,.18)!important;
+}
