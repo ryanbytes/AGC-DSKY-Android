@@ -2,6 +2,32 @@
 
 Last updated: 2026-09-14
 
+## 2026-09-14 DSKY runtime refactor phase 30
+
+`startup-defaults.js` had become a catch-all for four unrelated boot concerns: persistent run-mode defaulting, page-owned browser-resource teardown, chunked AGC snapshot transport, and camera console-error classification.
+
+Phase 30 narrows that startup ownership without changing AGC/DSKY semantics:
+
+- `startup-defaults.js` now owns only the first-run CLOCK persistence default;
+- `page-resource-lifecycle.js` owns timer/interval/animation-frame tracking, WebAudio wrapper cleanup, media/core teardown, and `AGCLifecycle`;
+- `agc-snapshot-codec.js` owns only the existing chunked `AgcCore` snapshot encoding/decoding path and preserves snapshot schema 1;
+- `camera-error-policy.js` owns only SXT camera console classification, downgrading expected permission/lifecycle outcomes while preserving unexpected failures as errors;
+- parser order is locked as `agc-core.js -> spacecraft-default.js -> startup-defaults.js -> page-resource-lifecycle.js -> agc-snapshot-codec.js -> camera-error-policy.js -> app-state-runtime.js`, so `AgcCore` exists before the codec patch, page-resource wrappers still install before application timers/audio work, and camera classification installs before `optics.js` can report camera failures;
+- `tools/startup-runtime-smoke.js` source-gates those ownership boundaries and behaviorally checks first-run mode defaulting, tracked resource cleanup, AudioContext closed-state removal, snapshot round-trip behavior, and camera-error classification;
+- `tools/audio-recovery-smoke.js` now reads `page-resource-lifecycle.js` directly for the closed-AudioContext lifecycle invariant instead of coupling that test to the old catch-all file;
+- `tools/asset-reference-smoke.js` requires the new startup modules and their parser order;
+- `tools/build-local.sh` includes the new startup runtime smoke in the canonical local gate.
+
+No channel mapping, Pinball key code, held-PRO behavior, relay model, display rendering, yaAGC startup sequence, Comanche rope input, or persisted snapshot schema changed in this phase.
+
+Observed in this execution environment against the phase-30 source staged from the committed branch:
+
+- `startup-defaults.js`, `page-resource-lifecycle.js`, `agc-snapshot-codec.js`, `camera-error-policy.js`, and `tools/startup-runtime-smoke.js` all passed `node --check`;
+- `node tools/startup-runtime-smoke.js` passed, including the snapshot memory round trip and page-resource/camera policy scenarios;
+- GitHub compare reports phase 30 as two commits ahead of phase 29 with only the intended startup/runtime-gate files changed.
+
+These are source-level checks only. The current execution environment still lacks the complete recursive checkout/Android SDK build path and its shell cannot resolve GitHub, so `bash tools/build-local.sh`, Gradle regular/Fire builds, APK verification, and Android/WebView/device smokes have **not** been run for this phase. Do not upgrade those gates to verified from the source smoke.
+
 ## 2026-09-14 DSKY runtime refactor phase 1
 
 A second audit caught an important detail the first pass missed: `index.html` does not list `flight-hardware-ui.js` or `keyboard-electrical-interlock.js` directly, but the statically loaded `cm-mode.js` installs both scripts dynamically from its window-load handler. They are therefore part of the active CM runtime. The earlier Phase-1 note that treated them as dormant was wrong and has been removed.
