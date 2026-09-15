@@ -25,7 +25,7 @@ for(const [name,source,forbidden] of [
   ['agc-api-runtime.js',api,["agcCore"]]
 ])for(const token of forbidden)assert(!source.includes(token),`${name} retained implicit state/core expression: ${token}`);
 assert(shell.includes('shellState.appVisible')&&shell.includes('function shellCore()')&&shell.includes('window.AGCDSKY_CORE_SESSION'),'shell does not use explicit visibility/core session');
-assert(geometry.includes("geometryState.mode==='agc'")&&geometry.includes('show(geometryState.verb,geometryState.noun)')&&geometry.includes("geometryState.mode!=='clock'"),'geometry startup/repaint does not read shared mode/command state');
+assert(geometry.includes("geometryState.mode==='agc'")&&geometry.includes('shell.show(geometryState.verb,geometryState.noun)')&&geometry.includes("geometryState.mode!=='clock'"),'geometry startup/repaint does not use explicit shared mode/command state through shell service');
 assert(identity.includes('!identityState.tickSound'),'relay identity audio does not read shared audio preference');
 assert(visual.includes('!visualState.tickSound'),'relay visual layer does not read shared audio preference');
 for(const [name,source,alias] of [['snapshot',snapshot,'snapshotCore'],['lifecycle',life,'lifecycleCore'],['API',api,'apiCore'],['relay show',show,'showCore'],['Dream AGC',dream,'dreamCore']])assert(source.includes(alias)&&source.includes('window.AGCDSKY_CORE_SESSION'),`${name} does not bind explicit core session`);

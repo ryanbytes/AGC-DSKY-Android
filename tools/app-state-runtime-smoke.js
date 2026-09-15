@@ -49,7 +49,7 @@ for(const [name,alias] of expected){
   const s=read(name);assert(s.includes(`const ${alias}`)&&s.includes('window.AGCDSKY_APP_STATE'),`${name} does not bind explicit shared app state`);
 }
 const coreExpected=[['agc-snapshot-runtime.js','snapshotCore'],['agc-lifecycle-runtime.js','lifecycleCore'],['agc-api-runtime.js','apiCore'],['relay-show.js','showCore'],['dream-agc.js','dreamCore']];
-for(const [name,alias] of coreExpected){const s=read(name);assert(s.includes(`const ${alias}`)&&s.includes('window.AGCDSKY_CORE_SESSION'),`${name} does not bind explicit AGC core session`)}
+for(const [name,alias] of coreExpected){const s=read(name);assert(s.includes(`${alias}=window.AGCDSKY_CORE_SESSION`)||s.includes(`${alias} = window.AGCDSKY_CORE_SESSION`),`${name} does not bind explicit AGC core session`)}
 const shell=read('app-shell-runtime.js');assert(shell.includes('function shellCore()')&&shell.includes('window.AGCDSKY_CORE_SESSION'),'shell does not dynamically resolve the explicit core session');
 for(const forbidden of ['let selectedMission=','let verb=','let noun=','let mode=','let ntpStatus=','let dreamMode=','let dim=','let tickSound=','let displayOnly=','let appVisible=','let agcCore=','let agcLoadedMission=','let agcSuspendedForClock=','let agcPausedForVisibility='])assert(!shell.includes(forbidden),`shell regained implicit session/core state: ${forbidden}`);
 console.log('app state runtime smoke: PASS');
