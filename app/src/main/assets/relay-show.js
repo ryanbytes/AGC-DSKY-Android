@@ -17,7 +17,9 @@
   const button = document.getElementById('relay-show');
   if (!button || !window.AGCDSKY || typeof window.AGCDSKY.hardware !== 'function') return;
   const showState = window.AGCDSKY_APP_STATE;
+  const showCore = window.AGCDSKY_CORE_SESSION;
   if (!showState) throw new Error('Shared application state unavailable');
+  if (!showCore) throw new Error('Shared AGC core session unavailable');
 
   const ROWS_DOWN = Object.freeze([12,11,10,9,8,7,6,5,4,3,2,1]);
   const DISPLAY_ROWS_DOWN = Object.freeze([11,10,9,8,7,6,5,4,3,2,1]);
@@ -157,8 +159,8 @@
     return {
       mode: showState.mode,
       modeLabel: document.getElementById('mode') ? document.getElementById('mode').textContent : '',
-      coreRunning: !!(agcCore && agcCore.running),
-      pausedForVisibility: !!agcPausedForVisibility,
+      coreRunning: !!(showCore.core && showCore.core.running),
+      pausedForVisibility: !!showCore.pausedForVisibility,
       tickSound: showState.tickSound,
       verb: showState.verb,
       noun: showState.noun,
@@ -177,16 +179,17 @@
     if (showState.mode === 'agc-loading' || showState.mode === 'relay-show' || showState.dream) throw new Error('relay-show-unavailable');
 
     // Capture the scheduler state before pausing it.  The settled DSKY relay
-    // snapshot is intentionally taken after the stop, but agcCore.stop() clears
-    // agcCore.running, so reading that flag afterward would make restore think
+    // snapshot is intentionally taken after the stop, but core.stop() clears
+    // core.running, so reading that flag afterward would make restore think
     // the AGC had already been idle and leave the DSKY frozen after the show.
-    const coreWasRunning = !!(showState.mode === 'agc' && agcCore && agcCore.running);
+    const core=showCore.core;
+    const coreWasRunning = !!(showState.mode === 'agc' && core && core.running);
 
     cancelLampTest();
-    if (showState.mode === 'agc' && agcCore) {
+    if (showState.mode === 'agc' && core) {
       // Durable checkpoint in case Android kills the process during a show.
       try { saveAgcState('relay show checkpoint'); } catch (_) {}
-      agcCore.stop();
+      core.stop();
     }
     stopClockQueue();
     lampTestActive = true;
@@ -322,27 +325,28 @@
       // instead of waiting for a later delta to make the clock visibly move.
       stopClockQueue();
       syncClockFace();
-      agcPausedForVisibility = false;
-    } else if (saved.mode === 'agc' && agcCore) {
+      showCore.pausedForVisibility = false;
+    } else if (saved.mode === 'agc' && showCore.core) {
+      const core=showCore.core;
       if (saved.coreRunning) {
         if (showState.appVisible) {
           // Mark as resumable before start(). If start ever throws, a later
           // visibility transition still has a recovery path instead of leaving
           // the stopped core indistinguishable from an intentional pause.
-          agcPausedForVisibility = true;
+          showCore.pausedForVisibility = true;
           try {
-            agcCore.start(1);
-            agcPausedForVisibility = false;
+            core.start(1);
+            showCore.pausedForVisibility = false;
           } catch (error) {
             if (!restoreError) restoreError = error;
           }
         } else {
           // While RELAY SHOW owns mode, setAppVisible(false) cannot mark the AGC
           // as visibility-paused. Do it here so foregrounding resumes the core.
-          agcPausedForVisibility = true;
+          showCore.pausedForVisibility = true;
         }
       } else {
-        agcPausedForVisibility = !!saved.pausedForVisibility;
+        showCore.pausedForVisibility = !!saved.pausedForVisibility;
       }
     }
 
