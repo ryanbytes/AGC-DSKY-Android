@@ -40,16 +40,22 @@ for(const token of [
   "dsky.addEventListener('pointermove'",
   "dsky.addEventListener('pointerdown'",
   "window.addEventListener('deviceorientation'",
+  "installNativeQuaternionTap()",
+  "api.nativePhoneQuaternion = wrapped",
+  "'native-quaternion'",
+  "nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS",
   "{passive:true}",
   "body.classList.contains('dream')",
   "body.classList.contains('display-only')",
   "glassSheen.className = 'el-glass-sheen'",
   'window.AGCDSKY_PARALLAX = controller',
-  'window.AGCDSKY.parallax3d = controller'
+  'api.parallax3d = controller'
 ]) assert(js.includes(token),`parallax controller missing ${token}`);
 
 const allowedBody=js.match(/function presentationAllowed\(\) \{([\s\S]*?)\n  \}/)?.[1]||'';
 assert(!allowedBody.includes("classList.contains('screen-only')"),'screen-only must keep parallax enabled outside Dream mode');
+assert(js.indexOf('installNativeQuaternionTap();')>js.indexOf("window.addEventListener('deviceorientation'"),'native quaternion wrapper must install after fallback listener registration');
+assert(js.includes('performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS'),'native quaternion must suppress WebView orientation fallback while active');
 
 for(const forbidden of [
   'preventDefault(',
@@ -84,4 +90,4 @@ assert(!css.includes('animation:'),'parallax layer must not introduce autonomous
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  visible tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
-console.log('  screen-only EL retains strong phosphor/glass separation while Dream remains flat');
+console.log('  native Android quaternion drives parallax; WebView orientation remains fallback; screen-only EL stays active');
