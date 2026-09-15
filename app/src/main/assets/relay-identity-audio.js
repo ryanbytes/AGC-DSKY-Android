@@ -24,6 +24,8 @@
 (() => {
   if (typeof emitTick !== 'function' || typeof ensureAudio !== 'function') return;
   if (!window.AGCDSKY || typeof window.AGCDSKY.hardware !== 'function') return;
+  const identityState = window.AGCDSKY_APP_STATE;
+  if (!identityState) throw new Error('Shared application state unavailable');
 
   const fallbackEmitTick = emitTick;
   const baseHardware = window.AGCDSKY.hardware.bind(window.AGCDSKY);
@@ -81,7 +83,7 @@
     soundButton.addEventListener('click', () => setTimeout(syncAuxSnapshot, 0));
   }
   setInterval(() => {
-    try { if (typeof tickSound === 'boolean' && !tickSound) syncAuxSnapshot(); } catch (_) {}
+    try { if (!identityState.tickSound) syncAuxSnapshot(); } catch (_) {}
   }, 250);
 
   function hash32(text) {
