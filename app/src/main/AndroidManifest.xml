@@ -23,12 +23,16 @@
             android:name="android.webkit.WebView.MetricsOptOut"
             android:value="true" />
 
-        <!-- Initializes the native updater in both regular-phone and Fire flavors. -->
+        <!-- Initializes and periodically checks the native updater in both flavors. -->
         <provider
             android:name=".UpdateInitProvider"
             android:authorities="${applicationId}.update-init"
             android:exported="false"
             android:initOrder="100" />
+
+        <receiver
+            android:name=".UpdateCheckReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".UpdateInstallReceiver"
