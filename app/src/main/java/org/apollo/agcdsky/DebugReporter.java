@@ -50,27 +50,12 @@ public final class DebugReporter {
                 .create();
         pendingReportOwner=new WeakReference<>(activity);
         pendingReportDialog=new WeakReference<>(dialog);
-        dialog.setOnDismissListener(ignored->{
-            synchronized(DebugReporter.class){
-                if(pendingReportDialog.get()==dialog){
-                    pendingReportDialog.clear();
-                    pendingReportOwner.clear();
-                }
-            }
-        });
-        dialog.show();
-        return true;
+        dialog.setOnDismissListener(ignored->{synchronized(DebugReporter.class){if(pendingReportDialog.get()==dialog){pendingReportDialog.clear();pendingReportOwner.clear();}}});
+        dialog.show();return true;
     }
-    public static synchronized void dismissPendingReport(Activity activity){
-        Activity owner=pendingReportOwner.get();
-        AlertDialog dialog=pendingReportDialog.get();
-        if(dialog==null){pendingReportOwner.clear();return;}
-        if(activity!=null&&owner!=activity)return;
-        pendingReportDialog.clear();
-        pendingReportOwner.clear();
-        try{if(dialog.isShowing())dialog.dismiss();}catch(RuntimeException ignored){}
-    }
+    public static synchronized void dismissPendingReport(Activity activity){Activity owner=pendingReportOwner.get();AlertDialog dialog=pendingReportDialog.get();if(dialog==null){pendingReportOwner.clear();return;}if(activity!=null&&owner!=activity)return;pendingReportDialog.clear();pendingReportOwner.clear();try{if(dialog.isShowing())dialog.dismiss();}catch(RuntimeException ignored){}}
     public static void appendWebError(Context context,String detail){if(detail==null||detail.trim().isEmpty()||isRecoverableWebAudioRenderError(detail))return;writeReport(context.getApplicationContext(),"WEBVIEW/JAVASCRIPT ERROR",detail);}
+    public static void appendNativeError(Context context,String detail){if(context==null||detail==null||detail.trim().isEmpty())return;writeReport(context.getApplicationContext(),"NATIVE ERROR",detail);}
     private static boolean isRecoverableWebAudioRenderError(String detail){String normalized=detail.trim();return normalized.equals(RECOVERABLE_WEB_AUDIO_RENDER_ERROR)||normalized.endsWith("\n"+RECOVERABLE_WEB_AUDIO_RENDER_ERROR);}
     public static final class JsBridge{private final Context app;public JsBridge(Context context){app=context.getApplicationContext();}@JavascriptInterface public void report(String detail){appendWebError(app,detail);}@JavascriptInterface public void ready(String detail){if(!isDebuggable(app))return;String safe=detail==null?"unknown":detail.replace('\n',' ').replace('\r',' ');if(safe.length()>80)safe=safe.substring(0,80);Log.i(LOG_TAG,"FRONTEND READY "+safe);}}
     private static boolean isDebuggable(Context context){return(context.getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0;}
