@@ -16,9 +16,9 @@ assert(!state.tickSound&&state.dim&&state.displayOnly&&state.dreamMode==='bright
 vm.runInContext('applyTickSound(); applyDim(); applyDisplayOnly();',context);
 assert(elements.sound.textContent==='RELAY CLICKS OFF','shared relay-click state did not drive control label');
 assert(elements.display.textContent==='EXIT FULL DSKY DISPLAY','shared display-only state did not drive control label');
-state.tickSound=true;vm.runInContext('dim=false; displayOnly=false;',context);
-assert(state.tickSound&&state.dim===false&&state.displayOnly===false,'shared/remaining compatibility presentation writes did not update state');
-assert(!Object.getOwnPropertyDescriptor(context,'tickSound'),'tickSound must remain shared-state only, not a Window compatibility accessor');
+state.tickSound=true;state.dim=false;state.displayOnly=false;
+assert(state.tickSound&&state.dim===false&&state.displayOnly===false,'direct shared presentation writes did not update state');
+for(const name of ['dream','dreamMode','dim','tickSound','displayOnly','appVisible'])assert(!Object.getOwnPropertyDescriptor(context,name),`${name} must remain shared-state only`);
 assert(read('display-environment.js').includes('const environmentState=window.AGCDSKY_APP_STATE;'),'display environment is not an explicit state consumer');
 assert(read('relay-audio-runtime.js').includes('const audioState=window.AGCDSKY_APP_STATE;'),'relay audio is not an explicit state consumer');
 const hardware=read('hardware-fidelity.js'),guard=read('background-audio-guard.js');
@@ -27,6 +27,8 @@ assert(guard.includes('const guardState = window.AGCDSKY_APP_STATE;'),'backgroun
 for(const old of ["if (!tickSound)","mode !== 'clock'","mode === 'clock'","currentClockLatchState(verb, noun)","verb = '16'; noun = '65';"])assert(!hardware.includes(old),`hardware fidelity retained implicit state expression: ${old}`);
 for(const old of ["!dream &&","!tickSound","if (tickSound &&","typeof mode !== 'undefined'","!dream && typeof"])assert(!guard.includes(old),`background audio guard retained implicit state expression: ${old}`);
 assert(guard.includes('guardState.appVisible')&&guard.includes('guardState.dream')&&guard.includes('guardState.tickSound')&&guard.includes("guardState.mode === 'clock'"),'audio guard does not consume shared visibility/presentation/mode state');
-assert(read('app-state-runtime.js').includes("appVisible:!document.hidden"),'shared state does not own lifecycle visibility');
+const appState=read('app-state-runtime.js');
+assert(appState.includes("appVisible:!document.hidden"),'shared state does not own lifecycle visibility');
+assert(!appState.includes('Object.defineProperty(window'),'presentation state regained Window compatibility accessors');
 console.log('presentation state smoke: PASS');
-console.log('  persisted settings, explicit hardware/audio consumers, shared visibility, and tickSound shared-state-only ownership verified');
+console.log('  persisted settings, explicit hardware/audio consumers, shared visibility, and explicit-only presentation state verified');
