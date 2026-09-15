@@ -14,8 +14,8 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 20075
-        versionName '1.1.5'
+        versionCode 20076
+        versionName '1.1.6'
     }
 
     flavorDimensions += 'target'
