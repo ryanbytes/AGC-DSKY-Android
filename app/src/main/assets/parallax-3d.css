@@ -26,6 +26,12 @@ body.parallax-3d:not(.dream):not(.screen-only) .dsky{
   filter:drop-shadow(var(--dsky-shadow-x) var(--dsky-shadow-y) 7px rgba(0,0,0,.72));
 }
 
+/* style.css positions/crops FULL DSKY DISPLAY with this base translation.
+   Retain that geometry and append only the presentation tilt. */
+body.parallax-3d.display-only:not(.dream):not(.screen-only) .dsky{
+  transform:translate(-50%,-29.57%) rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y));
+}
+
 /* Keep the machined face itself at the reference plane. A moving grazing
    highlight makes the gray painted casting read as solid without looking wet. */
 body.parallax-3d:not(.dream):not(.screen-only) .dsky:after{
