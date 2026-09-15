@@ -18,6 +18,14 @@
   const dsky = document.getElementById('dsky');
   if (!dsky || !document.body) return;
 
+  let glassSheen = dsky.querySelector('.el-glass-sheen');
+  if (!glassSheen) {
+    glassSheen = document.createElement('div');
+    glassSheen.className = 'el-glass-sheen';
+    glassSheen.setAttribute('aria-hidden', 'true');
+    dsky.appendChild(glassSheen);
+  }
+
   const reduceMotion = typeof matchMedia === 'function'
     ? matchMedia('(prefers-reduced-motion: reduce)')
     : null;
