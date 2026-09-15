@@ -68,7 +68,7 @@ function initializeAppShell(){
   loadNativeNtpStatus();applyDim();applyDreamMode();applyDisplayOnly();applyTickSound();applyMissionButton();clearLamps();set2('prog','00');show(shellState.verb,shellState.noun);syncClockFace();
   setInterval(tick,20);
   setInterval(loadNativeNtpStatus,60000);
-  setInterval(()=>{if(shellState.mode==='agc'&&agcCore&&agcCore.running&&appVisible&&Date.now()-lastAutosaveAt>15000)saveAgcState('periodic autosave')},5000);
+  setInterval(()=>{if(shellState.mode==='agc'&&agcCore&&agcCore.running&&shellState.appVisible&&Date.now()-lastAutosaveAt>15000)saveAgcState('periodic autosave')},5000);
   if(!shellState.dream&&!restoreAgcOnLoad)rememberRunMode('clock');
   if(restoreAgcOnLoad)setTimeout(()=>enterAgc(),0);
   if(shellState.dream){
