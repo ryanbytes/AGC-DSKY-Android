@@ -7,10 +7,10 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const GUARD_JS = path.join(ROOT, 'app/src/main/assets/background-audio-guard.js');
-const STARTUP_DEFAULTS = path.join(ROOT, 'app/src/main/assets/startup-defaults.js');
+const PAGE_RESOURCE_LIFECYCLE = path.join(ROOT, 'app/src/main/assets/page-resource-lifecycle.js');
 const DEBUG_REPORTER = path.join(ROOT, 'app/src/main/java/org/apollo/agcdsky/DebugReporter.java');
 const guardSource = fs.readFileSync(GUARD_JS, 'utf8');
-const startupDefaultsSource = fs.readFileSync(STARTUP_DEFAULTS, 'utf8');
+const pageResourceLifecycleSource = fs.readFileSync(PAGE_RESOURCE_LIFECYCLE, 'utf8');
 const debugReporterSource = fs.readFileSync(DEBUG_REPORTER, 'utf8');
 
 function assert(condition, message) {
@@ -130,7 +130,7 @@ async function flushPromises() {
     'background audio guard must replace closed AudioContexts');
   assert(guardSource.includes('AUDIO_FAILURE_LIMIT = 2'),
     'background audio guard must bound automatic recovery attempts');
-  assert(startupDefaultsSource.includes("if (context.state === 'closed') audioContexts.delete(context);"),
+  assert(pageResourceLifecycleSource.includes("if (context.state === 'closed') audioContexts.delete(context);"),
     'lifecycle tracker must release closed AudioContext wrappers');
 
   const chromiumMessage = 'The AudioContext encountered an error from the audio device or the WebAudio renderer.';
