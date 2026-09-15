@@ -18,6 +18,8 @@ assert(parallaxIndex>=0&&dreamIndex>parallaxIndex,'parallax presentation must in
 for(const token of [
   'perspective:1050px',
   'rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y))',
+  'body.parallax-3d.display-only:not(.dream):not(.screen-only) .dsky',
+  'transform:translate(-50%,-29.57%) rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y))',
   '.ann-well',
   '.display-well',
   '.ann-grid',
@@ -89,4 +91,4 @@ assert(wrapper[1].indexOf('return original.apply(this, args)')>wrapper[1].indexO
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  restrained tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; translation ${translation.toFixed(2)} px scale`);
-console.log('  Android native quaternion observation, FULL DSKY DISPLAY, pointer fallback, depth layers, and flat Dream/reduced-motion modes verified');
+console.log('  Android native quaternion observation, FULL DSKY DISPLAY crop preservation, pointer fallback, depth layers, and flat Dream/reduced-motion modes verified');
