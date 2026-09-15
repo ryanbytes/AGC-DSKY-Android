@@ -19,6 +19,7 @@
   const dsky = document.getElementById('dsky');
   if (!dsky || !document.body) return;
   const api = window.AGCDSKY = window.AGCDSKY || {};
+  const elPanel = document.getElementById('elpanel');
 
   let glassSheen = dsky.querySelector('.el-glass-sheen');
   if (!glassSheen) {
@@ -125,6 +126,34 @@
     dsky.style.setProperty('--dsky-light-y', `${lightY.toFixed(2)}%`);
     dsky.style.setProperty('--dsky-shadow-x', `${shadowX.toFixed(2)}px`);
     dsky.style.setProperty('--dsky-shadow-y', `${shadowY.toFixed(2)}px`);
+
+    // Fullscreen EL uses direct inline !important transforms. This deliberately
+    // bypasses every stylesheet transform/calc path so Android WebView cannot
+    // flatten the effect. The separation is intentionally obvious on a phone.
+    const fullscreen = document.body.classList.contains('screen-only')
+      && !document.body.classList.contains('dream')
+      && !document.body.classList.contains('display-only');
+    if (fullscreen && elPanel) {
+      const phosphorX = -x * 24.0;
+      const phosphorY = -y * 20.0;
+      const glassX = x * 34.0;
+      const glassY = y * 28.0;
+      elPanel.style.setProperty(
+        'transform',
+        `translate(-50%,-50%) translate(${phosphorX.toFixed(2)}px,${phosphorY.toFixed(2)}px) scale(1.012)`,
+        'important'
+      );
+      glassSheen.style.setProperty(
+        'transform',
+        `translate(-50%,-50%) translate(${glassX.toFixed(2)}px,${glassY.toFixed(2)}px) scale(.994)`,
+        'important'
+      );
+      glassSheen.style.setProperty('opacity', '.94', 'important');
+    } else {
+      if (elPanel) elPanel.style.removeProperty('transform');
+      glassSheen.style.removeProperty('transform');
+      glassSheen.style.removeProperty('opacity');
+    }
   }
 
   function scheduleFrame() {
