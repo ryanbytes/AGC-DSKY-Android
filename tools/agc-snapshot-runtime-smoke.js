@@ -23,7 +23,7 @@ applied=null;assert(vm.runInContext('restoreSavedAgcState()',context)===true,'sn
 assert(importCount===1&&applied&&applied.display.verb.join('')==='16','restore did not import core + UI state');
 const verify=vm.runInContext('verifySnapshotRoundTrip()',context);
 assert(verify.ok===true&&stopCount===1&&startCount===1&&renderCount===1,'snapshot round-trip did not stop/import/restart/render correctly');
-sharedState.appVisible=false;core.running=true;const startsBeforeHidden=startCount;vm.runInContext('verifySnapshotRoundTrip()',context);assert(startCount===startsBeforeHidden,'hidden snapshot verification must not restart AGC core');sharedState.appVisible=true;
+sharedState.appVisible=false;core.running=true;const startsBeforeHidden=startCount;vm.runInContext('verifySnapshotRoundTrip()',context);assert(startCount===startsBeforeHidden,'hidden snapshot verification must not restart AGC core');sharedState.appVisible=true;core.running=true;
 vm.runInContext("scheduleAgcAutosave('DSKY key make')",context);assert(timers.length===1&&timers[0].ms===1800,'autosave debounce changed');timers[0].fn();
 assert(JSON.parse(storage.get('agcSnapshotMetaV1')).reason==='autosave: DSKY key make','autosave reason changed');
 assert(vm.runInContext('clearSavedAgcState()',context)===true&&!storage.has('agcSnapshotV1')&&!storage.has('agcSnapshotMetaV1'),'snapshot clear failed');
