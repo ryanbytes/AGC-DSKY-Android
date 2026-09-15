@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const fs=require('fs'),path=require('path');
+const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets');
 const read=name=>fs.readFileSync(path.join(ASSETS,name),'utf8');
 const html=read('index.html'),css=read('parallax-3d.css'),js=read('parallax-3d.js');
@@ -89,6 +89,58 @@ assert((wrapper[1].match(/original\.apply\(this, args\)/g)||[]).length===1,'nati
 assert(wrapper[1].indexOf('onNativeQuaternion(...args)')>=0,'native quaternion observer must feed parallax');
 assert(wrapper[1].indexOf('return original.apply(this, args)')>wrapper[1].indexOf('onNativeQuaternion(...args)'),'native quaternion observer must preserve the original bridge return path');
 
+// Behavioral probe: run the production controller in a tiny DOM/WebView model,
+// deliver the same [w,x,y,z,displayAngle] shape used by SensorMainActivity, and
+// prove the wrapper both preserves the native bridge and moves presentation.
+const classes=new Set(),vars=new Map(),raf=[];
+const body={classList:{
+  contains:name=>classes.has(name),
+  toggle(name,on){if(on===undefined)on=!classes.has(name);on?classes.add(name):classes.delete(name);return on},
+  add:name=>classes.add(name),remove:name=>classes.delete(name)
+}};
+const dsky={
+  style:{setProperty:(name,value)=>vars.set(name,value)},
+  querySelector:()=>null,appendChild:()=>{},addEventListener:()=>{},
+  getBoundingClientRect:()=>({left:0,top:0,width:320,height:372})
+};
+const document={
+  body,hidden:false,getElementById:id=>id==='dsky'?dsky:null,
+  createElement:()=>({className:'',setAttribute(){}}),addEventListener:()=>{}
+};
+let originalCalls=0,lastArgs=null,lastThis=null;
+const original=function(...args){originalCalls++;lastArgs=args;lastThis=this;return 73};
+const window={
+  AGCDSKY:{nativePhoneQuaternion:original},addEventListener:()=>{},
+  requestAnimationFrame:fn=>{raf.push(fn);return raf.length}
+};
+const context={
+  window,document,console,
+  matchMedia:()=>({matches:false,addEventListener(){},addListener(){}}),
+  MutationObserver:class{observe(){}},setTimeout:()=>1,clearTimeout(){}
+};
+vm.runInNewContext(js,context,{filename:'parallax-3d.js'});
+const controller=window.AGCDSKY_PARALLAX,native=window.AGCDSKY.nativePhoneQuaternion;
+assert(controller&&controller.nativeBridgeObserved(),'production controller did not observe native quaternion bridge');
+assert(native!==original,'native quaternion bridge was not wrapped');
+const receiver={kind:'native-receiver'},first=[1,0,0,0,0];
+assert(native.apply(receiver,first)===73,'parallax wrapper changed native bridge return value');
+assert(originalCalls===1&&lastThis===receiver,'parallax wrapper did not preserve native bridge this/call count');
+assert(JSON.stringify(lastArgs)===JSON.stringify(first),'parallax wrapper changed native bridge arguments');
+const half=8*Math.PI/180/2,second=[Math.cos(half),Math.sin(half),0,0,0];
+assert(native.apply(receiver,second)===73&&originalCalls===2,'second native quaternion did not pass through exactly once');
+let guard=0;while(raf.length){const batch=raf.splice(0);for(const fn of batch)fn();if(++guard>200)throw new Error('parallax RAF did not settle')}
+const state=controller.state();
+assert(state.source==='native','native quaternion did not become parallax source');
+assert(state.targetX>0.55&&state.targetX<0.65,`unexpected 8-degree native tilt target ${state.targetX}`);
+assert(Math.abs(state.targetY)<0.01,`unexpected native pitch target ${state.targetY}`);
+assert(parseFloat(vars.get('--dsky-parallax-x'))>2,'native tilt did not produce visible layer translation');
+assert(parseFloat(vars.get('--dsky-tilt-y'))>0.8,'native tilt did not produce visible panel rotation');
+classes.add('display-only');
+assert(controller.enabled(),'FULL DSKY DISPLAY disabled parallax at runtime');
+classes.add('screen-only');
+assert(!controller.enabled(),'screen-only must remain flat');
+
 console.log('parallax 3D smoke: PASS');
 console.log(`  restrained tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; translation ${translation.toFixed(2)} px scale`);
-console.log('  Android native quaternion observation, FULL DSKY DISPLAY crop preservation, pointer fallback, depth layers, and flat Dream/reduced-motion modes verified');
+console.log(`  native 8-degree probe: targetX ${state.targetX.toFixed(3)} / layer ${vars.get('--dsky-parallax-x')} / tiltY ${vars.get('--dsky-tilt-y')}`);
+console.log('  Android native quaternion passthrough, FULL DSKY DISPLAY crop preservation, pointer fallback, depth layers, and flat Dream/reduced-motion modes verified');
