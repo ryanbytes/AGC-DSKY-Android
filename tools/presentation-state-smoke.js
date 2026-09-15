@@ -16,8 +16,9 @@ assert(!state.tickSound&&state.dim&&state.displayOnly&&state.dreamMode==='bright
 vm.runInContext('applyTickSound(); applyDim(); applyDisplayOnly();',context);
 assert(elements.sound.textContent==='RELAY CLICKS OFF','shared relay-click state did not drive control label');
 assert(elements.display.textContent==='EXIT FULL DSKY DISPLAY','shared display-only state did not drive control label');
-vm.runInContext('tickSound=true; dim=false; displayOnly=false;',context);
-assert(state.tickSound&&state.dim===false&&state.displayOnly===false,'legacy Window compatibility writes did not update shared state');
+state.tickSound=true;vm.runInContext('dim=false; displayOnly=false;',context);
+assert(state.tickSound&&state.dim===false&&state.displayOnly===false,'shared/remaining compatibility presentation writes did not update state');
+assert(!Object.getOwnPropertyDescriptor(context,'tickSound'),'tickSound must remain shared-state only, not a Window compatibility accessor');
 assert(read('display-environment.js').includes('const environmentState=window.AGCDSKY_APP_STATE;'),'display environment is not an explicit state consumer');
 assert(read('relay-audio-runtime.js').includes('const audioState=window.AGCDSKY_APP_STATE;'),'relay audio is not an explicit state consumer');
 const hardware=read('hardware-fidelity.js'),guard=read('background-audio-guard.js');
@@ -28,4 +29,4 @@ for(const old of ["!dream &&","!tickSound","if (tickSound &&","typeof mode !== '
 assert(guard.includes('guardState.appVisible')&&guard.includes('guardState.dream')&&guard.includes('guardState.tickSound')&&guard.includes("guardState.mode === 'clock'"),'audio guard does not consume shared visibility/presentation/mode state');
 assert(read('app-state-runtime.js').includes("appVisible:!document.hidden"),'shared state does not own lifecycle visibility');
 console.log('presentation state smoke: PASS');
-console.log('  persisted settings, explicit hardware/audio consumers, shared visibility, and remaining compatibility bridge verified');
+console.log('  persisted settings, explicit hardware/audio consumers, shared visibility, and tickSound shared-state-only ownership verified');
