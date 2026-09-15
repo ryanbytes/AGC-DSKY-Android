@@ -11,6 +11,8 @@
  * slanted glyph bounding width.
  */
 (() => {
+  const geometryState=window.AGCDSKY_APP_STATE;
+  if(!geometryState)throw new Error('Shared application state unavailable');
   const SOURCE = Object.freeze({
     a: 'M 95.137274,86.827056 l 1.10725,-1.523997 h -6.1558 l 0.40836,1.523997 z',
     f: 'M 91.361734,91.526056 l -1.66745,-6.222997 h -1.57776 l 1.66745,6.222997 z',
@@ -109,22 +111,22 @@
     if(node)node.setAttribute('transform',transform);
   }
 
-  if(typeof mode!=='undefined'&&mode==='agc'&&typeof renderAgcField==='function'){
+  if(geometryState.mode==='agc'&&typeof renderAgcField==='function'){
     ['prog','verb','noun','r1','r2','r3'].forEach(renderAgcField);
   }else{
     if(typeof set2==='function')set2('prog','00');
-    if(typeof show==='function')show(verb,noun);
+    if(typeof show==='function')show(geometryState.verb,geometryState.noun);
     if(typeof renderClockReg==='function')['r1','r2','r3'].forEach(renderClockReg);
   }
 
-  // app.js paints the synthetic clock face before the drawing renderer is
+  // The shell paints the synthetic clock face before the drawing renderer is
   // installed, while the later hardware-fidelity layers seed their retained
-  // relay state after it.  Reassert only the clock-mode PROG field after the
+  // relay state after it. Reassert only the clock-mode PROG field after the
   // complete startup script stack has settled so row 11 cannot leave it blank.
   // Real AGC/Comanche mode is never touched here: its PROG digits remain driven
   // exclusively by channel 010 relay row 11.
   function restoreClockProg(){
-    if(typeof mode==='undefined'||mode!=='clock')return;
+    if(geometryState.mode!=='clock')return;
     if(typeof lampTestActive!=='undefined'&&lampTestActive)return;
     const prog=document.getElementById('prog');
     if(prog)renderDigits(prog,'00');
