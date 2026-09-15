@@ -1,0 +1,140 @@
+/*
+ * Restrained 3D/parallax presentation for the physical DSKY face.
+ *
+ * This file changes presentation only. It never changes DSKY geometry, relay
+ * timing, channel state, or input behavior. Dream/display-only/screen-only and
+ * reduced-motion presentations remain flat and stable.
+ */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) #app{
+  perspective:1050px;
+  perspective-origin:50% 48%;
+}
+
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky{
+  --dsky-tilt-x:0deg;
+  --dsky-tilt-y:0deg;
+  --dsky-parallax-x:0;
+  --dsky-parallax-y:0;
+  --dsky-light-x:52%;
+  --dsky-light-y:44%;
+  --dsky-shadow-x:0px;
+  --dsky-shadow-y:5px;
+  transform:rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y));
+  transform-style:preserve-3d;
+  will-change:transform;
+  filter:drop-shadow(var(--dsky-shadow-x) var(--dsky-shadow-y) 7px rgba(0,0,0,.72));
+}
+
+/* Keep the machined face itself at the reference plane. A moving grazing
+   highlight makes the gray painted casting read as solid without looking wet. */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
+  background:
+    radial-gradient(circle at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.075),transparent 34%),
+    linear-gradient(115deg,rgba(255,255,255,.035),transparent 31%,rgba(0,0,0,.025) 72%,rgba(255,255,255,.018));
+  transform:translateZ(1px);
+}
+
+/* Recesses move slightly opposite the viewer. The tiny planar offset remains
+   visible even on older WebViews that flatten nested 3D stacking contexts. */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-well,
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .display-well{
+  transform:translate3d(
+    calc(var(--dsky-parallax-x) * -.22px),
+    calc(var(--dsky-parallax-y) * -.22px),
+    0
+  );
+}
+
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-grid{
+  transform:translate3d(
+    calc(var(--dsky-parallax-x) * .38px),
+    calc(var(--dsky-parallax-y) * .38px),
+    3px
+  );
+  transform-style:preserve-3d;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp{
+  transform-style:preserve-3d;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-legend{
+  transform:translateZ(1.2px);
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-source{
+  transform:translateZ(-.6px);
+}
+
+/* The active EL substrate sits behind a thin front-glass reflection plane. */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .elpanel{
+  transform:translate3d(
+    calc(var(--dsky-parallax-x) * .68px),
+    calc(var(--dsky-parallax-y) * .68px),
+    6px
+  );
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
+  position:absolute;
+  left:57.5000%;
+  top:5.1075%;
+  width:33.125%;
+  height:49.0204%;
+  z-index:5;
+  pointer-events:none;
+  transform:translate3d(
+    calc(var(--dsky-parallax-x) * 1.02px),
+    calc(var(--dsky-parallax-y) * 1.02px),
+    9px
+  );
+  background:
+    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.13),rgba(225,242,234,.035) 22%,transparent 47%),
+    linear-gradient(118deg,transparent 8%,rgba(255,255,255,.035) 28%,transparent 43%,rgba(10,15,12,.025) 76%,transparent 94%);
+  box-shadow:inset 0 0 .22vmin rgba(232,244,237,.08),inset 0 0 .8vmin rgba(0,0,0,.10);
+  mix-blend-mode:screen;
+  opacity:.58;
+  will-change:transform,background-position;
+}
+
+/* Keycaps are the strongest foreground plane. Existing Apollo-derived travel
+   remains authoritative: a pressed key moves toward the face and loses most of
+   its virtual Z height rather than receiving a second fake press animation. */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key{
+  transform:translate3d(
+    calc(var(--dsky-parallax-x) * .92px),
+    calc(var(--dsky-parallax-y) * .92px),
+    10px
+  );
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key:active,
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key.pressed{
+  transform:translate3d(
+    calc(var(--dsky-parallax-x) * .54px),
+    calc(var(--dsky-parallax-y) * .54px),
+    3px
+  ) translateY(var(--key-travel,.42vmin));
+}
+
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
+  transform:translate3d(
+    calc(var(--dsky-parallax-x) * .22px),
+    calc(var(--dsky-parallax-y) * .22px),
+    2px
+  );
+}
+
+@media (prefers-reduced-motion:reduce){
+  body.parallax-3d .dsky,
+  body.parallax-3d .ann-well,
+  body.parallax-3d .display-well,
+  body.parallax-3d .ann-grid,
+  body.parallax-3d .elpanel,
+  body.parallax-3d .el-glass-sheen,
+  body.parallax-3d .key,
+  body.parallax-3d .fastener{
+    transform:none!important;
+    will-change:auto!important;
+  }
+  body.parallax-3d .dsky{filter:none!important}
+}
