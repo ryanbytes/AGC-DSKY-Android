@@ -10,6 +10,14 @@
   const hardware=window.AGCDSKY_HARDWARE;
   const audioModel=window.DSKY_RELAY_AUDIO;
   if(!compat||!environment||!hardware||!audioModel)throw new Error('Relay perceptual service dependencies unavailable');
+  // Optional phone-speaker exaggeration. Keep the source-faithful relay model
+  // as the default; enable only for deliberate diagnostics/experiments.
+  let perceptualEnabled=false;
+  try{perceptualEnabled=localStorage.getItem('relayPerceptualAudioV1')==='1'}catch(_){}
+  if(!perceptualEnabled){
+    window.DSKY_RELAY_PERCEPTUAL=Object.freeze({enabled:false,model:'source-faithful-default',timingSource:'DSKY_RELAY_AUDIO set/reset travel profiles'});
+    return;
+  }
   const fallbackEmitTick=compat.get('emitTick');
   if(typeof fallbackEmitTick!=='function')throw new Error('Relay audio implementation unavailable');
   const buffers=new Map();
@@ -38,5 +46,5 @@
   function perceptibleIndividualRelay(ctx,when=ctx.currentTime,strength=1){const identity=activeIdentity(ctx,when);if(!identity)return fallbackEmitTick(ctx,when,strength);playPerceptibleIdentity(ctx,identity,strength)}
   compat.replace('emitTick',perceptibleIndividualRelay,'relay perceptual personality');
 
-  window.DSKY_RELAY_PERCEPTUAL=Object.freeze({model:'deterministic-installed-unit-audible-spread-v1',unitSeed:unitSeed(),pitchSpread:Object.freeze({minScale:.86,maxScale:1.14}),timingSource:'DSKY_RELAY_AUDIO set/reset travel profiles'});
+  window.DSKY_RELAY_PERCEPTUAL=Object.freeze({enabled:true,model:'deterministic-installed-unit-audible-spread-v1',unitSeed:unitSeed(),pitchSpread:Object.freeze({minScale:.86,maxScale:1.14}),timingSource:'DSKY_RELAY_AUDIO set/reset travel profiles'});
 })();
