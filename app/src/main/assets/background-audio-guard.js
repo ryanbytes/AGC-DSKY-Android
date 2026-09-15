@@ -4,7 +4,9 @@
 // layers, so it is also the right place to prevent stale relay/UI state from
 // repainting the visible DSKY after those layers have initialized.
 (() => {
-  const audibleNow = () => !dream && !document.hidden && appVisible;
+  const guardState = window.AGCDSKY_APP_STATE;
+  if (!guardState) throw new Error('Shared application state unavailable');
+  const audibleNow = () => !guardState.dream && !document.hidden && guardState.appVisible;
 
   // Chromium reports a WebAudio renderer/device failure by dispatching an
   // AudioContext "error" event and suspending the failed context. A suspended
@@ -117,7 +119,7 @@
     try { if (audioCtx) adoptAudioContext(audioCtx); } catch (_) {}
 
     ensureAudio = function resilientEnsureAudio() {
-      if (!audibleNow() || !tickSound || audioCircuitOpen) return null;
+      if (!audibleNow() || !guardState.tickSound || audioCircuitOpen) return null;
 
       if (audioCtx && audioCtx.state === 'closed') {
         retireAudioContext(audioCtx, 'context already closed', null, false);
@@ -174,12 +176,12 @@
   }
 
   // The sound button is the explicit manual reset for the circuit breaker.
-  // app.js flips tickSound before calling applyTickSound(), so an ON transition
-  // is the right point to permit another context after repeated failures.
+  // The app shell flips tickSound before calling applyTickSound(), so an ON
+  // transition is the right point to permit another context after failures.
   if (typeof applyTickSound === 'function') {
     const baseApplyTickSound = applyTickSound;
     applyTickSound = function resilientApplyTickSound() {
-      if (tickSound && audioCircuitOpen) resetAudioCircuit();
+      if (guardState.tickSound && audioCircuitOpen) resetAudioCircuit();
       return baseApplyTickSound();
     };
   }
@@ -221,7 +223,7 @@
   if (typeof renderAgcReg === 'function' && typeof renderClockReg === 'function') {
     const settledAgcRender = renderAgcReg;
     renderAgcReg = function sourceConsistentRegisterRender(name) {
-      if (typeof mode !== 'undefined' && mode === 'clock' &&
+      if (guardState.mode === 'clock' &&
           !(typeof lampTestActive !== 'undefined' && lampTestActive)) {
         return renderClockReg(name);
       }
@@ -332,7 +334,7 @@
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !dream && typeof stopClockQueue === 'function') {
+    if (document.hidden && !guardState.dream && typeof stopClockQueue === 'function') {
       stopClockQueue();
     }
   });
