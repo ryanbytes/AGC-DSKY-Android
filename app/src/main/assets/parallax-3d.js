@@ -7,7 +7,7 @@
  * - touch: samples the contact position without consuming the event
  * - device orientation: relative motion from the first sensor sample
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
- * - Dream/display-only/screen-only/reduced-motion: flat and inactive
+ * - Dream/display-only/reduced-motion: flat and inactive; screen-only keeps EL depth
  *
  * No AGC, relay, channel, keycode, or persistence state is touched here.
  */
@@ -56,8 +56,7 @@
     if (reduceMotion && reduceMotion.matches) return false;
     const body = document.body;
     return !body.classList.contains('dream')
-      && !body.classList.contains('display-only')
-      && !body.classList.contains('screen-only');
+      && !body.classList.contains('display-only');
   }
 
   function setPresentationClass() {
