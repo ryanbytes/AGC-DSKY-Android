@@ -21,6 +21,8 @@
   if (!window.AGCDSKY || typeof window.AGCDSKY.hardware !== 'function') return;
   if (!window.DSKY_RELAY_AUDIO || typeof window.DSKY_RELAY_AUDIO.profileFor !== 'function') return;
   if (!window.DSKY_RELAY_MATRIX || typeof window.DSKY_RELAY_MATRIX.segmentsForCode !== 'function') return;
+  const visualState = window.AGCDSKY_APP_STATE;
+  if (!visualState) throw new Error('Shared application state unavailable');
 
   const STORAGE_KEY = 'relayVisualTimingV1';
   const MODE_AUTHENTIC = 'authentic';
@@ -289,7 +291,7 @@
 
   function playPresentationClick(row, bit, engaging) {
     lastPresentationClick = {row, bit, engaging:!!engaging};
-    if (typeof tickSound === 'boolean' && !tickSound) return;
+    if (!visualState.tickSound) return;
     const p = profileFor(row, bit);
     if (!p || typeof ensureAudio !== 'function') return;
     const ctx = ensureAudio();
