@@ -4,7 +4,9 @@
 // implementation; once runtime-transitions.js loads, public transition calls
 // delegate to that coordinator without the API object itself being monkey-patched.
 const apiState=window.AGCDSKY_APP_STATE;
+const apiCore=window.AGCDSKY_CORE_SESSION;
 if(!apiState)throw new Error('Shared application state unavailable');
+if(!apiCore)throw new Error('Shared AGC core session unavailable');
 
 function publicEnterAgc(){
   const runtime=window.AGCDSKY_RUNTIME;
@@ -22,7 +24,7 @@ function publicEnterClock(){
 
 window.AGCDSKY={
   agcChannel:onAgcChannel,
-  getCore:()=>agcCore,
+  getCore:()=>apiCore.core,
   setAppVisible,
   getMission:()=>apiState.selectedMission,
   enterClock:publicEnterClock,
