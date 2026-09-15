@@ -16,6 +16,8 @@
 (() => {
   const button = document.getElementById('relay-show');
   if (!button || !window.AGCDSKY || typeof window.AGCDSKY.hardware !== 'function') return;
+  const showState = window.AGCDSKY_APP_STATE;
+  if (!showState) throw new Error('Shared application state unavailable');
 
   const ROWS_DOWN = Object.freeze([12,11,10,9,8,7,6,5,4,3,2,1]);
   const DISPLAY_ROWS_DOWN = Object.freeze([11,10,9,8,7,6,5,4,3,2,1]);
@@ -153,13 +155,13 @@
       latches[row] = (hwWord !== undefined ? hwWord : (fallback !== undefined ? fallback : 0)) & 0x7ff;
     }
     return {
-      mode,
+      mode: showState.mode,
       modeLabel: document.getElementById('mode') ? document.getElementById('mode').textContent : '',
       coreRunning: !!(agcCore && agcCore.running),
       pausedForVisibility: !!agcPausedForVisibility,
-      tickSound,
-      verb,
-      noun,
+      tickSound: showState.tickSound,
+      verb: showState.verb,
+      noun: showState.noun,
       entryMode,
       entry,
       clockDigits: JSON.parse(JSON.stringify(clockDigits)),
@@ -172,16 +174,16 @@
   }
 
   async function preflight() {
-    if (mode === 'agc-loading' || mode === 'relay-show' || dream) throw new Error('relay-show-unavailable');
+    if (showState.mode === 'agc-loading' || showState.mode === 'relay-show' || showState.dream) throw new Error('relay-show-unavailable');
 
     // Capture the scheduler state before pausing it.  The settled DSKY relay
     // snapshot is intentionally taken after the stop, but agcCore.stop() clears
     // agcCore.running, so reading that flag afterward would make restore think
     // the AGC had already been idle and leave the DSKY frozen after the show.
-    const coreWasRunning = !!(mode === 'agc' && agcCore && agcCore.running);
+    const coreWasRunning = !!(showState.mode === 'agc' && agcCore && agcCore.running);
 
     cancelLampTest();
-    if (mode === 'agc' && agcCore) {
+    if (showState.mode === 'agc' && agcCore) {
       // Durable checkpoint in case Android kills the process during a show.
       try { saveAgcState('relay show checkpoint'); } catch (_) {}
       agcCore.stop();
@@ -195,13 +197,13 @@
     saved = captureSettledState();
     saved.coreRunning = coreWasRunning;
 
-    mode = 'relay-show';
+    showState.mode = 'relay-show';
     stopRequested = false;
     button.textContent = 'STOP RELAY SHOW';
 
     // RELAY SHOW is explicitly an audible demonstration. Temporarily enable
     // relay sound without changing the user's saved RELAY CLICKS preference.
-    tickSound = true;
+    showState.tickSound = true;
     try { ensureAudio(); } catch (_) {}
   }
 
@@ -304,15 +306,15 @@
 
     // From this point onward recover ownership first.  These assignments must
     // happen even if one bank in the physical return cascade failed.
-    verb = saved.verb;
-    noun = saved.noun;
+    showState.verb = saved.verb;
+    showState.noun = saved.noun;
     entryMode = saved.entryMode;
     entry = saved.entry;
     clockDigits = JSON.parse(JSON.stringify(saved.clockDigits));
     clockRelayWords = {...saved.clockRelayWords};
-    tickSound = saved.tickSound;
+    showState.tickSound = saved.tickSound;
     lampTestActive = false;
-    mode = saved.mode;
+    showState.mode = saved.mode;
 
     if (saved.mode === 'clock') {
       // The global 20-ms clock service interval never stops. Clear any stale
@@ -323,7 +325,7 @@
       agcPausedForVisibility = false;
     } else if (saved.mode === 'agc' && agcCore) {
       if (saved.coreRunning) {
-        if (appVisible) {
+        if (showState.appVisible) {
           // Mark as resumable before start(). If start ever throws, a later
           // visibility transition still has a recovery path instead of leaving
           // the stopped core indistinguishable from an intentional pause.
