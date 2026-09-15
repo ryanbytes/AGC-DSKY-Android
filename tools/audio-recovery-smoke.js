@@ -58,6 +58,7 @@ function makeHarness({dream = false, hidden = false} = {}) {
   }
 
   const soundButton = {textContent: 'RELAY CLICKS ON'};
+  const sharedState = Object.seal({dream, tickSound:true, appVisible:!hidden, mode:'clock'});
   const context = {
     console,
     Promise,
@@ -79,9 +80,7 @@ function makeHarness({dream = false, hidden = false} = {}) {
       getElementById(id) { return id === 'sound' ? soundButton : null; },
       addEventListener() {}
     },
-    appVisible: !hidden,
-    dream,
-    tickSound: true,
+    AGCDSKY_APP_STATE: sharedState,
     audioCtx: null,
     DebugBridge: {report(detail) { reports.push(String(detail)); }},
     AGCDSKY: {},
@@ -109,7 +108,7 @@ function makeHarness({dream = false, hidden = false} = {}) {
       if(ctx) baseBurstCalls++;
     }
     function applyTickSound(){ applyCalls++; }
-    function setTickSound(value){ tickSound=!!value; }
+    function setTickSound(value){ AGCDSKY_APP_STATE.tickSound=!!value; }
   `, context, {filename: 'audio-base.js'});
   context.AudioContext = FakeAudioContext;
   context.webkitAudioContext = undefined;
@@ -123,6 +122,8 @@ async function flushPromises() {
 }
 
 (async () => {
+  assert(guardSource.includes('const guardState = window.AGCDSKY_APP_STATE;'),
+    'background audio guard must bind explicit shared app state');
   assert(guardSource.includes("addEventListener('error'"),
     'background audio guard must listen for AudioContext renderer errors');
   assert(guardSource.includes("ctx.state === 'closed'"),
@@ -229,6 +230,7 @@ async function flushPromises() {
   console.log('  closed context -> replaced');
   console.log('  resume rejection -> retired; NotAllowedError retained');
   console.log('  Dream/hidden modes remain silent');
+  console.log('  explicit shared-state audio ownership verified');
   console.log('  closed contexts are removed from lifecycle tracking');
   console.log('  raw Chromium renderer error is filtered from startup crash reports');
 })();
