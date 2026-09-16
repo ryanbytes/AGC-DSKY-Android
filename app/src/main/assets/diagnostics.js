@@ -35,6 +35,8 @@
     const core=typeof api.getCore==='function'?api.getCore():null;
     const phone=typeof api.phoneIcduStatus==='function'?api.phoneIcduStatus():null;
     const sxt=typeof api.sextantStatus==='function'?api.sextantStatus():null;
+    const parallax=api.parallax3d&&typeof api.parallax3d.state==='function'?api.parallax3d.state():null;
+    const parallaxGeometry=api.parallax3d&&typeof api.parallax3d.geometry==='function'?api.parallax3d.geometry():null;
     const r=(bank,addr)=>core&&typeof core.readErasable==='function'?core.readErasable(bank,addr):null;
     const state3=r(0,0o77),imodes30=r(2,0o320);
     const refsm=state3==null?'---':((state3&0o10000)?'VALID':'UNKNOWN');
@@ -49,6 +51,13 @@
     h+=row('Core',app.coreLoaded?`${app.coreVersion||'---'} · ${app.coreRunning?'RUNNING':'SUSPENDED'}`:'not loaded');
     h+=row('PROG / VERB / NOUN',`${(d.prog||[]).join('')||'--'} / ${(d.verb||[]).join('')||'--'} / ${(d.noun||[]).join('')||'--'}`);
     const ch=app.channels||{};h+=row('Channels 011 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
+    h+=section('PARALLAX / DISPLAY DEPTH');
+    if(parallax){
+      h+=row('Parallax state',`${parallax.enabled?'ENABLED':'DISABLED'} · source ${parallax.source||'none'} · native ${parallax.nativeActive?'ACTIVE':'STALE'}`);
+      h+=row('Parallax current → target',`${f(parallax.x,3)}, ${f(parallax.y,3)} → ${f(parallax.targetX,3)}, ${f(parallax.targetY,3)}`);
+      h+=row('Parallax intensity',`tilt ${parallax.tiltPercent??100}% · depth ${parallax.depthPercent??100}%`);
+    }else h+=row('Parallax state','CONTROLLER NOT LOADED');
+    if(parallaxGeometry)h+=row('Glass view depth',`${f(parallaxGeometry.glassViewThicknessIn,3)} in · ${f(parallaxGeometry.glassDepthPx,3)} px @ ${f(parallaxGeometry.renderedGlassWidthPx,1)} px width`);
     h+=section('ISS / ALIGNMENT');
     h+=row('IMODES30',`${oct(imodes30)} · ${iss}`);
     h+=row('REFSMFLG',`${refsm} · STATE+3 ${oct(state3)}`);
