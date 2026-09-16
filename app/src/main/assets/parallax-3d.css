@@ -2,7 +2,7 @@
  * Restrained 3D/parallax presentation for the physical DSKY face.
  *
  * This file changes presentation only. It never changes DSKY geometry, relay
- * timing, channel state, or input behavior. Dream/display-only/screen-only and
+ * timing, channel state, or input behavior. Dream/display-only and
  * reduced-motion presentations remain flat and stable.
  */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) #app{
@@ -19,6 +19,7 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky{
   --dsky-light-y:44%;
   --dsky-shadow-x:0px;
   --dsky-shadow-y:5px;
+  --dsky-el-z:-11.678px;
   transform:rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y));
   transform-style:preserve-3d;
   will-change:transform;
@@ -63,14 +64,11 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-so
   transform:translateZ(-.6px);
 }
 
-/* The active EL phosphor sits visibly behind the bezel while the cover glass
-   rides in front. The counter-motion is intentionally strong on phone screens. */
+/* The EL plane now uses one physical Z separation rather than independent
+   hand-tuned X/Y counter-motion. JavaScript scales --dsky-el-z from the
+   rendered 2.360-in display face and the 0.260-in package-depth envelope. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .elpanel{
-  transform:translate3d(
-    var(--dsky-el-x,0px),
-    var(--dsky-el-y,0px),
-    -18px
-  );
+  transform:translate3d(0,0,var(--dsky-el-z,-11.678px));
   transform-style:preserve-3d;
   will-change:transform;
 }
@@ -82,11 +80,7 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
   height:49.0204%;
   z-index:5;
   pointer-events:none;
-  transform:translate3d(
-    var(--dsky-glass-x,0px),
-    var(--dsky-glass-y,0px),
-    34px
-  );
+  transform:translate3d(0,0,0);
   background:
     radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.13),rgba(225,242,234,.035) 22%,transparent 47%),
     linear-gradient(118deg,transparent 8%,rgba(255,255,255,.035) 28%,transparent 43%,rgba(10,15,12,.025) 76%,transparent 94%);
@@ -172,9 +166,9 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
     inset var(--dsky-edge-light-x,0px) var(--dsky-edge-light-y,0px) .24vmin rgba(255,255,255,.13);
 }
 
-/* Screen-only is the full-handset EL presentation, not a flat accessibility
-   mode. Keep Dream flat, but preserve a conspicuous phosphor-vs-glass depth
-   cue when the user expands the EL face to the whole screen. */
+/* Screen-only keeps the same physical depth ratio. The layout grows, so the
+   JS recalculates --dsky-el-z from the actual rendered EL face width instead
+   of substituting a second set of exaggerated fullscreen offsets. */
 body.parallax-3d.screen-only:not(.dream):not(.display-only) #app{
   perspective:520px!important;
   perspective-origin:50% 50%!important;
@@ -187,11 +181,7 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) .dsky{
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel{
   transform:
     translate(-50%,-50%)
-    translate3d(
-      var(--dsky-fs-el-x,0px),
-      var(--dsky-fs-el-y,0px),
-      -28px
-    )!important;
+    translate3d(0,0,var(--dsky-el-z,-11.678px))!important;
   transform-style:preserve-3d!important;
   will-change:transform!important;
 }
@@ -201,13 +191,7 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen{
   top:50%!important;
   width:min(100vw,calc(100vh * 106 / 182.356))!important;
   height:min(100vh,calc(100vw * 182.356 / 106))!important;
-  transform:
-    translate(-50%,-50%)
-    translate3d(
-      var(--dsky-fs-glass-x,0px),
-      var(--dsky-fs-glass-y,0px),
-      42px
-    )!important;
+  transform:translate(-50%,-50%) translate3d(0,0,0)!important;
   z-index:9!important;
   opacity:.90!important;
   background:
