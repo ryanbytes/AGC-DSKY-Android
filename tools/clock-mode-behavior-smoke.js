@@ -40,8 +40,8 @@ for (const forbidden of [
 }
 for (const marker of [
   'const AGC_KEY = window.AGCDSKY_KEY_CODES;',
-  'const transitions = window.AGCDSKY_RUNTIME;',
-  'const input = window.AGCDSKY_INPUT;',
+  'const transitions = api?.runtimeTransitions;',
+  'const input = api?.inputRuntime;',
   "requestAgc('clock keypad fallback')",
   'input.keyMake(code)',
   "scheduleAgcAutosave('clock keypad handoff')",
