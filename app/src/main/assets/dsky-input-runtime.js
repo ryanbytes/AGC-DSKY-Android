@@ -5,7 +5,7 @@
   if (!api) throw new Error('AGC application API unavailable');
   if (window.AGCDSKY_INPUT) return;
 
-  const runtime = window.AGCDSKY_RUNTIME;
+  const runtime = api.runtimeTransitions;
   if (!runtime
       || typeof runtime.mode !== 'function'
       || typeof runtime.core !== 'function'
