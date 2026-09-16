@@ -1,9 +1,14 @@
-# Smoke programs intentionally excluded from tools/source-smoke-tests.txt.
+# Smoke programs intentionally excluded from the canonical source-smoke run.
 # Format: filename | reason
-# Every tools/*-smoke.js must be either in the canonical manifest or listed here.
+# Every tools/*-smoke.js and tools/*-smoke.sh must be canonical or listed here.
 
 device-agc-smoke.js | requires an adb-forwarded Android WebView DevTools socket and a running packaged app
 device-process-state-smoke.js | helper for ADB force-stop/relaunch process-recreation device harness
 device-recreation-smoke.js | requires an adb-forwarded Android WebView DevTools socket and packaged-page reload
 device-v35-smoke.js | requires an adb-forwarded Android WebView DevTools socket and real packaged AGC interaction
 phase24-transition-smoke.js | retired pre-service-graph harness; superseded by runtime-clock-transition-smoke.js and runtime-transition-integration-smoke.js
+
+device-agc-smoke.sh | requires adb, an installed debuggable APK, and a forwarded WebView DevTools socket
+device-full-smoke.sh | aggregate physical-device harness requiring adb and an installed APK
+device-process-recreation-smoke.sh | requires adb force-stop/relaunch against an installed Android app
+device-smoke.sh | requires adb and an attached Android device for native/package checks
