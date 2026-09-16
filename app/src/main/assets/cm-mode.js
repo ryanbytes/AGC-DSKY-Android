@@ -5,8 +5,11 @@
 // this module owns configuration only and performs no script injection.
 (() => {
   function applyCmMode() {
-    try { localStorage.setItem('agcMission','comanche055'); } catch (_) {}
-    document.body.classList.add('spacecraft-cm');
+    try {
+      localStorage.setItem('agcMission','comanche055');
+      localStorage.removeItem('dskyHardwareColorMode');
+    } catch (_) {}
+    document.body.classList.add('spacecraft-cm','authentic-colors');
   }
 
   applyCmMode();
