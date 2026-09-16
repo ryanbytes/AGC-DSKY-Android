@@ -80,11 +80,13 @@ forbid(show,'saved.coreRunning&&appVisible','old visibility-racy resume path');
 
 /* Relay personality stays deterministic and derives timing from the physical model. */
 for(const token of [
-  'window.AGCDSKY_COMPAT','window.AGCDSKY_ENVIRONMENT','window.AGCDSKY_HARDWARE',
+  'window.AGCDSKY_AUDIO','window.AGCDSKY_ENVIRONMENT','window.AGCDSKY_HARDWARE',
   'const audioModel=window.DSKY_RELAY_AUDIO','audioModel.profileFor(row,bit)',
+  "audio.implementation('emitTick')","audio.installImplementation('emitTick'",
   "localStorage.getItem('dskyHardwareUnitSeedV1')",'p.setTravelMs','p.resetTravelMs',
   "model:'deterministic-installed-unit-audible-spread-v1'"
 ]) req(perceptual,token,'relay personality contract');
+forbid(perceptual,'AGCDSKY_COMPAT','relay personality direct compatibility dependency');
 forbid(perceptual,'Math.random(','non-deterministic relay identity');
 
 /* User explicitly rejected synthetic brightness/glare effects. */
