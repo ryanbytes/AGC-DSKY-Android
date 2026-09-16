@@ -49,6 +49,8 @@ for (const [file, source] of [
     assert(!source.includes(forbidden), `${file} bypasses shared input runtime: ${forbidden}`);
   }
 }
+assert(!keyboardSource.includes('api.keyboardElectrical ='),
+  'keyboard electrical service regained late public-facade mutation');
 
 function addListener(bucket, type, fn) {
   (bucket[type] ||= []).push(fn);
@@ -147,7 +149,8 @@ async function main() {
   Object.defineProperties(AGCDSKY, {
     runtimeTransitions:{enumerable:true,get(){ return context.AGCDSKY_RUNTIME || null; }},
     inputRuntime:{enumerable:true,get(){ return context.AGCDSKY_INPUT || null; }},
-    clockBehavior:{enumerable:true,get(){ return context.AGCDSKY_CLOCK_BEHAVIOR || null; }}
+    clockBehavior:{enumerable:true,get(){ return context.AGCDSKY_CLOCK_BEHAVIOR || null; }},
+    keyboardElectrical:{enumerable:true,get(){ return context.AGCDSKY_KEYBOARD_ELECTRICAL || null; }}
   });
   context.enterAgc=AGCDSKY.enterAgc;
 
@@ -165,7 +168,10 @@ async function main() {
   assert(context.AGCDSKY_CLOCK_BEHAVIOR === AGCDSKY.clockBehavior,
     'RSET harness did not initialize the clock behavior service');
   vm.runInContext(keyboardSource,context,{filename:'keyboard-electrical-interlock.js'});
-  assert(AGCDSKY.keyboardElectrical, 'physical electrical interlock did not initialize');
+  assert(context.AGCDSKY_KEYBOARD_ELECTRICAL === AGCDSKY.keyboardElectrical,
+    'bootstrap-owned keyboardElectrical getter did not resolve the physical interlock service');
+  assert(Object.isFrozen(AGCDSKY.keyboardElectrical),
+    'physical keyboard electrical service must be frozen');
 
   const rset=makeButton('R');
   let event=makeEvent(rset,41);
@@ -225,7 +231,7 @@ async function main() {
     'two physical RSET cycles did not produce exactly two KEYRST releases');
 
   console.log('RSET flight path smoke: PASS');
-  console.log('  bootstrap runtime/input/clock getters preserve CLOCK handoff and AGC-mode physical RSET as Pinball 022 + KEYRST with no synthetic JavaScript reset path');
+  console.log('  bootstrap runtime/input/clock/keyboard getters preserve CLOCK handoff and AGC-mode physical RSET as Pinball 022 + KEYRST with no synthetic JavaScript reset path');
 }
 
 main().catch(error=>fail(error && error.stack ? error.stack : String(error)));
