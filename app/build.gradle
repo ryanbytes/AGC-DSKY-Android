@@ -36,8 +36,8 @@ android {
     // previously installed production or ELTEST signing lineage.
     buildTypes {
         debug {
-            applicationIdSuffix '.installtest20260916'
-            versionNameSuffix '-installtest20260916'
+            applicationIdSuffix '.installtest20260916b'
+            versionNameSuffix '-installtest20260916b'
         }
     }
 
