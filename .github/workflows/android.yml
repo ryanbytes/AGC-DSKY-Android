@@ -104,7 +104,7 @@ jobs:
             app/build/outputs/apk/fire/debug/app-fire-debug.apk; do
             "$BT/apksigner" verify --verbose --print-certs "$APK"
             "$BT/aapt" dump badging "$APK" | tee /tmp/eltest-badging.txt
-            grep -F "package: name='org.apollo.agcdsky.installtest20260916'" /tmp/eltest-badging.txt
+            grep -F "package: name='org.apollo.agcdsky.installtest20260916b'" /tmp/eltest-badging.txt
             grep -F "application-label:'AGC DSKY v${VERSION_NAME}'" /tmp/eltest-badging.txt
             unzip -l "$APK" | grep -F 'res/mipmap-xxhdpi-v4/ic_launcher_original.webp'
             unzip -p "$APK" assets/index.html | grep -F 'el-glass-background'
