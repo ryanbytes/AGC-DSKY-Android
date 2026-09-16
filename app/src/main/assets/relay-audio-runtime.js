@@ -1,8 +1,8 @@
 'use strict';
 
-// Shared relay-contact audio authority. Legacy global names remain registered
-// only at this boundary for compatibility, while all late audio layers replace
-// implementations through AGCDSKY_AUDIO itself.
+// Shared relay-contact audio authority. Legacy global names remain forwarded
+// compatibility aliases at this boundary; live context and implementation
+// authority stays local to AGCDSKY_AUDIO.
 (() => {
   const audioState=window.AGCDSKY_APP_STATE;
   const audioShell=window.AGCDSKY_SHELL;
@@ -16,6 +16,22 @@
   const RELAY_CLICK_SPREAD_MS_VALUE=2.5;
   let audioCtxValue=null;
   let contextSlot,ensureSlot,emitSlot,burstSlot,applySlot;
+
+  function createOwnedSlot(name,initial,validate=null,normalize=value=>value){
+    let value=normalize(initial),version=0;
+    if(validate&&!validate(value))throw new TypeError(`Invalid initial audio slot value: ${name}`);
+    const history=[];
+    return Object.freeze({
+      get:()=>value,
+      set(next,reason='explicit audio slot replacement'){
+        next=normalize(next);
+        if(validate&&!validate(next))throw new TypeError(`Invalid audio slot value: ${name}`);
+        const prior=value;value=next;version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
+      },
+      version:()=>version,
+      history:()=>history.map(item=>({...item}))
+    });
+  }
 
   function baseEnsureAudio(){
     if(!audioCtxValue){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;audioCtxValue=new AC()}
@@ -47,12 +63,17 @@
   function baseApplyTickSound(){audioShell.store.set('audioTickV4',audioState.tickSound?'1':'0');const b=audioShell.element('sound');if(b)b.textContent=audioState.tickSound?'RELAY CLICKS ON':'RELAY CLICKS OFF'}
 
   const isFn=value=>typeof value==='function';
+  contextSlot=createOwnedSlot('audioCtx',null,null,next=>next||null);
+  ensureSlot=createOwnedSlot('ensureAudio',baseEnsureAudio,isFn);
+  emitSlot=createOwnedSlot('emitTick',baseEmitTick,isFn);
+  burstSlot=createOwnedSlot('playRelayBurst',basePlayRelayBurst,isFn);
+  applySlot=createOwnedSlot('applyTickSound',baseApplyTickSound,isFn);
+
   compat.readonly('RELAY_CLICK_SPREAD_MS',()=>RELAY_CLICK_SPREAD_MS_VALUE);
-  contextSlot=compat.accessor('audioCtx',()=>audioCtxValue,next=>{audioCtxValue=next||null});
-  ensureSlot=compat.mutable('ensureAudio',baseEnsureAudio,isFn);
-  emitSlot=compat.mutable('emitTick',baseEmitTick,isFn);
-  burstSlot=compat.mutable('playRelayBurst',basePlayRelayBurst,isFn);
-  applySlot=compat.mutable('applyTickSound',baseApplyTickSound,isFn);
+  compat.alias('audioCtx',()=>audioCtxValue,(next,reason)=>{contextSlot.set(next,reason);audioCtxValue=contextSlot.get()},contextSlot.version,contextSlot.history);
+  for(const [name,slot] of Object.entries({ensureAudio:ensureSlot,emitTick:emitSlot,playRelayBurst:burstSlot,applyTickSound:applySlot})){
+    compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
+  }
 
   const implementationSlots=Object.freeze({
     ensure:ensureSlot,
@@ -72,7 +93,8 @@
     return slot.set(next,reason);
   }
   function setContext(next,reason='explicit audio context'){
-    contextSlot.set(next||null,reason);
+    contextSlot.set(next,reason);
+    audioCtxValue=contextSlot.get();
     return audioCtxValue;
   }
 
