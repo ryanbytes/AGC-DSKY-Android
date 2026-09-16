@@ -78,7 +78,6 @@ for(const token of [
   "body.classList.contains('display-only')",
   "glassFront.className = 'el-glass-sheen'",
   'window.AGCDSKY_PARALLAX = controller',
-  'api.parallax3d = controller',
   "const TILT_STORAGE_KEY = 'dskyParallaxTiltPct'",
   "const DEPTH_STORAGE_KEY = 'dskyParallaxDepthPct'",
   'const MAX_INTENSITY_PERCENT = 200',
@@ -95,8 +94,10 @@ for(const token of [
 for(const forbidden of [
   'installNativeQuaternionTap',
   'api.nativePhoneQuaternion = wrapped',
-  '__dskyParallaxWrapped'
-]) assert(!js.includes(forbidden),`parallax must not own the native phone callback: ${forbidden}`);
+  '__dskyParallaxWrapped',
+  'window.AGCDSKY = window.AGCDSKY || {}',
+  'api.parallax3d = controller'
+]) assert(!js.includes(forbidden),`parallax must not mutate the public facade: ${forbidden}`);
 
 for(const token of [
   'private void pushPhoneQuaternion(float[] q,int displayAngle)',
@@ -223,6 +224,7 @@ function runtimeNativeParallaxSmoke(){
   vm.runInNewContext(js,context,{filename:'parallax-3d.js'});
   assert(window.AGCDSKY_PARALLAX,'runtime controller was not published');
   assert(api.nativePhoneQuaternion===prior,'parallax presentation must not replace the native quaternion callback');
+  assert(!Object.prototype.hasOwnProperty.call(api,'parallax3d'),'parallax controller must not append a duplicate public-facade alias');
   const nativePush=(w,x,y,z,displayAngle=0)=>{
     api.nativePhoneQuaternion(w,x,y,z,displayAngle);
     const raw=[w,x,y,z].map(Number),norm=Math.hypot(raw[0],raw[1],raw[2],raw[3]);
@@ -258,6 +260,7 @@ const runtime=runtimeNativeParallaxSmoke();
 console.log('parallax 3D smoke: PASS');
 console.log(`  geometric tilt: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
 console.log('  native path: Android bridge -> unchanged phone callback -> read-only quaternion event -> presentation consumer');
+console.log('  ownership: AGCDSKY_PARALLAX only; no root AGCDSKY alias');
 console.log('  synthetic glint/reflection: forbidden');
 console.log('  controls: TILT 0–200% + DEPTH 0–200%, persisted independently');
 console.log(`  physical glass: ${edgeDepth.toFixed(3)} + ${centerRise.toFixed(3)} = ${viewDepth.toFixed(3)} in -> ${baseGlassPx.toFixed(3)} px at 106-unit width`);
