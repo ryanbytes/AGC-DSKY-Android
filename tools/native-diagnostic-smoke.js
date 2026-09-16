@@ -94,8 +94,12 @@ assert(diagnostics.includes("typeof api.parallax3d.state==='function'"),
     'diagnostics must read live parallax controller state without owning it');
 assert(diagnostics.includes("typeof api.parallax3d.geometry==='function'"),
     'diagnostics must read physical parallax geometry without owning it');
-assert(diagnostics.includes("api.openDiagnostics=open"),
-    'diagnostics module must expose the current openDiagnostics entry point');
+assert(diagnostics.includes('const api=window.AGCDSKY;')&&!diagnostics.includes('window.AGCDSKY=window.AGCDSKY||{}'),
+    'diagnostics must consume the existing public facade instead of creating it');
+assert(diagnostics.includes('window.AGCDSKY_DIAGNOSTICS=Object.freeze({open,close})'),
+    'diagnostics module must publish open/close through the dedicated diagnostics service');
+assert(!diagnostics.includes('api.openDiagnostics=')&&!diagnostics.includes('api.closeDiagnostics='),
+    'diagnostics module must not append open/close methods onto the public facade');
 
 console.log('native diagnostic source smoke: PASS');
-console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, parallax presentation telemetry, and diagnostics surface verified');
+console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, parallax presentation telemetry, and diagnostics service ownership verified');

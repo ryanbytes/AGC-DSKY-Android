@@ -11,7 +11,7 @@ const RESERVED=[
   'enterClock','enterAgc','appStatus','saveAgcState','clearSavedAgcState',
   'savedSnapshotInfo','verifySnapshotRoundTrip','scheduleAgcAutosave',
   'accurateTime','accurateDate','ntpStatus','nativeNtpStatus',
-  'hardware','audioStatus','relayShow'
+  'hardware','audioStatus','relayShow','openDiagnostics','closeDiagnostics'
 ];
 function escapeRegExp(value){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 const files=fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js')).sort();
@@ -39,6 +39,8 @@ for(const marker of [
   'function publicEnterClock()',
   'function publicHardware()',
   'function publicAudioStatus()',
+  'function publicOpenDiagnostics(...args)',
+  'function publicCloseDiagnostics(...args)',
   'const publicRelayShow=Object.freeze({',
   'window.AGCDSKY={services:apiServices'
 ])if(!owner.includes(marker))throw new Error(`public facade owner marker missing: ${marker}`);
