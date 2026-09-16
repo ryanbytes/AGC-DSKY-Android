@@ -17,16 +17,27 @@
   let audioCtxValue=null;
   let contextSlot,ensureSlot,emitSlot,burstSlot,applySlot;
 
-  function createOwnedSlot(name,initial,validate=null,normalize=value=>value){
-    let value=normalize(initial),version=0;
+  function createOwnedSlot(name,initial,validate=null){
+    let value=initial,version=0;
     if(validate&&!validate(value))throw new TypeError(`Invalid initial audio slot value: ${name}`);
     const history=[];
     return Object.freeze({
       get:()=>value,
       set(next,reason='explicit audio slot replacement'){
-        next=normalize(next);
         if(validate&&!validate(next))throw new TypeError(`Invalid audio slot value: ${name}`);
         const prior=value;value=next;version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
+      },
+      version:()=>version,
+      history:()=>history.map(item=>({...item}))
+    });
+  }
+  function createContextSlot(){
+    let version=0;
+    const history=[];
+    return Object.freeze({
+      get:()=>audioCtxValue,
+      set(next,reason='explicit audio context'){
+        const prior=audioCtxValue;audioCtxValue=next||null;version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
       },
       version:()=>version,
       history:()=>history.map(item=>({...item}))
@@ -63,14 +74,14 @@
   function baseApplyTickSound(){audioShell.store.set('audioTickV4',audioState.tickSound?'1':'0');const b=audioShell.element('sound');if(b)b.textContent=audioState.tickSound?'RELAY CLICKS ON':'RELAY CLICKS OFF'}
 
   const isFn=value=>typeof value==='function';
-  contextSlot=createOwnedSlot('audioCtx',null,null,next=>next||null);
+  contextSlot=createContextSlot();
   ensureSlot=createOwnedSlot('ensureAudio',baseEnsureAudio,isFn);
   emitSlot=createOwnedSlot('emitTick',baseEmitTick,isFn);
   burstSlot=createOwnedSlot('playRelayBurst',basePlayRelayBurst,isFn);
   applySlot=createOwnedSlot('applyTickSound',baseApplyTickSound,isFn);
 
   compat.readonly('RELAY_CLICK_SPREAD_MS',()=>RELAY_CLICK_SPREAD_MS_VALUE);
-  compat.alias('audioCtx',()=>audioCtxValue,(next,reason)=>{contextSlot.set(next,reason);audioCtxValue=contextSlot.get()},contextSlot.version,contextSlot.history);
+  compat.alias('audioCtx',contextSlot.get,(next,reason)=>contextSlot.set(next,reason),contextSlot.version,contextSlot.history);
   for(const [name,slot] of Object.entries({ensureAudio:ensureSlot,emitTick:emitSlot,playRelayBurst:burstSlot,applyTickSound:applySlot})){
     compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
   }
@@ -94,7 +105,6 @@
   }
   function setContext(next,reason='explicit audio context'){
     contextSlot.set(next,reason);
-    audioCtxValue=contextSlot.get();
     return audioCtxValue;
   }
 
