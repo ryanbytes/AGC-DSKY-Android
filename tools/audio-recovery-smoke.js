@@ -31,6 +31,10 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   assert(audioSource.includes('installImplementation'),'audio runtime must own replaceable implementation installation');
   assert(audioSource.includes('implementation(name)'),'audio runtime must expose implementation lookup for wrapper chaining');
   assert(audioSource.includes('setContext'),'audio runtime must own context replacement');
+  assert(audioSource.includes('function createOwnedSlot(name,initial,validate=null)'),'audio implementation slot owner missing');
+  assert(audioSource.includes('function createContextSlot()'),'audio context slot owner missing');
+  assert(audioSource.includes("compat.alias('audioCtx'")&&audioSource.includes('compat.alias(name,slot.get'),'audio compatibility globals must forward to audio-owned slots');
+  for(const token of ["compat.accessor('audioCtx'","compat.mutable('ensureAudio'","compat.mutable('emitTick'","compat.mutable('playRelayBurst'","compat.mutable('applyTickSound'"])assert(!audioSource.includes(token),`compatibility registry still owns audio live state: ${token}`);
   assert(guardSource.includes("audio.installImplementation('ensure'"),'audio guard must install resilient ensure through audio service');
   assert(guardSource.includes("audio.installImplementation('applySetting'"),'audio guard must install resilient setting through audio service');
   assert(guardSource.includes("audio.installImplementation('emitTick'"),'audio guard must install tick visibility gate through audio service');
@@ -55,5 +59,5 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   const p=makeHarness();p.FakeAudioContext.nextState='suspended';const policy=new Error('gesture required');policy.name='NotAllowedError';p.FakeAudioContext.nextResumeError=policy;const policyCtx=p.audio.ensure();await flush();assert(p.recovery.status().state==='suspended'&&p.recovery.status().failures===0&&policyCtx.closeCount===0,'NotAllowedError must retain suspended context without failure count');
   const dream=makeHarness({dream:true});assert(dream.audio.ensure()===null&&dream.instances.length===0,'Dream mode must remain silent');
   const hidden=makeHarness({hidden:true});assert(hidden.audio.ensure()===null&&hidden.instances.length===0,'hidden app must not create/resume relay audio');
-  console.log('audio recovery smoke: PASS');console.log('  explicit audio-service recovery publication/ownership, circuit breaker, closed-context replacement, policy rejection, and Dream/hidden silence verified');
+  console.log('audio recovery smoke: PASS');console.log('  audio-owned context/implementation slots, forwarded compatibility aliases, explicit recovery publication, circuit breaker, closed-context replacement, policy rejection, and Dream/hidden silence verified');
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});
