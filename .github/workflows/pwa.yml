@@ -8,6 +8,7 @@ on:
       - 'pwa/**'
       - 'analytics/cloudflare/**'
       - 'app/src/main/assets/**'
+      - 'tools/compat-boundary-smoke.js'
       - 'tools/clock-mode-behavior-smoke.js'
       - 'tools/relay-show-smoke.js'
       - 'tools/flight-hardware-ui-smoke.js'
@@ -23,6 +24,7 @@ on:
       - 'pwa/**'
       - 'analytics/cloudflare/**'
       - 'app/src/main/assets/**'
+      - 'tools/compat-boundary-smoke.js'
       - 'tools/clock-mode-behavior-smoke.js'
       - 'tools/relay-show-smoke.js'
       - 'tools/flight-hardware-ui-smoke.js'
@@ -93,6 +95,7 @@ jobs:
 
       - name: Shared AGC smoke tests
         run: |
+          node tools/compat-boundary-smoke.js
           node tools/frontend-smoke.js
           node tools/agc-core-smoke.js
           node tools/wasm-runtime-smoke.js
