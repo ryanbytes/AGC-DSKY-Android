@@ -1,8 +1,8 @@
 'use strict';
 
-// Shared electroluminescent DSKY rendering authority. Late geometry/stability
-// layers still use historical parser-global names, but those names are now
-// accessor-backed slots owned by this service via AGCDSKY_COMPAT.
+// Shared electroluminescent DSKY rendering authority. Legacy parser-global
+// names remain accessor-backed compatibility aliases at this boundary; late
+// presentation layers replace implementations through AGCDSKY_RENDERER.
 (() => {
   const compat=window.AGCDSKY_COMPAT;
   if(!compat)throw new Error('Runtime compatibility bridge unavailable');
@@ -48,6 +48,30 @@
   setLampSlot=compat.mutable('setLamp',baseSetLamp,isFn);
   clearLampsSlot=compat.mutable('clearLamps',baseClearLamps,isFn);
 
+  const implementationSlots=Object.freeze({
+    glyph:glyphSlot,
+    signGlyph:signSlot,
+    renderDigits:digitsSlot,
+    renderReg:regSlot,
+    set2:set2Slot,
+    setReg:setRegSlot,
+    setLamp:setLampSlot,
+    clearLamps:clearLampsSlot
+  });
+  function implementation(name){
+    const slot=implementationSlots[name];
+    if(!slot)throw new Error(`Unknown renderer implementation: ${String(name)}`);
+    return slot.get();
+  }
+  function installImplementation(name,next,reason='explicit renderer implementation'){
+    const slot=implementationSlots[name];
+    if(!slot)throw new Error(`Unknown renderer implementation: ${String(name)}`);
+    if(typeof next!=='function')throw new TypeError(`Renderer implementation must be a function: ${String(name)}`);
+    return slot.set(next,reason);
+  }
+  function segmentPattern(ch){return SEG[ch]||''}
+  function registerSegmentPattern(ch,pattern){SEG[ch]=String(pattern||'');return SEG[ch]}
+
   window.AGCDSKY_RENDERER=Object.freeze({
     renderDigits:(...args)=>digitsSlot.get()(...args),
     renderReg:(...args)=>regSlot.get()(...args),
@@ -55,6 +79,10 @@
     setReg:(...args)=>setRegSlot.get()(...args),
     setLamp:(...args)=>setLampSlot.get()(...args),
     clearLamps:(...args)=>clearLampsSlot.get()(...args),
+    implementation,
+    installImplementation,
+    segmentPattern,
+    registerSegmentPattern,
     compatibilityVersions:()=>({
       glyph:glyphSlot.version(),signGlyph:signSlot.version(),renderDigits:digitsSlot.version(),renderReg:regSlot.version(),
       set2:set2Slot.version(),setReg:setRegSlot.version(),setLamp:setLampSlot.version(),clearLamps:clearLampsSlot.version()
