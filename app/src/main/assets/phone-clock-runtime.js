@@ -2,8 +2,7 @@
 
 // Synthetic PHONE CLOCK relay/display authority. Historical mutable names remain
 // forwarded compatibility aliases at this service boundary; replaceable clock
-// implementations are owned by AGCDSKY_CLOCK while backing-state accessors remain
-// registered here for compatibility until their dedicated ownership migration.
+// implementations and backing state are owned by AGCDSKY_CLOCK itself.
 (() => {
   const clockState=window.AGCDSKY_APP_STATE;
   const clockShell=window.AGCDSKY_SHELL;
@@ -29,6 +28,7 @@
     {relay:2,cells:[['r3',1],['r3',2]],b:1},{relay:1,cells:[['r3',3],['r3',4]],b:0}
   ];
   let syncSlot,renderRegSlot,stopSlot,runQueueSlot,tickSlot,cancelSlot,lampTestSlot;
+  let digitsStateSlot,relayWordsStateSlot,queueStateSlot,busyStateSlot,lampActiveStateSlot,lampTimerStateSlot;
 
   function createImplementationSlot(name,initial,validate=null){
     if(validate&&!validate(initial))throw new TypeError(`Invalid initial clock implementation: ${name}`);
@@ -39,6 +39,19 @@
       set(next,reason='explicit clock implementation'){
         if(validate&&!validate(next))throw new TypeError(`Invalid clock implementation: ${name}`);
         const prior=value;value=next;version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
+      },
+      version:()=>version,
+      history:()=>history.map(item=>({...item}))
+    });
+  }
+  function createStateSlot(name,getter,setter){
+    if(typeof getter!=='function'||typeof setter!=='function')throw new TypeError(`Clock state slot requires accessors: ${name}`);
+    let version=0;
+    const history=[];
+    return Object.freeze({
+      get:getter,
+      set(next,reason='explicit clock state replacement'){
+        const prior=getter();setter(next);version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
       },
       version:()=>version,
       history:()=>history.map(item=>({...item}))
@@ -155,6 +168,12 @@
   tickSlot=createImplementationSlot('tick',baseTick,isFn);
   cancelSlot=createImplementationSlot('cancelLampTest',baseCancelLampTest,isFn);
   lampTestSlot=createImplementationSlot('lampTest',baseLampTest,isFn);
+  digitsStateSlot=createStateSlot('clockDigits',()=>clockDigitsValue,next=>{clockDigitsValue=next});
+  relayWordsStateSlot=createStateSlot('clockRelayWords',()=>clockRelayWordsValue,next=>{clockRelayWordsValue=next||{}});
+  queueStateSlot=createStateSlot('relayQueue',()=>relayQueueValue,next=>{relayQueueValue=Array.isArray(next)?next:[]});
+  busyStateSlot=createStateSlot('relayBusy',()=>relayBusyValue,next=>{relayBusyValue=!!next});
+  lampActiveStateSlot=createStateSlot('lampTestActive',()=>lampTestActiveValue,next=>{lampTestActiveValue=!!next});
+  lampTimerStateSlot=createStateSlot('lampTestTimer',()=>lampTestTimerValue,next=>{lampTestTimerValue=Number(next)||0});
 
   compat.readonly('DIGIT_RELAY',()=>DIGIT_RELAY_VALUE);
   compat.readonly('CLOCK_GROUPS',()=>CLOCK_GROUPS_VALUE);
@@ -165,12 +184,9 @@
   compat.readonly('desiredClockDigits',()=>desiredClockDigitsImpl);
   compat.readonly('clockWord',()=>clockWordImpl);
   compat.readonly('popcount11',()=>popcount11Impl);
-  compat.accessor('clockDigits',()=>clockDigitsValue,next=>{clockDigitsValue=next});
-  compat.accessor('clockRelayWords',()=>clockRelayWordsValue,next=>{clockRelayWordsValue=next||{}});
-  compat.accessor('relayQueue',()=>relayQueueValue,next=>{relayQueueValue=Array.isArray(next)?next:[]});
-  compat.accessor('relayBusy',()=>relayBusyValue,next=>{relayBusyValue=!!next});
-  compat.accessor('lampTestActive',()=>lampTestActiveValue,next=>{lampTestActiveValue=!!next});
-  compat.accessor('lampTestTimer',()=>lampTestTimerValue,next=>{lampTestTimerValue=Number(next)||0});
+  for(const [name,slot] of Object.entries({clockDigits:digitsStateSlot,clockRelayWords:relayWordsStateSlot,relayQueue:queueStateSlot,relayBusy:busyStateSlot,lampTestActive:lampActiveStateSlot,lampTestTimer:lampTimerStateSlot})){
+    compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
+  }
   for(const [name,slot] of Object.entries({renderClockReg:renderRegSlot,syncClockFace:syncSlot,stopClockQueue:stopSlot,runRelayQueue:runQueueSlot,tick:tickSlot,cancelLampTest:cancelSlot,lampTest:lampTestSlot})){
     compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
   }
