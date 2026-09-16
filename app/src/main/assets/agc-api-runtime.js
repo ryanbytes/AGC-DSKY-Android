@@ -19,6 +19,43 @@ if(!apiState)throw new Error('Shared application state unavailable');
 if(!apiCore)throw new Error('Shared AGC core session unavailable');
 for(const [name,service] of Object.entries({shell:apiShell,renderer:apiRenderer,environment:apiEnvironment,audio:apiAudio,clock:apiClock,display:apiDisplay,snapshot:apiSnapshot,lifecycle:apiLifecycle}))if(!service)throw new Error(`AGC ${name} service unavailable`);
 
+const LATE_SERVICE_GLOBALS=Object.freeze([
+  'AGCDSKY_PHONE','AGCDSKY_RUNTIME','AGCDSKY_INPUT','AGCDSKY_CLOCK_BEHAVIOR',
+  'AGCDSKY_OPTICS','AGCDSKY_SEXTANT_TAP_MARK','AGCDSKY_CM_MODE','AGCDSKY_HARDWARE',
+  'AGCDSKY_PROCEED','AGCDSKY_AUDIO_RECOVERY','AGCDSKY_FLIGHT_HARDWARE_UI',
+  'AGCDSKY_LIGHTING_RHEOSTAT_STOP','AGCDSKY_KEY_MECHANICAL_SPEC','AGCDSKY_KEYBOARD_ELECTRICAL',
+  'AGCDSKY_LIGHTING_ELECTRICAL','AGCDSKY_RELAY_SHOW','AGCDSKY_HARDWARE_COLOR_MODE','AGCDSKY_DIAGNOSTICS',
+  'AGCDSKY_APOLLO_STARS','AGCDSKY_PARALLAX','AGCDSKY_SCREEN_ONLY_GEOMETRY'
+]);
+function createLateServiceRegistry(){
+  const allowed=new Set(LATE_SERVICE_GLOBALS),values=Object.create(null),versions=Object.create(null),reasons=Object.create(null);
+  function assertName(name){if(!allowed.has(name))throw new Error(`Unknown late AGC service: ${String(name)}`)}
+  function get(name){assertName(name);return values[name]||null}
+  function publish(name,service,reason='explicit late service publication'){
+    assertName(name);
+    if(service===null||(typeof service!=='object'&&typeof service!=='function'))throw new TypeError(`Late AGC service must be an object or function: ${name}`);
+    const prior=values[name]||null;
+    if(prior){if(prior!==service)throw new Error(`Late AGC service already published: ${name}`);return prior}
+    values[name]=service;versions[name]=1;reasons[name]=String(reason||'explicit late service publication');return service;
+  }
+  function requireService(name){const service=get(name);if(!service)throw new Error(`Late AGC service unavailable: ${name}`);return service}
+  for(const name of LATE_SERVICE_GLOBALS){
+    const descriptor=Object.getOwnPropertyDescriptor(window,name),prior=descriptor?window[name]:undefined;
+    if(descriptor&&!descriptor.configurable)throw new Error(`Late AGC service global is already non-configurable: ${name}`);
+    Object.defineProperty(window,name,{configurable:false,enumerable:false,get:()=>values[name]||null,set:service=>publish(name,service,`compatibility global publication: ${name}`)});
+    if(prior!==undefined&&prior!==null)publish(name,prior,`pre-bootstrap publication: ${name}`);
+  }
+  return Object.freeze({
+    names:()=>LATE_SERVICE_GLOBALS.slice(),
+    get,
+    require:requireService,
+    publish,
+    describe:()=>LATE_SERVICE_GLOBALS.map(name=>Object.freeze({name,published:!!values[name],version:versions[name]||0,reason:reasons[name]||null}))
+  });
+}
+const apiLateServiceRegistry=window.AGCDSKY_SERVICE_REGISTRY||createLateServiceRegistry();
+if(!window.AGCDSKY_SERVICE_REGISTRY)Object.defineProperty(window,'AGCDSKY_SERVICE_REGISTRY',{configurable:false,enumerable:false,writable:false,value:apiLateServiceRegistry});
+
 const apiServices=Object.freeze({shell:apiShell,renderer:apiRenderer,environment:apiEnvironment,audio:apiAudio,clock:apiClock,display:apiDisplay,snapshot:apiSnapshot,lifecycle:apiLifecycle});
 window.AGCDSKY_SERVICES=apiServices;
 
