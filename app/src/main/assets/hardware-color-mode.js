@@ -14,5 +14,5 @@
   const controller = Object.freeze({
     authentic: () => true
   });
-  window.AGCDSKY_HARDWARE_COLOR_MODE = controller;
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE_COLOR_MODE',controller,'hardware-color-mode publication');
 })();
