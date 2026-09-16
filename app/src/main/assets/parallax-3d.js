@@ -10,9 +10,11 @@
  *   changing the arguments, return value, or AGC/IMU behavior of that bridge
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
  * - EL-only screen mode: tilts the isolated electroluminescent panel itself
+ * - user controls: independent persisted tilt and depth intensity, 0-200%
  * - Dream/reduced-motion: flat and inactive
  *
- * No AGC, relay, channel, keycode, or persistence state is touched here.
+ * No AGC, relay, channel, or keycode state is touched here. Only the two
+ * presentation intensity preferences are persisted.
  */
 (() => {
   if (window.__DSKY_PARALLAX_3D__) return;
@@ -44,6 +46,15 @@
   const MAX_ROTATE_X_DEG = 1.55;
   const MAX_SENSOR_DELTA_DEG = 12;
   const PARALLAX_TRANSLATION = 4.20;
+  const TILT_STORAGE_KEY = 'dskyParallaxTiltPct';
+  const DEPTH_STORAGE_KEY = 'dskyParallaxDepthPct';
+  const DEFAULT_INTENSITY_PERCENT = 100;
+  const MAX_INTENSITY_PERCENT = 200;
+
+  let tiltPercent = readStoredPercent(TILT_STORAGE_KEY, DEFAULT_INTENSITY_PERCENT);
+  let depthPercent = readStoredPercent(DEPTH_STORAGE_KEY, DEFAULT_INTENSITY_PERCENT);
+  let tiltOutput = null;
+  let depthOutput = null;
 
   let targetX = STATIC_X;
   let targetY = STATIC_Y;
@@ -60,6 +71,95 @@
     return Math.max(min, Math.min(max, Number(value) || 0));
   }
 
+  function normalizePercent(value, fallback = DEFAULT_INTENSITY_PERCENT) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.round(clamp(numeric, 0, MAX_INTENSITY_PERCENT));
+  }
+
+  function readStoredPercent(key, fallback) {
+    if (typeof localStorage === 'undefined') return fallback;
+    try {
+      const stored = localStorage.getItem(key);
+      return stored == null ? fallback : normalizePercent(stored, fallback);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeStoredPercent(key, value) {
+    if (typeof localStorage === 'undefined') return;
+    try { localStorage.setItem(key, String(value)); } catch (_) {}
+  }
+
+  function updateIntensityReadouts() {
+    if (tiltOutput) tiltOutput.textContent = `${tiltPercent}%`;
+    if (depthOutput) depthOutput.textContent = `${depthPercent}%`;
+  }
+
+  function updateTiltPercent(value, persist = true) {
+    tiltPercent = normalizePercent(value);
+    if (persist) writeStoredPercent(TILT_STORAGE_KEY, tiltPercent);
+    updateIntensityReadouts();
+    scheduleFrame();
+    return tiltPercent;
+  }
+
+  function updateDepthPercent(value, persist = true) {
+    depthPercent = normalizePercent(value);
+    if (persist) writeStoredPercent(DEPTH_STORAGE_KEY, depthPercent);
+    updateIntensityReadouts();
+    scheduleFrame();
+    return depthPercent;
+  }
+
+  function buildIntensityControl(id, label, value, setValue) {
+    const wrapper = document.createElement('label');
+    wrapper.className = 'parallax-control';
+    wrapper.setAttribute('for', id);
+
+    const legend = document.createElement('span');
+    const name = document.createElement('b');
+    name.textContent = label;
+    const output = document.createElement('output');
+    output.setAttribute('for', id);
+    output.textContent = `${value}%`;
+    legend.appendChild(name);
+    legend.appendChild(output);
+
+    const input = document.createElement('input');
+    input.id = id;
+    input.type = 'range';
+    input.min = '0';
+    input.max = String(MAX_INTENSITY_PERCENT);
+    input.step = '5';
+    input.value = String(value);
+    input.setAttribute('aria-label', `${label} parallax intensity`);
+    input.addEventListener('input', () => setValue(input.value, false));
+    input.addEventListener('change', () => setValue(input.value, true));
+
+    wrapper.appendChild(legend);
+    wrapper.appendChild(input);
+    return {wrapper, output};
+  }
+
+  function installIntensityControls() {
+    const controls = document.getElementById('controls');
+    if (!controls || controls.querySelector('.parallax-controls')) return;
+    const group = document.createElement('div');
+    group.className = 'parallax-controls';
+    group.setAttribute('aria-label', 'Parallax intensity');
+
+    const tilt = buildIntensityControl('parallax-tilt-intensity', 'TILT', tiltPercent, updateTiltPercent);
+    const depth = buildIntensityControl('parallax-depth-intensity', 'DEPTH', depthPercent, updateDepthPercent);
+    tiltOutput = tilt.output;
+    depthOutput = depth.output;
+    group.appendChild(tilt.wrapper);
+    group.appendChild(depth.wrapper);
+    controls.appendChild(group);
+    updateIntensityReadouts();
+  }
+
   function presentationAllowed() {
     if (reduceMotion && reduceMotion.matches) return false;
     const body = document.body;
@@ -74,14 +174,16 @@
     const allowed = presentationAllowed();
     const x = allowed ? currentX : 0;
     const y = allowed ? currentY : 0;
-    const tiltX = -y * MAX_ROTATE_X_DEG;
-    const tiltY = x * MAX_ROTATE_Y_DEG;
-    const parallaxX = x * PARALLAX_TRANSLATION;
-    const parallaxY = y * PARALLAX_TRANSLATION;
-    const lightX = 50 + x * 16;
-    const lightY = 45 + y * 14;
-    const shadowX = -x * 3.2;
-    const shadowY = 5.0 - y * 1.8;
+    const tiltScale = tiltPercent / 100;
+    const depthScale = depthPercent / 100;
+    const tiltX = -y * MAX_ROTATE_X_DEG * tiltScale;
+    const tiltY = x * MAX_ROTATE_Y_DEG * tiltScale;
+    const parallaxX = x * PARALLAX_TRANSLATION * depthScale;
+    const parallaxY = y * PARALLAX_TRANSLATION * depthScale;
+    const lightX = 50 + x * 16 * depthScale;
+    const lightY = 45 + y * 14 * depthScale;
+    const shadowX = -x * 3.2 * depthScale;
+    const shadowY = 5.0 - y * 1.8 * depthScale;
 
     dsky.style.setProperty('--dsky-tilt-x', `${tiltX.toFixed(3)}deg`);
     dsky.style.setProperty('--dsky-tilt-y', `${tiltY.toFixed(3)}deg`);
@@ -272,11 +374,16 @@
     enabled:() => presentationAllowed(),
     source:() => source,
     nativeBridgeObserved:() => nativeBridgeObserved,
+    intensity:() => Object.freeze({tiltPercent, depthPercent}),
+    setTiltPercent:value => updateTiltPercent(value, true),
+    setDepthPercent:value => updateDepthPercent(value, true),
     reset:() => setTarget(STATIC_X, STATIC_Y, 'static'),
     state:() => Object.freeze({
       enabled:presentationAllowed(),
       source,
       nativeBridgeObserved,
+      tiltPercent,
+      depthPercent,
       x:currentX,
       y:currentY,
       targetX,
@@ -286,6 +393,7 @@
   window.AGCDSKY_PARALLAX = controller;
   api.parallax3d = controller;
 
+  installIntensityControls();
   setPresentationClass();
   apply();
 })();
