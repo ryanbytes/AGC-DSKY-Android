@@ -55,24 +55,37 @@ assert((html.match(/src="relay-show\.js"/g) || []).length === 1,
 
 const classes = new Set();
 const storage = new Map();
+const AGCDSKY = {};
 const context = {
   console,
   document:{body:{classList:{add(name){ classes.add(name); }}}},
   localStorage:{setItem(key,value){ storage.set(String(key), String(value)); }},
-  AGCDSKY:{},
+  AGCDSKY,
   window:null
 };
 context.window = context;
+Object.defineProperty(AGCDSKY, 'applyCmMode', {
+  enumerable:true,
+  get(){
+    const service=context.AGCDSKY_CM_MODE;
+    return service && typeof service.apply === 'function' ? service.apply : null;
+  }
+});
 vm.createContext(context);
 vm.runInContext(cm, context, {filename:'cm-mode.js'});
 
 assert(classes.has('spacecraft-cm'), 'cm-mode.js did not apply the CM body class synchronously');
 assert(storage.get('agcMission') === 'comanche055', 'cm-mode.js did not lock the Comanche mission');
-assert(typeof context.AGCDSKY.applyCmMode === 'function', 'cm-mode.js did not publish applyCmMode');
+assert(context.AGCDSKY_CM_MODE && Object.isFrozen(context.AGCDSKY_CM_MODE),
+  'cm-mode.js did not publish a frozen dedicated service');
+assert(typeof context.AGCDSKY.applyCmMode === 'function',
+  'bootstrap-owned applyCmMode facade did not resolve the CM service');
+assert(!cm.includes('window.AGCDSKY.applyCmMode ='),
+  'cm-mode.js regained late public-facade mutation');
 
 context.AGCDSKY.applyCmMode();
 assert(classes.has('spacecraft-cm') && storage.get('agcMission') === 'comanche055',
   'repeat CM-mode application changed the locked CM state');
 
 console.log('CM feature load smoke: PASS');
-console.log('  all CM feature scripts and Relay Show control are parser-loaded exactly once; cm-mode owns configuration only');
+console.log('  parser-loaded CM features plus dedicated CM service and bootstrap-owned applyCmMode compatibility verified');
