@@ -11,7 +11,8 @@ const RESERVED=[
   'enterClock','enterAgc','appStatus','saveAgcState','clearSavedAgcState',
   'savedSnapshotInfo','verifySnapshotRoundTrip','scheduleAgcAutosave',
   'accurateTime','accurateDate','ntpStatus','nativeNtpStatus',
-  'hardware','audioStatus','relayShow','openDiagnostics','closeDiagnostics'
+  'hardware','audioStatus','relayShow','openDiagnostics','closeDiagnostics',
+  'openSextant','closeSextant','sextantStatus'
 ];
 const RETIRED=['parallax3d'];
 function escapeRegExp(value){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
@@ -49,6 +50,9 @@ for(const marker of [
   'function publicAudioStatus()',
   'function publicOpenDiagnostics(...args)',
   'function publicCloseDiagnostics(...args)',
+  'function publicOpenSextant(...args)',
+  'function publicCloseSextant(...args)',
+  'function publicSextantStatus(...args)',
   'const publicRelayShow=Object.freeze({',
   'window.AGCDSKY={services:apiServices'
 ])if(!owner.includes(marker))throw new Error(`public facade owner marker missing: ${marker}`);
@@ -56,3 +60,4 @@ console.log('public facade boundary smoke: PASS');
 console.log(`  ${RESERVED.length} stable AGCDSKY facade keys remain owned by ${OWNER}; retired aliases absent: ${RETIRED.join(', ')}`);
 require('./root-facade-creation-smoke.js');
 require('./phone-api-runtime-smoke.js');
+require('./optics-service-smoke.js');

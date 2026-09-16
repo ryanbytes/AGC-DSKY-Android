@@ -488,7 +488,6 @@
   });
   setInterval(pump,4);
 
-  api.openSextant = open;
-  api.closeSextant = close;
-  api.sextantStatus = () => ({open:document.getElementById('sxt-view')?.classList.contains('open')||false,pending:{shaft:pending[0],trunnion:pending[1]},camera:!!stream,cameraPending:!!cameraAcquire,aimScale,finderEnabled,location:skyLocation,target:selectedStar?{code:selectedStar.code,name:selectedStar.name,mag:selectedStar.mag}:null,pair:selectedPair?{a:selectedPair.a.star.code,b:selectedPair.b.star.code,sep:selectedPair.sep,index:pairIndex,count:pairCandidates.length}:null,pointingCalibration:typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null,health:{writeRejected:opticsWriteRejected,lastAccept:lastOpticsAccept}});
+  function status(){return {open:document.getElementById('sxt-view')?.classList.contains('open')||false,pending:{shaft:pending[0],trunnion:pending[1]},camera:!!stream,cameraPending:!!cameraAcquire,aimScale,finderEnabled,location:skyLocation,target:selectedStar?{code:selectedStar.code,name:selectedStar.name,mag:selectedStar.mag}:null,pair:selectedPair?{a:selectedPair.a.star.code,b:selectedPair.b.star.code,sep:selectedPair.sep,index:pairIndex,count:pairCandidates.length}:null,pointingCalibration:typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null,health:{writeRejected:opticsWriteRejected,lastAccept:lastOpticsAccept}}}
+  window.AGCDSKY_OPTICS=Object.freeze({open,close,status});
 })();
