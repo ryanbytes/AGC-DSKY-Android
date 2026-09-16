@@ -27,8 +27,8 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install Android build tools
-        run: sdkmanager 'build-tools;36.0.0' 'platform-tools'
+      - name: Install Android SDK packages
+        run: sdkmanager 'platforms;android-37' 'build-tools;36.0.0' 'platform-tools'
 
       - name: Canonical source smoke tests
         run: |
@@ -89,10 +89,12 @@ jobs:
         run: |
           APK=app/build/outputs/apk/regular/debug/app-regular-debug.apk
           BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
+          VERSION_NAME="$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle | head -1)"
+          test -n "$VERSION_NAME"
           "$BT/apksigner" verify --verbose --print-certs "$APK"
           "$BT/aapt" dump badging "$APK" | tee /tmp/eltest-badging.txt
           grep -F "package: name='org.apollo.agcdsky.eltest'" /tmp/eltest-badging.txt
-          grep -F "application-label:'AGC DSKY v1.1.2'" /tmp/eltest-badging.txt
+          grep -F "application-label:'AGC DSKY v${VERSION_NAME}'" /tmp/eltest-badging.txt
           unzip -l "$APK" | grep -F 'res/mipmap-xxhdpi-v4/ic_launcher_original.webp'
           unzip -p "$APK" assets/index.html | grep -F 'el-glass-background'
           unzip -p "$APK" assets/index.html | grep -F 'el-ito-dot'
