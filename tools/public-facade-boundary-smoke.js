@@ -56,6 +56,9 @@ if(violations.length)throw new Error(`stable public facade mutated outside ${OWN
 if(retiredUses.length)throw new Error(`retired public facade alias returned: ${retiredUses.join(', ')}`);
 const owner=fs.readFileSync(path.join(ASSETS,OWNER),'utf8');
 for(const marker of [
+  'const LATE_SERVICE_GLOBALS=Object.freeze([',
+  'function createLateServiceRegistry()',
+  "Object.defineProperty(window,'AGCDSKY_SERVICE_REGISTRY'",
   'function publicEnterAgc()',
   'function publicEnterClock()',
   'function publicHardware()',
@@ -89,6 +92,7 @@ for(const name of PHONE_API)if(!owner.includes(`'${name}'`))throw new Error(`pho
 console.log('public facade boundary smoke: PASS');
 console.log(`  ${RESERVED.length} stable AGCDSKY facade keys, including ${PHONE_API.length} phone/IMU/optics delegates, remain owned by ${OWNER}; retired aliases absent: ${RETIRED.join(', ')}`);
 require('./root-facade-creation-smoke.js');
+require('./late-service-publication-smoke.js');
 require('./phone-api-runtime-smoke.js');
 require('./optics-service-smoke.js');
 require('./late-public-facade-mutation-smoke.js');
