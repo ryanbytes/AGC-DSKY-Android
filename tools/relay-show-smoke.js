@@ -51,12 +51,15 @@ ordered(show,[
   "showState.mode='relay-show'"
 ],'relay-show preflight');
 
-/* Choreography must use the same physical relay service and individual travel profiles. */
+/* Choreography uses display-owned decoders plus the same physical relay service. */
 for(const token of [
-  "compat.get('decodeChannel10')",'model.profileFor(row,bit)','timing.meanTravelMs','timing.spreadMs',
+  "display.implementation('decodeChannel10')","display.implementation('decodeChannel11')","display.implementation('decodeChannel163')",
+  'model.profileFor(row,bit)','timing.meanTravelMs','timing.spreadMs',
   'NON_DECIMAL_CODES','for(let digit=0;digit<=9;digit++)','decode11(0o46)','decode163(0o730)',
   'await showSleep(1000)'
 ]) req(show,token,'physical relay choreography');
+for(const token of ["compat.get('decodeChannel10')","compat.get('decodeChannel11')","compat.get('decodeChannel163')"])
+  forbid(show,token,'relay-show display decoder bypass');
 
 /* Restore physical state first, quiesce delayed visual callbacks, then return ownership. */
 const restoreStart=show.indexOf('async function restorePreviousTask()');
@@ -93,4 +96,4 @@ forbid(perceptual,'Math.random(','non-deterministic relay identity');
 for(const token of ['brightness(','relay-flare','filter:']) forbid(show,token,'relay-show optical hack');
 
 console.log('Relay show smoke: PASS');
-console.log('  parser order, service ownership, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');
+console.log('  parser order, service ownership, display-owned channel choreography, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');
