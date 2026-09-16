@@ -12,7 +12,8 @@ const RESERVED=[
   'savedSnapshotInfo','verifySnapshotRoundTrip','scheduleAgcAutosave',
   'accurateTime','accurateDate','ntpStatus','nativeNtpStatus',
   'hardware','audioStatus','relayShow','openDiagnostics','closeDiagnostics',
-  'openSextant','closeSextant','sextantStatus'
+  'openSextant','closeSextant','sextantStatus',
+  'runtimeTransitions','inputRuntime','clockBehavior'
 ];
 const RETIRED=['parallax3d'];
 function escapeRegExp(value){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
@@ -54,6 +55,9 @@ for(const marker of [
   'function publicCloseSextant(...args)',
   'function publicSextantStatus(...args)',
   'const publicRelayShow=Object.freeze({',
+  'get runtimeTransitions(){return window.AGCDSKY_RUNTIME||null}',
+  'get inputRuntime(){return window.AGCDSKY_INPUT||null}',
+  'get clockBehavior(){return window.AGCDSKY_CLOCK_BEHAVIOR||null}',
   'window.AGCDSKY={services:apiServices'
 ])if(!owner.includes(marker))throw new Error(`public facade owner marker missing: ${marker}`);
 console.log('public facade boundary smoke: PASS');
