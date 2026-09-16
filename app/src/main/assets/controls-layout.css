@@ -48,7 +48,7 @@
 }
 .controls-visible .app-controls{opacity:.98;visibility:visible;pointer-events:auto;transform:none}
 
-/* DSKY-key visual treatment for application options.  The physical DSKY keys
+/* DSKY-key visual treatment for application options. The physical DSKY keys
    remain the authoritative geometry; these smaller controls only borrow the
    cap material, bevel, travel and white EL legend appearance. */
 .app-controls button{
@@ -107,10 +107,54 @@
 .app-controls button[hidden]{display:none!important}
 .app-controls span{display:none!important}
 
+/* Restored v1.1.18 parallax tuning. 100% is the calibrated physical-model default. */
+.app-controls .parallax-controls{
+  flex:0 0 auto;
+  display:flex;
+  align-items:stretch;
+  gap:5px;
+}
+.app-controls .parallax-control{
+  width:126px;
+  min-height:36px;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:3px;
+  padding:4px 7px 5px;
+  border:1px solid #080908;
+  border-radius:3px;
+  outline:1px solid #555850;
+  background:linear-gradient(145deg,#343532 0%,#252623 36%,#171816 78%,#10110f 100%);
+  box-shadow:inset 1px 1px 1px rgba(255,255,255,.10),inset -2px -2px 2px rgba(0,0,0,.72),0 2px 0 #080908;
+}
+.app-controls .parallax-control span{
+  display:flex!important;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  color:var(--key-el-color,rgba(245,247,237,1));
+  font:800 7.5px/.95 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
+  letter-spacing:.045em;
+  text-shadow:var(--key-el-shadow,0 0 .18vmin rgba(244,250,236,.46),0 .08em #000);
+}
+.app-controls .parallax-control b{font:inherit}
+.app-controls .parallax-control output{font:700 7.2px/1 monospace;color:#d8ddd4}
+.app-controls .parallax-control input[type="range"]{
+  width:100%;
+  height:14px;
+  margin:0;
+  accent-color:#e8eee3;
+  cursor:pointer;
+}
+.app-controls .parallax-control input[type="range"]:focus-visible{outline:2px solid rgba(245,247,237,.72);outline-offset:1px}
+
 @media (max-width:380px){
   .dsky{width:min(calc(100vw - 4px),calc((100vh - 164px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372))}
   .app-controls{gap:4px;padding:5px}
   .app-controls button{min-height:34px;font-size:7.3px;padding:8px 8px 7px}
+  .app-controls .parallax-control{width:112px;min-height:34px;padding:3px 6px 4px}
 }
 @media (orientation:landscape){
   .dsky,.dream .dsky{
