@@ -10,7 +10,7 @@ for(const name of files){const source=read(name);for(const slot of mutableNames)
 const renderer=read('dsky-display-renderer.js'),geometry=read('dsky-geometry.js'),matrix=read('dsky-relay-matrix.js'),hardware=read('hardware-fidelity.js'),audioRuntime=read('relay-audio-runtime.js'),audioRefine=read('relay-audio-refine.js'),identity=read('relay-identity-audio.js'),visual=read('relay-visual-coupling.js'),stretch=read('relay-stretch-stability.js'),guard=read('background-audio-guard.js'),perceptual=read('relay-perceptual-personality.js'),relayShow=read('relay-show.js'),screen=read('screen-only.js'),api=read('agc-api-runtime.js'),display=read('agc-display-runtime.js');
 for(const [name,source,markers] of [
  ['renderer',renderer,['window.AGCDSKY_RENDERER=Object.freeze({','implementation,','installImplementation,','segmentPattern,','registerSegmentPattern,']],
- ['geometry',geometry,["compat.replace('glyph'","compat.replace('renderDigits'",'const renderer=window.AGCDSKY_RENDERER;','const clock=window.AGCDSKY_CLOCK;','const display=window.AGCDSKY_DISPLAY;']],
+ ['geometry',geometry,['const renderer=window.AGCDSKY_RENDERER;',"renderer.segmentPattern(ch)","renderer.implementation('glyph')","renderer.implementation('signGlyph')","renderer.installImplementation('glyph'","renderer.installImplementation('renderDigits'",'const clock=window.AGCDSKY_CLOCK;','const display=window.AGCDSKY_DISPLAY;']],
  ['relay matrix',matrix,["const display=window.AGCDSKY_DISPLAY;","display.implementation('relayDigit')","display.installImplementation('relayDigit'",'window.DSKY_RELAY_MATRIX = Object.freeze({']],
  ['hardware',hardware,['window.AGCDSKY_HARDWARE=Object.freeze({',"compat.replace('decodeChannel10'","compat.replace('runRelayQueue'",'registerSnapshotExtension','registerSettledPaintPolicy','display.commitRelayWord']],
  ['audio runtime',audioRuntime,['window.AGCDSKY_AUDIO=Object.freeze({','implementation,','installImplementation,','setContext,',"compat.mutable('emitTick'", "compat.mutable('playRelayBurst'"]],
@@ -24,7 +24,7 @@ for(const [name,source,markers] of [
  ['screen only',screen,['const shell=window.AGCDSKY_SHELL;','const audio=window.AGCDSKY_AUDIO;','audio.applySetting()']]
 ])for(const marker of markers)assert(source.includes(marker),`${name} explicit service marker missing: ${marker}`);
 for(const source of [hardware,identity,visual,stretch,guard,perceptual])assert(!source.includes('window.AGCDSKY.hardware ='),'late layer monkey-patches public hardware API');
-for(const [name,source] of [['audio refine',audioRefine],['identity',identity],['visual',visual],['stretch',stretch],['guard',guard],['perceptual',perceptual]]){
+for(const [name,source] of [['geometry',geometry],['audio refine',audioRefine],['identity',identity],['visual',visual],['stretch',stretch],['guard',guard],['perceptual',perceptual]]){
   assert(!source.includes('AGCDSKY_COMPAT')&&!source.includes('compat.'),`${name} depends directly on compatibility registry instead of owning service`);
 }
 assert(!matrix.includes("compat.replace('relayDigit'"),'relay matrix must install relayDigit through AGCDSKY_DISPLAY');
@@ -34,4 +34,4 @@ assert(!relayShow.includes('entryMode')&&!/\bentry\s*=/.test(relayShow),'relay s
 assert(perceptual.includes("localStorage.getItem('relayPerceptualAudioV1')==='1'"),'perceptual relay exaggeration must remain explicit opt-in');
 assert(perceptual.includes("enabled:false,model:'source-faithful-default'"),'source-faithful relay audio must remain the default');
 assert(api.includes('hardware:publicHardware')&&api.includes('audioStatus:publicAudioStatus')&&api.includes('relayShow:publicRelayShow'),'public facade late-service delegates missing');assert(display.includes('function projectRelayWord(')&&display.includes('function commitRelayWord(')&&display.includes('setChannelState')&&display.includes('implementation,installImplementation'),'display service does not own relay projection/channel backing/implementation state');
-console.log('late service boundary smoke: PASS');console.log('  relay visual/stretch/audio wrappers route entirely through owning services; late geometry/hardware hooks use audited compat only where still required; perceptual exaggeration stays opt-in; no bare slot, timer, or public-API monkey-patching remains');
+console.log('late service boundary smoke: PASS');console.log('  geometry plus relay visual/stretch/audio wrappers route entirely through owning services; late hardware hooks use audited compat only where still required; perceptual exaggeration stays opt-in; no bare slot, timer, or public-API monkey-patching remains');
