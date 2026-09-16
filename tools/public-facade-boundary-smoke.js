@@ -14,7 +14,8 @@ const RESERVED=[
   'hardware','audioStatus','relayShow','openDiagnostics','closeDiagnostics',
   'openSextant','closeSextant','sextantStatus',
   'runtimeTransitions','inputRuntime','clockBehavior',
-  'applyCmMode','hardwareColorMode','lightingElectrical','lightingRheostatStop','proceedElectrical'
+  'applyCmMode','hardwareColorMode','lightingElectrical','lightingRheostatStop','proceedElectrical',
+  'lighting','hardwarePersonality','keyMechanicalSpec','keyboardElectrical','sextantTapMark'
 ];
 const RETIRED=['parallax3d'];
 function escapeRegExp(value){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
@@ -56,6 +57,8 @@ for(const marker of [
   'function publicCloseSextant(...args)',
   'function publicSextantStatus(...args)',
   'function publicApplyCmMode(...args)',
+  'function publicHardwarePersonality(...args)',
+  'function publicKeyMechanicalSpec(...args)',
   'const publicRelayShow=Object.freeze({',
   'get runtimeTransitions(){return window.AGCDSKY_RUNTIME||null}',
   'get inputRuntime(){return window.AGCDSKY_INPUT||null}',
@@ -64,6 +67,9 @@ for(const marker of [
   'get lightingElectrical(){return window.AGCDSKY_LIGHTING_ELECTRICAL||null}',
   'get lightingRheostatStop(){return window.AGCDSKY_LIGHTING_RHEOSTAT_STOP||null}',
   'get proceedElectrical(){return window.AGCDSKY_PROCEED||null}',
+  'get lighting(){return window.AGCDSKY_FLIGHT_HARDWARE_UI?.lighting||null}',
+  'get keyboardElectrical(){return window.AGCDSKY_KEYBOARD_ELECTRICAL||null}',
+  'get sextantTapMark(){return window.AGCDSKY_SEXTANT_TAP_MARK||null}',
   'window.AGCDSKY={services:apiServices'
 ])if(!owner.includes(marker))throw new Error(`public facade owner marker missing: ${marker}`);
 console.log('public facade boundary smoke: PASS');

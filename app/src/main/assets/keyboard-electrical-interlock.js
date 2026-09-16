@@ -333,7 +333,7 @@
   // AGC so channel 015 cannot remain asserted across the mode boundary.
   runtime.onBeforeClock(releaseForClock);
 
-  api.keyboardElectrical = Object.freeze({
+  window.AGCDSKY_KEYBOARD_ELECTRICAL = Object.freeze({
     state: () => ({
       cycleLatched,
       down:pointers.size,
