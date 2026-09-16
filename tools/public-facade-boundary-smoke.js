@@ -6,6 +6,13 @@ const path=require('path');
 const ROOT=path.resolve(__dirname,'..');
 const ASSETS=path.join(ROOT,'app/src/main/assets');
 const OWNER='agc-api-runtime.js';
+const PHONE_API=[
+  'nativePhoneQuaternion','setOpticsCaptureActive','zeroOpticsCapture','phoneOpticsAngles',
+  'nativePhoneSensorStatus','calibrateSkyBoresight','clearSkyBoresightCalibration',
+  'skyCalibrationStatus','projectSkyTarget','nativeMagneticQuaternion',
+  'nativeMagneticSensorStatus','nativeSkyPointing','phoneSkyPointing',
+  'nativePipaSensorStatus','nativePhoneLinearAcceleration','phoneIcduStatus','recenterPhoneImu'
+];
 const RESERVED=[
   'services','lifecycle','agcChannel','getCore','setAppVisible','getMission',
   'enterClock','enterAgc','appStatus','saveAgcState','clearSavedAgcState',
@@ -15,7 +22,8 @@ const RESERVED=[
   'openSextant','closeSextant','sextantStatus',
   'runtimeTransitions','inputRuntime','clockBehavior',
   'applyCmMode','hardwareColorMode','lightingElectrical','lightingRheostatStop','proceedElectrical',
-  'lighting','hardwarePersonality','keyMechanicalSpec','keyboardElectrical','sextantTapMark'
+  'lighting','hardwarePersonality','keyMechanicalSpec','keyboardElectrical','sextantTapMark',
+  ...PHONE_API
 ];
 const RETIRED=['parallax3d'];
 function escapeRegExp(value){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
@@ -25,7 +33,8 @@ const retiredUses=[];
 for(const name of files){
   const source=fs.readFileSync(path.join(ASSETS,name),'utf8');
   const aliases=[];
-  if(/\b(?:const|let|var)\s+api\s*=\s*window\.AGCDSKY\b/.test(source)||/\b(?:const|let|var)\s+api\s*=\s*window\.AGCDSKY\s*=/.test(source))aliases.push('api');
+  const aliasDecl=/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*window\.AGCDSKY\s*;/g;
+  let aliasMatch;while((aliasMatch=aliasDecl.exec(source)))aliases.push(aliasMatch[1]);
   for(const key of RETIRED){
     const escaped=escapeRegExp(key);
     if(new RegExp(`\\bwindow\\.AGCDSKY\\.${escaped}\\b`).test(source))retiredUses.push(`${name}: window.AGCDSKY.${key}`);
@@ -60,6 +69,10 @@ for(const marker of [
   'function publicHardwarePersonality(...args)',
   'function publicKeyMechanicalSpec(...args)',
   'const publicRelayShow=Object.freeze({',
+  'const PHONE_API_NAMES=Object.freeze([',
+  'function publicPhoneImplementation(name)',
+  'const publicPhoneApi=Object.freeze(Object.fromEntries(',
+  '...publicPhoneApi',
   'get runtimeTransitions(){return window.AGCDSKY_RUNTIME||null}',
   'get inputRuntime(){return window.AGCDSKY_INPUT||null}',
   'get clockBehavior(){return window.AGCDSKY_CLOCK_BEHAVIOR||null}',
@@ -72,8 +85,9 @@ for(const marker of [
   'get sextantTapMark(){return window.AGCDSKY_SEXTANT_TAP_MARK||null}',
   'window.AGCDSKY={services:apiServices'
 ])if(!owner.includes(marker))throw new Error(`public facade owner marker missing: ${marker}`);
+for(const name of PHONE_API)if(!owner.includes(`'${name}'`))throw new Error(`phone facade key missing from bootstrap owner: ${name}`);
 console.log('public facade boundary smoke: PASS');
-console.log(`  ${RESERVED.length} stable AGCDSKY facade keys remain owned by ${OWNER}; retired aliases absent: ${RETIRED.join(', ')}`);
+console.log(`  ${RESERVED.length} stable AGCDSKY facade keys, including ${PHONE_API.length} phone/IMU/optics delegates, remain owned by ${OWNER}; retired aliases absent: ${RETIRED.join(', ')}`);
 require('./root-facade-creation-smoke.js');
 require('./phone-api-runtime-smoke.js');
 require('./optics-service-smoke.js');
