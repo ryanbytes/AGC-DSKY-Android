@@ -5,11 +5,11 @@
  * while widening only the audible timbre envelope enough for phone speakers.
  */
 (() => {
-  const compat=window.AGCDSKY_COMPAT;
+  const audio=window.AGCDSKY_AUDIO;
   const environment=window.AGCDSKY_ENVIRONMENT;
   const hardware=window.AGCDSKY_HARDWARE;
   const audioModel=window.DSKY_RELAY_AUDIO;
-  if(!compat||!environment||!hardware||!audioModel)throw new Error('Relay perceptual service dependencies unavailable');
+  if(!audio||!environment||!hardware||!audioModel)throw new Error('Relay perceptual service dependencies unavailable');
   // Optional phone-speaker exaggeration. Keep the source-faithful relay model
   // as the default; enable only for deliberate diagnostics/experiments.
   let perceptualEnabled=false;
@@ -18,7 +18,7 @@
     window.DSKY_RELAY_PERCEPTUAL=Object.freeze({enabled:false,model:'source-faithful-default',timingSource:'DSKY_RELAY_AUDIO set/reset travel profiles'});
     return;
   }
-  const fallbackEmitTick=compat.get('emitTick');
+  const fallbackEmitTick=audio.implementation('emitTick');
   if(typeof fallbackEmitTick!=='function')throw new Error('Relay audio implementation unavailable');
   const buffers=new Map();
 
@@ -44,7 +44,7 @@
     const bounceTimes=engaging?p.setBounceTimesMs:p.resetBounceTimesMs;for(let i=0;i<bounceTimes.length;i++){const bounce=ctx.createOscillator(),bg=ctx.createGain(),bt=when+bounceTimes[i]/1000,freq=(6200+((p.ordinal*97+i*311)%2600))*(.96+i*.015);bounce.type='triangle';bounce.frequency.setValueAtTime(freq,bt);bg.gain.setValueAtTime(.055*level*strength*Math.pow(.58,i),bt);bg.gain.exponentialRampToValueAtTime(.0001,bt+.00055);bounce.connect(bg);bg.connect(ctx.destination);bounce.start(bt);bounce.stop(bt+.00075)}
   }
   function perceptibleIndividualRelay(ctx,when=ctx.currentTime,strength=1){const identity=activeIdentity(ctx,when);if(!identity)return fallbackEmitTick(ctx,when,strength);playPerceptibleIdentity(ctx,identity,strength)}
-  compat.replace('emitTick',perceptibleIndividualRelay,'relay perceptual personality');
+  audio.installImplementation('emitTick',perceptibleIndividualRelay,'relay perceptual personality');
 
   window.DSKY_RELAY_PERCEPTUAL=Object.freeze({enabled:true,model:'deterministic-installed-unit-audible-spread-v1',unitSeed:unitSeed(),pitchSpread:Object.freeze({minScale:.86,maxScale:1.14}),timingSource:'DSKY_RELAY_AUDIO set/reset travel profiles'});
 })();
