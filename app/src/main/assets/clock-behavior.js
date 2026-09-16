@@ -101,5 +101,5 @@
       pendingKeys:pendingKeys.slice()
     })
   });
-  window.AGCDSKY_CLOCK_BEHAVIOR = clockBehavior;
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior,'clock-behavior publication');
 })();
