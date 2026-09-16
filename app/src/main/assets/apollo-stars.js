@@ -80,8 +80,6 @@
   }
   function skyConditions(lat,lon,date=new Date()){
     const sun=sunEquatorial(date),sunPos=horizontalRaDec(sun.ra,sun.dec,lat,lon,date),a=sunPos.alt;
-    // Approximate naked-eye/phone-camera usability. The pair search falls back
-    // to geometric visibility if this strict threshold produces no valid pair.
     let maxMag=3.4,label='NIGHT';
     if(a>-2){maxMag=-.3;label='DAYLIGHT'}
     else if(a>-6){maxMag=.5;label='CIVIL TWILIGHT'}
@@ -99,7 +97,7 @@
     const distance=Math.acos(Math.max(-1,Math.min(1,cosd)))*r2d;
     const x=Math.cos(alt2)*Math.sin(da);
     const y=Math.cos(alt1)*Math.sin(alt2)-Math.sin(alt1)*Math.cos(alt2)*Math.cos(da);
-    return {distance,angle:Math.atan2(x,y)*r2d}; // 0 up, +90 right
+    return {distance,angle:Math.atan2(x,y)*r2d};
   }
   function candidatePairs(lat,lon,date=new Date(),minAlt=12,limit=6){
     if(!Number.isFinite(lat)||!Number.isFinite(lon))return {pairs:[],conditions:null,strict:false,visibleCount:0};
@@ -110,7 +108,7 @@
       const pairs=[];
       for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++){
         const a=pool[i],b=pool[j],sep=angularSeparation(a.star,b.star);
-        if(sep<40||sep>66)continue; // Comanche PICAPAR separation window.
+        if(sep<40||sep>66)continue;
         const brightness=-(a.star.mag+b.star.mag),altitude=a.pos.alt+b.pos.alt;
         const score=altitude*.75+brightness*8-Math.abs(sep-53)*.22;
         pairs.push({a,b,sep,score,strict,conditions});
@@ -125,5 +123,5 @@
   function bestPair(lat,lon,date=new Date(),minAlt=12){
     const r=candidatePairs(lat,lon,date,minAlt,1);return r.pairs[0]||null;
   }
-  window.AGCDSKY_APOLLO_STARS={stars,horizontal,horizontalRaDec,sunEquatorial,skyConditions,angularSeparation,bearingDelta,candidatePairs,bestPair,wrap180,wrap360};
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_APOLLO_STARS',{stars,horizontal,horizontalRaDec,sunEquatorial,skyConditions,angularSeparation,bearingDelta,candidatePairs,bestPair,wrap180,wrap360},'apollo-stars publication');
 })();
