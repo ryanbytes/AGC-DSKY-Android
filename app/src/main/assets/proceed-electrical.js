@@ -97,7 +97,7 @@
   // to its released level before app.js stops the core and switches to CLOCK.
   runtime.onBeforeClock(releaseProceed);
 
-  const controller = Object.freeze({
+  window.AGCDSKY_PROCEED = Object.freeze({
     release:releaseProceed,
     state:() => ({
       held:proPointer !== null,
@@ -105,6 +105,4 @@
       mode:currentMode()
     })
   });
-  window.AGCDSKY_PROCEED = controller;
-  api.proceedElectrical = controller;
 })();

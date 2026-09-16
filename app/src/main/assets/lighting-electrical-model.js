@@ -79,8 +79,7 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source {
   });
   observer.observe(root, {attributes:true, attributeFilter:['style']});
 
-  if (!window.AGCDSKY) throw new Error('AGCDSKY public facade unavailable');
-  window.AGCDSKY.lightingElectrical = Object.freeze({
+  const controller = Object.freeze({
     apply,
     incandescentFlux,
     state: () => Object.freeze({
@@ -92,4 +91,5 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source {
       curveSource:'engineering estimate; Apollo documents specify branch/rating, not lamp dimmer transfer curve'
     })
   });
+  window.AGCDSKY_LIGHTING_ELECTRICAL = controller;
 })();
