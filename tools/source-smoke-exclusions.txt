@@ -6,7 +6,6 @@ device-agc-smoke.js | requires an adb-forwarded Android WebView DevTools socket 
 device-process-state-smoke.js | helper for ADB force-stop/relaunch process-recreation device harness
 device-recreation-smoke.js | requires an adb-forwarded Android WebView DevTools socket and packaged-page reload
 device-v35-smoke.js | requires an adb-forwarded Android WebView DevTools socket and real packaged AGC interaction
-phase24-transition-smoke.js | retired pre-service-graph harness; superseded by runtime-clock-transition-smoke.js and runtime-transition-integration-smoke.js
 
 device-agc-smoke.sh | requires adb, an installed debuggable APK, and a forwarded WebView DevTools socket
 device-full-smoke.sh | aggregate physical-device harness requiring adb and an installed APK
