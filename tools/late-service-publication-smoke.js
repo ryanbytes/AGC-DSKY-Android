@@ -82,6 +82,7 @@ assert(preRegistry.describe().find(x=>x.name==='AGCDSKY_OPTICS').reason==='pre-b
 
 const explicitPublishers=new Map(EXPECTED.map(name=>[name,[]]));
 const violations=[];
+const compatibilityReads=[];
 for(const file of fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js')).sort()){
   if(file===OWNER)continue;
   const source=read(file);
@@ -106,8 +107,18 @@ for(const file of fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js')).sort
     if(EXPECTED_SET.has(name))explicitPublishers.get(name).push(file);
     else violations.push(`${file}:${name} explicitly publishes an unregistered late service`);
   }
+
+  // Production modules must consume late services through the registry, not
+  // through the legacy window.AGCDSKY_* getter views. Those views remain only
+  // as an external/backward-compatibility surface.
+  const readCompat=/\bwindow\.(AGCDSKY_[A-Z0-9_]+)\b/g;
+  while((match=readCompat.exec(source))){
+    const name=match[1];
+    if(EXPECTED_SET.has(name))compatibilityReads.push(`${file}:${name}`);
+  }
 }
 assert(!violations.length,`late service publication boundary violation: ${violations.join(', ')}`);
+assert(!compatibilityReads.length,`internal late-service compatibility read: ${[...new Set(compatibilityReads)].join(', ')}`);
 const bootstrapIndex=html.indexOf('<script src="agc-api-runtime.js"></script>');
 assert(bootstrapIndex>=0,'agc-api-runtime.js parser tag missing');
 for(const [name,files] of explicitPublishers){
@@ -118,4 +129,4 @@ for(const [name,files] of explicitPublishers){
 }
 
 console.log('late service publication smoke: PASS');
-console.log(`  ${EXPECTED.length} getter-only late-service views have exactly one post-bootstrap explicit publisher; direct compatibility writes are rejected`);
+console.log(`  ${EXPECTED.length} getter-only late-service views have exactly one post-bootstrap explicit publisher; production consumers use the registry, not compatibility globals`);
