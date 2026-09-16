@@ -163,7 +163,7 @@
 
   let cached = null;
   const get = () => cached || (cached = build());
-  window.AGCDSKY = window.AGCDSKY || {};
+  if (!window.AGCDSKY) throw new Error('AGCDSKY public facade unavailable');
   window.AGCDSKY.hardwarePersonality = get;
   window.AGCDSKY.keyMechanicalSpec = () => get().keyMechanicalSpec;
   get();
