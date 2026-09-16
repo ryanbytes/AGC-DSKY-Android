@@ -8,6 +8,8 @@ const ROOT = path.resolve(__dirname, '..');
 const STYLE = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/style.css'), 'utf8');
 const CONTROLS = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/controls-layout.css'), 'utf8');
 const CM = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/cm-dsky-finish.css'), 'utf8');
+const HARDWARE_COLORS = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/hardware-color-mode.css'), 'utf8');
+const CM_MODE = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/cm-mode.js'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -134,9 +136,26 @@ for (const marker of [
 assert(!CONTROLS.includes('Series 2 barrier-mount operator indicators'),
   'obsolete Series 2 option-button styling must not return');
 
+// Recovered v1.1.21/v1.1.24 authentic hardware palette.  Keep the palette in
+// source control, make it canonical in CM mode, and do not let it reintroduce
+// the superseded experimental glass-motion model.
+for (const marker of [
+  'linear-gradient(148deg,#8d9294 0%,#7c8183 30%,#6d7275 68%,#797e80 100%)',
+  '.el-glass-background{fill:#4e535a!important}',
+  '.el-ito-dot{fill:#91999c!important;opacity:.68!important}',
+  'linear-gradient(180deg,#858a8c 0%,#7c8183 58%,#707578 100%)'
+]) assert(HARDWARE_COLORS.includes(marker), 'recovered FS595 color marker missing: ' + marker);
+assert(CM_MODE.includes("document.body.classList.add('spacecraft-cm','authentic-colors')"),
+  'CM mode no longer enables the recovered authentic palette');
+assert(CM_MODE.includes("link.href = 'hardware-color-mode.css'"),
+  'CM mode no longer loads the recovered hardware palette stylesheet');
+for (const forbidden of ['el-glass-back','--dsky-el-parallax-x','translate3d(calc(var(--dsky-el-parallax-x)'])
+  assert(!HARDWARE_COLORS.includes(forbidden), 'color layer must not override physical glass/parallax geometry: ' + forbidden);
+
 console.log('display/layout geometry smoke: PASS');
 console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${expectedVisibleFraction.toFixed(6)})`);
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
 console.log('  annunciators: three-source per-bulb thermal fade with foreground black legends');
 console.log('  lighting: independent NUMERICS/INTEGRAL with white EL key legends');
 console.log('  options: bounded DSKY-style illuminated key strip');
+console.log('  recovered UI: canonical FS595 hardware palette guarded without legacy glass-motion overrides');
