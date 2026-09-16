@@ -27,7 +27,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final int TICK_REQUEST_CODE=21;
 
     // MIT/IL SCD 1006315G sheet 2: the active EL face is 2.360 x 4.060 in
-    // inside a 2.620 x 4.420-in hardware frame.  Nominal frame insets are
+    // inside a 2.620 x 4.420-in hardware frame. Nominal frame insets are
     // .130 in per side and .180 in top/bottom.
     private static final float U=106f/2.360f;
     private static final float ACTIVE_W=106f,ACTIVE_H=4.060f*U;
@@ -68,6 +68,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.el_widget);
       boolean staticFallbackRegisters=Build.VERSION.SDK_INT<31;
       views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.render(panelWidthPx,panelHeightPx,now,staticFallbackRegisters));
+      views.setImageViewBitmap(R.id.el_widget_glass,ElRenderer.renderGlass(panelWidthPx,panelHeightPx));
       if(Build.VERSION.SDK_INT>=31){
         RemoteViews.RemoteCollectionItems pairFrames=buildFrames(context,60),hourFrames=buildFrames(context,24);
         views.setRemoteAdapter(R.id.el_hour_flipper,hourFrames);
@@ -104,12 +105,16 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final LruCache<String,Bitmap> BITMAP_CACHE=new LruCache<String,Bitmap>(CACHE_KIB){
         @Override protected int sizeOf(String key,Bitmap value){return Math.max(1,value.getAllocationByteCount()/1024);}
       };
+
       private static final int CORE=Color.rgb(109,236,180),RULE=CORE;
-      private static final int FRAME=Color.rgb(86,90,86),PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5);
+      // Forced FS595 presentation used by the app: body FS 36231 screen
+      // approximation #7C8183, EL field FS 36076 approximation #4E535A.
+      private static final int FRAME=Color.rgb(124,129,131),PANEL=Color.rgb(78,83,90),HARDWARE=Color.rgb(145,153,156),INK=Color.rgb(5,6,5);
 
       // 1006315G Detail C is datum-dimensioned. The metric segment trace
       // already matches those physical dimensions; do not affine-squeeze it.
       private static final float U=106f/2.360f,MM_TO_U=U/25.4f;
+      private static final float GLASS_REAR_DX=.016f*U,GLASS_REAR_DY=.021f*U,GLASS_EDGE=.010f*U;
       private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,MIRROR_X=2f*SRC_X+SRC_W,DATUM_X=MIRROR_X-96.244524f;
       private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.400f*U;
       // Same sheet-2 upper electrode datums as the shared WebView renderer.
@@ -131,7 +136,8 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         {{96.671774f,91.907059f},{98.249534f,91.907059f},{99.801954f,97.700791f},{97.815844f,96.176791f}},
         {{96.005094f,90.891059f},{96.447474f,92.542059f},{92.028414f,92.542059f},{91.586024f,90.891059f}}};
       private static final int[] MAP={0,1,2,3,5,4,6};
-      private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),PANEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG);
+
+      private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),PANEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG),GLASS_REAR_P=new Paint(Paint.ANTI_ALIAS_FLAG),GLASS_TINT_P=new Paint(Paint.ANTI_ALIAS_FLAG),GLASS_FRONT_P=new Paint(Paint.ANTI_ALIAS_FLAG),GLASS_HIGHLIGHT_P=new Paint(Paint.ANTI_ALIAS_FLAG),GLASS_SHADOW_P=new Paint(Paint.ANTI_ALIAS_FLAG),GLASS_GRAZE_P=new Paint(Paint.ANTI_ALIAS_FLAG);
       static{
         ON.setStyle(Paint.Style.FILL);ON.setColor(CORE);
         PANEL_P.setStyle(Paint.Style.FILL);PANEL_P.setColor(PANEL);
@@ -146,7 +152,17 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         COMP_BG_P.setStyle(Paint.Style.FILL);COMP_BG_P.setColor(CORE);COMP_BG_P.setAlpha(24);
         HARDWARE_STROKE_P.setStyle(Paint.Style.STROKE);HARDWARE_STROKE_P.setStrokeWidth(.48f);HARDWARE_STROKE_P.setColor(HARDWARE);HARDWARE_STROKE_P.setAlpha(184);
         HARDWARE_FILL_P.setStyle(Paint.Style.FILL);HARDWARE_FILL_P.setColor(HARDWARE);HARDWARE_FILL_P.setAlpha(224);
+
+        // Static widget optics. The launcher cannot receive frame-rate sensor
+        // updates, so thickness is represented by separate rear/front planes.
+        GLASS_REAR_P.setStyle(Paint.Style.FILL);GLASS_REAR_P.setColor(Color.rgb(14,19,20));GLASS_REAR_P.setAlpha(145);
+        GLASS_TINT_P.setStyle(Paint.Style.FILL);GLASS_TINT_P.setColor(Color.rgb(177,196,191));GLASS_TINT_P.setAlpha(10);
+        GLASS_FRONT_P.setStyle(Paint.Style.STROKE);GLASS_FRONT_P.setStrokeWidth(GLASS_EDGE);GLASS_FRONT_P.setColor(Color.rgb(214,226,222));GLASS_FRONT_P.setAlpha(72);
+        GLASS_HIGHLIGHT_P.setStyle(Paint.Style.FILL);GLASS_HIGHLIGHT_P.setColor(Color.rgb(239,247,244));GLASS_HIGHLIGHT_P.setAlpha(44);
+        GLASS_SHADOW_P.setStyle(Paint.Style.FILL);GLASS_SHADOW_P.setColor(Color.rgb(7,12,13));GLASS_SHADOW_P.setAlpha(62);
+        GLASS_GRAZE_P.setStyle(Paint.Style.FILL);GLASS_GRAZE_P.setColor(Color.rgb(239,248,245));GLASS_GRAZE_P.setAlpha(16);
       }
+
       static Bitmap render(int width,int height,Calendar now,boolean drawRegisters){
         width=Math.max(1,width);height=Math.max(1,height);
         String key=width+"x"+height+(drawRegisters?((":dyn:"+now.get(Calendar.HOUR_OF_DAY)+":"+now.get(Calendar.MINUTE)+":"+now.get(Calendar.SECOND))):":static");
@@ -154,8 +170,19 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(FRAME);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,now,drawRegisters);
         synchronized(BITMAP_CACHE){BITMAP_CACHE.put(key,b);}return b;
       }
+
+      static Bitmap renderGlass(int width,int height){
+        width=Math.max(1,width);height=Math.max(1,height);
+        String key=width+"x"+height+":glass40";
+        synchronized(BITMAP_CACHE){Bitmap cached=BITMAP_CACHE.get(key);if(cached!=null&&!cached.isRecycled())return cached;}
+        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.scale(width/PANEL_W,height/PANEL_H);drawGlass(c);
+        synchronized(BITMAP_CACHE){BITMAP_CACHE.put(key,b);}return b;
+      }
+
       private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){
         c.drawPath(box(.24f,.24f,PANEL_W-.48f,PANEL_H-.48f),HARDWARE_STROKE_P);
+        // Rear-surface shadow is offset behind the true 1006315G active face.
+        c.drawPath(box(ACTIVE_X+GLASS_REAR_DX,ACTIVE_Y+GLASS_REAR_DY,ACTIVE_W,ACTIVE_H),GLASS_REAR_P);
         c.drawPath(box(ACTIVE_X,ACTIVE_Y,ACTIVE_W,ACTIVE_H),PANEL_P);
         c.save();
         c.translate(ACTIVE_X,ACTIVE_Y);
@@ -171,6 +198,26 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),0,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),0,R3_Y);}
         c.restore();
       }
+
+      // This bitmap is placed after the AdapterViewFlippers in el_widget.xml,
+      // therefore the cover glass is optically in front of live register digits.
+      private static void drawGlass(Canvas c){
+        c.drawPath(box(ACTIVE_X,ACTIVE_Y,ACTIVE_W,ACTIVE_H),GLASS_TINT_P);
+        c.drawPath(box(ACTIVE_X+.10f,ACTIVE_Y+.10f,ACTIVE_W-.20f,ACTIVE_H-.20f),GLASS_FRONT_P);
+        float lip=Math.max(.22f,GLASS_EDGE*.70f);
+        c.drawPath(box(ACTIVE_X+.15f,ACTIVE_Y+.15f,ACTIVE_W-.30f,lip),GLASS_HIGHLIGHT_P);
+        c.drawPath(box(ACTIVE_X+.15f,ACTIVE_Y+.15f,lip,ACTIVE_H-.30f),GLASS_HIGHLIGHT_P);
+        c.drawPath(box(ACTIVE_X+.35f,ACTIVE_Y+ACTIVE_H-lip-.18f,ACTIVE_W-.70f,lip),GLASS_SHADOW_P);
+        c.drawPath(box(ACTIVE_X+ACTIVE_W-lip-.18f,ACTIVE_Y+.35f,lip,ACTIVE_H-.70f),GLASS_SHADOW_P);
+        Path graze=new Path();
+        graze.moveTo(ACTIVE_X+ACTIVE_W*.09f,ACTIVE_Y+ACTIVE_H*.04f);
+        graze.lineTo(ACTIVE_X+ACTIVE_W*.42f,ACTIVE_Y+ACTIVE_H*.04f);
+        graze.lineTo(ACTIVE_X+ACTIVE_W*.23f,ACTIVE_Y+ACTIVE_H*.33f);
+        graze.lineTo(ACTIVE_X+ACTIVE_W*.04f,ACTIVE_Y+ACTIVE_H*.33f);
+        graze.close();
+        c.drawPath(graze,GLASS_GRAZE_P);
+      }
+
       private static String five(int v){return String.format(Locale.US,"%05d",v);}
       private static void section(Canvas c,float x,float y,float w,float h,Paint p){c.drawPath(box(x,y,w,h),p);}
       private static void rule(Canvas c,float x,float y,float w,float h){c.drawPath(box(x,y,w,h),RULE_P);}
