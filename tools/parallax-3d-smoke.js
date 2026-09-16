@@ -4,15 +4,18 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets');
 const read=name=>fs.readFileSync(path.join(ASSETS,name),'utf8');
-const html=read('index.html'),css=read('parallax-3d.css'),js=read('parallax-3d.js'),controls=read('controls-layout.css');
+const html=read('index.html'),css=read('parallax-3d.css'),js=read('parallax-3d.js'),adapter=read('phone-quaternion-events.js'),controls=read('controls-layout.css');
 function assert(c,m){if(!c)throw new Error(m)}
 
 assert((html.match(/href="parallax-3d\.css"/g)||[]).length===1,'parallax stylesheet must load exactly once');
 assert((html.match(/src="parallax-3d\.js"/g)||[]).length===1,'parallax controller must load exactly once');
+assert((html.match(/src="phone-quaternion-events\.js"/g)||[]).length===1,'native quaternion event adapter must load exactly once');
 const phoneIcduIndex=html.indexOf('<script src="phone-icdu.js"></script>');
+const adapterIndex=html.indexOf('<script src="phone-quaternion-events.js"></script>');
 const parallaxIndex=html.indexOf('<script src="parallax-3d.js"></script>');
 const dreamIndex=html.indexOf('<script src="dream-agc.js"></script>');
-assert(phoneIcduIndex>=0&&parallaxIndex>phoneIcduIndex,'phone sensor callback must exist before parallax wraps it');
+assert(phoneIcduIndex>=0&&adapterIndex>phoneIcduIndex,'quaternion event adapter must load after phone sensor callback');
+assert(adapterIndex>=0&&parallaxIndex>adapterIndex,'parallax must consume the sensor event after the adapter is installed');
 assert(parallaxIndex>=0&&dreamIndex>parallaxIndex,'parallax presentation must initialize before final Dream readiness layer');
 
 for(const token of [
@@ -49,8 +52,8 @@ for(const token of [
   "dsky.addEventListener('pointermove'",
   "dsky.addEventListener('pointerdown'",
   "window.addEventListener('deviceorientation'",
-  "installNativeQuaternionTap()",
-  "api.nativePhoneQuaternion = wrapped",
+  "window.addEventListener('agcdsky-phonequaternion', onNativeQuaternionEvent",
+  'function onNativeQuaternionEvent(event)',
   "'native-quaternion'",
   "nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS",
   "const GLASS_CLEAR_WIDTH_IN = 2.354",
@@ -89,6 +92,21 @@ for(const token of [
   'installIntensityControls()'
 ]) assert(js.includes(token),`parallax controller missing ${token}`);
 
+for(const forbidden of [
+  'installNativeQuaternionTap',
+  'api.nativePhoneQuaternion = wrapped',
+  '__dskyParallaxWrapped'
+]) assert(!js.includes(forbidden),`parallax must not own the native phone callback: ${forbidden}`);
+
+for(const token of [
+  'const prior = api.nativePhoneQuaternion',
+  "new CustomEvent('agcdsky-phonequaternion'",
+  'rawQuaternion: Object.freeze(rawQuaternion)',
+  "source: 'android-native'",
+  "Object.defineProperty(wrapped, '__agcdskyQuaternionEventAdapter'",
+  'api.nativePhoneQuaternion = wrapped'
+]) assert(adapter.includes(token),`native quaternion adapter missing ${token}`);
+
 for(const token of [
   '.app-controls .parallax-controls',
   '.app-controls .parallax-control',
@@ -99,7 +117,6 @@ for(const token of [
 
 const allowedBody=js.match(/function presentationAllowed\(\) \{([\s\S]*?)\n  \}/)?.[1]||'';
 assert(!allowedBody.includes("classList.contains('screen-only')"),'screen-only must keep parallax enabled outside Dream mode');
-assert(js.indexOf('installNativeQuaternionTap();')>js.indexOf("window.addEventListener('deviceorientation'"),'native quaternion wrapper must install after fallback listener registration');
 assert(js.includes('performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS'),'native quaternion must suppress WebView orientation fallback while active');
 
 for(const forbidden of [
@@ -151,9 +168,9 @@ assert(!/calc\(var\(--dsky-parallax-[xy]\)\s*\*/.test(css),'WebView-unsafe CSS m
 assert(css.includes('.el-glass-rear::after'),'rear glass interface edge layer missing');
 assert(!css.includes('animation:'),'parallax layer must not introduce autonomous looping animation');
 
-/* Execute the real controller in a tiny DOM harness. Static token checks alone
-   previously allowed a native path that could exist in source without proving
-   that Android quaternion samples actually changed the presentation state. */
+/* Execute the adapter + real controller in a tiny DOM harness. This proves
+   the Android callback remains an AGC/sensor integration concern while the
+   presentation layer receives only the published quaternion event. */
 function runtimeNativeParallaxSmoke(){
   const vars=new Map(),listeners=new Map(),raf=[];
   let now=1000,rafId=0,priorCalls=0;
@@ -184,22 +201,28 @@ function runtimeNativeParallaxSmoke(){
   controlsEl.querySelector=()=>null;
   const prior=function(){priorCalls++;};
   const api={nativePhoneQuaternion:prior};
+  class CustomEventShim{constructor(type,init={}){this.type=type;this.detail=init.detail;}}
+  const addListener=(name,fn)=>{const list=listeners.get(name)||[];list.push(fn);listeners.set(name,list);};
   const window={
     AGCDSKY:api,
     requestAnimationFrame:cb=>{raf.push(cb);return ++rafId;},
-    addEventListener:(name,fn)=>listeners.set(name,fn)
+    addEventListener:addListener,
+    dispatchEvent:event=>{for(const fn of listeners.get(event.type)||[])fn(event);return true;}
   };
   const localStorage={data:new Map(),getItem(k){return this.data.has(k)?this.data.get(k):null;},setItem(k,v){this.data.set(k,String(v));}};
   const context={
-    window,document,localStorage,
+    window,document,localStorage,CustomEvent:CustomEventShim,
     performance:{now:()=>now},
     matchMedia:()=>({matches:false,addEventListener(){},addListener(){}}),
     setTimeout:()=>1,clearTimeout(){},console,
     Object,Number,Math,Map,Set,Array,String,Boolean,Error
   };
+  vm.runInNewContext(adapter,context,{filename:'phone-quaternion-events.js'});
+  const adaptedCallback=api.nativePhoneQuaternion;
+  assert(adaptedCallback!==prior,'native quaternion event adapter did not wrap the phone callback');
   vm.runInNewContext(js,context,{filename:'parallax-3d.js'});
   assert(window.AGCDSKY_PARALLAX,'runtime controller was not published');
-  assert(api.nativePhoneQuaternion!==prior,'native quaternion callback was not wrapped at runtime');
+  assert(api.nativePhoneQuaternion===adaptedCallback,'parallax presentation must not replace the native quaternion callback');
   const drain=()=>{let guard=0;while(raf.length&&guard++<100){const cb=raf.shift();cb(now+=16);}assert(guard<100,'parallax RAF failed to converge');};
   const qY=degrees=>{const h=degrees*Math.PI/360;return [Math.cos(h),0,Math.sin(h),0];};
   api.nativePhoneQuaternion(1,0,0,0,0);
@@ -208,13 +231,13 @@ function runtimeNativeParallaxSmoke(){
   api.nativePhoneQuaternion(q[0],q[1],q[2],q[3],0);
   drain();
   const state=window.AGCDSKY_PARALLAX.state();
-  assert(priorCalls===2,'parallax wrapper must preserve the phone-ICDU native callback');
-  assert(state.source==='native-quaternion','native quaternion sample did not become active parallax source');
-  assert(state.nativeActive===true,'native quaternion source should report active after a fresh sample');
+  assert(priorCalls===2,'event adapter must preserve the phone-ICDU native callback');
+  assert(state.source==='native-quaternion','native quaternion event did not become active parallax source');
+  assert(state.nativeActive===true,'native quaternion source should report active after a fresh event');
   assert(state.targetX>0.45&&state.targetX<0.55,'4-degree native pitch should map to about 50% horizontal parallax target');
   assert(Math.abs(state.targetY)<1e-6,'pure native pitch should not create roll target');
   const tiltY=parseFloat(vars.get('--dsky-tilt-y'));
-  assert(tiltY>1.9&&tiltY<2.2,'native quaternion did not produce the expected visible Y tilt');
+  assert(tiltY>1.9&&tiltY<2.2,'native quaternion event did not produce the expected visible Y tilt');
   const physicalDepthBefore=vars.get('--dsky-el-z');
   assert(physicalDepthBefore==='-6.034px','runtime physical glass depth must resolve to 6.034 px at the 106-unit reference width');
   window.AGCDSKY_PARALLAX.setDepthPercent(200);drain();
@@ -225,6 +248,7 @@ const runtime=runtimeNativeParallaxSmoke();
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  geometric tilt: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
+console.log('  native path: phone callback -> read-only quaternion event -> presentation consumer');
 console.log('  synthetic glint/reflection: forbidden');
 console.log('  controls: TILT 0–200% + DEPTH 0–200%, persisted independently');
 console.log(`  physical glass: ${edgeDepth.toFixed(3)} + ${centerRise.toFixed(3)} = ${viewDepth.toFixed(3)} in -> ${baseGlassPx.toFixed(3)} px at 106-unit width`);
