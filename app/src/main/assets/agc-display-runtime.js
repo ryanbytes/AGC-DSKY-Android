@@ -2,7 +2,7 @@
 
 // Authoritative real-AGC DSKY output/display state. Core and late fidelity
 // layers consume the frozen service; compatibility names remain versioned slots
-// only for external/parser-legacy interoperability.
+// only at this boundary for external/parser-legacy interoperability.
 (() => {
   const displayState=window.AGCDSKY_APP_STATE;
   const displayRenderer=window.AGCDSKY_RENDERER;
@@ -59,5 +59,27 @@
   const isFn=value=>typeof value==='function';
   compat.readonly('agcDisplay',()=>agcDisplayValue);compat.readonly('agcRelayWords',()=>agcRelayWordsValue);compat.readonly('RELAY_DIGIT',()=>RELAY_DIGIT);relayDigitSlot=compat.mutable('relayDigit',relayDigitImpl,isFn);compat.accessor('agcCh11',()=>agcCh11Value,next=>{agcCh11Value=Number(next)||0});compat.accessor('agcCh13',()=>agcCh13Value,next=>{agcCh13Value=Number(next)||0});compat.accessor('agcCh163',()=>agcCh163Value,next=>{agcCh163Value=Number(next)||0});renderRegSlot=compat.mutable('renderAgcReg',baseRenderAgcReg,isFn);resetSlot=compat.mutable('resetAgcFace',baseResetAgcFace,isFn);decode10Slot=compat.mutable('decodeChannel10',baseDecodeChannel10,isFn);decode11Slot=compat.mutable('decodeChannel11',baseDecodeChannel11,isFn);decode13Slot=compat.mutable('decodeChannel13',baseDecodeChannel13,isFn);decode163Slot=compat.mutable('decodeChannel163',baseDecodeChannel163,isFn);applySnapshotSlot=compat.mutable('applySnapshotUi',baseApplySnapshotUi,isFn);compat.readonly('onAgcChannel',()=>onAgcChannelImpl);compat.readonly('renderAgcSnapshot',()=>renderAgcSnapshotImpl);compat.readonly('snapshotUiState',()=>snapshotUiStateImpl);
 
-  window.AGCDSKY_DISPLAY=Object.freeze({onChannel:(...args)=>onAgcChannelImpl(...args),resetFace:(...args)=>resetSlot.get()(...args),renderSnapshot:(...args)=>renderAgcSnapshotImpl(...args),snapshotUi:(...args)=>snapshotUiStateImpl(...args),applySnapshotUi:(...args)=>applySnapshotSlot.get()(...args),relayDigit:(...args)=>relayDigitSlot.get()(...args),renderReg:(...args)=>renderRegSlot.get()(...args),renderRelayWord:(relay,low11)=>projectRelayWord(relay,low11,true),commitRelayWord:(relay,low11,options)=>commitRelayWord(relay,low11,options),setChannelState,status:()=>agcDisplayStatus(),compatibilityVersions:()=>({relayDigit:relayDigitSlot.version(),renderReg:renderRegSlot.version(),reset:resetSlot.version(),ch10:decode10Slot.version(),ch11:decode11Slot.version(),ch13:decode13Slot.version(),ch163:decode163Slot.version(),applySnapshot:applySnapshotSlot.version()})});
+  const implementationSlots=Object.freeze({
+    relayDigit:relayDigitSlot,
+    renderReg:renderRegSlot,
+    resetFace:resetSlot,
+    decodeChannel10:decode10Slot,
+    decodeChannel11:decode11Slot,
+    decodeChannel13:decode13Slot,
+    decodeChannel163:decode163Slot,
+    applySnapshotUi:applySnapshotSlot
+  });
+  function implementation(name){
+    const slot=implementationSlots[name];
+    if(!slot)throw new Error(`Unknown display implementation: ${String(name)}`);
+    return slot.get();
+  }
+  function installImplementation(name,next,reason='explicit display implementation'){
+    const slot=implementationSlots[name];
+    if(!slot)throw new Error(`Unknown display implementation: ${String(name)}`);
+    if(typeof next!=='function')throw new TypeError(`Display implementation must be a function: ${String(name)}`);
+    return slot.set(next,reason);
+  }
+
+  window.AGCDSKY_DISPLAY=Object.freeze({onChannel:(...args)=>onAgcChannelImpl(...args),resetFace:(...args)=>resetSlot.get()(...args),renderSnapshot:(...args)=>renderAgcSnapshotImpl(...args),snapshotUi:(...args)=>snapshotUiStateImpl(...args),applySnapshotUi:(...args)=>applySnapshotSlot.get()(...args),relayDigit:(...args)=>relayDigitSlot.get()(...args),renderReg:(...args)=>renderRegSlot.get()(...args),renderRelayWord:(relay,low11)=>projectRelayWord(relay,low11,true),commitRelayWord:(relay,low11,options)=>commitRelayWord(relay,low11,options),setChannelState,status:()=>agcDisplayStatus(),implementation,installImplementation,compatibilityVersions:()=>({relayDigit:relayDigitSlot.version(),renderReg:renderRegSlot.version(),reset:resetSlot.version(),ch10:decode10Slot.version(),ch11:decode11Slot.version(),ch13:decode13Slot.version(),ch163:decode163Slot.version(),applySnapshot:applySnapshotSlot.version()})});
 })();
