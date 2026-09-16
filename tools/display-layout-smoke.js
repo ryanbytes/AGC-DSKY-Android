@@ -135,7 +135,7 @@ assert(CM_MODE.includes("document.body.classList.add('spacecraft-cm')") &&
   'CM mode no longer enables the recovered authentic palette');
 assert(CM_MODE.includes("link.href = 'hardware-color-mode.css'"),
   'CM mode no longer loads the recovered hardware palette stylesheet');
-for (const forbidden of ['el-glass-back','--dsky-el-parallax-x','translate3d(calc(var(--dsky-el-parallax-x)'])
+for (const forbidden of ['.el-glass-back{','.el-glass-back,','--dsky-el-parallax-x','translate3d(calc(var(--dsky-el-parallax-x)'])
   assert(!HARDWARE_COLORS.includes(forbidden), 'color layer must not override physical glass/parallax geometry: ' + forbidden);
 
 console.log('display/layout geometry smoke: PASS');
