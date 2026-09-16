@@ -13,26 +13,23 @@
  * yaAGC I/O, and yaAGC DSKY hardware-state output are authoritative. The
  * synthetic phone-clock V35 helpers are retained only for clock-mode testing.
  *
- * This module no longer mutates parser-global implementations directly. Display
- * implementation hooks are installed through AGCDSKY_DISPLAY; remaining clock
- * queue/V35 compatibility slots stay behind AGCDSKY_COMPAT until the clock
- * ownership slice. Hardware diagnostics and settled-paint policy live on
+ * This module no longer mutates parser-global implementations directly.
+ * Display hooks are installed through AGCDSKY_DISPLAY, clock queue/V35 hooks
+ * through AGCDSKY_CLOCK, and hardware diagnostics/settled-paint policy live on
  * AGCDSKY_HARDWARE.
  */
 (() => {
   const fidelityState=window.AGCDSKY_APP_STATE;
-  const compat=window.AGCDSKY_COMPAT;
   const renderer=window.AGCDSKY_RENDERER;
   const audio=window.AGCDSKY_AUDIO;
   const clock=window.AGCDSKY_CLOCK;
   const display=window.AGCDSKY_DISPLAY;
   const shell=window.AGCDSKY_SHELL;
-  if(!fidelityState||!compat||!renderer||!audio||!clock||!display||!shell)throw new Error('Hardware fidelity service dependencies unavailable');
+  if(!fidelityState||!renderer||!audio||!clock||!display||!shell)throw new Error('Hardware fidelity service dependencies unavailable');
 
-  const DIGIT_RELAY=compat.get('DIGIT_RELAY');
-  const CLOCK_GROUPS=compat.get('CLOCK_GROUPS');
-  const desiredClockDigits=compat.get('desiredClockDigits');
-  const clockWord=compat.get('clockWord');
+  const CLOCK_GROUPS=clock.relayGroups();
+  const desiredClockDigits=()=>clock.desiredDigits();
+  const clockWord=(group,want)=>clock.relayWord(group,want);
   const T4_MS=120;
   const RELAY_DRIVE_MS=20;
   const DIRTY_ROW_START_MS=40;
@@ -53,14 +50,14 @@
   const snapshotExtensions=new Map();
   const settledPaintPolicies=new Map();
 
-  const getClockDigits=()=>compat.get('clockDigits');
-  const getClockRelayWords=()=>compat.get('clockRelayWords');
-  const getRelayQueue=()=>compat.get('relayQueue');
-  const getRelayBusy=()=>!!compat.get('relayBusy');
-  const setRelayBusy=value=>compat.replace('relayBusy',!!value,'hardware-fidelity queue state');
+  const getClockDigits=()=>clock.digits();
+  const getClockRelayWords=()=>clock.relayWords();
+  const getRelayQueue=()=>clock.queue();
+  const getRelayBusy=()=>clock.queueBusy();
+  const setRelayBusy=value=>clock.setQueueBusy(value);
   const getLampTestActive=()=>clock.lampTestActive();
-  const setLampTestActive=value=>compat.replace('lampTestActive',!!value,'hardware-fidelity V35 state');
-  const setLampTestTimer=value=>compat.replace('lampTestTimer',Number(value)||0,'hardware-fidelity V35 timer');
+  const setLampTestActive=value=>clock.setLampTestActive(value);
+  const setLampTestTimer=value=>clock.setLampTestTimer(value);
 
   function later(fn,ms){
     const id=setTimeout(()=>{hw.timers.delete(id);fn()},Math.max(0,ms));hw.timers.add(id);return id;
@@ -102,7 +99,7 @@
   function clockLow11(row,want){return clockWord(row.native,want)&0o3777}
   function relayOfJob(job){return job.group?job.group.relay:job.relay}
   function cellsOfJob(job){return job.group?job.group.cells:[]}
-  function low11ForPair(text){const s=String(text||'').padEnd(2,' ').slice(0,2);return((DIGIT_RELAY[s[0]]||0)<<5)|(DIGIT_RELAY[s[1]]||0)}
+  function low11ForPair(text){const s=String(text||'').padEnd(2,' ').slice(0,2);return(clock.digitRelayCode(s[0])<<5)|clock.digitRelayCode(s[1])}
   function targetClockState(commandVerb=fidelityState.verb,commandNoun=fidelityState.noun){
     const want=desiredClockDigits(),state={11:low11ForPair('00'),10:low11ForPair(commandVerb),9:low11ForPair(commandNoun),12:0};
     for(const row of CLOCK_ROWS)state[row.relay]=clockLow11(row,want);return{state,want};
@@ -112,7 +109,7 @@
     for(const row of CLOCK_ROWS)state[row.relay]=(relayWords[row.relay]??0)&0o3777;return state;
   }
   function v35State(){
-    const eight=DIGIT_RELAY['8'],state={};
+    const eight=clock.digitRelayCode('8'),state={};
     for(let relay=1;relay<=11;relay++){const plus=relay===2||relay===5||relay===7;state[relay]=(plus?0o2000:0)|(eight<<5)|eight}
     state[12]=0o650;return state;
   }
@@ -164,9 +161,9 @@
   }
   display.installImplementation('resetFace',hardwareResetAgcFace,'hardware reset state');
 
-  const baseStopClockQueue=compat.get('stopClockQueue');
+  const baseStopClockQueue=clock.implementation('stopQueue');
   function hardwareStopClockQueue(...args){hw.clockToken++;return baseStopClockQueue.apply(this,args)}
-  compat.replace('stopClockQueue',hardwareStopClockQueue,'hardware clock queue ownership');
+  clock.installImplementation('stopQueue',hardwareStopClockQueue,'hardware clock queue ownership');
 
   function hardwareRunRelayQueue(){
     const queue=getRelayQueue();queue.sort((a,b)=>relayOfJob(b)-relayOfJob(a));
@@ -189,7 +186,7 @@
     };
     later(step,startDelay);
   }
-  compat.replace('runRelayQueue',hardwareRunRelayQueue,'hardware T4 relay queue');
+  clock.installImplementation('runQueue',hardwareRunRelayQueue,'hardware T4 relay queue');
 
   function flashPhaseOff(){const elapsed=Math.max(0,performance.now()-scalerEpoch);return Math.floor(elapsed/DSKY_FLASH_QUANTUM_MS)%DSKY_FLASH_PHASES===0}
   function applySyntheticFlash(){
@@ -211,14 +208,14 @@
     later(()=>{if(token!==hw.v35Token||!getLampTestActive())return;if(onComplete)onComplete()},start+(V35_ORDER.length-1)*DIRTY_ROW_START_MS+RELAY_DRIVE_MS+2);
   }
 
-  const baseCancelLampTest=compat.get('cancelLampTest');
+  const baseCancelLampTest=clock.implementation('cancelLampTest');
   function hardwareCancelLampTest(...args){
     hw.v35Token++;hw.v35FlashEnabled=false;hw.v35DirectKeyRel=false;hw.v35DirectOperErr=false;
     if(hw.v35FlashTimer)clearTimeout(hw.v35FlashTimer);hw.v35FlashTimer=0;document.body.classList.remove('vn-flash-off');
     if(fidelityState.mode==='clock')setAuxRelays({comp:false,uplink:false,temp:false,keyrel:false,oprerr:false,flash:false,restart:false,stby:false},true);
     return baseCancelLampTest.apply(this,args);
   }
-  compat.replace('cancelLampTest',hardwareCancelLampTest,'hardware V35 cancellation');
+  clock.installImplementation('cancelLampTest',hardwareCancelLampTest,'hardware V35 cancellation');
 
   function hardwareLampTest(){
     clock.cancelLampTest();clock.stopQueue();setLampTestActive(true);const token=++hw.v35Token;
@@ -239,7 +236,7 @@
       });
     },V35_HOLD_MS);setLampTestTimer(timer);
   }
-  compat.replace('lampTest',hardwareLampTest,'hardware V35 sequence');
+  clock.installImplementation('lampTest',hardwareLampTest,'hardware V35 sequence');
 
   // Run yaAGC from the original 1024-kHz/12 machine-cycle rate while draining
   // peripheral output at 250 Hz. The faster drain does not speed up the AGC.

@@ -12,28 +12,46 @@ const document={hidden:false,body:{classList:{toggle(){},remove(){}}}};
 const context={console,window:null,document,performance:{now:()=>now},setTimeout(fn,ms=0){const id=++timerId;timers.set(id,{fn,due:now+Math.max(0,Number(ms)||0)});return id},clearTimeout(id){timers.delete(id)},setInterval(){return 1},clearInterval(){},Object,Map,Set,Number,String,Math,TypeError,Promise};
 context.window=context;vm.createContext(context);
 new vm.Script(stateSource,{filename:'app-state-runtime.js'}).runInContext(context);
-const compat=context.AGCDSKY_COMPAT,state=context.AGCDSKY_APP_STATE,isFn=v=>typeof v==='function';
+const state=context.AGCDSKY_APP_STATE;
 state.mode='agc';state.tickSound=false;
 
 const DIGIT_RELAY={' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31};
 const CLOCK_GROUPS=[{relay:8,cells:[['r1',0]],singleRight:true}];
 const clockDigits={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']},clockRelayWords={};
 let relayQueue=[],relayBusy=false,lampTestActive=false,lampTestTimer=0;
-compat.readonly('DIGIT_RELAY',()=>DIGIT_RELAY);
-compat.readonly('CLOCK_GROUPS',()=>CLOCK_GROUPS);
-compat.readonly('desiredClockDigits',()=>()=>({r1:['0','0','0','0','1'],r2:['0','0','0','0','2'],r3:['0','0','0','0','3']}));
-compat.readonly('clockWord',()=>((group,want)=>DIGIT_RELAY[want.r1[0]]||0));
-compat.accessor('clockDigits',()=>clockDigits,next=>Object.assign(clockDigits,next));
-compat.accessor('clockRelayWords',()=>clockRelayWords,next=>{for(const k of Object.keys(clockRelayWords))delete clockRelayWords[k];Object.assign(clockRelayWords,next||{})});
-compat.accessor('relayQueue',()=>relayQueue,next=>{relayQueue=Array.isArray(next)?next:[]});
-compat.accessor('relayBusy',()=>relayBusy,next=>{relayBusy=!!next});
-compat.accessor('lampTestActive',()=>lampTestActive,next=>{lampTestActive=!!next});
-compat.accessor('lampTestTimer',()=>lampTestTimer,next=>{lampTestTimer=Number(next)||0});
-for(const [name,fn] of [['stopClockQueue',()=>{relayQueue=[];relayBusy=false}],['runRelayQueue',()=>{}],['cancelLampTest',()=>{lampTestActive=false}],['lampTest',()=>{}]])compat.mutable(name,fn,isFn);
+const clockSlots={
+  stopQueue:()=>{relayQueue=[];relayBusy=false},
+  runQueue:()=>{},
+  cancelLampTest:()=>{lampTestActive=false},
+  lampTest:()=>{}
+};
 
 context.AGCDSKY_RENDERER={setLamp:(name,on)=>lamps.set(name,!!on)};
 context.AGCDSKY_AUDIO={ensure:()=>null,emitTick:()=>{}};
-context.AGCDSKY_CLOCK={lampTestActive:()=>lampTestActive,cancelLampTest:(...args)=>compat.get('cancelLampTest')(...args),stopQueue:(...args)=>compat.get('stopClockQueue')(...args),renderReg:name=>renders.push(name),syncFace:()=>{},tick:()=>{}};
+context.AGCDSKY_CLOCK={
+  relayGroups:()=>CLOCK_GROUPS,
+  desiredDigits:()=>({r1:['0','0','0','0','1'],r2:['0','0','0','0','2'],r3:['0','0','0','0','3']}),
+  relayWord:(group,want)=>DIGIT_RELAY[want.r1[0]]||0,
+  digitRelayCode:value=>DIGIT_RELAY[String(value)]??0,
+  digits:()=>clockDigits,
+  relayWords:()=>clockRelayWords,
+  queue:()=>relayQueue,
+  queueBusy:()=>relayBusy,
+  setQueueBusy:value=>(relayBusy=!!value),
+  lampTestActive:()=>lampTestActive,
+  setLampTestActive:value=>(lampTestActive=!!value),
+  lampTestTimer:()=>lampTestTimer,
+  setLampTestTimer:value=>(lampTestTimer=Number(value)||0),
+  implementation:name=>clockSlots[name],
+  installImplementation(name,next){if(typeof next!=='function')throw new TypeError(`invalid clock implementation ${name}`);clockSlots[name]=next;return next},
+  cancelLampTest:(...args)=>clockSlots.cancelLampTest(...args),
+  stopQueue:(...args)=>clockSlots.stopQueue(...args),
+  runQueue:(...args)=>clockSlots.runQueue(...args),
+  lampTest:(...args)=>clockSlots.lampTest(...args),
+  renderReg:name=>renders.push(name),
+  syncFace:()=>{},
+  tick:()=>{}
+};
 const displaySlots={decodeChannel10:()=>{},decodeChannel11:()=>{},decodeChannel13:()=>{},decodeChannel163:()=>{},resetFace:()=>{}};
 context.AGCDSKY_DISPLAY={
   commitRelayWord:(relay,word,options)=>{commits.push({relay,word,render:options&&options.render,at:now});return true},
@@ -42,10 +60,11 @@ context.AGCDSKY_DISPLAY={
 };
 context.AGCDSKY_SHELL={element:()=>({textContent:''})};
 new vm.Script(hardwareSource,{filename:'hardware-fidelity.js'}).runInContext(context);
-const hardware=context.AGCDSKY_HARDWARE,display=context.AGCDSKY_DISPLAY;
+const hardware=context.AGCDSKY_HARDWARE,display=context.AGCDSKY_DISPLAY,clock=context.AGCDSKY_CLOCK;
 assert(hardware&&Object.isFrozen(hardware),'hardware service missing/mutable');
 assert(hardware.relayDriveMs===20&&hardware.dirtyRowStartMs===40,'hardware timing constants changed');
 for(const name of ['decodeChannel10','decodeChannel11','decodeChannel163','resetFace'])assert(typeof display.implementation(name)==='function',`hardware did not install ${name} through display service`);
+for(const name of ['stopQueue','runQueue','cancelLampTest','lampTest'])assert(typeof clock.implementation(name)==='function',`hardware did not install ${name} through clock service`);
 commits.length=0;timers.clear();now=0;
 
 function runNext(){let chosen=null;for(const [id,timer] of timers){if(!chosen||timer.due<chosen.timer.due||(timer.due===chosen.timer.due&&id<chosen.id))chosen={id,timer}}if(!chosen)return false;timers.delete(chosen.id);now=chosen.timer.due;chosen.timer.fn();return true}
@@ -67,9 +86,9 @@ const diagnostic=hardware.snapshot();
 assert(diagnostic.testExtension===true&&diagnostic.latches[10]===0o123&&diagnostic.latches[9]===0o456,'hardware diagnostic extension/latches changed');
 assert(!hardwareSource.includes('window.AGCDSKY.hardware ='),'hardware source must not patch public facade');
 for(const name of ['decodeChannel10','decodeChannel11','decodeChannel163','resetFace'])assert(hardwareSource.includes(`display.installImplementation('${name}'`),`hardware display-service registration missing: ${name}`);
-for(const legacy of ["compat.replace('decodeChannel10'","compat.replace('decodeChannel11'","compat.replace('decodeChannel163'","compat.replace('resetAgcFace'"])assert(!hardwareSource.includes(legacy),`hardware retained display compatibility mutation: ${legacy}`);
-assert(hardwareSource.includes("compat.replace('runRelayQueue'",),'clock queue compatibility hook unexpectedly moved in display-only slice');
+for(const name of ['stopQueue','runQueue','cancelLampTest','lampTest'])assert(hardwareSource.includes(`clock.installImplementation('${name}'`),`hardware clock-service registration missing: ${name}`);
+assert(!hardwareSource.includes('AGCDSKY_COMPAT')&&!hardwareSource.includes('compat.'),'hardware retained direct compatibility-registry dependency');
 assert(hardwareSource.includes('display.commitRelayWord(relay,low11,{render:paint})'),'settled commit marker missing');
 
 console.log('hardware service smoke: PASS');
-console.log('  display-owned decoder/reset hooks, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
+console.log('  display/clock-owned implementation hooks, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');

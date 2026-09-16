@@ -1,8 +1,9 @@
 'use strict';
 
 // Synthetic PHONE CLOCK relay/display authority. Historical mutable names are
-// accessor-backed implementation/state slots so hardware-fidelity can continue
-// its parser-ordered overrides without escaping this service's ownership.
+// accessor-backed implementation/state slots at this service boundary; late
+// hardware layers install overrides through AGCDSKY_CLOCK rather than touching
+// the generic compatibility registry directly.
 (() => {
   const clockState=window.AGCDSKY_APP_STATE;
   const clockShell=window.AGCDSKY_SHELL;
@@ -127,7 +128,9 @@
     clockRelayWordsValue=next.relayWords&&typeof next.relayWords==='object'?{...next.relayWords}:{};
     return snapshotBackingState();
   }
+  function setQueueBusy(value){relayBusyValue=!!value;return relayBusyValue}
   function setLampTestActive(value){lampTestActiveValue=!!value;return lampTestActiveValue}
+  function setLampTestTimer(value){lampTestTimerValue=Number(value)||0;return lampTestTimerValue}
 
   const isFn=value=>typeof value==='function';
   compat.readonly('DIGIT_RELAY',()=>DIGIT_RELAY_VALUE);
@@ -153,10 +156,32 @@
   cancelSlot=compat.mutable('cancelLampTest',baseCancelLampTest,isFn);
   lampTestSlot=compat.mutable('lampTest',baseLampTest,isFn);
 
+  const implementationSlots=Object.freeze({
+    renderReg:renderRegSlot,
+    syncFace:syncSlot,
+    stopQueue:stopSlot,
+    runQueue:runQueueSlot,
+    tick:tickSlot,
+    cancelLampTest:cancelSlot,
+    lampTest:lampTestSlot
+  });
+  function implementation(name){
+    const slot=implementationSlots[name];
+    if(!slot)throw new Error(`Unknown clock implementation: ${String(name)}`);
+    return slot.get();
+  }
+  function installImplementation(name,next,reason='explicit clock implementation'){
+    const slot=implementationSlots[name];
+    if(!slot)throw new Error(`Unknown clock implementation: ${String(name)}`);
+    if(typeof next!=='function')throw new TypeError(`Clock implementation must be a function: ${String(name)}`);
+    return slot.set(next,reason);
+  }
+
   window.AGCDSKY_CLOCK=Object.freeze({
     tick:(...args)=>tickSlot.get()(...args),
     syncFace:(...args)=>syncSlot.get()(...args),
     stopQueue:(...args)=>stopSlot.get()(...args),
+    runQueue:(...args)=>runQueueSlot.get()(...args),
     cancelLampTest:(...args)=>cancelSlot.get()(...args),
     lampTest:(...args)=>lampTestSlot.get()(...args),
     renderReg:(...args)=>renderRegSlot.get()(...args),
@@ -164,10 +189,22 @@
     v35RelayState:(...args)=>v35RelayState(...args),
     popcount11:(...args)=>popcount11Impl(...args),
     digitRelayCode,
+    relayGroups:()=>CLOCK_GROUPS_VALUE,
+    desiredDigits:(...args)=>desiredClockDigitsImpl(...args),
+    relayWord:(...args)=>clockWordImpl(...args),
+    digits:()=>clockDigitsValue,
+    relayWords:()=>clockRelayWordsValue,
+    queue:()=>relayQueueValue,
+    queueBusy:()=>relayBusyValue,
+    setQueueBusy,
     snapshotBackingState,
     restoreBackingState,
     lampTestActive:()=>lampTestActiveValue,
     setLampTestActive,
+    lampTestTimer:()=>lampTestTimerValue,
+    setLampTestTimer,
+    implementation,
+    installImplementation,
     compatibilityVersions:()=>({renderReg:renderRegSlot.version(),syncFace:syncSlot.version(),stopQueue:stopSlot.version(),runQueue:runQueueSlot.version(),tick:tickSlot.version(),cancelLampTest:cancelSlot.version(),lampTest:lampTestSlot.version()})
   });
 })();
