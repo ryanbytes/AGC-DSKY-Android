@@ -18,6 +18,10 @@ android {
         versionName '1.1.15'
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
     flavorDimensions += 'target'
     productFlavors {
         regular {
