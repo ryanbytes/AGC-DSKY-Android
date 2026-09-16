@@ -42,7 +42,7 @@ for (const [file, source] of [
   ['keyboard-electrical-interlock.js', keyboardSource],
   ['clock-behavior.js', clockSource]
 ]) {
-  for (const forbidden of ['clearLamps(', 'resetAgcFace(', 'cancelLampTest(', "press('R')", 'press("R")']) {
+  for (const forbidden of ['clearLamps(', 'resetAgcFace(', 'cancelLampTest(', "press('R')", 'press(\"R\")']) {
     assert(!source.includes(forbidden), `${file} contains synthetic RSET/reset behavior: ${forbidden}`);
   }
   for (const forbidden of ['.keyPress(', '.keyRelease(', 'writeIo(0o15']) {
@@ -144,6 +144,11 @@ async function main() {
   };
   context.window=context;
   context.addEventListener=function(type,fn){addListener(win,type,fn);};
+  Object.defineProperties(AGCDSKY, {
+    runtimeTransitions:{enumerable:true,get(){ return context.AGCDSKY_RUNTIME || null; }},
+    inputRuntime:{enumerable:true,get(){ return context.AGCDSKY_INPUT || null; }},
+    clockBehavior:{enumerable:true,get(){ return context.AGCDSKY_CLOCK_BEHAVIOR || null; }}
+  });
   context.enterAgc=AGCDSKY.enterAgc;
 
   vm.createContext(context);
@@ -151,10 +156,14 @@ async function main() {
   assert(context.AGCDSKY_KEY_CODES.R === 0o22, 'shared RSET keycode is not 022');
 
   vm.runInContext(transitionsSource,context,{filename:'runtime-transitions.js'});
+  assert(context.AGCDSKY_RUNTIME === AGCDSKY.runtimeTransitions,
+    'bootstrap-owned runtime getter did not resolve the transition service');
   vm.runInContext(inputSource,context,{filename:'dsky-input-runtime.js'});
   assert(context.AGCDSKY_INPUT === AGCDSKY.inputRuntime,
     'RSET harness did not initialize the shared input runtime');
   vm.runInContext(clockSource,context,{filename:'clock-behavior.js'});
+  assert(context.AGCDSKY_CLOCK_BEHAVIOR === AGCDSKY.clockBehavior,
+    'RSET harness did not initialize the clock behavior service');
   vm.runInContext(keyboardSource,context,{filename:'keyboard-electrical-interlock.js'});
   assert(AGCDSKY.keyboardElectrical, 'physical electrical interlock did not initialize');
 
@@ -216,7 +225,7 @@ async function main() {
     'two physical RSET cycles did not produce exactly two KEYRST releases');
 
   console.log('RSET flight path smoke: PASS');
-  console.log('  CLOCK handoff and AGC-mode physical RSET both deliver Pinball 022 + KEYRST through shared input runtime with no synthetic JavaScript reset path');
+  console.log('  bootstrap runtime/input/clock getters preserve CLOCK handoff and AGC-mode physical RSET as Pinball 022 + KEYRST with no synthetic JavaScript reset path');
 }
 
 main().catch(error=>fail(error && error.stack ? error.stack : String(error)));

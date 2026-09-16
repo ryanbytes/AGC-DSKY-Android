@@ -38,34 +38,34 @@ const calls = [];
 const timers = [];
 const core = {};
 
+const runtimeTransitions = {
+  modes:MODES,
+  mode(){ return mode; },
+  core(){ return core; },
+  clockRequested(){ return clockPending; },
+  requestAgc(reason){
+    calls.push(['request-agc', reason]);
+    if (clockPending) return Promise.reject(new Error('CLOCK pending'));
+    if (mode === MODES.AGC) return Promise.resolve({mode});
+    mode = MODES.AGC_LOADING;
+    return new Promise(resolve => {
+      releaseAgc = () => {
+        mode = MODES.AGC;
+        calls.push(['agc-ready']);
+        resolve({mode});
+      };
+    });
+  },
+  onBeforeClock(handler){
+    beforeClockHook = handler;
+    return () => { if (beforeClockHook === handler) beforeClockHook = null; };
+  }
+};
+const inputRuntime = {
+  ready(){ return mode === MODES.AGC && !clockPending; },
+  keyMake(code){ calls.push(['make', code]); return 1; }
+};
 const AGCDSKY = {
-  runtimeTransitions:{
-    modes:MODES,
-    mode(){ return mode; },
-    core(){ return core; },
-    clockRequested(){ return clockPending; },
-    requestAgc(reason){
-      calls.push(['request-agc', reason]);
-      if (clockPending) return Promise.reject(new Error('CLOCK pending'));
-      if (mode === MODES.AGC) return Promise.resolve({mode});
-      mode = MODES.AGC_LOADING;
-      return new Promise(resolve => {
-        releaseAgc = () => {
-          mode = MODES.AGC;
-          calls.push(['agc-ready']);
-          resolve({mode});
-        };
-      });
-    },
-    onBeforeClock(handler){
-      beforeClockHook = handler;
-      return () => { if (beforeClockHook === handler) beforeClockHook = null; };
-    }
-  },
-  inputRuntime:{
-    ready(){ return mode === MODES.AGC && !clockPending; },
-    keyMake(code){ calls.push(['make', code]); return 1; }
-  },
   scheduleAgcAutosave(reason){ calls.push(['autosave', reason]); }
 };
 const documentObject = {
@@ -73,6 +73,8 @@ const documentObject = {
 };
 const context = {
   AGCDSKY,
+  AGCDSKY_RUNTIME:runtimeTransitions,
+  AGCDSKY_INPUT:inputRuntime,
   console,
   Promise,
   document:documentObject,
@@ -81,11 +83,18 @@ const context = {
   window:null
 };
 context.window = context;
+Object.defineProperties(AGCDSKY,{
+  runtimeTransitions:{enumerable:true,get:()=>context.AGCDSKY_RUNTIME||null},
+  inputRuntime:{enumerable:true,get:()=>context.AGCDSKY_INPUT||null},
+  clockBehavior:{enumerable:true,get:()=>context.AGCDSKY_CLOCK_BEHAVIOR||null}
+});
 vm.createContext(context);
 vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
 vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
 
 assert(AGCDSKY.clockBehavior, 'clock fallback did not initialize');
+assert(AGCDSKY.clockBehavior === context.AGCDSKY_CLOCK_BEHAVIOR,
+  'clock fallback compatibility getter did not resolve the service owner');
 assert(typeof beforeClockHook === 'function',
   'clock fallback did not register pre-CLOCK cancellation hook');
 

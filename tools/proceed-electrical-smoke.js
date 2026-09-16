@@ -112,23 +112,23 @@ const documentObject = {
   }
 };
 const MODES = Object.freeze({CLOCK:'clock',AGC_LOADING:'agc-loading',AGC:'agc'});
-const AGCDSKY = {
-  runtimeTransitions:Object.freeze({
-    modes:MODES,
-    mode(){ return mode; },
-    core(){ return core; },
-    clockRequested(){ return clockPending; },
-    onBeforeClock(handler){
-      beforeClockRegistrations++;
-      beforeClockHook = handler;
-      return () => { if (beforeClockHook === handler) beforeClockHook = null; };
-    }
-  })
-};
+const runtimeTransitions = Object.freeze({
+  modes:MODES,
+  mode(){ return mode; },
+  core(){ return core; },
+  clockRequested(){ return clockPending; },
+  onBeforeClock(handler){
+    beforeClockRegistrations++;
+    beforeClockHook = handler;
+    return () => { if (beforeClockHook === handler) beforeClockHook = null; };
+  }
+});
+const AGCDSKY = {};
 const context = {
   console,
   document:documentObject,
   AGCDSKY,
+  AGCDSKY_RUNTIME:runtimeTransitions,
   agcFailure(error){ failures.push(String(error && error.message || error)); },
   __baseEnterClock(...args){
     calls.push(['enterClock', ...args]);
@@ -138,8 +138,14 @@ const context = {
   window:null
 };
 context.window = context;
+Object.defineProperties(AGCDSKY,{
+  runtimeTransitions:{enumerable:true,get:()=>context.AGCDSKY_RUNTIME||null},
+  inputRuntime:{enumerable:true,get:()=>context.AGCDSKY_INPUT||null}
+});
 vm.createContext(context);
 vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
+assert(context.AGCDSKY_INPUT === AGCDSKY.inputRuntime,
+  'shared input runtime bootstrap getter did not resolve one controller reference');
 vm.runInContext(source, context, {filename:'proceed-electrical.js'});
 
 assert(typeof proListeners.pointerdown === 'function'
@@ -249,4 +255,4 @@ assert(calls.filter(call => call[0] === 'proceed' && call[1] === false).length =
   'failed PRO make did not restore released level');
 
 console.log('PRO electrical smoke: PASS');
-console.log('  maintained contact, lifecycle cleanup, centralized CLOCK release ordering, pending-CLOCK suppression, idempotence, and failure cleanup verified');
+console.log('  maintained contact, lifecycle cleanup, centralized CLOCK release ordering, pending-CLOCK suppression, bootstrap service getters, idempotence, and failure cleanup verified');

@@ -3,7 +3,7 @@
 
   const api = window.AGCDSKY;
   if (!api) throw new Error('AGC application API unavailable');
-  if (api.inputRuntime) return;
+  if (window.AGCDSKY_INPUT) return;
 
   const runtime = api.runtimeTransitions;
   if (!runtime
@@ -70,5 +70,4 @@
   });
 
   window.AGCDSKY_INPUT = input;
-  api.inputRuntime = input;
 })();

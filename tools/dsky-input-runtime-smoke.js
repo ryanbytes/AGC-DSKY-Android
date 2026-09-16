@@ -27,11 +27,12 @@ for (const marker of [
   'core.keyPress(value)',
   'core.keyRelease()',
   'core.proceedKey(!!pressed)',
-  'window.AGCDSKY_INPUT = input',
-  'api.inputRuntime = input'
+  'window.AGCDSKY_INPUT = input'
 ]) {
   assert(source.includes(marker), `input runtime missing marker: ${marker}`);
 }
+assert(!source.includes('api.inputRuntime ='),
+  'input runtime must not mutate the public facade after bootstrap');
 assert(!/fetch\s*\(/.test(source) && !/XMLHttpRequest/.test(source),
   'input runtime must not depend on network activity');
 
@@ -43,20 +44,23 @@ const core = {
   proceedKey(pressed){ calls.push(['proceed', !!pressed]); return 1; }
 };
 const MODES = Object.freeze({CLOCK:'clock',AGC_LOADING:'agc-loading',AGC:'agc'});
-const AGCDSKY = {
-  runtimeTransitions:Object.freeze({
-    modes:MODES,
-    mode(){ return mode; },
-    core(){ return core; }
-  })
-};
-const context = {AGCDSKY, console, window:null};
+const runtime = Object.freeze({
+  modes:MODES,
+  mode(){ return mode; },
+  core(){ return core; }
+});
+const AGCDSKY = {};
+const context = {AGCDSKY, AGCDSKY_RUNTIME:runtime, console, window:null};
 context.window = context;
+Object.defineProperties(AGCDSKY, {
+  runtimeTransitions:{enumerable:true,get(){ return context.AGCDSKY_RUNTIME || null; }},
+  inputRuntime:{enumerable:true,get(){ return context.AGCDSKY_INPUT || null; }}
+});
 vm.createContext(context);
 vm.runInContext(source, context, {filename:'dsky-input-runtime.js'});
 
 assert(context.AGCDSKY_INPUT === AGCDSKY.inputRuntime,
-  'global and AGCDSKY input-runtime references differ');
+  'bootstrap-owned inputRuntime getter did not resolve the shared controller');
 assert(Object.isFrozen(AGCDSKY.inputRuntime),
   'input runtime API must be frozen');
 assert(AGCDSKY.inputRuntime.ready() === false,
@@ -97,9 +101,6 @@ assert(AGCDSKY.inputRuntime.keyReset() === true,
 assert(calls.filter(call => call[0] === 'reset').length === 1,
   'KEYRST did not call the core exactly once');
 
-// A keyboard cycle may retain the exact core that accepted its make while the
-// app transitions away. The explicit override lets the all-up cleanup restore
-// channel 015 without consulting a now-different runtime mode/core.
 mode = MODES.CLOCK;
 assert(AGCDSKY.inputRuntime.keyReset(core) === true,
   'KEYRST override could not release the retained electrical core');
@@ -110,11 +111,10 @@ const snap = AGCDSKY.inputRuntime.snapshot();
 assert(snap.mode === MODES.CLOCK && snap.ready === false,
   'input runtime snapshot did not reflect current runtime state');
 
-// Re-running the classic script is intentionally idempotent.
 const prior = AGCDSKY.inputRuntime;
 vm.runInContext(source, context, {filename:'dsky-input-runtime-second-load.js'});
-assert(AGCDSKY.inputRuntime === prior,
+assert(AGCDSKY.inputRuntime === prior && context.AGCDSKY_INPUT === prior,
   'second input-runtime load replaced the published controller');
 
 console.log('DSKY input runtime smoke: PASS');
-console.log('  AGC gating, positive key makes, KEYRST-only zero, retained-core release, PRO maintained contact, keycode validation, and idempotence verified');
+console.log('  bootstrap-owned getter, AGC gating, positive key makes, KEYRST-only zero, retained-core release, PRO maintained contact, validation, and idempotence verified');

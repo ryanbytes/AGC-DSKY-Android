@@ -28,25 +28,31 @@ for (const marker of [
   'ready:next.mode === MODES.AGC',
   'classicTransitionGlobals:false',
   'publicApiDelegates:true',
-  'api.runtimeTransitions = runtime'
+  'window.AGCDSKY_RUNTIME = runtime'
 ]) {
   if (!transitionSource.includes(marker)) fail('missing runtime-transition marker: ' + marker);
 }
 for (const forbidden of [
   'waitForAgcReady','LOAD_POLL_MS','MAX_LOAD_POLLS','api.enterAgc =','api.enterClock =',
-  'window.enterAgc','window.enterClock','sharedEnterAgc','sharedEnterClock'
+  'api.runtimeTransitions =','window.enterAgc','window.enterClock','sharedEnterAgc','sharedEnterClock'
 ]) {
   if (transitionSource.includes(forbidden)) fail('runtime transition service contains obsolete ownership/polling marker: ' + forbidden);
 }
 for (const marker of [
   'const AGC_KEY = window.AGCDSKY_KEY_CODES;',
+  'const transitions = api?.runtimeTransitions;',
   'const input = api?.inputRuntime;',
   "requestAgc('clock keypad fallback')",
   'input.keyMake(code)',
   "scheduleAgcAutosave('clock keypad handoff')",
-  'api.clockBehavior = clockBehavior'
+  'window.AGCDSKY_CLOCK_BEHAVIOR = clockBehavior'
 ]) {
   if (!clockSource.includes(marker)) fail('missing clock-fallback marker: ' + marker);
+}
+for (const forbidden of ['api.runtimeTransitions =','api.inputRuntime =','api.clockBehavior =']) {
+  if (transitionSource.includes(forbidden) || inputSource.includes(forbidden) || clockSource.includes(forbidden)) {
+    fail('runtime/input/clock service regained late public-facade mutation: ' + forbidden);
+  }
 }
 if (clockSource.includes('.keyPress(') || clockSource.includes('writeIo(0o15')) {
   fail('clock fallback must not bypass the shared input runtime');
@@ -100,6 +106,11 @@ function createHarness(initialMode = 'clock') {
     window:null
   };
   context.window = context;
+  Object.defineProperties(AGCDSKY,{
+    runtimeTransitions:{enumerable:true,get:()=>context.AGCDSKY_RUNTIME||null},
+    inputRuntime:{enumerable:true,get:()=>context.AGCDSKY_INPUT||null},
+    clockBehavior:{enumerable:true,get:()=>context.AGCDSKY_CLOCK_BEHAVIOR||null}
+  });
   AGCDSKY.enterAgc=function(){
     const runtime=context.AGCDSKY_RUNTIME;
     return runtime&&typeof runtime.enterAgc==='function'
@@ -127,13 +138,16 @@ function createHarness(initialMode = 'clock') {
   if (context.enterAgc !== undefined || context.enterClock !== undefined) {
     fail('runtime service published classic transition globals');
   }
+  if (context.AGCDSKY_RUNTIME !== context.AGCDSKY.runtimeTransitions) {
+    fail('runtime transition compatibility getter did not resolve the service owner');
+  }
   vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
   if (context.AGCDSKY_INPUT !== context.AGCDSKY.inputRuntime) {
-    fail('shared input runtime did not publish one controller reference');
+    fail('shared input runtime compatibility getter did not resolve one controller reference');
   }
   vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
-  if (!context.AGCDSKY.clockBehavior) {
-    fail('clock fallback did not initialize against shared keycode/runtime/input services');
+  if (!context.AGCDSKY.clockBehavior || context.AGCDSKY_CLOCK_BEHAVIOR !== context.AGCDSKY.clockBehavior) {
+    fail('clock fallback compatibility getter did not resolve the shared controller');
   }
   return {
     AGCDSKY, context, handlers, timers, keyPresses,
@@ -275,5 +289,5 @@ async function flush(count = 20) {
   }
 
   console.log('Clock mode behavior: PASS');
-  console.log('  stable public API, lifecycle-backed shared transition/input entry, fallback queue, no polling/globals, and lifecycle-failure compatibility verified');
+  console.log('  stable public compatibility getters, lifecycle-backed shared transition/input entry, fallback queue, no polling/globals, and lifecycle-failure compatibility verified');
 })().catch(error => fail(error.stack || String(error)));

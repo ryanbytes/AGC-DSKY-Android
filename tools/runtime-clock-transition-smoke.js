@@ -8,6 +8,7 @@ for(const marker of ['const lifecycle = api.lifecycle;','const baseEnterAgc = li
 for(const forbidden of ['baseApiEnterClock','sharedApiEnterClock','sharedEnterAgc','sharedEnterClock','window.enterAgc','window.enterClock','api.enterClock =','api.enterAgc ='])assert(!source.includes(forbidden),`obsolete transition ownership remains: ${forbidden}`);
 
 function installFacade(context,api,lifecycle,label='API LABEL'){
+  Object.defineProperty(api,'runtimeTransitions',{enumerable:true,configurable:true,get:()=>context.AGCDSKY_RUNTIME||null});
   api.enterAgc=function(){
     const r=context.AGCDSKY_RUNTIME;
     return r&&r.enterAgc?r.enterAgc('public AGCDSKY.enterAgc'):lifecycle.enterAgc();
@@ -47,6 +48,6 @@ async function main(){
   assert(loading.enterAgc===undefined&&loading.enterClock===undefined,'deferred harness gained classic transition globals');
 
   console.log('runtime CLOCK transition smoke: PASS');
-  console.log('  stable API methods, lifecycle-backed dynamic runtime delegation, cleanup hooks, direct runtime semantics, no classic transition globals, and AGC-load serialization verified');
+  console.log('  stable API methods, lifecycle-backed bootstrap compatibility getter, cleanup hooks, direct runtime semantics, no classic transition globals, and AGC-load serialization verified');
 }
 main().catch(e=>fail(e&&e.stack?e.stack:String(e)));

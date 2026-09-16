@@ -102,5 +102,4 @@
     })
   });
   window.AGCDSKY_CLOCK_BEHAVIOR = clockBehavior;
-  api.clockBehavior = clockBehavior;
 })();
