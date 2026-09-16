@@ -33,10 +33,11 @@ ordered(html,[
 
 /* Explicit runtime-service ownership. */
 for(const token of [
-  'window.AGCDSKY_APP_STATE','window.AGCDSKY_CORE_SESSION','window.AGCDSKY_COMPAT',
+  'window.AGCDSKY_APP_STATE','window.AGCDSKY_CORE_SESSION',
   'window.AGCDSKY_SHELL','window.AGCDSKY_AUDIO','window.AGCDSKY_CLOCK',
   'window.AGCDSKY_DISPLAY','window.AGCDSKY_SNAPSHOT','window.AGCDSKY_HARDWARE'
 ]) req(show,token,'relay-show service dependency');
+forbid(show,'AGCDSKY_COMPAT','relay-show direct compatibility dependency');
 for(const retired of ['agcCore.','agcPausedForVisibility','saveAgcState('])
   forbid(show,retired,'retired relay-show global');
 
@@ -45,21 +46,23 @@ ordered(show,[
   "const core=showCore.core,coreWasRunning=!!(showState.mode==='agc'&&core&&core.running)",
   "snapshot.save('relay show checkpoint')",
   'core.stop()',
-  "compat.replace('lampTestActive',true,'relay show ownership')",
+  'clock.stopQueue()',
+  'clock.setLampTestActive(true)',
   'saved=captureSettledState()',
   'saved.coreRunning=coreWasRunning',
   "showState.mode='relay-show'"
 ],'relay-show preflight');
 
-/* Choreography uses display-owned decoders plus the same physical relay service. */
+/* Choreography uses display-owned decoders and clock-owned relay codes/state. */
 for(const token of [
   "display.implementation('decodeChannel10')","display.implementation('decodeChannel11')","display.implementation('decodeChannel163')",
+  'clock.digitRelayCode(digit)','clock.snapshotBackingState()',
   'model.profileFor(row,bit)','timing.meanTravelMs','timing.spreadMs',
   'NON_DECIMAL_CODES','for(let digit=0;digit<=9;digit++)','decode11(0o46)','decode163(0o730)',
   'await showSleep(1000)'
 ]) req(show,token,'physical relay choreography');
-for(const token of ["compat.get('decodeChannel10')","compat.get('decodeChannel11')","compat.get('decodeChannel163')"])
-  forbid(show,token,'relay-show display decoder bypass');
+for(const token of ["compat.get('decodeChannel10')","compat.get('decodeChannel11')","compat.get('decodeChannel163')","compat.get('clockDigits')","compat.get('clockRelayWords')"])
+  forbid(show,token,'relay-show ownership bypass');
 
 /* Restore physical state first, quiesce delayed visual callbacks, then return ownership. */
 const restoreStart=show.indexOf('async function restorePreviousTask()');
@@ -69,8 +72,8 @@ ordered(restore,[
   'let restoreError=null',
   'saved.latches[row]',
   'quiesceRelayPresentation()',
-  "compat.replace('clockRelayWords',{...saved.clockRelayWords},'relay show restore')",
-  "compat.replace('lampTestActive',false,'relay show restore')",
+  'clock.restoreBackingState({digits:saved.clockDigits,relayWords:saved.clockRelayWords})',
+  'clock.setLampTestActive(false)',
   'showState.mode=saved.mode'
 ],'relay-show restore ownership');
 for(const token of [
@@ -96,4 +99,4 @@ forbid(perceptual,'Math.random(','non-deterministic relay identity');
 for(const token of ['brightness(','relay-flare','filter:']) forbid(show,token,'relay-show optical hack');
 
 console.log('Relay show smoke: PASS');
-console.log('  parser order, service ownership, display-owned channel choreography, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');
+console.log('  parser order, service ownership, display/clock-owned choreography, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');
