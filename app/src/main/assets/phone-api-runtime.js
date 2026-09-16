@@ -41,12 +41,12 @@
     return source;
   }
 
-  window.AGCDSKY_PHONE=Object.freeze({
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_PHONE',Object.freeze({
     keys:()=>NAMES.slice(),
     implementation,
     installImplementation,
     installImplementations,
     compatibilityVersions:()=>Object.freeze(Object.fromEntries(NAMES.map(name=>[name,versions[name]||0]))),
     registrationReasons:()=>Object.freeze(Object.fromEntries(NAMES.map(name=>[name,reasons[name]||null])))
-  });
+  }),'phone-api-runtime publication');
 })();
