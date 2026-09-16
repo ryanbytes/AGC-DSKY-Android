@@ -227,7 +227,7 @@
     if (document.hidden) { pointer = null; markToken++; }
   });
 
-  api.sextantTapMark = Object.freeze({
+  window.AGCDSKY_SEXTANT_TAP_MARK = Object.freeze({
     enabled:() => true,
     lastMark:() => lastMark ? JSON.parse(JSON.stringify(lastMark)) : null,
     cancel:() => { pointer = null; markToken++; }
