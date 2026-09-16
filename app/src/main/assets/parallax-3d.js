@@ -57,13 +57,11 @@
   const MAX_SENSOR_DELTA_DEG = 8;
   const NATIVE_PRIORITY_MS = 600;
 
-  // Restored v1.1.18 user tuning. 100% is the calibrated current default.
   const TILT_STORAGE_KEY = 'dskyParallaxTiltPct';
   const DEPTH_STORAGE_KEY = 'dskyParallaxDepthPct';
   const DEFAULT_INTENSITY_PERCENT = 100;
   const MAX_INTENSITY_PERCENT = 200;
 
-  // Drawing-accurate 2004745 reconstructed glass geometry, in inches.
   const GLASS_CLEAR_WIDTH_IN = 2.354;
   const GLASS_EDGE_THICKNESS_IN = 0.109;
   const GLASS_CENTER_RISE_IN = 0.025;
@@ -488,7 +486,7 @@
       targetY
     })
   });
-  window.AGCDSKY_PARALLAX = controller;
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_PARALLAX',controller,'parallax-3d publication');
 
   installIntensityControls();
   setPresentationClass();
