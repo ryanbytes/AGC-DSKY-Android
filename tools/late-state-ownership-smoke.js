@@ -18,7 +18,7 @@ const explicit=[
   ['dream-agc.js','dreamState'],['relay-identity-audio.js','identityState'],['relay-visual-coupling.js','visualState']
 ];
 for(const [name,alias] of explicit){const source=read(name);assert(source.includes(alias)&&source.includes('window.AGCDSKY_APP_STATE'),`${name} is not an explicit shared-state consumer`)}
-const shell=read('app-shell-runtime.js'),geometry=read('dsky-geometry.js'),hardware=read('hardware-fidelity.js'),guard=read('background-audio-guard.js'),show=read('relay-show.js'),screen=read('screen-only.js'),dream=read('dream-agc.js'),identity=read('relay-identity-audio.js'),visual=read('relay-visual-coupling.js'),snapshot=read('agc-snapshot-runtime.js'),life=read('agc-lifecycle-runtime.js'),api=read('agc-api-runtime.js'),renderer=read('dsky-display-renderer.js');
+const shell=read('app-shell-runtime.js'),geometry=read('dsky-geometry.js'),hardware=read('hardware-fidelity.js'),guard=read('background-audio-guard.js'),show=read('relay-show.js'),screen=read('screen-only.js'),dream=read('dream-agc.js'),identity=read('relay-identity-audio.js'),visual=read('relay-visual-coupling.js'),snapshot=read('agc-snapshot-runtime.js'),life=read('agc-lifecycle-runtime.js'),api=read('agc-api-runtime.js'),renderer=read('dsky-display-renderer.js'),clock=read('phone-clock-runtime.js');
 for(const [name,source,forbidden] of [
   ['app-shell-runtime.js',shell,["&&appVisible&&","if(appVisible)","if(!appVisible)","agcCore"]],
   ['dsky-geometry.js',geometry,["typeof mode!==","mode==='agc'","mode!=='clock'","show(verb,noun)"]],
@@ -48,5 +48,8 @@ for(const name of ['mode','selectedMission','verb','noun','dream','dreamMode','d
 assert(renderer.includes('function createImplementationSlot(name,initial,validate=null)'),'renderer owner-backed slot primitive missing');
 assert(renderer.includes('compat.alias(name,slot.get'),'renderer compatibility globals are not forwarding aliases');
 for(const token of ["compat.mutable('glyph'","compat.mutable('renderDigits'","compat.mutable('set2'","compat.mutable('setLamp'"])assert(!renderer.includes(token),`renderer live implementation state escaped back into compatibility registry: ${token}`);
+assert(clock.includes('function createImplementationSlot(name,initial,validate=null)')&&clock.includes('function createStateSlot(name,getter,setter)'),'clock owner-backed slot primitives missing');
+assert(clock.includes("digitsStateSlot=createStateSlot('clockDigits'")&&clock.includes("busyStateSlot=createStateSlot('relayBusy'")&&clock.includes('compat.alias(name,slot.get'),'clock backing state is not owner-held behind forwarded aliases');
+for(const token of ["compat.accessor('clockDigits'","compat.accessor('clockRelayWords'","compat.accessor('relayQueue'","compat.accessor('relayBusy'","compat.accessor('lampTestActive'","compat.accessor('lampTestTimer'","compat.mutable('renderClockReg'","compat.mutable('runRelayQueue'","compat.mutable('tick'","compat.mutable('lampTest'"])assert(!clock.includes(token),`clock live state escaped back into compatibility registry: ${token}`);
 console.log('late state ownership smoke: PASS');
-console.log('  app/core state remains explicit; renderer implementation state is owner-held behind forwarded aliases; remaining fidelity compatibility boundaries stay audited');
+console.log('  app/core state remains explicit; renderer and clock live state is owner-held behind forwarded aliases; remaining fidelity compatibility boundaries stay audited');
