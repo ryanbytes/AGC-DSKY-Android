@@ -1,8 +1,8 @@
 'use strict';
 
 // Shared electroluminescent DSKY rendering authority. Legacy parser-global
-// names remain accessor-backed compatibility aliases at this boundary; late
-// presentation layers replace implementations through AGCDSKY_RENDERER.
+// names remain forwarded compatibility aliases at this boundary; renderer
+// implementation authority stays local to AGCDSKY_RENDERER.
 (() => {
   const compat=window.AGCDSKY_COMPAT;
   if(!compat)throw new Error('Runtime compatibility bridge unavailable');
@@ -28,6 +28,21 @@
       `</g>`;
   }
 
+  function createImplementationSlot(name,initial,validate=null){
+    if(validate&&!validate(initial))throw new TypeError(`Invalid initial renderer implementation: ${name}`);
+    let value=initial,version=0;
+    const history=[];
+    return Object.freeze({
+      get:()=>value,
+      set(next,reason='explicit renderer implementation'){
+        if(validate&&!validate(next))throw new TypeError(`Invalid renderer implementation: ${name}`);
+        const prior=value;value=next;version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
+      },
+      version:()=>version,
+      history:()=>history.map(item=>({...item}))
+    });
+  }
+
   let glyphSlot,signSlot,digitsSlot,regSlot,set2Slot,setRegSlot,setLampSlot,clearLampsSlot;
   function baseRenderDigits(el,text){let out='';String(text).split('').forEach((ch,i)=>out+=glyphSlot.get()(ch,i*14));el.innerHTML=out}
   function baseRenderReg(el,text){text=String(text);let out=signSlot.get()(text[0]);text.slice(1).split('').forEach((ch,i)=>out+=glyphSlot.get()(ch,7+i*14));el.innerHTML=out}
@@ -37,16 +52,20 @@
   function baseClearLamps(){document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.remove('on'));document.body.classList.remove('vn-flash-off','el-off')}
 
   const isFn=value=>typeof value==='function';
+  glyphSlot=createImplementationSlot('glyph',baseGlyph,isFn);
+  signSlot=createImplementationSlot('signGlyph',baseSignGlyph,isFn);
+  digitsSlot=createImplementationSlot('renderDigits',baseRenderDigits,isFn);
+  regSlot=createImplementationSlot('renderReg',baseRenderReg,isFn);
+  set2Slot=createImplementationSlot('set2',baseSet2,isFn);
+  setRegSlot=createImplementationSlot('setReg',baseSetReg,isFn);
+  setLampSlot=createImplementationSlot('setLamp',baseSetLamp,isFn);
+  clearLampsSlot=createImplementationSlot('clearLamps',baseClearLamps,isFn);
+
   compat.readonly('SEG',()=>SEG);
   compat.readonly('PATH',()=>PATH);
-  glyphSlot=compat.mutable('glyph',baseGlyph,isFn);
-  signSlot=compat.mutable('signGlyph',baseSignGlyph,isFn);
-  digitsSlot=compat.mutable('renderDigits',baseRenderDigits,isFn);
-  regSlot=compat.mutable('renderReg',baseRenderReg,isFn);
-  set2Slot=compat.mutable('set2',baseSet2,isFn);
-  setRegSlot=compat.mutable('setReg',baseSetReg,isFn);
-  setLampSlot=compat.mutable('setLamp',baseSetLamp,isFn);
-  clearLampsSlot=compat.mutable('clearLamps',baseClearLamps,isFn);
+  for(const [name,slot] of Object.entries({glyph:glyphSlot,signGlyph:signSlot,renderDigits:digitsSlot,renderReg:regSlot,set2:set2Slot,setReg:setRegSlot,setLamp:setLampSlot,clearLamps:clearLampsSlot})){
+    compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
+  }
 
   const implementationSlots=Object.freeze({
     glyph:glyphSlot,
