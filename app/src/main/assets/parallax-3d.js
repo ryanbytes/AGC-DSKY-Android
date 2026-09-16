@@ -9,7 +9,8 @@
  * - Android WebView: observes the existing native rotation-vector bridge without
  *   changing the arguments, return value, or AGC/IMU behavior of that bridge
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
- * - Dream/screen-only/reduced-motion: flat and inactive
+ * - EL-only screen mode: tilts the isolated electroluminescent panel itself
+ * - Dream/reduced-motion: flat and inactive
  *
  * No AGC, relay, channel, keycode, or persistence state is touched here.
  */
@@ -62,8 +63,7 @@
   function presentationAllowed() {
     if (reduceMotion && reduceMotion.matches) return false;
     const body = document.body;
-    return !body.classList.contains('dream')
-      && !body.classList.contains('screen-only');
+    return !body.classList.contains('dream');
   }
 
   function setPresentationClass() {
@@ -195,11 +195,6 @@
     return [roll * scale, pitch * scale];
   }
 
-  // SensorMainActivity already sends a high-rate Android rotation-vector
-  // quaternion to AGCDSKY.nativePhoneQuaternion(). Observe that same bridge so
-  // parallax works in WebView even when Chromium never emits DeviceOrientation.
-  // The wrapped function is still called exactly once with its original this,
-  // arguments, and return value.
   function onNativeQuaternion(w, x, y, z, displayAngle = 0) {
     if (!presentationAllowed()) return;
     const values = [Number(w), Number(x), Number(y), Number(z)];
