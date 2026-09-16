@@ -11,6 +11,8 @@ const CM = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/cm-dsky-finish.c
 const HARDWARE_COLORS = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/hardware-color-mode.css'), 'utf8');
 const HARDWARE_COLOR_MODE = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/hardware-color-mode.js'), 'utf8');
 const CM_MODE = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/cm-mode.js'), 'utf8');
+const SCREEN_ONLY = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/screen-only.css'), 'utf8');
+const SCREEN_ONLY_JS = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/screen-only.js'), 'utf8');
 const HTML = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/index.html'), 'utf8');
 
 function assert(condition, message) {
@@ -55,6 +57,48 @@ assert(STYLE.includes('@media (orientation:landscape)'),
   'landscape layout override missing');
 assert(STYLE.match(/calc\(100vh \* 320 \/ 220\)/g)?.length >= 2,
   'display-only 320x220 scaling must be preserved in base and landscape rules');
+
+/* 1006315G full-screen EL package geometry. The SVG ratio is the active
+   digital-indicator face, while the bonded 2004745 cover and the 1006315
+   package remain distinct depths. */
+close(106 / 182.356, 2.360 / 4.060, 0.00002,
+  'screen-only SVG must retain the 1006315G nominal 2.360 x 4.060 active-face ratio');
+for (const marker of [
+  'const COVER_CLEAR_WIDTH_IN=2.354',
+  'const COVER_VIEW_THICKNESS_IN=0.134',
+  'const INDICATOR_FACE_WIDTH_IN=2.360',
+  'const INDICATOR_FACE_HEIGHT_MIN_IN=4.055',
+  'const INDICATOR_FACE_HEIGHT_MAX_IN=4.065',
+  'const INDICATOR_PACKAGE_DEPTH_MIN_IN=0.257',
+  'const INDICATOR_PACKAGE_DEPTH_MAX_IN=0.263',
+  'const nextCoverDepth=coverPxPerIn*COVER_VIEW_THICKNESS_IN',
+  'const nextIndicatorDepth=indicatorPxPerIn*INDICATOR_PACKAGE_DEPTH_IN',
+  'const nextTotalDepth=nextCoverDepth+nextIndicatorDepth',
+  "'--dsky-screen-indicator-package-depth-px'",
+  "'--dsky-screen-assembly-depth-px'",
+  "'--dsky-screen-indicator-back-z'",
+  "indicatorBack.className='el-indicator-back'",
+  'dsky.insertBefore(indicatorBack,el)',
+  'window.AGCDSKY_SCREEN_ONLY_GEOMETRY=Object.freeze({'
+]) assert(SCREEN_ONLY_JS.includes(marker), '1006315 screen-only geometry missing: ' + marker);
+assert(!SCREEN_ONLY_JS.includes("setProperty('--dsky-el-z'"),
+  'screen-only package geometry must never repurpose package depth as EL/phosphor depth');
+for (const marker of [
+  '.el-indicator-back{display:none}',
+  'body.screen-only.parallax-3d:not(.dream):not(.display-only) #dsky .el-indicator-back',
+  'var(--dsky-screen-indicator-back-z,-17.712px)',
+  'background:#454a4d!important'
+]) assert(SCREEN_ONLY.includes(marker), '1006315 package-rear rendering missing: ' + marker);
+
+const nominalCoverDepthAt106 = 106 / 2.354 * 0.134;
+const nominalIndicatorDepthAt106 = 106 / 2.360 * 0.260;
+const nominalTotalDepthAt106 = nominalCoverDepthAt106 + nominalIndicatorDepthAt106;
+close(nominalCoverDepthAt106, 6.034, 0.002,
+  '2004745 cover depth at the 106-unit reference width');
+close(nominalIndicatorDepthAt106, 11.678, 0.002,
+  '1006315 package depth at the 106-unit active-face reference width');
+close(nominalTotalDepthAt106, 17.712, 0.003,
+  'full cover-plus-indicator stack depth at the 106-unit reference width');
 
 assert(!STYLE.includes('.el-field,.comp-el{filter:url(#elGlow)}'),
   'EL glow must not filter complete multi-glyph fields');
@@ -151,6 +195,7 @@ for (const forbidden of ['.el-glass-back{','.el-glass-back,','--dsky-el-parallax
 console.log('display/layout geometry smoke: PASS');
 console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${expectedVisibleFraction.toFixed(6)})`);
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
+console.log(`  full-screen EL stack: cover ${nominalCoverDepthAt106.toFixed(3)} + 1006315 package ${nominalIndicatorDepthAt106.toFixed(3)} = ${nominalTotalDepthAt106.toFixed(3)} units at 106-wide`);
 console.log('  annunciators: three-source per-bulb thermal fade with foreground black legends');
 console.log('  lighting: independent NUMERICS/INTEGRAL with white EL key legends');
 console.log('  options: bounded DSKY-style illuminated key strip');
