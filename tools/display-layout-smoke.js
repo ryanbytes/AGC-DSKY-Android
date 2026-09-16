@@ -54,9 +54,6 @@ assert(STYLE.includes('@media (orientation:landscape)'),
 assert(STYLE.match(/calc\(100vh \* 320 \/ 220\)/g)?.length >= 2,
   'display-only 320x220 scaling must be preserved in base and landscape rules');
 
-// Old Fire OS WebView compositors can repeat low-alpha geometry when the SVG
-// glow filter is placed on a whole multi-glyph field.  Off-segment ghosts stay
-// visible, but only energized segments may enter the blur pass.
 assert(!STYLE.includes('.el-field,.comp-el{filter:url(#elGlow)}'),
   'EL glow must not filter complete multi-glyph fields');
 assert(STYLE.includes('.comp-el{filter:url(#elGlow)}'),
@@ -64,10 +61,6 @@ assert(STYLE.includes('.comp-el{filter:url(#elGlow)}'),
 assert(STYLE.includes('.el-field .el-seg.on{filter:url(#elGlow)}'),
   'numeric EL glow must be scoped to energized segments');
 
-// SCD 1006387C alarm/status indicator.  The first-paint fallback keeps the
-// three-source light in the element background.  After flight-hardware-ui.js
-// wraps the legend text, three separate bulb source elements carry stable
-// per-component brightness and rise/fall personalities behind the legend.
 assert(CM.includes('Alarm/status indicator, SCD 1006387C'),
   'annunciator SCD fidelity block missing');
 assert(CM.includes('background:#74756f') && CM.includes('color:#11120f'),
@@ -91,8 +84,6 @@ assert(CM.includes('overflow:hidden'),
 assert(!CM.includes('box-shadow:0 0 .62vmin') && !CM.includes('box-shadow:0 0 .7vmin'),
   'legacy exterior annunciator glow must not reappear in CM finish');
 
-// NUMERICS and INTEGRAL are electrically separate.  Zero NUMERICS power must
-// change EL visibility, not the DSKY glass/geometry or any relay data structure.
 assert(CM.includes('--numerics-level:1') && CM.includes('--integral-level:1'),
   'independent lighting variables missing');
 assert(CM.includes('.el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level))}'),
@@ -102,9 +93,6 @@ assert(CM.includes('color:var(--key-el-color)') && CM.includes('text-shadow:var(
 assert(CM.includes('.key.pressed') && CM.includes('translateY(var(--key-travel,.42vmin))'),
   'mechanical key travel rendering missing');
 
-// The controls remain a flowing bounded strip but intentionally borrow the
-// DSKY black-key / white-EL visual language.  Their legend light follows the
-// same INTEGRAL variables as the physical keyboard.
 assert(CONTROLS.includes('max-width:calc(100vw - 8px)'),
   'control strip must remain constrained to the phone viewport');
 assert(CONTROLS.includes('flex-flow:row wrap'),
@@ -136,16 +124,14 @@ for (const marker of [
 assert(!CONTROLS.includes('Series 2 barrier-mount operator indicators'),
   'obsolete Series 2 option-button styling must not return');
 
-// Recovered v1.1.21/v1.1.24 authentic hardware palette.  Keep the palette in
-// source control, make it canonical in CM mode, and do not let it reintroduce
-// the superseded experimental glass-motion model.
 for (const marker of [
   'linear-gradient(148deg,#8d9294 0%,#7c8183 30%,#6d7275 68%,#797e80 100%)',
   '.el-glass-background{fill:#4e535a!important}',
   '.el-ito-dot{fill:#91999c!important;opacity:.68!important}',
   'linear-gradient(180deg,#858a8c 0%,#7c8183 58%,#707578 100%)'
 ]) assert(HARDWARE_COLORS.includes(marker), 'recovered FS595 color marker missing: ' + marker);
-assert(CM_MODE.includes("document.body.classList.add('spacecraft-cm','authentic-colors')"),
+assert(CM_MODE.includes("document.body.classList.add('spacecraft-cm')") &&
+       CM_MODE.includes("document.body.classList.add('authentic-colors')"),
   'CM mode no longer enables the recovered authentic palette');
 assert(CM_MODE.includes("link.href = 'hardware-color-mode.css'"),
   'CM mode no longer loads the recovered hardware palette stylesheet');
