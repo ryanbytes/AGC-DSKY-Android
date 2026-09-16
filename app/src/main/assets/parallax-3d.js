@@ -10,13 +10,13 @@
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
  * - Dream/display-only/reduced-motion: flat and inactive; screen-only keeps EL depth
  *
- * Display depth is scaled from Apollo dimensions instead of hand-tuned pixels:
- * - 2.360 in: EL face width (SCD 1006315G)
- * - 0.260 in: .263/.257 indicator package thickness midpoint (SCD 1006315G)
- * - 0.300 in: indicator-cover frame total depth envelope (2004699A-001 model)
+ * Display-glass depth is scaled from drawing 2004745 geometry documented in
+ * docs/DISPLAY_GLASS_GEOMETRY.md.  The external laminated panel has a
+ * 2.354-in raised clear-view width, 0.109-in edge thickness, and a 0.025-in
+ * raised central face, for 0.134 in from rear face to central viewing face.
  *
- * The 0.260-in value is used as the visual luminous-plane depth envelope; it is
- * not a claim that phosphor-to-cover-glass spacing itself was 0.260 in.
+ * The 0.257/0.263-in SCD 1006315 dimension is the sealed digital-indicator
+ * package thickness and is intentionally NOT used as cover-glass depth.
  *
  * No AGC, relay, channel, keycode, or persistence state is touched here.
  */
@@ -29,12 +29,20 @@
   const api = window.AGCDSKY = window.AGCDSKY || {};
   const elPanel = document.getElementById('elpanel');
 
-  let glassSheen = dsky.querySelector('.el-glass-sheen');
-  if (!glassSheen) {
-    glassSheen = document.createElement('div');
-    glassSheen.className = 'el-glass-sheen';
-    glassSheen.setAttribute('aria-hidden', 'true');
-    dsky.appendChild(glassSheen);
+  let glassFront = dsky.querySelector('.el-glass-sheen');
+  if (!glassFront) {
+    glassFront = document.createElement('div');
+    glassFront.className = 'el-glass-sheen';
+    glassFront.setAttribute('aria-hidden', 'true');
+    dsky.appendChild(glassFront);
+  }
+
+  let glassRear = dsky.querySelector('.el-glass-rear');
+  if (!glassRear) {
+    glassRear = document.createElement('div');
+    glassRear.className = 'el-glass-rear';
+    glassRear.setAttribute('aria-hidden', 'true');
+    dsky.insertBefore(glassRear, glassFront);
   }
 
   const reduceMotion = typeof matchMedia === 'function'
@@ -51,16 +59,17 @@
   const MAX_SENSOR_DELTA_DEG = 8;
   const NATIVE_PRIORITY_MS = 600;
 
-  // Dimensional authority for the display-depth scale.  The package-depth value
-  // is deliberately bounded by the 0.300-in indicator-cover frame envelope.
-  const DISPLAY_FACE_WIDTH_IN = 2.360;
-  const DISPLAY_PACKAGE_DEPTH_IN = 0.260;
-  const FRAME_DEPTH_IN = 0.300;
+  // Drawing-accurate 2004745 reconstructed glass geometry, in inches.
+  const GLASS_CLEAR_WIDTH_IN = 2.354;
+  const GLASS_EDGE_THICKNESS_IN = 0.109;
+  const GLASS_CENTER_RISE_IN = 0.025;
+  const GLASS_VIEW_THICKNESS_IN = GLASS_EDGE_THICKNESS_IN + GLASS_CENTER_RISE_IN;
 
-  let physicalFaceWidthPx = 0;
+  let physicalGlassWidthPx = 0;
   let physicalPxPerIn = 0;
-  let physicalPackageDepthPx = 0;
-  let physicalFrameDepthPx = 0;
+  let physicalGlassDepthPx = 0;
+  let physicalGlassEdgeDepthPx = 0;
+  let physicalGlassCenterRisePx = 0;
 
   let targetX = STATIC_X;
   let targetY = STATIC_Y;
@@ -90,21 +99,29 @@
   }
 
   function updatePhysicalDepth() {
-    if (!elPanel) return;
-    const widthPx = Number(elPanel.offsetWidth) || elPanel.getBoundingClientRect().width || 0;
+    const reference = glassFront || elPanel;
+    if (!reference) return;
+    const widthPx = Number(reference.offsetWidth) || reference.getBoundingClientRect().width || 0;
     if (!(widthPx > 0)) return;
-    const pxPerIn = widthPx / DISPLAY_FACE_WIDTH_IN;
-    const packageDepthPx = pxPerIn * DISPLAY_PACKAGE_DEPTH_IN;
-    const frameDepthPx = pxPerIn * FRAME_DEPTH_IN;
 
-    physicalFaceWidthPx = widthPx;
+    const pxPerIn = widthPx / GLASS_CLEAR_WIDTH_IN;
+    const edgeDepthPx = pxPerIn * GLASS_EDGE_THICKNESS_IN;
+    const centerRisePx = pxPerIn * GLASS_CENTER_RISE_IN;
+    const glassDepthPx = edgeDepthPx + centerRisePx;
+
+    physicalGlassWidthPx = widthPx;
     physicalPxPerIn = pxPerIn;
-    physicalPackageDepthPx = packageDepthPx;
-    physicalFrameDepthPx = frameDepthPx;
+    physicalGlassDepthPx = glassDepthPx;
+    physicalGlassEdgeDepthPx = edgeDepthPx;
+    physicalGlassCenterRisePx = centerRisePx;
 
-    dsky.style.setProperty('--dsky-el-z', `${(-packageDepthPx).toFixed(3)}px`);
-    dsky.style.setProperty('--dsky-package-depth-px', `${packageDepthPx.toFixed(3)}px`);
-    dsky.style.setProperty('--dsky-frame-depth-px', `${frameDepthPx.toFixed(3)}px`);
+    // Front central glass surface is the Z datum.  The rear glass interface
+    // and bonded EL face sit one physical 2004745 viewing thickness behind it.
+    dsky.style.setProperty('--dsky-glass-rear-z', `${(-glassDepthPx).toFixed(3)}px`);
+    dsky.style.setProperty('--dsky-el-z', `${(-glassDepthPx).toFixed(3)}px`);
+    dsky.style.setProperty('--dsky-glass-depth-px', `${glassDepthPx.toFixed(3)}px`);
+    dsky.style.setProperty('--dsky-glass-edge-depth-px', `${edgeDepthPx.toFixed(3)}px`);
+    dsky.style.setProperty('--dsky-glass-center-rise-px', `${centerRisePx.toFixed(3)}px`);
   }
 
   function apply() {
@@ -343,8 +360,9 @@
     new MutationObserver(flatten).observe(document.body, {attributes:true, attributeFilter:['class']});
   }
 
-  if (typeof ResizeObserver === 'function' && elPanel) {
-    new ResizeObserver(updatePhysicalDepth).observe(elPanel);
+  if (typeof ResizeObserver === 'function') {
+    if (glassFront) new ResizeObserver(updatePhysicalDepth).observe(glassFront);
+    else if (elPanel) new ResizeObserver(updatePhysicalDepth).observe(elPanel);
   }
 
   const controller = Object.freeze({
@@ -353,13 +371,15 @@
     nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS,
     reset:() => setTarget(STATIC_X, STATIC_Y, 'static'),
     geometry:() => Object.freeze({
-      displayFaceWidthIn:DISPLAY_FACE_WIDTH_IN,
-      displayPackageDepthIn:DISPLAY_PACKAGE_DEPTH_IN,
-      frameDepthIn:FRAME_DEPTH_IN,
-      renderedFaceWidthPx:physicalFaceWidthPx,
+      glassClearWidthIn:GLASS_CLEAR_WIDTH_IN,
+      glassEdgeThicknessIn:GLASS_EDGE_THICKNESS_IN,
+      glassCenterRiseIn:GLASS_CENTER_RISE_IN,
+      glassViewThicknessIn:GLASS_VIEW_THICKNESS_IN,
+      renderedGlassWidthPx:physicalGlassWidthPx,
       pxPerIn:physicalPxPerIn,
-      packageDepthPx:physicalPackageDepthPx,
-      frameDepthPx:physicalFrameDepthPx
+      glassDepthPx:physicalGlassDepthPx,
+      glassEdgeDepthPx:physicalGlassEdgeDepthPx,
+      glassCenterRisePx:physicalGlassCenterRisePx
     }),
     state:() => Object.freeze({
       enabled:presentationAllowed(),
