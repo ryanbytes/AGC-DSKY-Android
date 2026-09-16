@@ -3,8 +3,8 @@
 // Public application facade/bootstrap. This is the root of the explicit core
 // service graph; public transition methods retain stable identity and delegate
 // to runtime-transitions.js once that coordinator is published. Late hardware,
-// recovery, diagnostics, optics, and presentation services are resolved dynamically,
-// never patched onto the facade after bootstrap.
+// recovery, diagnostics, optics, presentation, and phone services are resolved
+// dynamically, never patched onto the facade after bootstrap.
 const apiState=window.AGCDSKY_APP_STATE;
 const apiCore=window.AGCDSKY_CORE_SESSION;
 const apiShell=window.AGCDSKY_SHELL;
@@ -40,5 +40,15 @@ const publicRelayShow=Object.freeze({
   active:()=>{const service=window.AGCDSKY_RELAY_SHOW;return !!(service&&typeof service.active==='function'&&service.active())}
 });
 
-window.AGCDSKY={services:apiServices,lifecycle:apiLifecycle,agcChannel:apiDisplay.onChannel,getCore:()=>apiCore.core,setAppVisible:apiLifecycle.setAppVisible,getMission:()=>apiState.selectedMission,enterClock:publicEnterClock,enterAgc:publicEnterAgc,appStatus:apiLifecycle.status,saveAgcState:apiSnapshot.save,clearSavedAgcState:apiSnapshot.clear,savedSnapshotInfo:apiSnapshot.savedInfo,verifySnapshotRoundTrip:apiSnapshot.verifyRoundTrip,scheduleAgcAutosave:apiSnapshot.scheduleAutosave,accurateTime:apiShell.accurateTime,accurateDate:apiShell.accurateDate,ntpStatus:()=>({...apiState.ntpStatus}),nativeNtpStatus:apiShell.updateNtpStatus,hardware:publicHardware,audioStatus:publicAudioStatus,relayShow:publicRelayShow,openDiagnostics:publicOpenDiagnostics,closeDiagnostics:publicCloseDiagnostics,openSextant:publicOpenSextant,closeSextant:publicCloseSextant,sextantStatus:publicSextantStatus,applyCmMode:publicApplyCmMode,hardwarePersonality:publicHardwarePersonality,keyMechanicalSpec:publicKeyMechanicalSpec,get runtimeTransitions(){return window.AGCDSKY_RUNTIME||null},get inputRuntime(){return window.AGCDSKY_INPUT||null},get clockBehavior(){return window.AGCDSKY_CLOCK_BEHAVIOR||null},get hardwareColorMode(){return window.AGCDSKY_HARDWARE_COLOR_MODE||null},get lightingElectrical(){return window.AGCDSKY_LIGHTING_ELECTRICAL||null},get lightingRheostatStop(){return window.AGCDSKY_LIGHTING_RHEOSTAT_STOP||null},get proceedElectrical(){return window.AGCDSKY_PROCEED||null},get lighting(){return window.AGCDSKY_FLIGHT_HARDWARE_UI?.lighting||null},get keyboardElectrical(){return window.AGCDSKY_KEYBOARD_ELECTRICAL||null},get sextantTapMark(){return window.AGCDSKY_SEXTANT_TAP_MARK||null}};
+const PHONE_API_NAMES=Object.freeze([
+  'nativePhoneQuaternion','setOpticsCaptureActive','zeroOpticsCapture','phoneOpticsAngles',
+  'nativePhoneSensorStatus','calibrateSkyBoresight','clearSkyBoresightCalibration',
+  'skyCalibrationStatus','projectSkyTarget','nativeMagneticQuaternion',
+  'nativeMagneticSensorStatus','nativeSkyPointing','phoneSkyPointing',
+  'nativePipaSensorStatus','nativePhoneLinearAcceleration','phoneIcduStatus','recenterPhoneImu'
+]);
+function publicPhoneImplementation(name){const service=window.AGCDSKY_PHONE;return service&&typeof service.implementation==='function'?service.implementation(name):null}
+const publicPhoneApi=Object.freeze(Object.fromEntries(PHONE_API_NAMES.map(name=>[name,function(...args){const impl=publicPhoneImplementation(name);return typeof impl==='function'?Reflect.apply(impl,window.AGCDSKY,args):undefined}])));
+
+window.AGCDSKY={services:apiServices,lifecycle:apiLifecycle,agcChannel:apiDisplay.onChannel,getCore:()=>apiCore.core,setAppVisible:apiLifecycle.setAppVisible,getMission:()=>apiState.selectedMission,enterClock:publicEnterClock,enterAgc:publicEnterAgc,appStatus:apiLifecycle.status,saveAgcState:apiSnapshot.save,clearSavedAgcState:apiSnapshot.clear,savedSnapshotInfo:apiSnapshot.savedInfo,verifySnapshotRoundTrip:apiSnapshot.verifyRoundTrip,scheduleAgcAutosave:apiSnapshot.scheduleAutosave,accurateTime:apiShell.accurateTime,accurateDate:apiShell.accurateDate,ntpStatus:()=>({...apiState.ntpStatus}),nativeNtpStatus:apiShell.updateNtpStatus,hardware:publicHardware,audioStatus:publicAudioStatus,relayShow:publicRelayShow,openDiagnostics:publicOpenDiagnostics,closeDiagnostics:publicCloseDiagnostics,openSextant:publicOpenSextant,closeSextant:publicCloseSextant,sextantStatus:publicSextantStatus,applyCmMode:publicApplyCmMode,hardwarePersonality:publicHardwarePersonality,keyMechanicalSpec:publicKeyMechanicalSpec,...publicPhoneApi,get runtimeTransitions(){return window.AGCDSKY_RUNTIME||null},get inputRuntime(){return window.AGCDSKY_INPUT||null},get clockBehavior(){return window.AGCDSKY_CLOCK_BEHAVIOR||null},get hardwareColorMode(){return window.AGCDSKY_HARDWARE_COLOR_MODE||null},get lightingElectrical(){return window.AGCDSKY_LIGHTING_ELECTRICAL||null},get lightingRheostatStop(){return window.AGCDSKY_LIGHTING_RHEOSTAT_STOP||null},get proceedElectrical(){return window.AGCDSKY_PROCEED||null},get lighting(){return window.AGCDSKY_FLIGHT_HARDWARE_UI?.lighting||null},get keyboardElectrical(){return window.AGCDSKY_KEYBOARD_ELECTRICAL||null},get sextantTapMark(){return window.AGCDSKY_SEXTANT_TAP_MARK||null}};
 apiShell.initialize(window.AGCDSKY,apiServices);

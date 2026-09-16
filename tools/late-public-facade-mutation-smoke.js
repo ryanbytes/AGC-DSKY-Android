@@ -6,19 +6,16 @@ const path=require('path');
 const ROOT=path.resolve(__dirname,'..');
 const ASSETS=path.join(ROOT,'app/src/main/assets');
 const OWNER='agc-api-runtime.js';
-// phone-icdu.js writes through the accessor-backed phone API seam and
-// phone-api-runtime.js owns that seam; tools/phone-api-runtime-smoke.js audits it.
-const EXEMPT=new Set(['phone-icdu.js','phone-api-runtime.js']);
 const files=fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js')).sort();
 const writes=[];
 
 for(const name of files){
-  if(name===OWNER||EXEMPT.has(name))continue;
+  if(name===OWNER)continue;
   const source=fs.readFileSync(path.join(ASSETS,name),'utf8');
   const seen=new Set();
   const record=(key,form)=>{
     if(!key)return;
-    const id=`${name}:${key}`;
+    const id=`${name}:${form}${key}`;
     if(seen.has(id))return;
     seen.add(id);
     writes.push(`${name}: ${form}${key}`);
@@ -39,9 +36,18 @@ for(const name of files){
     while((match=dot.exec(source)))record(match[1],`${alias}.`);
     const viaBracket=new RegExp(`\\b${escaped}\\[['\"]([^'\"]+)['\"]\\]\\s*=\\s*(?!=|>)`,'g');
     while((match=viaBracket.exec(source)))record(match[1],`${alias}.`);
+    const defineProperty=new RegExp(`\\bObject\\.defineProperty\\(\\s*${escaped}\\s*,`,'g');
+    if(defineProperty.test(source))record('*',`Object.defineProperty(${alias},`);
+    const assign=new RegExp(`\\bObject\\.assign\\(\\s*${escaped}\\s*,`,'g');
+    if(assign.test(source))record('*',`Object.assign(${alias},`);
+    const reflectSet=new RegExp(`\\bReflect\\.set\\(\\s*${escaped}\\s*,`,'g');
+    if(reflectSet.test(source))record('*',`Reflect.set(${alias},`);
   }
+  if(/\bObject\.defineProperty\(\s*window\.AGCDSKY\s*,/.test(source))record('*','Object.defineProperty(window.AGCDSKY,');
+  if(/\bObject\.assign\(\s*window\.AGCDSKY\s*,/.test(source))record('*','Object.assign(window.AGCDSKY,');
+  if(/\bReflect\.set\(\s*window\.AGCDSKY\s*,/.test(source))record('*','Reflect.set(window.AGCDSKY,');
 }
 
 if(writes.length)throw new Error(`late AGCDSKY public-facade mutation outside ${OWNER}: ${writes.join(', ')}`);
 console.log('late public facade mutation smoke: PASS');
-console.log(`  zero direct late AGCDSKY assignments outside ${OWNER}; phone accessor seam audited separately`);
+console.log(`  zero direct late AGCDSKY assignments, defineProperty calls, Object.assign calls, or Reflect.set calls outside ${OWNER}`);

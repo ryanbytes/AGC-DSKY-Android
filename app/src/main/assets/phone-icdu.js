@@ -16,7 +16,15 @@
  * CDU resolution is 2^15 counts/revolution (32768 / 360 degrees).
  */
 (() => {
-  const api = window.AGCDSKY;
+  const app = window.AGCDSKY;
+  const phoneService = window.AGCDSKY_PHONE;
+  if (!app) throw new Error('AGCDSKY public facade unavailable');
+  if (!phoneService || typeof phoneService.installImplementations !== 'function') throw new Error('AGCDSKY phone service unavailable');
+  // Preserve the historical local `api.name = implementation` definitions
+  // without writing to the root facade. Read-only app services (notably
+  // getCore) remain available through the prototype; all own function exports
+  // are validated and registered atomically at the end of this module.
+  const api = Object.create(app);
   const CDU_CHANNEL = [0o200 | 0o32, 0o200 | 0o33, 0o200 | 0o34];
   // Socket t-bit 0200 marks an unprogrammed counter sequence.
   // Counter 032/033/034 are CDUX/CDUY/CDUZ.  Fictitious 0174/0175/0176
@@ -712,4 +720,6 @@
     sky:{...skyPointing}
   });
   api.recenterPhoneImu = () => { referenceQ=null; lastEuler=null; unwrappedDeg=[0,0,0]; baselineCounts=emittedCounts.slice(); desiredCounts=emittedCounts.slice(); pending=[0,0,0]; magneticReferenceYaw=magneticQ?eulerXYZ(magneticQ)[2]:null; magneticYawCorrection=0; };
+
+  phoneService.installImplementations(api,'phone-icdu module registration');
 })();
