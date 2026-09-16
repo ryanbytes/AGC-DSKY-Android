@@ -3,7 +3,7 @@
 /* RELAY SHOW: presentation choreography over the same physical relay service. */
 (() => {
   const button=document.getElementById('relay-show');
-  const showState=window.AGCDSKY_APP_STATE,showCore=window.AGCDSKY_CORE_SESSION,shell=window.AGCDSKY_SHELL,audio=window.AGCDSKY_AUDIO,clock=window.AGCDSKY_CLOCK,display=window.AGCDSKY_DISPLAY,snapshot=window.AGCDSKY_SNAPSHOT,hardware=window.AGCDSKY_HARDWARE;
+  const showState=window.AGCDSKY_APP_STATE,showCore=window.AGCDSKY_CORE_SESSION,shell=window.AGCDSKY_SHELL,audio=window.AGCDSKY_AUDIO,clock=window.AGCDSKY_CLOCK,display=window.AGCDSKY_DISPLAY,snapshot=window.AGCDSKY_SNAPSHOT,hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   if(!button||!showState||!showCore||!shell||!audio||!clock||!display||!snapshot||!hardware)return;
   const ROWS_DOWN=Object.freeze([12,11,10,9,8,7,6,5,4,3,2,1]),DISPLAY_ROWS_DOWN=Object.freeze([11,10,9,8,7,6,5,4,3,2,1]),DISPLAY_ROWS_UP=Object.freeze([1,2,3,4,5,6,7,8,9,10,11]),NON_DECIMAL_CODES=Object.freeze([1,2,4,5,6,7,8,9,10,11,12,13,14,16,17,18,20,22,23,24,26]),V35_PLUS_ROWS=new Set([7,5,2]),SHOW_TEMPO=2.0;
   let active=false,stopRequested=false,saved=null;

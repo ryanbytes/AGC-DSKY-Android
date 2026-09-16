@@ -12,7 +12,7 @@
   const visual=window.DSKY_RELAY_VISUAL;
   const display=window.AGCDSKY_DISPLAY;
   const renderer=window.AGCDSKY_RENDERER;
-  const hardware=window.AGCDSKY_HARDWARE;
+  const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   const relayMatrix=window.DSKY_RELAY_MATRIX;
   if(!visual||!display||!renderer||!hardware||!relayMatrix)throw new Error('Relay stretch stability dependencies unavailable');
   const baseDecodeChannel10=display.implementation('decodeChannel10');

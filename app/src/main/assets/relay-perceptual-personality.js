@@ -7,7 +7,7 @@
 (() => {
   const audio=window.AGCDSKY_AUDIO;
   const environment=window.AGCDSKY_ENVIRONMENT;
-  const hardware=window.AGCDSKY_HARDWARE;
+  const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   const audioModel=window.DSKY_RELAY_AUDIO;
   if(!audio||!environment||!hardware||!audioModel)throw new Error('Relay perceptual service dependencies unavailable');
   // Optional phone-speaker exaggeration. Keep the source-faithful relay model
