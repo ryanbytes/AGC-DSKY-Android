@@ -38,12 +38,6 @@
 
   const FALLBACK_CONTACT_MS = 36;
   const FALLBACK_RETURN_MS = 18;
-  // Best-estimate minimum electrical dwell, not a measured switch spec.
-  // Block II keyboard lines enter the AGC through noise-filtering D circuits;
-  // surviving descriptions place a valid sustained keyboard input around the
-  // 10-ms region. Twelve milliseconds prevents an unrealistically short
-  // touchscreen tap from making and resetting in the same JS turn while still
-  // being far below an ordinary human key hold.
   const MIN_KEYCODE_HOLD_MS = 12;
 
   const pointers = new Map();
@@ -121,13 +115,7 @@
 
   async function promoteClockContact(state, code) {
     try {
-      // runtime-transitions.js owns transition serialization and mode/core
-      // authority; dsky-input-runtime.js owns channel-015 electrical access.
       await runtime.requestAgc('keyboard electrical contact');
-
-      // Blur/visibility/CLOCK cleanup may have canceled this exact physical
-      // switch cycle while the AGC was loading. Never resurrect that stale
-      // contact after the async transition completes.
       if (state.cancelled || !clockHandoffPending || runtime.clockRequested()) return;
       if (currentMode() !== runtime.modes.AGC || !input.ready()) {
         throw new Error('AGC input runtime not ready after clock handoff');
@@ -135,9 +123,6 @@
       if (!registerElectricalMake(code)) throw new Error('AGC rejected clock-handoff keycode');
 
       clockHandoffPending = false;
-      // A touchscreen tap may have physically returned while the WASM/rope was
-      // loading. In that case the make still happened, so assert its keycode
-      // first and then let the normal minimum-dwell/KEYRST path release it.
       if (!state.down) assertKeyResetIfReady();
     } catch (error) {
       clockHandoffPending = false;
@@ -156,11 +141,6 @@
     }
     state.made = true;
     keySound(state.button, false);
-
-    // A mechanically depressed second key is real, but the series contact
-    // network prevents it from generating another keycode until every normal
-    // key has first returned to released. It must not become the new owner
-    // merely because the original key is subsequently released.
     if (!state.accepted) return;
 
     const key = state.button.dataset.key;
@@ -169,9 +149,6 @@
     try {
       const modeNow = currentMode();
       if (modeNow === runtime.modes.CLOCK || modeNow === runtime.modes.AGC_LOADING) {
-        // The window-capture electrical layer stops propagation before the
-        // document-level clock listener. Preserve this same physical contact
-        // while the shared transition coordinator gets the real AGC ready.
         if (!clockHandoffPending) {
           clockHandoffPending = true;
           void promoteClockContact(state, code);
@@ -203,14 +180,8 @@
 
   function assertKeyResetIfReady() {
     if (!allNormalKeysReleased()) return;
-    // While CLOCK -> AGC startup is in flight, retain ownership of this
-    // physical cycle. Clearing it here would let the async handoff assert a
-    // keycode after KEYRST had already been declared, leaving channel 015 held.
     if (clockHandoffPending && !electricalMade) return;
 
-    // KEYRST exists only at the all-released state. If the accepted contact
-    // was made only moments ago (possible on a touchscreen fast tap), retain
-    // the keycode through a short D-input-filter dwell before restoring KEYRST.
     if (electricalMade) {
       const elapsed = Math.max(0, performance.now() - electricalMadeAt);
       const remaining = MIN_KEYCODE_HOLD_MS - elapsed;
@@ -277,8 +248,6 @@
     event.stopPropagation();
     event.stopImmediatePropagation();
 
-    // CLOCK intent wins over any new physical input while an already-running
-    // AGC load is merely being allowed to settle before the base mode switch.
     if (runtime.clockRequested()) return;
     if (pointers.has(event.pointerId)) return;
     const accepted = !cycleLatched;
@@ -301,7 +270,7 @@
     event.stopImmediatePropagation();
 
     clearTimeout(state.timer);
-    if (!cancelled && !state.made) makeContact(state); // fast tap still closes its switch
+    if (!cancelled && !state.made) makeContact(state);
     state.down = false;
     state.button.classList.remove('pressed');
     if (state.made) {
@@ -314,8 +283,6 @@
     return true;
   }
 
-  // Window capture executes before the document-capture handler in
-  // flight-hardware-ui.js. PRO is deliberately allowed to continue downward.
   window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false});
   window.addEventListener('pointerup', event => finishPointer(event, false), {capture:true, passive:false});
   window.addEventListener('pointercancel', event => finishPointer(event, true), {capture:true, passive:false});
@@ -328,12 +295,9 @@
   window.addEventListener('blur', releaseEverything, {passive:true});
   document.addEventListener('visibilitychange', () => { if (document.hidden) releaseEverything(); }, {capture:true});
 
-  // CLOCK entry is an application mode transition, not a physical key return.
-  // Release any held/pending matrix state synchronously before app.js stops the
-  // AGC so channel 015 cannot remain asserted across the mode boundary.
   runtime.onBeforeClock(releaseForClock);
 
-  window.AGCDSKY_KEYBOARD_ELECTRICAL = Object.freeze({
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEYBOARD_ELECTRICAL',Object.freeze({
     state: () => ({
       cycleLatched,
       down:pointers.size,
@@ -346,5 +310,5 @@
       keys:Array.from(pointers.values()).map(s => ({key:s.button.dataset.key, accepted:s.accepted, made:s.made}))
     }),
     releaseAll: releaseEverything
-  });
+  }),'keyboard-electrical-interlock publication');
 })();
