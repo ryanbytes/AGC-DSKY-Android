@@ -111,12 +111,21 @@ const clockSync=show.indexOf('clock.syncFace();',clockBranch);
 const agcBranch=show.indexOf("}else if(saved.mode==='agc'&&showCore.core){",clockBranch);
 if(!(clockSync>clockBranch&&agcBranch>clockSync)) fail('clock face must resync inside the clock restore branch');
 
-req(perceptual,'window.DSKY_RELAY_AUDIO.profileFor','authoritative individual-relay profile source');
+// Perceptual personality was also moved behind explicit services. Keep the
+// deterministic installed-unit identity and authoritative physical travel
+// profiles, but do not require the retired direct-global spelling.
+for(const token of [
+  'window.AGCDSKY_COMPAT',
+  'window.AGCDSKY_ENVIRONMENT',
+  'window.AGCDSKY_HARDWARE',
+  'const audioModel=window.DSKY_RELAY_AUDIO;'
+]) req(perceptual,token,'relay personality service dependency');
+req(perceptual,'audioModel.profileFor(row,bit)','authoritative individual-relay profile source');
 req(perceptual,"localStorage.getItem('dskyHardwareUnitSeedV1')",'stable installed-unit identity');
 req(perceptual,'p.setTravelMs','set travel controls audible impact timing');
 req(perceptual,'p.resetTravelMs','reset travel controls audible impact timing');
-req(perceptual,'const pitchScale = 0.86 + serial * 0.28','phone-audible relay timbre spread');
-req(perceptual,"model: 'deterministic-installed-unit-audible-spread-v1'",'diagnostic model marker');
+req(perceptual,'pitchScale=.86+serial*.28','phone-audible relay timbre spread');
+req(perceptual,"model:'deterministic-installed-unit-audible-spread-v1'",'diagnostic model marker');
 no(perceptual,'Math.random(','non-deterministic relay identity');
 
 const runningCapture=show.indexOf("const core=showCore.core,coreWasRunning=!!(showState.mode==='agc'&&core&&core.running);");
