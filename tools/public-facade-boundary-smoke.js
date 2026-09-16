@@ -8,14 +8,11 @@ const ASSETS=path.join(ROOT,'app/src/main/assets');
 const OWNER='agc-api-runtime.js';
 const PHONE_API=[
   'nativePhoneQuaternion','setOpticsCaptureActive','zeroOpticsCapture','phoneOpticsAngles',
-  'nativePhoneSensorStatus','calibrateSkyBoresightCalibration','clearSkyBoresightCalibration',
+  'nativePhoneSensorStatus','calibrateSkyBoresight','clearSkyBoresightCalibration',
   'skyCalibrationStatus','projectSkyTarget','nativeMagneticQuaternion',
   'nativeMagneticSensorStatus','nativeSkyPointing','phoneSkyPointing',
   'nativePipaSensorStatus','nativePhoneLinearAcceleration','phoneIcduStatus','recenterPhoneImu'
 ];
-// Preserve the actual facade key spelling; the extra compatibility guard above
-// intentionally does not alter the public name.
-PHONE_API[5]='calibrateSkyBoresight';
 const LATE_SERVICE_GLOBALS=[
   'AGCDSKY_PHONE','AGCDSKY_RUNTIME','AGCDSKY_INPUT','AGCDSKY_CLOCK_BEHAVIOR',
   'AGCDSKY_OPTICS','AGCDSKY_SEXTANT_TAP_MARK','AGCDSKY_CM_MODE','AGCDSKY_HARDWARE',
