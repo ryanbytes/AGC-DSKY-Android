@@ -5,19 +5,17 @@
  *
  * Source of truth: MIT/IL SCD 1006315G plus the metric segment trace from
  * DSKY V2.svg. The renderer service owns the implementation slots; this late
- * drawing-geometry layer replaces those slots explicitly through AGCDSKY_COMPAT
- * and does not depend on parser-global helper bindings.
+ * drawing-geometry layer installs those slots through AGCDSKY_RENDERER and
+ * does not depend on the generic compatibility registry or parser globals.
  */
 (() => {
   const geometryState=window.AGCDSKY_APP_STATE;
-  const compat=window.AGCDSKY_COMPAT;
   const renderer=window.AGCDSKY_RENDERER;
   const shell=window.AGCDSKY_SHELL;
   const clock=window.AGCDSKY_CLOCK;
   const display=window.AGCDSKY_DISPLAY;
   if(!geometryState)throw new Error('Shared application state unavailable');
-  if(!compat||!renderer||!shell||!clock||!display)throw new Error('DSKY geometry service dependencies unavailable');
-  const segments=compat.get('SEG');
+  if(!renderer||!shell||!clock||!display)throw new Error('DSKY geometry service dependencies unavailable');
 
   const SOURCE = Object.freeze({
     a: 'M 95.137274,86.827056 l 1.10725,-1.523997 h -6.1558 l 0.40836,1.523997 z',
@@ -51,7 +49,7 @@
   }
 
   function apolloGlyph(ch,x){
-    const lit=segments[ch]||'';
+    const lit=renderer.segmentPattern(ch);
     const paths=['a','b','c','d','e','f','g'].map(name=>segment(name,lit.includes(name))).join('');
     return `<g class="el-glyph" transform="translate(${Number(x).toFixed(3)} 0) scale(${MM_TO_U.toFixed(6)}) translate(${-DATUM_X.toFixed(6)} ${-SRC_Y})"><g transform="matrix(-1 0 0 1 ${MIRROR_X.toFixed(6)} 0)">${paths}</g></g>`;
   }
@@ -71,22 +69,23 @@
   function apolloSignGlyph(sign){const a=sign==='+',b=a||sign==='-';return `<g class="el-sign">${signA(a)}${signB(b)}</g>`;}
 
   function apolloRenderDigits(el,text){
-    let out='';
-    String(text).split('').forEach((ch,i)=>{out+=compat.get('glyph')(ch,i*UPPER_ADVANCE);});
+    let out='',glyph=renderer.implementation('glyph');
+    String(text).split('').forEach((ch,i)=>{out+=glyph(ch,i*UPPER_ADVANCE);});
     el.innerHTML=out;
   }
   const FIRST_DIGIT_X=.400*U;
   function apolloRenderReg(el,text){
     text=String(text);
-    let out=compat.get('signGlyph')(text[0]);
-    text.slice(1).split('').forEach((ch,i)=>{out+=compat.get('glyph')(ch,FIRST_DIGIT_X+i*REGISTER_ADVANCE);});
+    const signGlyph=renderer.implementation('signGlyph'),glyph=renderer.implementation('glyph');
+    let out=signGlyph(text[0]);
+    text.slice(1).split('').forEach((ch,i)=>{out+=glyph(ch,FIRST_DIGIT_X+i*REGISTER_ADVANCE);});
     el.innerHTML=out;
   }
 
-  compat.replace('glyph',apolloGlyph,'Apollo drawing geometry');
-  compat.replace('signGlyph',apolloSignGlyph,'Apollo drawing geometry');
-  compat.replace('renderDigits',apolloRenderDigits,'Apollo drawing geometry');
-  compat.replace('renderReg',apolloRenderReg,'Apollo drawing geometry');
+  renderer.installImplementation('glyph',apolloGlyph,'Apollo drawing geometry');
+  renderer.installImplementation('signGlyph',apolloSignGlyph,'Apollo drawing geometry');
+  renderer.installImplementation('renderDigits',apolloRenderDigits,'Apollo drawing geometry');
+  renderer.installImplementation('renderReg',apolloRenderReg,'Apollo drawing geometry');
 
   const RIGHT_FIELD_X_IN=1.620;
   const UPPER_GROUP_X_OFFSET_IN=1.470;
