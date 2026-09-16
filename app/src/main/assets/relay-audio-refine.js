@@ -9,11 +9,10 @@
 // low-11 latch states is therefore rendered as mechanically scattered relay
 // motion, not serialized electrical drive.
 (() => {
-  const compat=window.AGCDSKY_COMPAT;
   const audio=window.AGCDSKY_AUDIO;
   const environment=window.AGCDSKY_ENVIRONMENT;
-  if(!compat||!audio||!environment)throw new Error('Relay audio service graph unavailable');
-  const fallbackEmitTick=compat.get('emitTick');
+  if(!audio||!environment)throw new Error('Relay audio service graph unavailable');
+  const fallbackEmitTick=audio.implementation('emitTick');
   if(typeof fallbackEmitTick!=='function')throw new Error('Base relay tick unavailable');
 
   let clickSerial = 0;
@@ -86,7 +85,7 @@
     source.start(when);
     source.stop(when + 0.010);
   }
-  compat.replace('emitTick',recreatedDskyRelayClick,'recreated dry DSKY relay click');
+  audio.installImplementation('emitTick',recreatedDskyRelayClick,'recreated dry DSKY relay click');
 
   function recreatedRelayBankClicks(count) {
     const ctx = audio.ensure();
@@ -94,8 +93,7 @@
     if (!ctx || count < 1) return;
     const go = () => {
       const base = ctx.currentTime + 0.002;
-      const spreadValue=compat.get('RELAY_CLICK_SPREAD_MS');
-      const spreadMs = typeof spreadValue === 'number' ? Math.max(0, spreadValue) : 2.5;
+      const spreadMs = Math.max(0, Number(audio.relayClickSpreadMs()) || 2.5);
       const rnd = xorshift32(0x44534b59 ^ (++clickSerial * 0x45d9f3b));
       const offsets = [];
       for (let i = 0; i < count; i++) offsets.push((rnd() + 1) * 0.5 * spreadMs / 1000);
@@ -106,5 +104,5 @@
     if (ctx.state === 'running') go();
     else ctx.resume().then(go).catch(() => {});
   }
-  compat.replace('playRelayBurst',recreatedRelayBankClicks,'recreated parallel relay-bank clicks');
+  audio.installImplementation('playBurst',recreatedRelayBankClicks,'recreated parallel relay-bank clicks');
 })();
