@@ -37,5 +37,8 @@ for(const name of consumers){
 const renderer=fs.readFileSync(path.join(ASSETS,'dsky-display-renderer.js'),'utf8');
 if(!renderer.includes('createImplementationSlot(')||!renderer.includes('compat.alias(name,slot.get'))throw new Error('renderer does not own implementation slots behind forwarded compatibility aliases');
 if(renderer.includes("compat.mutable('glyph'")||renderer.includes("compat.mutable('renderDigits'")||renderer.includes("compat.mutable('set2'"))throw new Error('renderer compatibility registry still owns implementation state');
+const audio=fs.readFileSync(path.join(ASSETS,'relay-audio-runtime.js'),'utf8');
+if(!audio.includes('function createOwnedSlot(name,initial,validate=null)')||!audio.includes('function createContextSlot()')||!audio.includes("compat.alias('audioCtx'")||!audio.includes('compat.alias(name,slot.get'))throw new Error('audio does not own context/implementation slots behind forwarded compatibility aliases');
+for(const token of ["compat.accessor('audioCtx'","compat.mutable('ensureAudio'","compat.mutable('emitTick'","compat.mutable('playRelayBurst'","compat.mutable('applyTickSound'"])if(audio.includes(token))throw new Error(`audio compatibility registry still owns live state: ${token}`);
 console.log('compat boundary smoke: PASS');
-console.log(`  registry confined to ${consumers.join(', ')}; renderer implementation slots are owner-backed aliases`);
+console.log(`  registry confined to ${consumers.join(', ')}; renderer and audio implementation state is owner-held behind forwarded aliases`);
