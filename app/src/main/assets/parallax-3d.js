@@ -25,7 +25,6 @@
 
   const dsky = document.getElementById('dsky');
   if (!dsky || !document.body) return;
-  const api = window.AGCDSKY = window.AGCDSKY || {};
   const elPanel = document.getElementById('elpanel');
 
   let glassFront = dsky.querySelector('.el-glass-sheen');
@@ -490,7 +489,6 @@
     })
   });
   window.AGCDSKY_PARALLAX = controller;
-  api.parallax3d = controller;
 
   installIntensityControls();
   setPresentationClass();
