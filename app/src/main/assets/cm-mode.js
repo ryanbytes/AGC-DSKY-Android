@@ -7,8 +7,10 @@
   function applyCmMode() {
     try { localStorage.setItem('agcMission','comanche055'); } catch (_) {}
     document.body.classList.add('spacecraft-cm');
+    return true;
   }
 
+  const service=Object.freeze({apply:applyCmMode});
+  window.AGCDSKY_CM_MODE=service;
   applyCmMode();
-  if (window.AGCDSKY) window.AGCDSKY.applyCmMode = applyCmMode;
 })();
