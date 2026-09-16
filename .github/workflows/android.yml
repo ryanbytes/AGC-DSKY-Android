@@ -34,13 +34,21 @@ jobs:
         run: |
           for script in tools/*.sh; do bash -n "$script"; done
           for script in tools/*.js; do node --check "$script" >/dev/null; done
+          status=0
           for test in \
             branding-smoke.js manifest-policy-smoke.js ntp-policy-smoke.js fire-home-setup-smoke.js self-update-smoke.js csp-smoke.js \
             app-state-runtime-smoke.js startup-runtime-smoke.js core-service-graph-smoke.js fidelity-compat-smoke.js late-service-boundary-smoke.js hardware-service-smoke.js presentation-state-smoke.js late-state-ownership-smoke.js app-shell-runtime-smoke.js agc-api-runtime-smoke.js display-runtime-smoke.js phone-clock-runtime-smoke.js agc-display-runtime-smoke.js agc-snapshot-runtime-smoke.js agc-lifecycle-runtime-smoke.js frontend-smoke.js \
             cm-feature-load-smoke.js clock-mode-behavior-smoke.js clock-fallback-cancel-smoke.js runtime-authority-smoke.js runtime-clock-transition-smoke.js dsky-input-runtime-smoke.js app-input-boundary-smoke.js audio-recovery-smoke.js cheatsheet-smoke.js optics-lifecycle-smoke.js device-v35-policy-smoke.js display-layout-smoke.js parallax-3d-smoke.js el-widget-smoke.js solar-model-smoke.js agc-core-smoke.js proceed-electrical-smoke.js native-diagnostic-smoke.js dsky-mapping-smoke.js dsky-keycode-consistency-smoke.js flight-hardware-ui-smoke.js key-mechanical-spec-smoke.js keyboard-electrical-interlock-smoke.js keyboard-clock-cancel-smoke.js rset-flightpath-smoke.js runtime-transition-integration-smoke.js lighting-rheostat-stop-smoke.js lighting-electrical-model-smoke.js v35-model-smoke.js dsky-output-path-smoke.js relay-stretch-stability-smoke.js asset-reference-smoke.js wasm-runtime-smoke.js; do
-            node "tools/$test"
+            if ! node "tools/$test"; then
+              echo "FAILED_SMOKE=$test"
+              status=1
+            fi
           done
-          bash tools/ntp-time-smoke.sh
+          if ! bash tools/ntp-time-smoke.sh; then
+            echo "FAILED_SMOKE=ntp-time-smoke.sh"
+            status=1
+          fi
+          exit "$status"
 
       - name: Build release APKs and install-safe EL test APK
         run: bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:clean :app:verifyPinnedAgcAssets :app:assembleRelease :app:assembleRegularDebug
