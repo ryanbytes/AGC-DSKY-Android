@@ -1,9 +1,9 @@
 'use strict';
 
-// Synthetic PHONE CLOCK relay/display authority. Historical mutable names are
-// accessor-backed implementation/state slots at this service boundary; late
-// hardware layers install overrides through AGCDSKY_CLOCK rather than touching
-// the generic compatibility registry directly.
+// Synthetic PHONE CLOCK relay/display authority. Historical mutable names remain
+// forwarded compatibility aliases at this service boundary; replaceable clock
+// implementations are owned by AGCDSKY_CLOCK while backing-state accessors remain
+// registered here for compatibility until their dedicated ownership migration.
 (() => {
   const clockState=window.AGCDSKY_APP_STATE;
   const clockShell=window.AGCDSKY_SHELL;
@@ -29,6 +29,21 @@
     {relay:2,cells:[['r3',1],['r3',2]],b:1},{relay:1,cells:[['r3',3],['r3',4]],b:0}
   ];
   let syncSlot,renderRegSlot,stopSlot,runQueueSlot,tickSlot,cancelSlot,lampTestSlot;
+
+  function createImplementationSlot(name,initial,validate=null){
+    if(validate&&!validate(initial))throw new TypeError(`Invalid initial clock implementation: ${name}`);
+    let value=initial,version=0;
+    const history=[];
+    return Object.freeze({
+      get:()=>value,
+      set(next,reason='explicit clock implementation'){
+        if(validate&&!validate(next))throw new TypeError(`Invalid clock implementation: ${name}`);
+        const prior=value;value=next;version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
+      },
+      version:()=>version,
+      history:()=>history.map(item=>({...item}))
+    });
+  }
 
   function pad(n,len){return String(n).padStart(len,'0').slice(-len)}
   function desiredClockDigitsImpl(){const d=clockShell.accurateDate();return {r1:pad(d.getHours(),5).split(''),r2:pad(d.getMinutes(),5).split(''),r3:pad(d.getSeconds(),5).split('')}}
@@ -133,6 +148,14 @@
   function setLampTestTimer(value){lampTestTimerValue=Number(value)||0;return lampTestTimerValue}
 
   const isFn=value=>typeof value==='function';
+  renderRegSlot=createImplementationSlot('renderClockReg',baseRenderClockReg,isFn);
+  syncSlot=createImplementationSlot('syncClockFace',baseSyncClockFace,isFn);
+  stopSlot=createImplementationSlot('stopClockQueue',baseStopClockQueue,isFn);
+  runQueueSlot=createImplementationSlot('runRelayQueue',baseRunRelayQueue,isFn);
+  tickSlot=createImplementationSlot('tick',baseTick,isFn);
+  cancelSlot=createImplementationSlot('cancelLampTest',baseCancelLampTest,isFn);
+  lampTestSlot=createImplementationSlot('lampTest',baseLampTest,isFn);
+
   compat.readonly('DIGIT_RELAY',()=>DIGIT_RELAY_VALUE);
   compat.readonly('CLOCK_GROUPS',()=>CLOCK_GROUPS_VALUE);
   compat.readonly('CLOCK_RELAY_MS',()=>CLOCK_RELAY_MS);
@@ -148,13 +171,9 @@
   compat.accessor('relayBusy',()=>relayBusyValue,next=>{relayBusyValue=!!next});
   compat.accessor('lampTestActive',()=>lampTestActiveValue,next=>{lampTestActiveValue=!!next});
   compat.accessor('lampTestTimer',()=>lampTestTimerValue,next=>{lampTestTimerValue=Number(next)||0});
-  renderRegSlot=compat.mutable('renderClockReg',baseRenderClockReg,isFn);
-  syncSlot=compat.mutable('syncClockFace',baseSyncClockFace,isFn);
-  stopSlot=compat.mutable('stopClockQueue',baseStopClockQueue,isFn);
-  runQueueSlot=compat.mutable('runRelayQueue',baseRunRelayQueue,isFn);
-  tickSlot=compat.mutable('tick',baseTick,isFn);
-  cancelSlot=compat.mutable('cancelLampTest',baseCancelLampTest,isFn);
-  lampTestSlot=compat.mutable('lampTest',baseLampTest,isFn);
+  for(const [name,slot] of Object.entries({renderClockReg:renderRegSlot,syncClockFace:syncSlot,stopClockQueue:stopSlot,runRelayQueue:runQueueSlot,tick:tickSlot,cancelLampTest:cancelSlot,lampTest:lampTestSlot})){
+    compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
+  }
 
   const implementationSlots=Object.freeze({
     renderReg:renderRegSlot,
