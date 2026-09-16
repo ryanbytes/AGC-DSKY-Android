@@ -13,16 +13,11 @@ const EXEMPT=new Set(['phone-icdu.js','phone-api-runtime.js']);
 // CI fails both on a new late mutation and when an entry disappears without the
 // inventory being updated in the same change.
 const KNOWN_LEGACY=new Set([
-  'cm-mode.js:applyCmMode',
   'flight-hardware-ui.js:lighting',
   'flight-hardware-ui.js:hardwarePersonality',
-  'hardware-color-mode.js:hardwareColorMode',
   'key-mechanical-spec.js:hardwarePersonality',
   'key-mechanical-spec.js:keyMechanicalSpec',
   'keyboard-electrical-interlock.js:keyboardElectrical',
-  'lighting-electrical-model.js:lightingElectrical',
-  'lighting-rheostat-stop.js:lightingRheostatStop',
-  'proceed-electrical.js:proceedElectrical',
   'sextant-tap-mark.js:sextantTapMark'
 ]);
 const files=fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js')).sort();
@@ -64,4 +59,4 @@ const missing=[...KNOWN_LEGACY].filter(id=>!observed.has(id));
 if(unexpected.length)throw new Error(`new late AGCDSKY public-facade mutation outside ${OWNER}: ${unexpected.map(item=>item.display).join(', ')}`);
 if(missing.length)throw new Error(`late facade quarantine inventory is stale; remove migrated entries: ${missing.join(', ')}`);
 console.log('late public facade mutation inventory: PASS');
-console.log(`  ${KNOWN_LEGACY.size} quarantined late assignments remain; runtimeTransitions/inputRuntime/clockBehavior now bootstrap-owned; phone accessor seam audited separately`);
+console.log(`  ${KNOWN_LEGACY.size} quarantined late assignments remain; CM/color/lighting-electrical/rheostat/PRO ownership now bootstrap-backed; phone accessor seam audited separately`);
