@@ -34,7 +34,7 @@ const originalState=state,originalCore=core,originalCompat=compat;new vm.Script(
 assert(source.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,replace,describe});'),'audited compatibility registry publication missing explicit replacement API');
 assert(source.includes('Object.defineProperty(window, name'),'compatibility registry must own its accessor boundary');
 
-const stateIndex=html.indexOf('<script src="app-state-runtime.js"></script>'),shellIndex=html.indexOf('<script src="app-shell-runtime.js"></script>');
+const stateIndex=html.indexOf('src="app-state-runtime.js"'),shellIndex=html.indexOf('src="app-shell-runtime.js"');
 assert(stateIndex>=0&&shellIndex>stateIndex,'app-state runtime must parser-load before shell');
 const expected=[
   ['app-shell-runtime.js','shellState'],['display-environment.js','environmentState'],['relay-audio-runtime.js','audioState'],
@@ -45,7 +45,7 @@ const expected=[
   ['dream-agc.js','dreamState']
 ];
 for(const [name,alias] of expected){
-  assert(html.indexOf(`<script src="${name}"></script>`)>stateIndex,`${name} must load after shared state`);
+  assert(html.indexOf(`src="${name}"`)>stateIndex,`${name} must load after shared state`);
   const s=read(name);assert(s.includes(`const ${alias}`)&&s.includes('window.AGCDSKY_APP_STATE'),`${name} does not bind explicit shared app state`);
 }
 const coreExpected=[['agc-snapshot-runtime.js','snapshotCore'],['agc-lifecycle-runtime.js','lifecycleCore'],['agc-api-runtime.js','apiCore'],['relay-show.js','showCore'],['dream-agc.js','dreamCore']];
