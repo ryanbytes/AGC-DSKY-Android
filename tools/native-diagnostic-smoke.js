@@ -77,15 +77,25 @@ for (const token of [
     "api.getCore",
     "api.phoneIcduStatus",
     "api.sextantStatus",
+    "api.parallax3d",
     "api.saveAgcState",
     "api.verifySnapshotRoundTrip",
     "api.clearSavedAgcState",
-    "ARM 5-SECOND PIPA MOTION TEST"
+    "ARM 5-SECOND PIPA MOTION TEST",
+    "PARALLAX / DISPLAY DEPTH",
+    "Parallax state",
+    "Parallax current → target",
+    "Parallax intensity",
+    "Glass view depth"
 ]) {
     assert(diagnostics.includes(token), `diagnostics surface missing: ${token}`);
 }
+assert(diagnostics.includes("typeof api.parallax3d.state==='function'"),
+    'diagnostics must read live parallax controller state without owning it');
+assert(diagnostics.includes("typeof api.parallax3d.geometry==='function'"),
+    'diagnostics must read physical parallax geometry without owning it');
 assert(diagnostics.includes("api.openDiagnostics=open"),
     'diagnostics module must expose the current openDiagnostics entry point');
 
 console.log('native diagnostic source smoke: PASS');
-console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, and diagnostics surface verified');
+console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, parallax presentation telemetry, and diagnostics surface verified');
