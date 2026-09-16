@@ -9,7 +9,9 @@ const STYLE = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/style.css'), 
 const CONTROLS = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/controls-layout.css'), 'utf8');
 const CM = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/cm-dsky-finish.css'), 'utf8');
 const HARDWARE_COLORS = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/hardware-color-mode.css'), 'utf8');
+const HARDWARE_COLOR_MODE = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/hardware-color-mode.js'), 'utf8');
 const CM_MODE = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/cm-mode.js'), 'utf8');
+const HTML = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/index.html'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -128,13 +130,21 @@ for (const marker of [
   'linear-gradient(148deg,#8d9294 0%,#7c8183 30%,#6d7275 68%,#797e80 100%)',
   '.el-glass-background{fill:#4e535a!important}',
   '.el-ito-dot{fill:#91999c!important;opacity:.68!important}',
-  'linear-gradient(180deg,#858a8c 0%,#7c8183 58%,#707578 100%)'
-]) assert(HARDWARE_COLORS.includes(marker), 'recovered FS595 color marker missing: ' + marker);
+  'linear-gradient(180deg,#858a8c 0%,#7c8183 58%,#707578 100%)',
+  'radial-gradient(ellipse 23% 12%',
+  'border:.045vmin solid rgba(220,232,227,.18)'
+]) assert(HARDWARE_COLORS.includes(marker), 'recovered FS595/glass marker missing: ' + marker);
+assert(HTML.includes('<link rel="stylesheet" href="hardware-color-mode.css">'),
+  'hardware-color-mode.css must be parser-loaded');
+assert(HTML.includes('<script src="hardware-color-mode.js"></script>'),
+  'hardware-color-mode.js must be parser-loaded');
+assert(HARDWARE_COLOR_MODE.includes("body.classList.add('authentic-colors')"),
+  'forced FS595 module no longer enables authentic colors');
+assert(HARDWARE_COLOR_MODE.includes("localStorage.removeItem('dskyHardwareColorMode')"),
+  'forced FS595 module no longer clears the obsolete palette preference');
 assert(CM_MODE.includes("document.body.classList.add('spacecraft-cm')") &&
-       CM_MODE.includes("document.body.classList.add('authentic-colors')"),
-  'CM mode no longer enables the recovered authentic palette');
-assert(CM_MODE.includes("link.href = 'hardware-color-mode.css'"),
-  'CM mode no longer loads the recovered hardware palette stylesheet');
+       !CM_MODE.includes("document.body.classList.add('authentic-colors')"),
+  'CM mode must own configuration while hardware-color-mode owns the palette');
 for (const forbidden of ['.el-glass-back{','.el-glass-back,','--dsky-el-parallax-x','translate3d(calc(var(--dsky-el-parallax-x)'])
   assert(!HARDWARE_COLORS.includes(forbidden), 'color layer must not override physical glass/parallax geometry: ' + forbidden);
 
@@ -144,4 +154,4 @@ console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(
 console.log('  annunciators: three-source per-bulb thermal fade with foreground black legends');
 console.log('  lighting: independent NUMERICS/INTEGRAL with white EL key legends');
 console.log('  options: bounded DSKY-style illuminated key strip');
-console.log('  recovered UI: canonical FS595 hardware palette guarded without legacy glass-motion overrides');
+console.log('  recovered UI: forced FS595/glass finish is parser-loaded while physical parallax retains motion ownership');
