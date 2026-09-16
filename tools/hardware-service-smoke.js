@@ -2,6 +2,7 @@
 'use strict';
 
 const fs=require('fs'),path=require('path'),vm=require('vm');
+const {installServiceRegistry}=require('./test-service-registry');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 
@@ -10,7 +11,7 @@ const timers=new Map();let timerId=0,now=0;
 const commits=[],renders=[],lamps=new Map();
 const document={hidden:false,body:{classList:{toggle(){},remove(){}}}};
 const context={console,window:null,document,performance:{now:()=>now},setTimeout(fn,ms=0){const id=++timerId;timers.set(id,{fn,due:now+Math.max(0,Number(ms)||0)});return id},clearTimeout(id){timers.delete(id)},setInterval(){return 1},clearInterval(){},Object,Map,Set,Number,String,Math,TypeError,Promise};
-context.window=context;vm.createContext(context);
+context.window=context;installServiceRegistry(context);vm.createContext(context);
 new vm.Script(stateSource,{filename:'app-state-runtime.js'}).runInContext(context);
 const state=context.AGCDSKY_APP_STATE;
 state.mode='agc';state.tickSound=false;
@@ -85,10 +86,11 @@ hardware.registerSnapshotExtension('test',snapshot=>({...snapshot,testExtension:
 const diagnostic=hardware.snapshot();
 assert(diagnostic.testExtension===true&&diagnostic.latches[10]===0o123&&diagnostic.latches[9]===0o456,'hardware diagnostic extension/latches changed');
 assert(!hardwareSource.includes('window.AGCDSKY.hardware ='),'hardware source must not patch public facade');
+assert(hardwareSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE'"),'hardware service must publish explicitly through the registry');
 for(const name of ['decodeChannel10','decodeChannel11','decodeChannel163','resetFace'])assert(hardwareSource.includes(`display.installImplementation('${name}'`),`hardware display-service registration missing: ${name}`);
 for(const name of ['stopQueue','runQueue','cancelLampTest','lampTest'])assert(hardwareSource.includes(`clock.installImplementation('${name}'`),`hardware clock-service registration missing: ${name}`);
 assert(!hardwareSource.includes('AGCDSKY_COMPAT')&&!hardwareSource.includes('compat.'),'hardware retained direct compatibility-registry dependency');
 assert(hardwareSource.includes('display.commitRelayWord(relay,low11,{render:paint})'),'settled commit marker missing');
 
 console.log('hardware service smoke: PASS');
-console.log('  display/clock-owned implementation hooks, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
+console.log('  explicit hardware-service publication, display/clock-owned implementation hooks, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
