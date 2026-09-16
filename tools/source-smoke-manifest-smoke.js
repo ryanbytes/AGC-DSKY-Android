@@ -17,4 +17,4 @@ const all=fs.readdirSync(TOOLS).filter(isSmoke).sort();
 const unclassified=all.filter(name=>!canonicalSet.has(name)&&!excludedSet.has(name));assert(!unclassified.length,`unclassified smoke programs: ${unclassified.join(', ')}`);
 const unexpected=Array.from(new Set([...canonical,...exclusions.map(x=>x.name)])).filter(name=>!all.includes(name));assert(!unexpected.length,`classified entries are not smoke programs: ${unexpected.join(', ')}`);
 console.log('source smoke manifest smoke: PASS');
-console.log(`  ${included.length} canonical Node smokes + ${CANONICAL_SHELL.length} canonical shell smoke + ${exclusions.length} explicit device/retired exclusions classify all ${all.length} tools/*-smoke.{js,sh} programs`);
+console.log(`  ${included.length} canonical Node smokes + ${CANONICAL_SHELL.length} canonical shell smoke + ${exclusions.length} explicit device-only exclusions classify all ${all.length} tools/*-smoke.{js,sh} programs`);
