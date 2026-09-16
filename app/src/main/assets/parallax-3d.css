@@ -19,7 +19,9 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky{
   --dsky-light-y:44%;
   --dsky-shadow-x:0px;
   --dsky-shadow-y:5px;
-  --dsky-el-z:-11.678px;
+  /* 106 px / 2.354 in * 0.134 in. JS replaces this at runtime. */
+  --dsky-glass-rear-z:-6.034px;
+  --dsky-el-z:-6.034px;
   transform:rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y));
   transform-style:preserve-3d;
   will-change:transform;
@@ -64,30 +66,81 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-so
   transform:translateZ(-.6px);
 }
 
-/* The EL plane now uses one physical Z separation rather than independent
-   hand-tuned X/Y counter-motion. JavaScript scales --dsky-el-z from the
-   rendered 2.360-in display face and the 0.260-in package-depth envelope. */
+/* 2003988 optically bonds the 2004745 laminated-glass panel to the glass face
+   of the digital indicator.  The EL artwork therefore sits at the rear cover
+   interface, one 0.134-in central viewing thickness behind the front surface. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .elpanel{
-  transform:translate3d(0,0,var(--dsky-el-z,-11.678px));
+  transform:translate3d(0,0,var(--dsky-el-z,-6.034px));
   transform-style:preserve-3d;
   will-change:transform;
 }
+
+/* Both glass optical surfaces use the real clear-view opening.  They remain
+   almost completely transparent: depth comes from Z separation, edge
+   occlusion, and a sparse AR reflection rather than a visible rectangular slab. */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-rear,
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
   position:absolute;
   left:57.5000%;
   top:5.1075%;
   width:33.125%;
   height:49.0204%;
-  z-index:5;
   pointer-events:none;
-  transform:translate3d(0,0,0);
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-rear{
+  z-index:4;
+  transform:translate3d(0,0,var(--dsky-glass-rear-z,-6.034px));
+  background:transparent;
+  box-shadow:
+    inset var(--dsky-glass-shadow-dark-x,0px) var(--dsky-glass-shadow-dark-y,0px) .38vmin rgba(0,0,0,.25),
+    inset var(--dsky-glass-shadow-light-x,0px) var(--dsky-glass-shadow-light-y,0px) .22vmin rgba(175,225,188,.08);
+  opacity:.72;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-rear::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
   background:
-    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.13),rgba(225,242,234,.035) 22%,transparent 47%),
-    linear-gradient(118deg,transparent 8%,rgba(255,255,255,.035) 28%,transparent 43%,rgba(10,15,12,.025) 76%,transparent 94%);
-  box-shadow:inset 0 0 .22vmin rgba(232,244,237,.08),inset 0 0 .8vmin rgba(0,0,0,.10);
+    linear-gradient(90deg,rgba(42,72,51,.10),transparent 3%,transparent 97%,rgba(11,23,15,.13)),
+    linear-gradient(180deg,rgba(47,77,54,.08),transparent 3.5%,transparent 96.5%,rgba(10,20,13,.14));
+  opacity:.55;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
+  z-index:5;
+  transform:translate3d(0,0,0);
+  background:transparent;
+  box-shadow:
+    inset var(--dsky-edge-dark-x,0px) var(--dsky-edge-dark-y,0px) .20vmin rgba(0,0,0,.19),
+    inset var(--dsky-edge-light-x,0px) var(--dsky-edge-light-y,0px) .14vmin rgba(232,244,237,.10);
   mix-blend-mode:screen;
-  opacity:.58;
-  will-change:transform,background-position;
+  opacity:.78;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen::before{
+  content:"";
+  position:absolute;
+  inset:-1% -2% 48% 7%;
+  pointer-events:none;
+  clip-path:polygon(0 18%,72% 0,100% 18%,24% 74%);
+  background:linear-gradient(112deg,transparent 15%,rgba(255,255,255,.03) 31%,rgba(255,255,255,.20) 43%,rgba(255,255,255,.035) 53%,transparent 68%);
+  transform:translate3d(
+    var(--dsky-glass-shadow-light-x,0px),
+    var(--dsky-glass-shadow-light-y,0px),
+    .15px
+  );
+  opacity:.62;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(235,250,241,.07),transparent 30%),
+    linear-gradient(180deg,rgba(255,255,255,.025),transparent 11%,transparent 88%,rgba(0,0,0,.03));
+  opacity:.55;
 }
 
 /* Keycaps are the strongest foreground plane. Existing Apollo-derived travel
@@ -125,6 +178,7 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
   body.parallax-3d .display-well,
   body.parallax-3d .ann-grid,
   body.parallax-3d .elpanel,
+  body.parallax-3d .el-glass-rear,
   body.parallax-3d .el-glass-sheen,
   body.parallax-3d .key,
   body.parallax-3d .fastener{
@@ -134,8 +188,7 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
   body.parallax-3d .dsky{filter:none!important}
 }
 
-/* Photographic response refinement: the moving highlight is broad and weak on
-   the matte painted casting, while the EL cover has a narrower glass reflection. */
+/* Photographic response refinement for the matte casting only. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
   background:
     radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.090),rgba(255,255,255,.024) 22%,transparent 47%),
@@ -143,32 +196,9 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
     linear-gradient(118deg,rgba(255,255,255,.030),transparent 30%,rgba(0,0,0,.025) 72%,rgba(255,255,255,.014));
   mix-blend-mode:soft-light;
 }
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
-  background:
-    linear-gradient(112deg,transparent 4%,rgba(255,255,255,.025) 20%,rgba(255,255,255,.24) 28%,rgba(255,255,255,.040) 35%,transparent 48%),
-    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.18),rgba(220,237,228,.045) 22%,transparent 47%),
-    linear-gradient(180deg,rgba(255,255,255,.035),transparent 16%,transparent 76%,rgba(0,0,0,.085));
-  box-shadow:
-    inset var(--dsky-glass-shadow-dark-x,0px) var(--dsky-glass-shadow-dark-y,0px) .60vmin rgba(0,0,0,.42),
-    inset var(--dsky-glass-shadow-light-x,0px) var(--dsky-glass-shadow-light-y,0px) .32vmin rgba(255,255,255,.16),
-    inset 0 0 .18vmin rgba(255,255,255,.14),
-    inset 0 0 .85vmin rgba(0,0,0,.12);
-  opacity:.82;
-}
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  border:.10vmin solid rgba(205,218,209,.16);
-  box-shadow:
-    inset var(--dsky-edge-dark-x,0px) var(--dsky-edge-dark-y,0px) .36vmin rgba(0,0,0,.40),
-    inset var(--dsky-edge-light-x,0px) var(--dsky-edge-light-y,0px) .24vmin rgba(255,255,255,.13);
-}
 
-/* Screen-only keeps the same physical depth ratio. The layout grows, so the
-   JS recalculates --dsky-el-z from the actual rendered EL face width instead
-   of substituting a second set of exaggerated fullscreen offsets. */
+/* Screen-only keeps the identical 0.134-in depth ratio.  The parent DSKY must
+   rotate here too; otherwise the separated optical planes produce no parallax. */
 body.parallax-3d.screen-only:not(.dream):not(.display-only) #app{
   perspective:520px!important;
   perspective-origin:50% 50%!important;
@@ -184,32 +214,40 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) .dsky{
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel{
   transform:
     translate(-50%,-50%)
-    translate3d(0,0,var(--dsky-el-z,-11.678px))!important;
+    translate3d(0,0,var(--dsky-el-z,-6.034px))!important;
   transform-style:preserve-3d!important;
   will-change:transform!important;
 }
+body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-rear,
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen{
   display:block!important;
   left:50%!important;
   top:50%!important;
   width:min(100vw,calc(100vh * 106 / 182.356))!important;
   height:min(100vh,calc(100vw * 182.356 / 106))!important;
+  transform-style:preserve-3d!important;
+  will-change:transform!important;
+}
+body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-rear{
+  transform:translate(-50%,-50%) translate3d(0,0,var(--dsky-glass-rear-z,-6.034px))!important;
+  z-index:8!important;
+  background:transparent!important;
+  box-shadow:
+    inset var(--dsky-fs-shadow-dark-x,0px) var(--dsky-fs-shadow-dark-y,0px) .46vmin rgba(0,0,0,.30),
+    inset var(--dsky-fs-shadow-light-x,0px) var(--dsky-fs-shadow-light-y,0px) .24vmin rgba(175,225,188,.09)!important;
+  opacity:.76!important;
+}
+body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen{
   transform:translate(-50%,-50%) translate3d(0,0,0)!important;
   z-index:9!important;
-  opacity:.90!important;
-  background:
-    linear-gradient(112deg,transparent 2%,rgba(255,255,255,.025) 17%,rgba(255,255,255,.30) 27%,rgba(255,255,255,.055) 36%,transparent 49%),
-    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.23),rgba(220,237,228,.055) 20%,transparent 46%),
-    linear-gradient(180deg,rgba(255,255,255,.040),transparent 15%,transparent 76%,rgba(0,0,0,.11))!important;
+  background:transparent!important;
   box-shadow:
-    inset var(--dsky-fs-shadow-dark-x,0px) var(--dsky-fs-shadow-dark-y,0px) .78vmin rgba(0,0,0,.52),
-    inset var(--dsky-fs-shadow-light-x,0px) var(--dsky-fs-shadow-light-y,0px) .42vmin rgba(255,255,255,.20),
-    inset 0 0 .22vmin rgba(255,255,255,.18),
-    inset 0 0 1.0vmin rgba(0,0,0,.16)!important;
+    inset var(--dsky-fs-edge-dark-x,0px) var(--dsky-fs-edge-dark-y,0px) .28vmin rgba(0,0,0,.22),
+    inset var(--dsky-fs-edge-light-x,0px) var(--dsky-fs-edge-light-y,0px) .18vmin rgba(235,248,240,.13)!important;
+  opacity:.84!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen::before{
-  border:.12vmin solid rgba(215,228,219,.20)!important;
-  box-shadow:
-    inset var(--dsky-fs-edge-dark-x,0px) var(--dsky-fs-edge-dark-y,0px) .48vmin rgba(0,0,0,.52),
-    inset var(--dsky-fs-edge-light-x,0px) var(--dsky-fs-edge-light-y,0px) .30vmin rgba(255,255,255,.18)!important;
+  inset:-1% -2% 48% 7%!important;
+  background:linear-gradient(112deg,transparent 15%,rgba(255,255,255,.035) 31%,rgba(255,255,255,.24) 43%,rgba(255,255,255,.045) 53%,transparent 68%)!important;
+  opacity:.66!important;
 }
