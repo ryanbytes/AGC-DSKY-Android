@@ -102,7 +102,7 @@
     });
   }
   function baseLampTest(){
-    cancelSlot.get()();stopSlot.get()();
+    cancelSlot.get()();stopSlot.get();
     const prior=captureClockRelayState(),active=v35RelayState();
     lampTestActiveValue=true;scheduleV35RelaySounds(prior,active);
     document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.add('on'));
@@ -111,9 +111,23 @@
       lampTestTimerValue=0;if(clockState.mode!=='clock'){cancelSlot.get()();return}
       const want=desiredClockDigitsImpl();for(const group of CLOCK_GROUPS_VALUE)clockRelayWordsValue[group.relay]=clockWordImpl(group,want);
       const restore=captureClockRelayState('16','65');scheduleV35RelaySounds(active,restore);
-      lampTestActiveValue=false;clockRenderer.clearLamps();clockRenderer.set2('prog','00');clockState.verb='16';clockState.noun='65';clockShell.show(clockState.verb,clockState.noun);stopSlot.get()();syncSlot.get()();
+      lampTestActiveValue=false;clockRenderer.clearLamps();clockRenderer.set2('prog','00');clockState.verb='16';clockState.noun='65';clockShell.show(clockState.verb,clockState.noun);stopSlot.get()();syncSlot.get();
     },V35_TEST_MS);
   }
+
+  function cloneClockDigits(value=clockDigitsValue){
+    const source=value&&typeof value==='object'?value:{};
+    return{r1:Array.isArray(source.r1)?source.r1.slice():[],r2:Array.isArray(source.r2)?source.r2.slice():[],r3:Array.isArray(source.r3)?source.r3.slice():[]};
+  }
+  function digitRelayCode(value){return DIGIT_RELAY_VALUE[String(value)]??0}
+  function snapshotBackingState(){return{digits:cloneClockDigits(),relayWords:{...clockRelayWordsValue}}}
+  function restoreBackingState(next){
+    if(!next||typeof next!=='object')throw new TypeError('Clock backing state must be an object');
+    clockDigitsValue=cloneClockDigits(next.digits);
+    clockRelayWordsValue=next.relayWords&&typeof next.relayWords==='object'?{...next.relayWords}:{};
+    return snapshotBackingState();
+  }
+  function setLampTestActive(value){lampTestActiveValue=!!value;return lampTestActiveValue}
 
   const isFn=value=>typeof value==='function';
   compat.readonly('DIGIT_RELAY',()=>DIGIT_RELAY_VALUE);
@@ -149,7 +163,11 @@
     captureRelayState:(...args)=>captureClockRelayState(...args),
     v35RelayState:(...args)=>v35RelayState(...args),
     popcount11:(...args)=>popcount11Impl(...args),
+    digitRelayCode,
+    snapshotBackingState,
+    restoreBackingState,
     lampTestActive:()=>lampTestActiveValue,
+    setLampTestActive,
     compatibilityVersions:()=>({renderReg:renderRegSlot.version(),syncFace:syncSlot.version(),stopQueue:stopSlot.version(),runQueue:runQueueSlot.version(),tick:tickSlot.version(),cancelLampTest:cancelSlot.version(),lampTest:lampTestSlot.version()})
   });
 })();
