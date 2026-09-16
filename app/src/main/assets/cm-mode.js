@@ -5,11 +5,13 @@
 // parallax remain owned by the dedicated physical-depth presentation layer.
 (() => {
   function ensureHardwarePalette() {
-    if (document.querySelector('link[data-dsky-hardware-colors]')) return;
+    if (window.__DSKY_HARDWARE_PALETTE_LINKED__) return;
+    if (!document.head || typeof document.createElement !== 'function') return;
+    window.__DSKY_HARDWARE_PALETTE_LINKED__ = true;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'hardware-color-mode.css';
-    link.setAttribute('data-dsky-hardware-colors','1');
+    if (typeof link.setAttribute === 'function') link.setAttribute('data-dsky-hardware-colors','1');
     document.head.appendChild(link);
   }
 
@@ -19,7 +21,8 @@
       localStorage.removeItem('dskyHardwareColorMode');
     } catch (_) {}
     ensureHardwarePalette();
-    document.body.classList.add('spacecraft-cm','authentic-colors');
+    document.body.classList.add('spacecraft-cm');
+    document.body.classList.add('authentic-colors');
   }
 
   applyCmMode();
