@@ -30,7 +30,7 @@ assert(phone.includes('const app = window.AGCDSKY;'),'phone-icdu must retain app
 assert(phone.includes('const api = Object.create(app);'),'phone-icdu must define implementations on a module-local export object');
 assert(phone.includes("phoneService.installImplementations(api,'phone-icdu module registration');"),'phone-icdu explicit batch registration missing');
 assert(!phone.includes('const api = window.AGCDSKY;'),'phone-icdu regained direct root-facade alias');
-const assigned=[...phone.matchAll(/\bapi\.([A-Za-z_$][\w$]*)\s*=\s*(?!=)/g)].map(m=>m[1]);
+const assigned=[...phone.matchAll(/^\s*api\.([A-Za-z_$][\w$]*)\s*=\s*(?!=)/gm)].map(m=>m[1]);
 same([...new Set(assigned)].sort(),expected.slice().sort(),'phone-icdu module export set changed without updating the explicit phone registry');
 
 let initCount=0;
