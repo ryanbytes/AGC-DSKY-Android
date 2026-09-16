@@ -9,14 +9,13 @@
  * global timers or the public hardware diagnostics function.
  */
 (() => {
-  const compat=window.AGCDSKY_COMPAT;
   const visual=window.DSKY_RELAY_VISUAL;
   const display=window.AGCDSKY_DISPLAY;
+  const renderer=window.AGCDSKY_RENDERER;
   const hardware=window.AGCDSKY_HARDWARE;
   const relayMatrix=window.DSKY_RELAY_MATRIX;
-  if(!compat||!visual||!display||!hardware||!relayMatrix)throw new Error('Relay stretch stability dependencies unavailable');
+  if(!visual||!display||!renderer||!hardware||!relayMatrix)throw new Error('Relay stretch stability dependencies unavailable');
   const baseDecodeChannel10=display.implementation('decodeChannel10');
-  const segments=compat.get('SEG');
   if(typeof baseDecodeChannel10!=='function'||typeof visual.withSettledWordOverride!=='function')throw new Error('Relay stretch implementation hooks unavailable');
 
   const MODE_STRETCHED='stretched',FINAL_SETTLE_MS=Number(visual.finalSettleMs)||20,SEGMENT_ORDER='abcdefg',SEGMENT_FULL_MASK=0x7f;
@@ -55,11 +54,11 @@
   }
 
   function maskForSegments(value){let mask=0,text=String(value||'');for(let i=0;i<SEGMENT_ORDER.length;i++)if(text.includes(SEGMENT_ORDER[i]))mask|=1<<i;return mask&SEGMENT_FULL_MASK}
-  function maskForChar(ch){return maskForSegments(segments[ch]||'')}
+  function maskForChar(ch){return maskForSegments(renderer.segmentPattern(ch))}
   function maskForRelayCode(code){return maskForSegments(relayMatrix.segmentsForCode(Number(code)&0x1f))}
   function charForMask(mask){
     const normalized=Number(mask)&SEGMENT_FULL_MASK;if(pseudoCharForMask.has(normalized))return pseudoCharForMask.get(normalized);
-    const ch=String.fromCharCode(0xe100+normalized);let value='';for(let i=0;i<SEGMENT_ORDER.length;i++)if(normalized&(1<<i))value+=SEGMENT_ORDER[i];segments[ch]=value;pseudoCharForMask.set(normalized,ch);return ch;
+    const ch=String.fromCharCode(0xe100+normalized);let value='';for(let i=0;i<SEGMENT_ORDER.length;i++)if(normalized&(1<<i))value+=SEGMENT_ORDER[i];renderer.registerSegmentPattern(ch,value);pseudoCharForMask.set(normalized,ch);return ch;
   }
   function rowCharacterPositions(row,low11){const c=(low11>>5)&0o37,d=low11&0o37;switch(row){case 11:return[['prog0',c],['prog1',d]];case 10:return[['verb0',c],['verb1',d]];case 9:return[['noun0',c],['noun1',d]];case 8:return[['r1d0',d]];case 7:return[['r1d1',c],['r1d2',d]];case 6:return[['r1d3',c],['r1d4',d]];case 5:return[['r2d0',c],['r2d1',d]];case 4:return[['r2d2',c],['r2d3',d]];case 3:return[['r2d4',c],['r3d0',d]];case 2:return[['r3d1',c],['r3d2',d]];case 1:return[['r3d3',c],['r3d4',d]];default:return[]}}
 
@@ -75,12 +74,12 @@
   function stabilizePairText(id,text){const keys=pairPositions[id];if(!keys)return null;const chars=String(text||'').padEnd(2,' ').slice(0,2).split(''),masks=chars.map((ch,i)=>filteredMask(keys[i],maskForChar(ch),codeOf(ch)));return{text:masks.map(charForMask).join(''),signature:`${id}:${masks.join(',')}`}}
   function stabilizeRegisterText(id,sign,digits){const keys=regPositions[id];if(!keys)return null;const chars=String(digits||'').padEnd(5,' ').slice(0,5).split(''),masks=chars.map((ch,i)=>filteredMask(keys[i],maskForChar(ch),codeOf(ch)));return{digits:masks.map(charForMask).join(''),signature:`${id}:${String(sign||' ')}:${masks.join(',')}`}}
 
-  const baseSet2=compat.get('set2');
+  const baseSet2=renderer.implementation('set2');
   function stableStretchedSet2(id,text){if(suppressCrewFacingWrite>0)return;if(!isStretched())return baseSet2(id,text);const stable=stabilizePairText(id,text);if(!stable)return baseSet2(id,text);if(lastSurfaceSignature.get(id)===stable.signature)return;lastSurfaceSignature.set(id,stable.signature);return baseSet2(id,stable.text)}
-  compat.replace('set2',stableStretchedSet2,'stretched EL pair stability');
-  const baseSetReg=compat.get('setReg');
+  renderer.installImplementation('set2',stableStretchedSet2,'stretched EL pair stability');
+  const baseSetReg=renderer.implementation('setReg');
   function stableStretchedSetReg(id,sign,digits){if(suppressCrewFacingWrite>0)return;if(!isStretched())return baseSetReg(id,sign,digits);const stable=stabilizeRegisterText(id,sign,digits);if(!stable)return baseSetReg(id,sign,digits);if(lastSurfaceSignature.get(id)===stable.signature)return;lastSurfaceSignature.set(id,stable.signature);return baseSetReg(id,sign,stable.digits)}
-  compat.replace('setReg',stableStretchedSetReg,'stretched EL register stability');
+  renderer.installImplementation('setReg',stableStretchedSetReg,'stretched EL register stability');
 
   function stableStretchedRelayDecode(value){
     const word=Number(value)&0o77777,row=(word>>11)&0o17;
