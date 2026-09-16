@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.AGCDSKY;
-  if (!api || window.AGCDSKY_RUNTIME) return;
+  if (!api || window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_RUNTIME')) return;
   const lifecycle = api.lifecycle;
   if (!lifecycle
       || typeof lifecycle.enterAgc !== 'function'

@@ -101,7 +101,7 @@
     return lo + (hi - lo) * u;
   }
 
-  const baseService = window.AGCDSKY_FLIGHT_HARDWARE_UI;
+  const baseService = window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_FLIGHT_HARDWARE_UI');
   const previous = baseService && typeof baseService.hardwarePersonality === 'function'
     ? baseService.hardwarePersonality
     : null;

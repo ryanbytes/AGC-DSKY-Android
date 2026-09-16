@@ -35,9 +35,11 @@ ordered(html,[
 for(const token of [
   'window.AGCDSKY_APP_STATE','window.AGCDSKY_CORE_SESSION',
   'window.AGCDSKY_SHELL','window.AGCDSKY_AUDIO','window.AGCDSKY_CLOCK',
-  'window.AGCDSKY_DISPLAY','window.AGCDSKY_SNAPSHOT','window.AGCDSKY_HARDWARE'
+  'window.AGCDSKY_DISPLAY','window.AGCDSKY_SNAPSHOT',
+  "window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE')"
 ]) req(show,token,'relay-show service dependency');
 forbid(show,'AGCDSKY_COMPAT','relay-show direct compatibility dependency');
+forbid(show,'window.AGCDSKY_HARDWARE','relay-show late-service compatibility read');
 for(const retired of ['agcCore.','agcPausedForVisibility','saveAgcState('])
   forbid(show,retired,'retired relay-show global');
 
@@ -86,17 +88,19 @@ forbid(show,'saved.coreRunning&&appVisible','old visibility-racy resume path');
 
 /* Relay personality stays deterministic and derives timing from the physical model. */
 for(const token of [
-  'window.AGCDSKY_AUDIO','window.AGCDSKY_ENVIRONMENT','window.AGCDSKY_HARDWARE',
+  'window.AGCDSKY_AUDIO','window.AGCDSKY_ENVIRONMENT',
+  "window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE')",
   'const audioModel=window.DSKY_RELAY_AUDIO','audioModel.profileFor(row,bit)',
   "audio.implementation('emitTick')","audio.installImplementation('emitTick'",
   "localStorage.getItem('dskyHardwareUnitSeedV1')",'p.setTravelMs','p.resetTravelMs',
   "model:'deterministic-installed-unit-audible-spread-v1'"
 ]) req(perceptual,token,'relay personality contract');
 forbid(perceptual,'AGCDSKY_COMPAT','relay personality direct compatibility dependency');
+forbid(perceptual,'window.AGCDSKY_HARDWARE','relay personality late-service compatibility read');
 forbid(perceptual,'Math.random(','non-deterministic relay identity');
 
 /* User explicitly rejected synthetic brightness/glare effects. */
 for(const token of ['brightness(','relay-flare','filter:']) forbid(show,token,'relay-show optical hack');
 
 console.log('Relay show smoke: PASS');
-console.log('  parser order, service ownership, display/clock-owned choreography, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');
+console.log('  parser order, registry-backed service ownership, display/clock-owned choreography, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');

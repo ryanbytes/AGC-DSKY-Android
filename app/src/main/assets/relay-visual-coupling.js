@@ -13,7 +13,7 @@
   const audio=window.AGCDSKY_AUDIO;
   const environment=window.AGCDSKY_ENVIRONMENT;
   const shell=window.AGCDSKY_SHELL;
-  const hardware=window.AGCDSKY_HARDWARE;
+  const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   const audioModel=window.DSKY_RELAY_AUDIO;
   const relayMatrix=window.DSKY_RELAY_MATRIX;
   if(!visualState||!display||!audio||!environment||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');

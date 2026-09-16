@@ -9,7 +9,7 @@
 (() => {
   const audio=window.AGCDSKY_AUDIO;
   const environment=window.AGCDSKY_ENVIRONMENT;
-  const hardware=window.AGCDSKY_HARDWARE;
+  const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   const identityState=window.AGCDSKY_APP_STATE;
   if(!audio||!environment||!hardware||!identityState)throw new Error('Relay identity service dependencies unavailable');
   const fallbackEmitTick=audio.implementation('emitTick');

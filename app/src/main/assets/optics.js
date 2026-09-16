@@ -286,7 +286,7 @@
   function chooseStar(star){selectedStar=star;updateStarFinder()}
 
   function computePair(){
-    const cat=window.AGCDSKY_APOLLO_STARS;if(!cat||!skyLocation)return null;
+    const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');if(!cat||!skyLocation)return null;
     const now=Date.now();
     if(selectedPair&&now-pairComputedAt<5000)return selectedPair;
     pairMeta=typeof cat.candidatePairs==='function'?cat.candidatePairs(skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date(),12,6):null;
@@ -303,7 +303,7 @@
   }
 
   function currentTargetPosition(){
-    const cat=window.AGCDSKY_APOLLO_STARS;if(!cat||!skyLocation||!selectedStar)return null;
+    const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');if(!cat||!skyLocation||!selectedStar)return null;
     return cat.horizontal(selectedStar,skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date());
   }
 
@@ -325,7 +325,7 @@
     box.classList.toggle('visible',finderEnabled);if(!finderEnabled)return;
     const loc=document.getElementById('sxt-star-location'),pairEl=document.getElementById('sxt-star-pair'),cond=document.getElementById('sxt-star-conditions'),buttons=document.getElementById('sxt-star-buttons');
     const targ=document.getElementById('sxt-star-target'),err=document.getElementById('sxt-star-error'),arrow=document.getElementById('sxt-star-arrow'),cmd=document.getElementById('sxt-star-command'),cal=document.getElementById('sxt-star-cal');
-    const cat=window.AGCDSKY_APOLLO_STARS;
+    const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');
     if(!cat){loc.textContent='STAR CATALOG UNAVAILABLE';return}
     const cs=typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null;
     if(cal){

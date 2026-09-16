@@ -36,7 +36,7 @@
     const core=typeof api.getCore==='function'?api.getCore():null;
     const phone=typeof api.phoneIcduStatus==='function'?api.phoneIcduStatus():null;
     const sxt=typeof api.sextantStatus==='function'?api.sextantStatus():null;
-    const parallaxService=window.AGCDSKY_PARALLAX;
+    const parallaxService=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_PARALLAX');
     const parallax=parallaxService&&typeof parallaxService.state==='function'?parallaxService.state():null;
     const parallaxGeometry=parallaxService&&typeof parallaxService.geometry==='function'?parallaxService.geometry():null;
     const r=(bank,addr)=>core&&typeof core.readErasable==='function'?core.readErasable(bank,addr):null;

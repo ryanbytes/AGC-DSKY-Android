@@ -17,7 +17,7 @@
  */
 (() => {
   const app = window.AGCDSKY;
-  const phoneService = window.AGCDSKY_PHONE;
+  const phoneService = window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_PHONE');
   if (!app) throw new Error('AGCDSKY public facade unavailable');
   if (!phoneService || typeof phoneService.installImplementations !== 'function') throw new Error('AGCDSKY phone service unavailable');
   // Preserve the historical local `api.name = implementation` definitions

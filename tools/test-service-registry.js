@@ -20,6 +20,12 @@ function installServiceRegistry(context) {
       }
       return service;
     },
+    get(name) { return services.get(name) || null; },
+    require(name) {
+      const service = services.get(name);
+      if (!service) throw new Error(`test service unavailable: ${name}`);
+      return service;
+    },
     service(name) { return services.get(name); },
     reason(name) { return reasons.get(name); }
   });
