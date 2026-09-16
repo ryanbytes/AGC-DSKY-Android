@@ -44,3 +44,4 @@ for(const marker of [
 ])if(!owner.includes(marker))throw new Error(`public facade owner marker missing: ${marker}`);
 console.log('public facade boundary smoke: PASS');
 console.log(`  ${RESERVED.length} stable AGCDSKY facade keys remain owned by ${OWNER}`);
+require('./phone-api-runtime-smoke.js');
