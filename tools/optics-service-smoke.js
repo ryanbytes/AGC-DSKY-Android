@@ -13,8 +13,8 @@ assert(source.includes('const api = window.AGCDSKY;'),
   'optics must consume the bootstrapped AGCDSKY facade');
 assert(!source.includes('window.AGCDSKY = window.AGCDSKY || {}'),
   'optics must not recreate the root AGCDSKY facade');
-assert(source.includes('window.AGCDSKY_OPTICS=Object.freeze({open,close,status})'),
-  'optics must publish a frozen dedicated service');
+assert(source.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_OPTICS',Object.freeze({open,close,status})"),
+  'optics must publish a frozen dedicated service explicitly through the registry');
 for(const forbidden of ['api.openSextant =','api.closeSextant =','api.sextantStatus ='])
   assert(!source.includes(forbidden),`optics regained direct public-facade mutation: ${forbidden}`);
 for(const marker of [
@@ -35,4 +35,4 @@ const opticsIndex=html.indexOf('<script src="optics.js"></script>');
 assert(apiIndex>=0&&opticsIndex>apiIndex,
   'optics must load after the root AGCDSKY public facade bootstrap');
 console.log('optics service smoke: PASS');
-console.log('  sextant API service ownership, parser order, camera lifecycle, CDU/nav paths, autosave, and status telemetry retained');
+console.log('  explicit sextant service publication, parser order, camera lifecycle, CDU/nav paths, autosave, and status telemetry retained');
