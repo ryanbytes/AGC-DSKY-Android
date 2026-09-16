@@ -18,6 +18,7 @@
   const RELAY_DIGIT={0:' ',21:'0',3:'1',25:'2',27:'3',15:'4',30:'5',28:'6',19:'7',29:'8',31:'9'};
   const agcDisplayValue={prog:[' ',' '],verb:[' ',' '],noun:[' ',' '],r1:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false},r2:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false},r3:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false}};
   let relayDigitSlot,renderRegSlot,resetSlot,decode10Slot,decode11Slot,decode13Slot,decode163Slot,applySnapshotSlot;
+  let ch11StateSlot,ch13StateSlot,ch163StateSlot;
 
   function createImplementationSlot(name,initial,validate=null){
     if(validate&&!validate(initial))throw new TypeError(`Invalid initial display implementation: ${name}`);
@@ -28,6 +29,19 @@
       set(next,reason='explicit display implementation'){
         if(validate&&!validate(next))throw new TypeError(`Invalid display implementation: ${name}`);
         const prior=value;value=next;version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
+      },
+      version:()=>version,
+      history:()=>history.map(item=>({...item}))
+    });
+  }
+  function createStateSlot(name,getter,setter){
+    if(typeof getter!=='function'||typeof setter!=='function')throw new TypeError(`Display state slot requires accessors: ${name}`);
+    let version=0;
+    const history=[];
+    return Object.freeze({
+      get:getter,
+      set(next,reason='explicit display state replacement'){
+        const prior=getter();setter(next);version++;history.push(Object.freeze({version,reason:String(reason)}));return prior;
       },
       version:()=>version,
       history:()=>history.map(item=>({...item}))
@@ -80,13 +94,16 @@
   decode13Slot=createImplementationSlot('decodeChannel13',baseDecodeChannel13,isFn);
   decode163Slot=createImplementationSlot('decodeChannel163',baseDecodeChannel163,isFn);
   applySnapshotSlot=createImplementationSlot('applySnapshotUi',baseApplySnapshotUi,isFn);
+  ch11StateSlot=createStateSlot('agcCh11',()=>agcCh11Value,next=>{agcCh11Value=Number(next)||0});
+  ch13StateSlot=createStateSlot('agcCh13',()=>agcCh13Value,next=>{agcCh13Value=Number(next)||0});
+  ch163StateSlot=createStateSlot('agcCh163',()=>agcCh163Value,next=>{agcCh163Value=Number(next)||0});
 
   compat.readonly('agcDisplay',()=>agcDisplayValue);
   compat.readonly('agcRelayWords',()=>agcRelayWordsValue);
   compat.readonly('RELAY_DIGIT',()=>RELAY_DIGIT);
-  compat.accessor('agcCh11',()=>agcCh11Value,next=>{agcCh11Value=Number(next)||0});
-  compat.accessor('agcCh13',()=>agcCh13Value,next=>{agcCh13Value=Number(next)||0});
-  compat.accessor('agcCh163',()=>agcCh163Value,next=>{agcCh163Value=Number(next)||0});
+  for(const [name,slot] of Object.entries({agcCh11:ch11StateSlot,agcCh13:ch13StateSlot,agcCh163:ch163StateSlot})){
+    compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
+  }
   for(const [name,slot] of Object.entries({relayDigit:relayDigitSlot,renderAgcReg:renderRegSlot,resetAgcFace:resetSlot,decodeChannel10:decode10Slot,decodeChannel11:decode11Slot,decodeChannel13:decode13Slot,decodeChannel163:decode163Slot,applySnapshotUi:applySnapshotSlot})){
     compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
   }
