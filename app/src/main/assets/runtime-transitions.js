@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.AGCDSKY;
-  if (!api || api.runtimeTransitions) return;
+  if (!api || window.AGCDSKY_RUNTIME) return;
   const lifecycle = api.lifecycle;
   if (!lifecycle
       || typeof lifecycle.enterAgc !== 'function'
@@ -179,5 +179,4 @@
   });
 
   window.AGCDSKY_RUNTIME = runtime;
-  api.runtimeTransitions = runtime;
 })();
