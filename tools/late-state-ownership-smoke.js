@@ -18,7 +18,7 @@ const explicit=[
   ['dream-agc.js','dreamState'],['relay-identity-audio.js','identityState'],['relay-visual-coupling.js','visualState']
 ];
 for(const [name,alias] of explicit){const source=read(name);assert(source.includes(alias)&&source.includes('window.AGCDSKY_APP_STATE'),`${name} is not an explicit shared-state consumer`)}
-const shell=read('app-shell-runtime.js'),geometry=read('dsky-geometry.js'),hardware=read('hardware-fidelity.js'),guard=read('background-audio-guard.js'),show=read('relay-show.js'),screen=read('screen-only.js'),dream=read('dream-agc.js'),identity=read('relay-identity-audio.js'),visual=read('relay-visual-coupling.js'),snapshot=read('agc-snapshot-runtime.js'),life=read('agc-lifecycle-runtime.js'),api=read('agc-api-runtime.js');
+const shell=read('app-shell-runtime.js'),geometry=read('dsky-geometry.js'),hardware=read('hardware-fidelity.js'),guard=read('background-audio-guard.js'),show=read('relay-show.js'),screen=read('screen-only.js'),dream=read('dream-agc.js'),identity=read('relay-identity-audio.js'),visual=read('relay-visual-coupling.js'),snapshot=read('agc-snapshot-runtime.js'),life=read('agc-lifecycle-runtime.js'),api=read('agc-api-runtime.js'),renderer=read('dsky-display-renderer.js');
 for(const [name,source,forbidden] of [
   ['app-shell-runtime.js',shell,["&&appVisible&&","if(appVisible)","if(!appVisible)","agcCore"]],
   ['dsky-geometry.js',geometry,["typeof mode!==","mode==='agc'","mode!=='clock'","show(verb,noun)"]],
@@ -40,10 +40,13 @@ assert(visual.includes('!visualState.tickSound'),'relay visual layer does not re
 for(const [name,source,alias] of [['snapshot',snapshot,'snapshotCore'],['lifecycle',life,'lifecycleCore'],['API',api,'apiCore'],['relay show',show,'showCore'],['Dream AGC',dream,'dreamCore']])assert(source.includes(alias)&&source.includes('window.AGCDSKY_CORE_SESSION'),`${name} does not bind explicit core session`);
 const appState=read('app-state-runtime.js');
 assert(appState.includes('window.AGCDSKY_CORE_SESSION = Object.seal({'),'core session bootstrap is missing or unsealed');
-assert(appState.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,replace,describe});'),'audited compatibility registry/replacement API missing');
+assert(appState.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,alias,readonly,get,replace,describe});'),'audited compatibility registry/replacement/forwarding API missing');
 assert(appState.includes('Object.defineProperty(window, name'),'compatibility registry accessor boundary missing');
 for(const name of ['mode','selectedMission','verb','noun','dream','dreamMode','dim','tickSound','displayOnly','appVisible','ntpStatus','agcCore','agcLoadedMission','agcSuspendedForClock','agcPausedForVisibility']){
-  assert(!appState.includes(`mutable('${name}'`)&&!appState.includes(`accessor('${name}'`),`state field ${name} must not be registered as a compatibility alias`);
+  assert(!appState.includes(`mutable('${name}'`)&&!appState.includes(`accessor('${name}'`)&&!appState.includes(`alias('${name}'`),`state field ${name} must not be registered as a compatibility alias`);
 }
+assert(renderer.includes('function createImplementationSlot(name,initial,validate=null)'),'renderer owner-backed slot primitive missing');
+assert(renderer.includes('compat.alias(name,slot.get'),'renderer compatibility globals are not forwarding aliases');
+for(const token of ["compat.mutable('glyph'","compat.mutable('renderDigits'","compat.mutable('set2'","compat.mutable('setLamp'"])assert(!renderer.includes(token),`renderer live implementation state escaped back into compatibility registry: ${token}`);
 console.log('late state ownership smoke: PASS');
-console.log('  app/core state remains explicit; late fidelity slots are isolated behind the audited compatibility registry and explicit replacement API');
+console.log('  app/core state remains explicit; renderer implementation state is owner-held behind forwarded aliases; remaining fidelity compatibility boundaries stay audited');
