@@ -3,11 +3,9 @@
   if (window.__DSKY_PHASE37_PRESENTATION__) return;
   window.__DSKY_PHASE37_PRESENTATION__ = true;
 
-  const STORAGE_KEY='dskyHardwareColorMode';
   const body=document.body;
   const dsky=document.getElementById('dsky');
-  const controls=document.getElementById('controls');
-  if(!body||!dsky||!controls)return;
+  if(!body||!dsky)return;
 
   const link=document.createElement('link');
   link.rel='stylesheet';
@@ -15,25 +13,10 @@
   link.dataset.feature='phase37-presentation';
   document.head.appendChild(link);
 
-  let authentic=false;
-  try{authentic=localStorage.getItem(STORAGE_KEY)==='authentic'}catch(_){}
-
-  const button=document.createElement('button');
-  button.id='hardware-color-mode';
-  button.type='button';
-  button.title='Switch between the default palette and FS 36231 body / FS 36076 EL colors';
-
-  function applyColor(persist=false){
-    body.classList.toggle('authentic-colors',authentic);
-    button.textContent=authentic?'COLOR · FS595':'COLOR · DEFAULT';
-    button.setAttribute('aria-pressed',authentic?'true':'false');
-    if(persist){try{localStorage.setItem(STORAGE_KEY,authentic?'authentic':'default')}catch(_){}}
-  }
-
-  button.addEventListener('click',()=>{authentic=!authentic;applyColor(true)});
-  const parallaxControls=controls.querySelector('.parallax-controls');
-  controls.insertBefore(button,parallaxControls||null);
-  applyColor(false);
+  // FS595 is now the only hardware palette. Remove the retired preference so
+  // an older DEFAULT selection cannot survive an upgrade.
+  try{localStorage.removeItem('dskyHardwareColorMode')}catch(_){}
+  body.classList.add('authentic-colors');
 
   function numberVar(name,fallback=0){
     const n=parseFloat(dsky.style.getPropertyValue(name));
@@ -65,9 +48,7 @@
   syncElParallax();
 
   const controller=Object.freeze({
-    authentic:()=>authentic,
-    setAuthentic(value){authentic=!!value;applyColor(true);return authentic},
-    toggle(){authentic=!authentic;applyColor(true);return authentic},
+    authentic:()=>true,
     syncElParallax
   });
   window.AGCDSKY_PHASE37_PRESENTATION=controller;
