@@ -82,35 +82,36 @@ const core = {
   keyPress(code){ calls.push(['make', code, nowMs]); return 1; },
   keyRelease(){ calls.push(['reset', nowMs]); return true; }
 };
-const AGCDSKY = {
-  runtimeTransitions:{
-    modes:MODES,
-    mode(){ return mode; },
-    core(){ return core; },
-    clockRequested(){ return clockPending; },
-    requestAgc(reason){
-      calls.push(['request-agc', reason, nowMs]);
-      if (clockPending) return Promise.reject(new Error('CLOCK pending'));
-      if (mode === MODES.AGC) return Promise.resolve({mode});
-      mode = MODES.AGC_LOADING;
-      return new Promise(resolve => {
-        releaseLoad = () => {
-          mode = MODES.AGC;
-          calls.push(['agc-ready', nowMs]);
-          resolve({mode});
-        };
-      });
-    },
-    onBeforeClock(handler){
-      beforeClockHook = handler;
-      return () => { if (beforeClockHook === handler) beforeClockHook = null; };
-    }
+const runtimeTransitions = Object.freeze({
+  modes:MODES,
+  mode(){ return mode; },
+  core(){ return core; },
+  clockRequested(){ return clockPending; },
+  requestAgc(reason){
+    calls.push(['request-agc', reason, nowMs]);
+    if (clockPending) return Promise.reject(new Error('CLOCK pending'));
+    if (mode === MODES.AGC) return Promise.resolve({mode});
+    mode = MODES.AGC_LOADING;
+    return new Promise(resolve => {
+      releaseLoad = () => {
+        mode = MODES.AGC;
+        calls.push(['agc-ready', nowMs]);
+        resolve({mode});
+      };
+    });
   },
+  onBeforeClock(handler){
+    beforeClockHook = handler;
+    return () => { if (beforeClockHook === handler) beforeClockHook = null; };
+  }
+});
+const AGCDSKY = {
   scheduleAgcAutosave(reason){ calls.push(['autosave', reason, nowMs]); },
   hardwarePersonality(){ return {keys:{V:{contactMs:10,returnSoundMs:5}}}; }
 };
 const context = {
   AGCDSKY,
+  AGCDSKY_RUNTIME:runtimeTransitions,
   console,
   Promise,
   performance:{now(){ return nowMs; }},
@@ -126,10 +127,16 @@ const context = {
   press(key){ calls.push(['legacy-clock-press', key, nowMs]); }
 };
 context.window = context;
+Object.defineProperties(AGCDSKY, {
+  runtimeTransitions:{enumerable:true,get(){ return context.AGCDSKY_RUNTIME || null; }},
+  inputRuntime:{enumerable:true,get(){ return context.AGCDSKY_INPUT || null; }}
+});
 context.addEventListener = function(type, fn){ addListener(windowListeners, type, fn); };
 vm.createContext(context);
 vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
 vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
+assert(context.AGCDSKY_INPUT === AGCDSKY.inputRuntime,
+  'bootstrap-owned input getter did not resolve the shared controller');
 vm.runInContext(keyboardSource, context, {filename:'keyboard-electrical-interlock.js'});
 
 assert(typeof beforeClockHook === 'function',
@@ -179,5 +186,5 @@ assert(typeof beforeClockHook === 'function',
     'canceled handoff re-latched keyboard electrical state after AGC load');
 
   console.log('keyboard CLOCK cancel smoke: PASS');
-  console.log('  pending first-key contact is canceled, later contacts are suppressed, and no ghost channel-015 make can appear after AGC loading');
+  console.log('  bootstrap runtime/input getters preserve pending first-key cancellation, suppress later contacts, and prevent ghost channel-015 makes after AGC loading');
 })().catch(error => fail(error && error.stack ? error.stack : String(error)));
