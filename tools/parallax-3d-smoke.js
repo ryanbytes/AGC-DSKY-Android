@@ -27,13 +27,10 @@ for(const token of [
   'top:5.1075%',
   'width:33.125%',
   'height:49.0204%',
+  'var(--dsky-el-z,-11.678px)',
   '@media (prefers-reduced-motion:reduce)',
   'body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel',
-  'body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen',
-  'var(--dsky-el-x,0px)',
-  'var(--dsky-glass-x,0px)',
-  'var(--dsky-fs-el-x,0px)',
-  'var(--dsky-fs-glass-x,0px)'
+  'body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen'
 ]) assert(css.includes(token),`parallax CSS missing ${token}`);
 for(const mode of [':not(.dream)',':not(.display-only)'])
   assert(css.includes(mode),`parallax CSS does not exclude ${mode}`);
@@ -48,14 +45,19 @@ for(const token of [
   "api.nativePhoneQuaternion = wrapped",
   "'native-quaternion'",
   "nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS",
-  "setPx('--dsky-fs-el-x'",
-  "setPx('--dsky-fs-glass-x'",
-  "const elPanel = document.getElementById('elpanel')",
-  "const phosphorX = -x * 24.0",
-  "const glassX = x * 34.0",
-  "elPanel.style.setProperty(",
-  "glassSheen.style.setProperty(",
-  "'important'",
+  "const DISPLAY_FACE_WIDTH_IN = 2.360",
+  "const DISPLAY_PACKAGE_DEPTH_IN = 0.260",
+  "const FRAME_DEPTH_IN = 0.300",
+  "function updatePhysicalDepth()",
+  "elPanel.offsetWidth",
+  "'--dsky-el-z'",
+  "'--dsky-package-depth-px'",
+  "'--dsky-frame-depth-px'",
+  "new ResizeObserver(updatePhysicalDepth).observe(elPanel)",
+  "geometry:() => Object.freeze({",
+  "displayFaceWidthIn:DISPLAY_FACE_WIDTH_IN",
+  "displayPackageDepthIn:DISPLAY_PACKAGE_DEPTH_IN",
+  "frameDepthIn:FRAME_DEPTH_IN",
   "{passive:true}",
   "body.classList.contains('dream')",
   "body.classList.contains('display-only')",
@@ -68,10 +70,20 @@ const allowedBody=js.match(/function presentationAllowed\(\) \{([\s\S]*?)\n  \}/
 assert(!allowedBody.includes("classList.contains('screen-only')"),'screen-only must keep parallax enabled outside Dream mode');
 assert(js.indexOf('installNativeQuaternionTap();')>js.indexOf("window.addEventListener('deviceorientation'"),'native quaternion wrapper must install after fallback listener registration');
 assert(js.includes('performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS'),'native quaternion must suppress WebView orientation fallback while active');
-assert(js.includes("elPanel.style.setProperty(\n        'transform'"),'fullscreen phosphor must use direct inline transform');
-assert(js.includes("glassSheen.style.setProperty(\n        'transform'"),'fullscreen glass must use direct inline transform');
 
 for(const forbidden of [
+  '--dsky-el-x',
+  '--dsky-el-y',
+  '--dsky-glass-x',
+  '--dsky-glass-y',
+  '--dsky-fs-el-x',
+  '--dsky-fs-el-y',
+  '--dsky-fs-glass-x',
+  '--dsky-fs-glass-y',
+  'const phosphorX = -x * 24.0',
+  'const glassX = x * 34.0',
+  "elPanel.style.setProperty(\n        'transform'",
+  "glassSheen.style.setProperty(\n        'transform'",
   'preventDefault(',
   'stopPropagation(',
   'stopImmediatePropagation(',
@@ -85,18 +97,40 @@ for(const forbidden of [
   'onAgcChannel(',
   'localStorage',
   'sessionStorage'
-]) assert(!js.includes(forbidden),`parallax controller crossed presentation boundary: ${forbidden}`);
+]) assert(!js.includes(forbidden),`parallax controller crossed fidelity/presentation boundary: ${forbidden}`);
+
+for(const forbidden of [
+  'var(--dsky-el-x,0px)',
+  'var(--dsky-el-y,0px)',
+  'var(--dsky-glass-x,0px)',
+  'var(--dsky-glass-y,0px)',
+  'var(--dsky-fs-el-x,0px)',
+  'var(--dsky-fs-glass-x,0px)',
+  'translate3d(\n      var(--dsky-fs-glass-x'
+]) assert(!css.includes(forbidden),`legacy fake EL/glass counter-motion returned: ${forbidden}`);
 
 const rx=Number((js.match(/MAX_ROTATE_X_DEG\s*=\s*([0-9.]+)/)||[])[1]);
 const ry=Number((js.match(/MAX_ROTATE_Y_DEG\s*=\s*([0-9.]+)/)||[])[1]);
 const sensor=Number((js.match(/MAX_SENSOR_DELTA_DEG\s*=\s*([0-9.]+)/)||[])[1]);
+const face=Number((js.match(/DISPLAY_FACE_WIDTH_IN\s*=\s*([0-9.]+)/)||[])[1]);
+const packageDepth=Number((js.match(/DISPLAY_PACKAGE_DEPTH_IN\s*=\s*([0-9.]+)/)||[])[1]);
+const frameDepth=Number((js.match(/FRAME_DEPTH_IN\s*=\s*([0-9.]+)/)||[])[1]);
 assert(Number.isFinite(rx)&&rx>=3&&rx<=5,'X parallax tilt must stay in visible 3–5 degree envelope');
 assert(Number.isFinite(ry)&&ry>=3&&ry<=5,'Y parallax tilt must stay in visible 3–5 degree envelope');
 assert(Number.isFinite(sensor)&&sensor>=6&&sensor<=10,'sensor response must reach full parallax within 6–10 degrees');
+assert(face===2.360,'EL face width must remain tied to SCD 1006315G 2.360-in reference');
+assert(packageDepth===0.260,'EL package visual depth envelope must remain at .263/.257 midpoint');
+assert(frameDepth===0.300,'cover-frame depth cross-check must remain 0.300 in');
+assert(packageDepth>0&&packageDepth<=frameDepth,'EL package depth must fit inside cover-frame depth envelope');
+const basePackagePx=106*packageDepth/face;
+const baseFramePx=106*frameDepth/face;
+assert(basePackagePx>11&&basePackagePx<12,'base 106-unit EL package depth should scale to about 11.68 px');
+assert(baseFramePx>13&&baseFramePx<14,'base 106-unit cover-frame depth should scale to about 13.47 px');
 assert(!/calc\(var\(--dsky-parallax-[xy]\)\s*\*/.test(css),'WebView-unsafe CSS multiplication returned to parallax layer');
 assert(css.includes('.el-glass-sheen::before'),'EL glass edge occlusion layer missing');
 assert(!css.includes('animation:'),'parallax layer must not introduce autonomous looping animation');
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  visible tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
-console.log('  fullscreen EL bypasses stylesheet transforms with direct inline !important phosphor/glass motion');
+console.log(`  dimension-scaled EL package depth: ${packageDepth.toFixed(3)} in -> ${basePackagePx.toFixed(3)} px at 106-unit face width`);
+console.log(`  indicator-cover frame envelope: ${frameDepth.toFixed(3)} in -> ${baseFramePx.toFixed(3)} px at 106-unit face width`);
