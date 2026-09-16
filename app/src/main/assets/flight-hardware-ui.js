@@ -266,7 +266,7 @@
   installLightingControls();
   applyManual();
 
-  window.AGCDSKY = window.AGCDSKY || {};
+  if (!window.AGCDSKY) throw new Error('AGCDSKY public facade unavailable');
   window.AGCDSKY.lighting = Object.freeze({
     levels: () => ({numerics:effectiveNumerics, integral:effectiveIntegral, numericsIndex, integralIndex}),
     cycleNumerics,
