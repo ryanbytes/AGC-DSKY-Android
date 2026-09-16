@@ -4,18 +4,18 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets');
 const read=name=>fs.readFileSync(path.join(ASSETS,name),'utf8');
-const html=read('index.html'),css=read('parallax-3d.css'),js=read('parallax-3d.js'),adapter=read('phone-quaternion-events.js'),controls=read('controls-layout.css');
+const html=read('index.html'),css=read('parallax-3d.css'),js=read('parallax-3d.js'),controls=read('controls-layout.css');
+const java=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 
 assert((html.match(/href="parallax-3d\.css"/g)||[]).length===1,'parallax stylesheet must load exactly once');
 assert((html.match(/src="parallax-3d\.js"/g)||[]).length===1,'parallax controller must load exactly once');
-assert((html.match(/src="phone-quaternion-events\.js"/g)||[]).length===1,'native quaternion event adapter must load exactly once');
+assert(!html.includes('phone-quaternion-events.js'),'native quaternion callback adapter must not be parser-loaded');
+assert(!fs.existsSync(path.join(ASSETS,'phone-quaternion-events.js')),'obsolete native quaternion callback adapter must be deleted');
 const phoneIcduIndex=html.indexOf('<script src="phone-icdu.js"></script>');
-const adapterIndex=html.indexOf('<script src="phone-quaternion-events.js"></script>');
 const parallaxIndex=html.indexOf('<script src="parallax-3d.js"></script>');
 const dreamIndex=html.indexOf('<script src="dream-agc.js"></script>');
-assert(phoneIcduIndex>=0&&adapterIndex>phoneIcduIndex,'quaternion event adapter must load after phone sensor callback');
-assert(adapterIndex>=0&&parallaxIndex>adapterIndex,'parallax must consume the sensor event after the adapter is installed');
+assert(phoneIcduIndex>=0&&parallaxIndex>phoneIcduIndex,'parallax must initialize after the phone sensor callback owner');
 assert(parallaxIndex>=0&&dreamIndex>parallaxIndex,'parallax presentation must initialize before final Dream readiness layer');
 
 for(const token of [
@@ -99,13 +99,17 @@ for(const forbidden of [
 ]) assert(!js.includes(forbidden),`parallax must not own the native phone callback: ${forbidden}`);
 
 for(const token of [
-  'const prior = api.nativePhoneQuaternion',
+  'private void pushPhoneQuaternion(float[] q,int displayAngle)',
+  'pushPhoneQuaternion(q,angle);',
+  'AGCDSKY.nativePhoneQuaternion(%.9f,%.9f,%.9f,%.9f,%d)',
   "new CustomEvent('agcdsky-phonequaternion'",
-  'rawQuaternion: Object.freeze(rawQuaternion)',
-  "source: 'android-native'",
-  "Object.defineProperty(wrapped, '__agcdskyQuaternionEventAdapter'",
-  'api.nativePhoneQuaternion = wrapped'
-]) assert(adapter.includes(token),`native quaternion adapter missing ${token}`);
+  'Math.hypot(q[0],q[1],q[2],q[3])',
+  "Object.freeze({rawQuaternion:Object.freeze(q),displayAngle:%d,source:'android-native'})"
+]) assert(java.includes(token),`Android native quaternion bridge missing ${token}`);
+const nativeCallbackIndex=java.indexOf('AGCDSKY.nativePhoneQuaternion(%.9f,%.9f,%.9f,%.9f,%d)');
+const nativeEventIndex=java.indexOf("new CustomEvent('agcdsky-phonequaternion'");
+assert(nativeCallbackIndex>=0&&nativeEventIndex>nativeCallbackIndex,'Android bridge must preserve AGC phone callback before publishing presentation event');
+assert(!java.includes('__agcdskyQuaternionEventAdapter'),'Android bridge must not recreate callback wrapping');
 
 for(const token of [
   '.app-controls .parallax-controls',
@@ -168,9 +172,8 @@ assert(!/calc\(var\(--dsky-parallax-[xy]\)\s*\*/.test(css),'WebView-unsafe CSS m
 assert(css.includes('.el-glass-rear::after'),'rear glass interface edge layer missing');
 assert(!css.includes('animation:'),'parallax layer must not introduce autonomous looping animation');
 
-/* Execute the adapter + real controller in a tiny DOM harness. This proves
-   the Android callback remains an AGC/sensor integration concern while the
-   presentation layer receives only the published quaternion event. */
+/* Execute the real controller in a tiny DOM harness and model the exact native
+   bridge contract: phone callback first, then normalized read-only event. */
 function runtimeNativeParallaxSmoke(){
   const vars=new Map(),listeners=new Map(),raf=[];
   let now=1000,rafId=0,priorCalls=0;
@@ -217,21 +220,27 @@ function runtimeNativeParallaxSmoke(){
     setTimeout:()=>1,clearTimeout(){},console,
     Object,Number,Math,Map,Set,Array,String,Boolean,Error
   };
-  vm.runInNewContext(adapter,context,{filename:'phone-quaternion-events.js'});
-  const adaptedCallback=api.nativePhoneQuaternion;
-  assert(adaptedCallback!==prior,'native quaternion event adapter did not wrap the phone callback');
   vm.runInNewContext(js,context,{filename:'parallax-3d.js'});
   assert(window.AGCDSKY_PARALLAX,'runtime controller was not published');
-  assert(api.nativePhoneQuaternion===adaptedCallback,'parallax presentation must not replace the native quaternion callback');
+  assert(api.nativePhoneQuaternion===prior,'parallax presentation must not replace the native quaternion callback');
+  const nativePush=(w,x,y,z,displayAngle=0)=>{
+    api.nativePhoneQuaternion(w,x,y,z,displayAngle);
+    const raw=[w,x,y,z].map(Number),norm=Math.hypot(raw[0],raw[1],raw[2],raw[3]);
+    if(!(norm>0))return;
+    const normalized=raw.map(value=>value/norm);
+    const angle=Number.isFinite(Number(displayAngle))?((Number(displayAngle)%360)+360)%360:0;
+    window.dispatchEvent(new CustomEventShim('agcdsky-phonequaternion',{detail:Object.freeze({rawQuaternion:Object.freeze(normalized),displayAngle:angle,source:'android-native'})}));
+  };
   const drain=()=>{let guard=0;while(raf.length&&guard++<100){const cb=raf.shift();cb(now+=16);}assert(guard<100,'parallax RAF failed to converge');};
   const qY=degrees=>{const h=degrees*Math.PI/360;return [Math.cos(h),0,Math.sin(h),0];};
-  api.nativePhoneQuaternion(1,0,0,0,0);
+  nativePush(1,0,0,0,0);
   now+=10;
   const q=qY(4);
-  api.nativePhoneQuaternion(q[0],q[1],q[2],q[3],0);
+  nativePush(q[0],q[1],q[2],q[3],0);
   drain();
   const state=window.AGCDSKY_PARALLAX.state();
-  assert(priorCalls===2,'event adapter must preserve the phone-ICDU native callback');
+  assert(priorCalls===2,'direct native bridge must preserve the phone-ICDU native callback');
+  assert(api.nativePhoneQuaternion===prior,'native bridge contract must not replace callback ownership');
   assert(state.source==='native-quaternion','native quaternion event did not become active parallax source');
   assert(state.nativeActive===true,'native quaternion source should report active after a fresh event');
   assert(state.targetX>0.45&&state.targetX<0.55,'4-degree native pitch should map to about 50% horizontal parallax target');
@@ -248,7 +257,7 @@ const runtime=runtimeNativeParallaxSmoke();
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  geometric tilt: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
-console.log('  native path: phone callback -> read-only quaternion event -> presentation consumer');
+console.log('  native path: Android bridge -> unchanged phone callback -> read-only quaternion event -> presentation consumer');
 console.log('  synthetic glint/reflection: forbidden');
 console.log('  controls: TILT 0–200% + DEPTH 0–200%, persisted independently');
 console.log(`  physical glass: ${edgeDepth.toFixed(3)} + ${centerRise.toFixed(3)} = ${viewDepth.toFixed(3)} in -> ${baseGlassPx.toFixed(3)} px at 106-unit width`);
