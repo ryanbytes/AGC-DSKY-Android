@@ -27,7 +27,8 @@ if(consumers.length!==OWNERS.size)throw new Error(`compatibility owner count cha
 for(const name of consumers){
   const source=fs.readFileSync(path.join(ASSETS,name),'utf8');
   if(name==='app-state-runtime.js'){
-    if(!source.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,alias,readonly,get,replace,describe});'))throw new Error('compatibility registry publication changed');
+    if(!source.includes('window.AGCDSKY_COMPAT = Object.freeze({alias,readonly,get,replace,describe});'))throw new Error('forwarding/read-only compatibility registry publication changed');
+    if(source.includes('function mutable(')||source.includes('function accessor('))throw new Error('compatibility registry regained mutable ownership primitives');
     if(!source.includes('function alias(name, getter, setter = null, versionGetter = null, historyGetter = null)'))throw new Error('forwarded compatibility alias primitive missing');
     continue;
   }
@@ -47,4 +48,4 @@ const display=fs.readFileSync(path.join(ASSETS,'agc-display-runtime.js'),'utf8')
 if(!display.includes('function createImplementationSlot(name,initial,validate=null)')||!display.includes('function createStateSlot(name,getter,setter)')||!display.includes("relayDigitSlot=createImplementationSlot('relayDigit'")||!display.includes("decode10Slot=createImplementationSlot('decodeChannel10'")||!display.includes("applySnapshotSlot=createImplementationSlot('applySnapshotUi'")||!display.includes("ch13StateSlot=createStateSlot('agcCh13'")||!display.includes('compat.alias(name,slot.get'))throw new Error('display does not own implementation/channel-state slots behind forwarded compatibility aliases');
 for(const token of ["compat.mutable('relayDigit'","compat.mutable('renderAgcReg'","compat.mutable('resetAgcFace'","compat.mutable('decodeChannel10'","compat.mutable('decodeChannel11'","compat.mutable('decodeChannel13'","compat.mutable('decodeChannel163'","compat.mutable('applySnapshotUi'","compat.accessor('agcCh11'","compat.accessor('agcCh13'","compat.accessor('agcCh163'"])if(display.includes(token))throw new Error(`display compatibility registry still owns live state: ${token}`);
 console.log('compat boundary smoke: PASS');
-console.log(`  registry confined to ${consumers.join(', ')}; renderer, audio, clock, and display live state is owner-held behind forwarded aliases`);
+console.log(`  forwarding/read-only registry confined to ${consumers.join(', ')}; renderer, audio, clock, and display live state is owner-held behind forwarded aliases`);
