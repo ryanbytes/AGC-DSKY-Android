@@ -10,6 +10,7 @@ const state=context.AGCDSKY_APP_STATE,core=context.AGCDSKY_CORE_SESSION,compat=c
 assert(state&&Object.isSealed(state),'shared app state must exist and be sealed');
 assert(core&&Object.isSealed(core),'shared AGC core session must exist and be sealed');
 assert(compat&&Object.isFrozen(compat),'compatibility registry must exist and be frozen');
+assert(!('mutable' in compat)&&!('accessor' in compat),'compatibility registry must not expose mutable/accessor ownership primitives');
 assert(state.mode==='clock'&&state.selectedMission==='comanche055'&&state.verb==='16'&&state.noun==='65','shared app-state core defaults changed');
 assert(state.dream===false&&state.dreamMode==='dim'&&state.dim===false&&state.tickSound===true&&state.displayOnly===false&&state.appVisible===true,'shared presentation/visibility defaults changed');
 assert(state.ntpStatus&&state.ntpStatus.server==='time.cloudflare.com'&&state.ntpStatus.state==='unavailable','NTP state defaults changed');
@@ -18,14 +19,10 @@ assert(core.core===null&&core.loadedMission===''&&core.suspendedForClock===false
 const stateNames=['mode','selectedMission','verb','noun','dream','dreamMode','dim','tickSound','displayOnly','appVisible','ntpStatus','agcCore','agcLoadedMission','agcSuspendedForClock','agcPausedForVisibility'];
 for(const name of stateNames)assert(!Object.getOwnPropertyDescriptor(context,name),`${name} must not be a Window state property`);
 
-const probe=compat.mutable('compatProbe',()=>1,value=>typeof value==='function');
-assert(context.compatProbe()===1&&probe.version()===0,'compatibility mutable slot bootstrap changed');
-vm.runInContext("compatProbe=function(){return 2}",context);
-assert(context.compatProbe()===2&&compat.get('compatProbe')()===2&&probe.version()===1,'compatibility assignment did not update the owning slot');
-compat.replace('compatProbe',()=>3,'explicit smoke replacement');
-assert(context.compatProbe()===3&&probe.version()===2,'explicit compatibility replacement did not update the owning slot');
-assert(probe.history().length===2&&probe.history()[1].reason==='explicit smoke replacement','compatibility replacement provenance changed');
-assert(compat.describe().some(item=>item.name==='compatProbe'&&item.version===2),'compatibility registry diagnostics changed');
+const readonlyProbe=compat.readonly('readonlyProbe',()=>42);
+assert(context.readonlyProbe===42&&compat.get('readonlyProbe')===42&&readonlyProbe.version()===0,'compatibility read-only view bootstrap changed');
+let readonlyRejected=false;try{compat.replace('readonlyProbe',7,'forbidden replacement')}catch(error){readonlyRejected=error instanceof TypeError}assert(readonlyRejected,'read-only compatibility view accepted explicit replacement');
+assert(compat.describe().some(item=>item.name==='readonlyProbe'&&item.kind==='readonly'&&item.version===0),'read-only compatibility diagnostics changed');
 
 let forwarded=1,forwardedVersion=0;const forwardedHistory=[];
 compat.alias('forwardedProbe',()=>forwarded,(next,reason)=>{forwarded=Number(next);forwardedVersion++;forwardedHistory.push({version:forwardedVersion,reason})},()=>forwardedVersion,()=>forwardedHistory);
@@ -38,7 +35,8 @@ state.mode='agc';state.verb='35';state.noun='00';state.tickSound=false;state.dre
 assert(state.mode==='agc'&&state.verb==='35'&&state.noun==='00'&&state.tickSound===false&&state.dream&&state.displayOnly&&state.dreamMode==='solar'&&state.dim&&state.appVisible===false,'direct shared-state writes changed');
 assert(core.core&&core.loadedMission==='comanche055'&&core.suspendedForClock&&core.pausedForVisibility,'direct core-session writes changed');
 const originalState=state,originalCore=core,originalCompat=compat;new vm.Script(source).runInContext(context);assert(context.AGCDSKY_APP_STATE===originalState&&context.AGCDSKY_CORE_SESSION===originalCore&&context.AGCDSKY_COMPAT===originalCompat&&state.mode==='agc'&&core.loadedMission==='comanche055','bootstrap reinitialized an existing session/registry');
-assert(source.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,alias,readonly,get,replace,describe});'),'audited compatibility registry publication missing forwarded-alias API');
+assert(source.includes('window.AGCDSKY_COMPAT = Object.freeze({alias,readonly,get,replace,describe});'),'audited forwarding/read-only compatibility registry publication missing');
+assert(!source.includes('function mutable(')&&!source.includes('function accessor('),'compatibility registry retained mutable ownership primitives');
 assert(source.includes('Object.defineProperty(window, name'),'compatibility registry must own its accessor boundary');
 
 const stateIndex=html.indexOf('src="app-state-runtime.js"'),shellIndex=html.indexOf('src="app-shell-runtime.js"');
@@ -60,4 +58,4 @@ for(const [name,alias] of coreExpected){const s=read(name);assert(s.includes(`${
 const shell=read('app-shell-runtime.js');assert(shell.includes('function shellCore()')&&shell.includes('window.AGCDSKY_CORE_SESSION'),'shell does not dynamically resolve the explicit core session');
 for(const forbidden of ['let selectedMission=','let verb=','let noun=','let mode=','let ntpStatus=','let dreamMode=','let dim=','let tickSound=','let displayOnly=','let appVisible=','let agcCore=','let agcLoadedMission=','let agcSuspendedForClock=','let agcPausedForVisibility='])assert(!shell.includes(forbidden),`shell regained implicit session/core state: ${forbidden}`);
 console.log('app state runtime smoke: PASS');
-console.log('  sealed explicit app/core state, audited compatibility registry, forwarded owner-backed aliases, explicit replacement provenance, idempotent bootstrap, and explicit consumers verified');
+console.log('  sealed explicit app/core state, forwarding/read-only compatibility registry, owner-backed alias provenance, idempotent bootstrap, and explicit consumers verified');
