@@ -102,5 +102,5 @@
   function open(){build();document.getElementById('diag-view').classList.add('open');update();if(!timer)timer=setInterval(update,250)}
   function close(){document.getElementById('diag-view')?.classList.remove('open');if(timer){clearInterval(timer);timer=0}}
   addEventListener('DOMContentLoaded',()=>{build();const b=document.getElementById('diagnostics');if(b)b.addEventListener('click',open)});
-  window.AGCDSKY_DIAGNOSTICS=Object.freeze({open,close});
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_DIAGNOSTICS',Object.freeze({open,close}),'diagnostics publication');
 })();
