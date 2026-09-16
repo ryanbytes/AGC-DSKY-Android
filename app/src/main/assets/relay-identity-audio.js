@@ -7,12 +7,12 @@
  * and acoustic response without changing latch/display state.
  */
 (() => {
-  const compat=window.AGCDSKY_COMPAT;
+  const audio=window.AGCDSKY_AUDIO;
   const environment=window.AGCDSKY_ENVIRONMENT;
   const hardware=window.AGCDSKY_HARDWARE;
   const identityState=window.AGCDSKY_APP_STATE;
-  if(!compat||!environment||!hardware||!identityState)throw new Error('Relay identity service dependencies unavailable');
-  const fallbackEmitTick=compat.get('emitTick');
+  if(!audio||!environment||!hardware||!identityState)throw new Error('Relay identity service dependencies unavailable');
+  const fallbackEmitTick=audio.implementation('emitTick');
   if(typeof fallbackEmitTick!=='function')throw new Error('Relay audio implementation unavailable');
   const bufferCache=new Map(),contactBufferCache=new Map();
 
@@ -111,7 +111,7 @@
     }
     fallbackEmitTick(ctx,when,strength);
   }
-  compat.replace('emitTick',individualDskyRelayClick,'individual relay identity audio');
+  audio.installImplementation('emitTick',individualDskyRelayClick,'individual relay identity audio');
 
   const RELAY_SETTLE_MS=Object.freeze(Array.from({length:12},(_,rowIndex)=>Object.freeze(Array.from({length:11},(_,bit)=>{const p=profileFor(relayIdentity(rowIndex+1,bit),relayOrdinal(rowIndex+1,bit));return Math.max(p.setStableMs,p.resetStableMs)}))));
   const allStable=RELAY_SETTLE_MS.flat();

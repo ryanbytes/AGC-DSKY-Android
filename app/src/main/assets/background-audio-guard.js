@@ -2,19 +2,19 @@
 
 // Late WebAudio lifecycle/recovery service. Display snapshot authority and
 // PHONE CLOCK rendering now live in their owning services, so this layer only
-// wraps audio implementation slots and background queue handling.
+// replaces audio implementations through AGCDSKY_AUDIO and handles background
+// queue/lifecycle policy.
 (() => {
   const guardState=window.AGCDSKY_APP_STATE;
-  const compat=window.AGCDSKY_COMPAT;
   const audio=window.AGCDSKY_AUDIO;
   const clock=window.AGCDSKY_CLOCK;
-  if(!guardState||!compat||!audio||!clock)throw new Error('Audio recovery service dependencies unavailable');
+  if(!guardState||!audio||!clock)throw new Error('Audio recovery service dependencies unavailable');
   const audibleNow=()=>!guardState.dream&&!document.hidden&&guardState.appVisible;
   const AUDIO_STABLE_MS=8000,AUDIO_FAILURE_LIMIT=2;
   let audioFailureCount=0,audioCircuitOpen=false,audioFailureReported=false,audioStableTimer=0;
   const observedAudioContexts=new WeakSet(),retiredAudioContexts=new WeakSet();
   const getContext=()=>audio.context();
-  const setContext=value=>compat.replace('audioCtx',value,'audio recovery context');
+  const setContext=value=>audio.setContext(value,'audio recovery context');
 
   function audioErrorText(error){if(!error)return'unknown error';if(typeof error==='string')return error;const name=error.name?String(error.name):'',message=error.message?String(error.message):String(error);return name&&message&&!message.startsWith(name)?`${name}: ${message}`:(message||name||'unknown error')}
   function reportAudioFailure(reason,error){if(audioFailureReported)return;audioFailureReported=true;const detail=`WebAudio recovery failed after ${audioFailureCount} consecutive failures: ${reason}; ${audioErrorText(error)}`;try{if(window.DebugBridge&&typeof window.DebugBridge.report==='function')window.DebugBridge.report(detail)}catch(_){}}
@@ -53,19 +53,19 @@
     }
     return ctx;
   }
-  compat.replace('ensureAudio',resilientEnsureAudio,'WebAudio recovery guard');
+  audio.installImplementation('ensure',resilientEnsureAudio,'WebAudio recovery guard');
 
-  const baseApplyTickSound=compat.get('applyTickSound');
+  const baseApplyTickSound=audio.implementation('applySetting');
   function resilientApplyTickSound(){if(guardState.tickSound&&audioCircuitOpen)resetAudioCircuit();return baseApplyTickSound()}
-  compat.replace('applyTickSound',resilientApplyTickSound,'WebAudio circuit reset');
+  audio.installImplementation('applySetting',resilientApplyTickSound,'WebAudio circuit reset');
 
-  const audibleEmitTick=compat.get('emitTick');
+  const audibleEmitTick=audio.implementation('emitTick');
   function guardedRelayTick(ctx,when,strength){if(!audibleNow()||!ctx||ctx!==getContext()||ctx.state==='closed')return;return audibleEmitTick(ctx,when,strength)}
-  compat.replace('emitTick',guardedRelayTick,'background audio visibility guard');
+  audio.installImplementation('emitTick',guardedRelayTick,'background audio visibility guard');
 
-  const audiblePlayRelayBurst=compat.get('playRelayBurst');
+  const audiblePlayRelayBurst=audio.implementation('playBurst');
   function guardedRelayBurst(count){if(!audibleNow()||audioCircuitOpen)return;return audiblePlayRelayBurst(count)}
-  compat.replace('playRelayBurst',guardedRelayBurst,'background relay burst guard');
+  audio.installImplementation('playBurst',guardedRelayBurst,'background relay burst guard');
 
   function status(){const ctx=getContext();return{state:ctx?ctx.state:'none',failures:audioFailureCount,circuitOpen:audioCircuitOpen}}
   window.AGCDSKY_AUDIO_RECOVERY=Object.freeze({status,resetCircuit:resetAudioCircuit});

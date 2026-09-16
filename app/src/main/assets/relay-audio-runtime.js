@@ -1,8 +1,8 @@
 'use strict';
 
-// Shared relay-contact audio authority. Late relay personality/recovery scripts
-// still assign the historical names, but AGCDSKY_COMPAT turns those assignments
-// into versioned implementation-slot updates consumed by AGCDSKY_AUDIO.
+// Shared relay-contact audio authority. Legacy global names remain registered
+// only at this boundary for compatibility, while all late audio layers replace
+// implementations through AGCDSKY_AUDIO itself.
 (() => {
   const audioState=window.AGCDSKY_APP_STATE;
   const audioShell=window.AGCDSKY_SHELL;
@@ -15,7 +15,7 @@
 
   const RELAY_CLICK_SPREAD_MS_VALUE=2.5;
   let audioCtxValue=null;
-  let ensureSlot,emitSlot,burstSlot,applySlot;
+  let contextSlot,ensureSlot,emitSlot,burstSlot,applySlot;
 
   function baseEnsureAudio(){
     if(!audioCtxValue){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;audioCtxValue=new AC()}
@@ -48,11 +48,33 @@
 
   const isFn=value=>typeof value==='function';
   compat.readonly('RELAY_CLICK_SPREAD_MS',()=>RELAY_CLICK_SPREAD_MS_VALUE);
-  compat.accessor('audioCtx',()=>audioCtxValue,next=>{audioCtxValue=next||null});
+  contextSlot=compat.accessor('audioCtx',()=>audioCtxValue,next=>{audioCtxValue=next||null});
   ensureSlot=compat.mutable('ensureAudio',baseEnsureAudio,isFn);
   emitSlot=compat.mutable('emitTick',baseEmitTick,isFn);
   burstSlot=compat.mutable('playRelayBurst',basePlayRelayBurst,isFn);
   applySlot=compat.mutable('applyTickSound',baseApplyTickSound,isFn);
+
+  const implementationSlots=Object.freeze({
+    ensure:ensureSlot,
+    emitTick:emitSlot,
+    playBurst:burstSlot,
+    applySetting:applySlot
+  });
+  function implementation(name){
+    const slot=implementationSlots[name];
+    if(!slot)throw new Error(`Unknown audio implementation: ${String(name)}`);
+    return slot.get();
+  }
+  function installImplementation(name,next,reason='explicit audio implementation'){
+    const slot=implementationSlots[name];
+    if(!slot)throw new Error(`Unknown audio implementation: ${String(name)}`);
+    if(typeof next!=='function')throw new TypeError(`Audio implementation must be a function: ${String(name)}`);
+    return slot.set(next,reason);
+  }
+  function setContext(next,reason='explicit audio context'){
+    contextSlot.set(next||null,reason);
+    return audioCtxValue;
+  }
 
   window.AGCDSKY_AUDIO=Object.freeze({
     ensure:(...args)=>ensureSlot.get()(...args),
@@ -60,6 +82,10 @@
     playBurst:(...args)=>burstSlot.get()(...args),
     applySetting:(...args)=>applySlot.get()(...args),
     context:()=>audioCtxValue,
+    setContext,
+    implementation,
+    installImplementation,
+    relayClickSpreadMs:()=>RELAY_CLICK_SPREAD_MS_VALUE,
     compatibilityVersions:()=>({ensure:ensureSlot.version(),emitTick:emitSlot.version(),playBurst:burstSlot.version(),applySetting:applySlot.version()})
   });
 })();

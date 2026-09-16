@@ -3,7 +3,7 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
-const guardSource=read('background-audio-guard.js'),pageResourceLifecycleSource=read('page-resource-lifecycle.js'),debugReporterSource=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/DebugReporter.java'),'utf8');
+const guardSource=read('background-audio-guard.js'),audioSource=read('relay-audio-runtime.js'),pageResourceLifecycleSource=read('page-resource-lifecycle.js'),debugReporterSource=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/DebugReporter.java'),'utf8');
 function makeHarness({dream=false,hidden=false}={}){
   const reports=[],instances=[],scheduled=new Map();let timerId=0;
   class FakeAudioContext{
@@ -27,7 +27,15 @@ function makeHarness({dream=false,hidden=false}={}){
 }
 async function flush(){await Promise.resolve();await Promise.resolve()}
 (async()=>{
-  assert(guardSource.includes("compat.replace('ensureAudio'"),'audio guard must register resilient ensure through compatibility service');
+  assert(audioSource.includes('installImplementation'),'audio runtime must own replaceable implementation installation');
+  assert(audioSource.includes('implementation(name)'),'audio runtime must expose implementation lookup for wrapper chaining');
+  assert(audioSource.includes('setContext'),'audio runtime must own context replacement');
+  assert(guardSource.includes("audio.installImplementation('ensure'"),'audio guard must install resilient ensure through audio service');
+  assert(guardSource.includes("audio.installImplementation('applySetting'"),'audio guard must install resilient setting through audio service');
+  assert(guardSource.includes("audio.installImplementation('emitTick'"),'audio guard must install tick visibility gate through audio service');
+  assert(guardSource.includes("audio.installImplementation('playBurst'"),'audio guard must install burst visibility gate through audio service');
+  assert(guardSource.includes("audio.setContext(value,'audio recovery context')"),'audio recovery must replace context through audio service');
+  assert(!guardSource.includes('AGCDSKY_COMPAT')&&!guardSource.includes('compat.'),'audio recovery must not depend directly on compatibility registry');
   assert(guardSource.includes("ctx.addEventListener('error'"),'audio guard must listen for renderer errors');
   assert(guardSource.includes('AUDIO_FAILURE_LIMIT=2'),'audio guard failure limit changed');
   assert(!guardSource.includes('applySnapshotUi =')&&!guardSource.includes('renderAgcReg ='),'audio recovery guard must not own display/snapshot projection');
@@ -45,5 +53,5 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   const p=makeHarness();p.FakeAudioContext.nextState='suspended';const policy=new Error('gesture required');policy.name='NotAllowedError';p.FakeAudioContext.nextResumeError=policy;const policyCtx=p.audio.ensure();await flush();assert(p.recovery.status().state==='suspended'&&p.recovery.status().failures===0&&policyCtx.closeCount===0,'NotAllowedError must retain suspended context without failure count');
   const dream=makeHarness({dream:true});assert(dream.audio.ensure()===null&&dream.instances.length===0,'Dream mode must remain silent');
   const hidden=makeHarness({hidden:true});assert(hidden.audio.ensure()===null&&hidden.instances.length===0,'hidden app must not create/resume relay audio');
-  console.log('audio recovery smoke: PASS');console.log('  explicit audio service recovery, circuit breaker, closed-context replacement, policy rejection, and Dream/hidden silence verified');
+  console.log('audio recovery smoke: PASS');console.log('  explicit audio-service recovery ownership, circuit breaker, closed-context replacement, policy rejection, and Dream/hidden silence verified');
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});
