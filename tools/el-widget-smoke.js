@@ -184,9 +184,16 @@ no(generator,'android:viewportWidth="100"','obsolete squeezed viewport');
 no(html,'viewBox="0 0 106 190"','obsolete stretched WebView');
 const versionCode=gradle.match(/\bversionCode\s+(\d+)/);
 if(!versionCode || Number(versionCode[1]) < 20053) fail('Gradle versionCode is missing or regressed below 20053');
-req(gradle,"versionName '1.1.4'",'Gradle');
+const versionName=gradle.match(/\bversionName\s+'(\d+)\.(\d+)\.(\d+)'/);
+if(!versionName) fail('Gradle semantic versionName is missing');
+const versionTuple=versionName.slice(1).map(Number);
+const minimumTuple=[1,1,4];
+for(let i=0;i<3;i++){
+  if(versionTuple[i] > minimumTuple[i]) break;
+  if(versionTuple[i] < minimumTuple[i]) fail(`Gradle versionName regressed below ${minimumTuple.join('.')}: ${versionTuple.join('.')}`);
+}
 req(generator,'for (let sec=0; sec<60; sec++)','seconds generator');
 req(generator,'android:pathData','seconds generator');
 
 console.log('EL widget source smoke: PASS');
-console.log('  1006315G active-face ratio, upper electrodes, labels, and clearance verified');
+console.log(`  1006315G active-face ratio, upper electrodes, labels, clearance, and app version ${versionTuple.join('.')} verified`);
