@@ -33,8 +33,8 @@ for(const token of [
   'height:49.0204%',
   '@media (prefers-reduced-motion:reduce)'
 ]) assert(css.includes(token),`parallax CSS missing ${token}`);
-for(const mode of [':not(.dream)',':not(.screen-only)'])
-  assert(css.includes(mode),`parallax CSS does not exclude ${mode}`);
+assert(css.includes(':not(.dream)'), 'parallax CSS must keep Dream flat');
+assert(css.includes('body.parallax-3d.screen-only:not(.dream) .elpanel'),'EL-only view must have a dedicated parallax transform');
 assert(!css.includes(':not(.display-only)'),'FULL DSKY DISPLAY must not disable parallax in CSS');
 
 for(const token of [
@@ -49,7 +49,6 @@ for(const token of [
   "source = 'static'",
   "setTarget(dx * 0.88, dy * 0.78, 'native')",
   "body.classList.contains('dream')",
-  "body.classList.contains('screen-only')",
   "glassSheen.className = 'el-glass-sheen'",
   'window.AGCDSKY_PARALLAX = controller',
   'api.parallax3d = controller'
@@ -80,18 +79,12 @@ assert(Number.isFinite(ry)&&ry>0&&ry<=2,'Y parallax tilt escaped restrained <=2 
 assert(Number.isFinite(translation)&&translation>=3&&translation<=6,'parallax layer translation must stay visible but bounded');
 assert(!css.includes('animation:'),'parallax layer must not introduce autonomous looping animation');
 
-// The Android bridge observer is deliberately a transparent wrapper. Ensure the
-// source keeps the try/catch presentation observer before one exact passthrough
-// call and never suppresses/replaces the native IMU handler's return value.
 const wrapper=js.match(/const observed = function dskyParallaxNativeQuaternion\(\.\.\.args\) \{([\s\S]*?)\n    \};/);
 assert(wrapper,'native quaternion observer wrapper missing');
 assert((wrapper[1].match(/original\.apply\(this, args\)/g)||[]).length===1,'native quaternion bridge must call its original exactly once');
 assert(wrapper[1].indexOf('onNativeQuaternion(...args)')>=0,'native quaternion observer must feed parallax');
 assert(wrapper[1].indexOf('return original.apply(this, args)')>wrapper[1].indexOf('onNativeQuaternion(...args)'),'native quaternion observer must preserve the original bridge return path');
 
-// Behavioral probe: run the production controller in a tiny DOM/WebView model,
-// deliver the same [w,x,y,z,displayAngle] shape used by SensorMainActivity, and
-// prove the wrapper both preserves the native bridge and moves presentation.
 const classes=new Set(),vars=new Map(),raf=[];
 const body={classList:{
   contains:name=>classes.has(name),
@@ -138,9 +131,11 @@ assert(parseFloat(vars.get('--dsky-tilt-y'))>0.8,'native tilt did not produce vi
 classes.add('display-only');
 assert(controller.enabled(),'FULL DSKY DISPLAY disabled parallax at runtime');
 classes.add('screen-only');
-assert(!controller.enabled(),'screen-only must remain flat');
+assert(controller.enabled(),'screen-only EL display must remain parallax-enabled');
+classes.add('dream');
+assert(!controller.enabled(),'Dream must remain flat');
 
 console.log('parallax 3D smoke: PASS');
 console.log(`  restrained tilt envelope: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; translation ${translation.toFixed(2)} px scale`);
 console.log(`  native 8-degree probe: targetX ${state.targetX.toFixed(3)} / layer ${vars.get('--dsky-parallax-x')} / tiltY ${vars.get('--dsky-tilt-y')}`);
-console.log('  Android native quaternion passthrough, FULL DSKY DISPLAY crop preservation, pointer fallback, depth layers, and flat Dream/reduced-motion modes verified');
+console.log('  Android native quaternion passthrough, FULL DSKY DISPLAY crop preservation, pointer fallback, depth layers, and EL-only parallax plus flat Dream/reduced-motion modes verified');
