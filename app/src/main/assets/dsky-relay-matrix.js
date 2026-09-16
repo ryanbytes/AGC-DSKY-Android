@@ -26,10 +26,11 @@
  */
 (() => {
   const compat=window.AGCDSKY_COMPAT;
-  if(!compat)throw new Error('Runtime compatibility bridge unavailable');
+  const display=window.AGCDSKY_DISPLAY;
+  if(!compat||!display)throw new Error('DSKY relay matrix services unavailable');
   const segments=compat.get('SEG');
   const relayDigits=compat.get('RELAY_DIGIT');
-  const baseRelayDigit=compat.get('relayDigit');
+  const baseRelayDigit=display.implementation('relayDigit');
   if(typeof baseRelayDigit!=='function'||!segments||typeof segments!=='object'||!relayDigits||typeof relayDigits!=='object')throw new Error('DSKY relay matrix dependencies unavailable');
 
   function segmentsForRelayCode(value) {
@@ -78,7 +79,7 @@
     if (!Number.isFinite(value)) return baseRelayDigit(code);
     return physicalChars[value & 0x1f];
   }
-  compat.replace('relayDigit',schematicRelayDigit,'schematic K1-K5 relay matrix');
+  display.installImplementation('relayDigit',schematicRelayDigit,'schematic K1-K5 relay matrix');
 
   window.DSKY_RELAY_MATRIX = Object.freeze({
     source: 'Apollo DSKY relay-contact schematic via VirtualAGC Tools/traceDSKY.py',
