@@ -34,10 +34,18 @@ android {
 
     // Debug builds are intentionally installable alongside a release build so
     // hardware/UI work can be device-tested without replacing the user's HOME app.
+    // The installfix build uses a second, never-before-used package ID so it also
+    // bypasses stale .eltest signatures from older CI/debug builds.
     buildTypes {
         debug {
             applicationIdSuffix '.eltest'
             versionNameSuffix '-eltest'
+        }
+        installfix {
+            debuggable true
+            applicationIdSuffix '.installfix'
+            versionNameSuffix '-installfix'
+            signingConfig signingConfigs.debug
         }
     }
 
