@@ -13,14 +13,21 @@ const RESERVED=[
   'accurateTime','accurateDate','ntpStatus','nativeNtpStatus',
   'hardware','audioStatus','relayShow','openDiagnostics','closeDiagnostics'
 ];
+const RETIRED=['parallax3d'];
 function escapeRegExp(value){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 const files=fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js')).sort();
 const violations=[];
+const retiredUses=[];
 for(const name of files){
-  if(name===OWNER)continue;
   const source=fs.readFileSync(path.join(ASSETS,name),'utf8');
   const aliases=[];
   if(/\b(?:const|let|var)\s+api\s*=\s*window\.AGCDSKY\b/.test(source)||/\b(?:const|let|var)\s+api\s*=\s*window\.AGCDSKY\s*=/.test(source))aliases.push('api');
+  for(const key of RETIRED){
+    const escaped=escapeRegExp(key);
+    if(new RegExp(`\\bwindow\\.AGCDSKY\\.${escaped}\\b`).test(source))retiredUses.push(`${name}: window.AGCDSKY.${key}`);
+    for(const alias of aliases)if(new RegExp(`\\b${alias}\\.${escaped}\\b`).test(source))retiredUses.push(`${name}: ${alias}.${key}`);
+  }
+  if(name===OWNER)continue;
   for(const key of RESERVED){
     const escaped=escapeRegExp(key);
     const direct=new RegExp(`\\bwindow\\.AGCDSKY\\.${escaped}\\s*=\\s*(?!=)`,'m');
@@ -33,6 +40,7 @@ for(const name of files){
   }
 }
 if(violations.length)throw new Error(`stable public facade mutated outside ${OWNER}: ${violations.join(', ')}`);
+if(retiredUses.length)throw new Error(`retired public facade alias returned: ${retiredUses.join(', ')}`);
 const owner=fs.readFileSync(path.join(ASSETS,OWNER),'utf8');
 for(const marker of [
   'function publicEnterAgc()',
@@ -45,5 +53,5 @@ for(const marker of [
   'window.AGCDSKY={services:apiServices'
 ])if(!owner.includes(marker))throw new Error(`public facade owner marker missing: ${marker}`);
 console.log('public facade boundary smoke: PASS');
-console.log(`  ${RESERVED.length} stable AGCDSKY facade keys remain owned by ${OWNER}`);
+console.log(`  ${RESERVED.length} stable AGCDSKY facade keys remain owned by ${OWNER}; retired aliases absent: ${RETIRED.join(', ')}`);
 require('./phone-api-runtime-smoke.js');
