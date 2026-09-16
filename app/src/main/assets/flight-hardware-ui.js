@@ -266,8 +266,7 @@
   installLightingControls();
   applyManual();
 
-  if (!window.AGCDSKY) throw new Error('AGCDSKY public facade unavailable');
-  window.AGCDSKY.lighting = Object.freeze({
+  const lighting = Object.freeze({
     levels: () => ({numerics:effectiveNumerics, integral:effectiveIntegral, numericsIndex, integralIndex}),
     cycleNumerics,
     cycleIntegral,
@@ -275,9 +274,12 @@
     demoActive: () => demoActive,
     restore: applyManual
   });
-  window.AGCDSKY.hardwarePersonality = () => ({
-    seed:hardwareSeed,
-    lamps:Object.fromEntries(Object.entries(lampPersonalities).map(([name, value]) => [name, {part:value.part, sources:value.sources.map(x => ({...x}))}])),
-    keys:Object.fromEntries(Object.entries(keyPersonalities).map(([name, value]) => [name, {...value}]))
-  });
+  function hardwarePersonality(){
+    return {
+      seed:hardwareSeed,
+      lamps:Object.fromEntries(Object.entries(lampPersonalities).map(([name, value]) => [name, {part:value.part, sources:value.sources.map(x => ({...x}))}])),
+      keys:Object.fromEntries(Object.entries(keyPersonalities).map(([name, value]) => [name, {...value}]))
+    };
+  }
+  window.AGCDSKY_FLIGHT_HARDWARE_UI=Object.freeze({lighting,hardwarePersonality});
 })();
