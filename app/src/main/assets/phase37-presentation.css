@@ -1,0 +1,86 @@
+/* Phase 37: optional FS-595-inspired palette and EL cover-glass material. */
+body.authentic-colors.spacecraft-cm:not(.dream):not(.screen-only) .dsky{
+  background:
+    radial-gradient(ellipse at 22% 8%,rgba(255,255,255,.10) 0%,rgba(255,255,255,.025) 24%,transparent 46%),
+    radial-gradient(ellipse at 83% 92%,rgba(0,0,0,.13) 0%,transparent 48%),
+    repeating-linear-gradient(101deg,rgba(255,255,255,.008) 0 .06vmin,rgba(0,0,0,.010) .06vmin .14vmin),
+    linear-gradient(148deg,#8d9294 0%,#7c8183 30%,#6d7275 68%,#797e80 100%)!important;
+}
+body.authentic-colors.spacecraft-cm .el-glass-background{fill:#4e535a!important}
+body.authentic-colors.spacecraft-cm .el-ito-dot{fill:#91999c!important;opacity:.68!important}
+body.authentic-colors.spacecraft-cm .lamp:not(.on){
+  background:linear-gradient(112deg,rgba(255,255,255,.075),transparent 31%),linear-gradient(180deg,#858a8c 0%,#7c8183 58%,#707578 100%)!important;
+}
+body.authentic-colors.screen-only,
+body.authentic-colors.screen-only #app,
+body.authentic-colors.screen-only .dsky,
+body.authentic-colors.screen-only .elpanel{background:#4e535a!important}
+
+body.parallax-3d.screen-only:not(.dream) #app{perspective:760px!important;perspective-origin:50% 50%}
+body.parallax-3d.screen-only:not(.dream) .elpanel{
+  transform:translate(-50%,-50%) translate3d(calc(var(--dsky-el-parallax-x) * .58px),calc(var(--dsky-el-parallax-y) * .58px),7px) rotateX(var(--dsky-el-tilt-x)) rotateY(var(--dsky-el-tilt-y))!important;
+  transform-origin:50% 50%!important;
+  transform-style:preserve-3d;
+  will-change:transform;
+  filter:drop-shadow(var(--dsky-el-shadow-x) var(--dsky-el-shadow-y) 5px rgba(0,0,0,.48))!important;
+}
+body.parallax-3d.screen-only:not(.dream) .el-glass-sheen{
+  --glass-shift-x:var(--dsky-el-parallax-x);
+  --glass-shift-y:var(--dsky-el-parallax-y);
+  transform:translate(-50%,-50%) translate3d(calc(var(--dsky-el-parallax-x) * .98px),calc(var(--dsky-el-parallax-y) * .98px),13px) rotateX(var(--dsky-el-tilt-x)) rotateY(var(--dsky-el-tilt-y))!important;
+  transform-origin:50% 50%!important;
+  opacity:.88!important;
+}
+body.parallax-3d:not(.dream):not(.screen-only) .el-glass-sheen{
+  --glass-shift-x:var(--dsky-parallax-x);
+  --glass-shift-y:var(--dsky-parallax-y);
+}
+
+/* Front reflection, rear-surface ghost, and absorbed dark edge of finite glass. */
+body.spacecraft-cm:not(.dream) .el-glass-sheen{
+  overflow:hidden;
+  border:.055vmin solid rgba(205,218,213,.20);
+  border-radius:.20vmin;
+  box-sizing:border-box;
+  mix-blend-mode:normal!important;
+  box-shadow:
+    inset .08vmin .07vmin .16vmin rgba(255,255,255,.13),
+    inset -.10vmin -.12vmin .24vmin rgba(0,0,0,.26),
+    inset 0 0 .95vmin rgba(9,17,15,.14),
+    0 .04vmin .12vmin rgba(0,0,0,.26)!important;
+}
+body.spacecraft-cm:not(.dream) .el-glass-sheen::before,
+body.spacecraft-cm:not(.dream) .el-glass-sheen::after{
+  content:"";
+  position:absolute;
+  pointer-events:none;
+}
+body.spacecraft-cm:not(.dream) .el-glass-sheen::before{
+  inset:0;
+  background:
+    linear-gradient(111deg,transparent 2%,rgba(240,249,245,.025) 18%,rgba(246,252,249,.15) 25%,rgba(255,255,255,.035) 31%,transparent 42%),
+    radial-gradient(ellipse at var(--dsky-light-x,52%) var(--dsky-light-y,44%),rgba(238,249,244,.11),rgba(221,239,232,.025) 25%,transparent 52%),
+    linear-gradient(180deg,rgba(255,255,255,.035),transparent 16%,transparent 80%,rgba(4,10,9,.10));
+  mix-blend-mode:screen;
+  opacity:.76;
+}
+body.spacecraft-cm:not(.dream) .el-glass-sheen::after{
+  inset:1.1%;
+  border:.04vmin solid rgba(5,12,10,.18);
+  border-radius:.14vmin;
+  background:
+    linear-gradient(111deg,transparent 7%,rgba(215,232,225,.055) 26%,transparent 34%),
+    linear-gradient(180deg,rgba(4,10,8,.035),transparent 14%,transparent 84%,rgba(2,7,6,.085));
+  transform:translate3d(calc(var(--glass-shift-x,0) * -.20px),calc(var(--glass-shift-y,0) * -.20px),1px);
+  box-shadow:inset 0 0 .38vmin rgba(0,0,0,.13);
+  opacity:.72;
+}
+body.parallax-3d.screen-only:not(.dream) .el-glass-sheen::before{
+  background:
+    linear-gradient(109deg,transparent 0 12%,rgba(244,252,248,.035) 20%,rgba(250,255,252,.18) 27%,rgba(255,255,255,.045) 34%,transparent 46%),
+    radial-gradient(ellipse at var(--dsky-el-light-x,52%) var(--dsky-el-light-y,44%),rgba(238,249,244,.13),rgba(221,239,232,.028) 27%,transparent 55%),
+    linear-gradient(180deg,rgba(255,255,255,.045),transparent 15%,transparent 80%,rgba(4,10,9,.12));
+}
+body.parallax-3d.screen-only:not(.dream) .el-glass-sheen::after{
+  transform:translate3d(calc(var(--glass-shift-x,0) * -.26px),calc(var(--glass-shift-y,0) * -.26px),1px);
+}
