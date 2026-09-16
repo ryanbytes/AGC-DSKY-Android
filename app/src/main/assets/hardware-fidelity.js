@@ -13,9 +13,11 @@
  * yaAGC I/O, and yaAGC DSKY hardware-state output are authoritative. The
  * synthetic phone-clock V35 helpers are retained only for clock-mode testing.
  *
- * This module no longer mutates parser-global implementations directly. Core
- * implementation hooks are replaced explicitly through AGCDSKY_COMPAT, while
- * hardware diagnostics and settled-paint policy live on AGCDSKY_HARDWARE.
+ * This module no longer mutates parser-global implementations directly. Display
+ * implementation hooks are installed through AGCDSKY_DISPLAY; remaining clock
+ * queue/V35 compatibility slots stay behind AGCDSKY_COMPAT until the clock
+ * ownership slice. Hardware diagnostics and settled-paint policy live on
+ * AGCDSKY_HARDWARE.
  */
 (() => {
   const fidelityState=window.AGCDSKY_APP_STATE;
@@ -136,32 +138,31 @@
     },RELAY_DRIVE_MS);
   }
 
-  const baseDecodeChannel10=compat.get('decodeChannel10');
   function hardwareDecodeChannel10(value){
     const word=Number(value)&0o77777,relay=(word>>11)&0o17;
     if(relay===0){hw.activeDrive=0;hw.lastWrite={relay:0,low11:0,changed:0,at:performance.now()};return true}
     if(relay<1||relay>12)return false;
     beginRelayDrive(relay,word&0o3777,true);return true;
   }
-  compat.replace('decodeChannel10',hardwareDecodeChannel10,'hardware relay drive');
+  display.installImplementation('decodeChannel10',hardwareDecodeChannel10,'hardware relay drive');
 
-  const baseDecodeChannel11=compat.get('decodeChannel11');
+  const baseDecodeChannel11=display.implementation('decodeChannel11');
   function hardwareDecodeChannel11(value){
     const word=Number(value)&0o77777;setAuxRelays({comp:!!(word&0o00002),uplink:!!(word&0o00004),flash:!!(word&0o00040)},false);return baseDecodeChannel11.call(this,value);
   }
-  compat.replace('decodeChannel11',hardwareDecodeChannel11,'hardware auxiliary relays');
+  display.installImplementation('decodeChannel11',hardwareDecodeChannel11,'hardware auxiliary relays');
 
-  const baseDecodeChannel163=compat.get('decodeChannel163');
+  const baseDecodeChannel163=display.implementation('decodeChannel163');
   function hardwareDecodeChannel163(value){
     const word=Number(value)&0o77777;setAuxRelays({temp:!!(word&0o00010),keyrel:!!(word&0o00020),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},false);return baseDecodeChannel163.call(this,value);
   }
-  compat.replace('decodeChannel163',hardwareDecodeChannel163,'hardware pulse-modulated auxiliaries');
+  display.installImplementation('decodeChannel163',hardwareDecodeChannel163,'hardware pulse-modulated auxiliaries');
 
-  const baseResetAgcFace=compat.get('resetAgcFace');
+  const baseResetAgcFace=display.implementation('resetFace');
   function hardwareResetAgcFace(...args){
     for(const key of Object.keys(hw.latches))delete hw.latches[key];for(const key of Object.keys(hw.relayGeneration))delete hw.relayGeneration[key];hw.activeDrive=0;for(const key of Object.keys(hw.auxRelays))hw.auxRelays[key]=false;return baseResetAgcFace.apply(this,args);
   }
-  compat.replace('resetAgcFace',hardwareResetAgcFace,'hardware reset state');
+  display.installImplementation('resetFace',hardwareResetAgcFace,'hardware reset state');
 
   const baseStopClockQueue=compat.get('stopClockQueue');
   function hardwareStopClockQueue(...args){hw.clockToken++;return baseStopClockQueue.apply(this,args)}
