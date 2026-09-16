@@ -2,8 +2,8 @@
   'use strict';
 
   const api = window.AGCDSKY;
-  const transitions = window.AGCDSKY_RUNTIME;
-  const input = window.AGCDSKY_INPUT;
+  const transitions = api?.runtimeTransitions;
+  const input = api?.inputRuntime;
   const AGC_KEY = window.AGCDSKY_KEY_CODES;
   if (!api || !transitions || !input
       || typeof transitions.requestAgc !== 'function'
