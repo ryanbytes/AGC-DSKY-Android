@@ -48,13 +48,13 @@ for(const token of [
   "nativeBridgeObserved:() => nativeBridgeObserved",
   "source = 'static'",
   "setTarget(dx * 0.88, dy * 0.78, 'native')",
-  "document.body.classList.contains('dream')",
-  "document.body.classList.contains('screen-only')",
+  "body.classList.contains('dream')",
+  "body.classList.contains('screen-only')",
   "glassSheen.className = 'el-glass-sheen'",
   'window.AGCDSKY_PARALLAX = controller',
   'api.parallax3d = controller'
 ]) assert(js.includes(token),`parallax controller missing ${token}`);
-assert(!js.includes("document.body.classList.contains('display-only')"),'FULL DSKY DISPLAY must remain parallax-enabled in JS');
+assert(!js.includes("classList.contains('display-only')"),'FULL DSKY DISPLAY must remain parallax-enabled in JS');
 
 for(const forbidden of [
   'preventDefault(',
