@@ -40,5 +40,8 @@ if(renderer.includes("compat.mutable('glyph'")||renderer.includes("compat.mutabl
 const audio=fs.readFileSync(path.join(ASSETS,'relay-audio-runtime.js'),'utf8');
 if(!audio.includes('function createOwnedSlot(name,initial,validate=null)')||!audio.includes('function createContextSlot()')||!audio.includes("compat.alias('audioCtx'")||!audio.includes('compat.alias(name,slot.get'))throw new Error('audio does not own context/implementation slots behind forwarded compatibility aliases');
 for(const token of ["compat.accessor('audioCtx'","compat.mutable('ensureAudio'","compat.mutable('emitTick'","compat.mutable('playRelayBurst'","compat.mutable('applyTickSound'"])if(audio.includes(token))throw new Error(`audio compatibility registry still owns live state: ${token}`);
+const clock=fs.readFileSync(path.join(ASSETS,'phone-clock-runtime.js'),'utf8');
+if(!clock.includes('function createImplementationSlot(name,initial,validate=null)')||!clock.includes("runQueueSlot=createImplementationSlot('runRelayQueue'")||!clock.includes("lampTestSlot=createImplementationSlot('lampTest'")||!clock.includes('compat.alias(name,slot.get'))throw new Error('clock does not own implementation slots behind forwarded compatibility aliases');
+for(const token of ["compat.mutable('renderClockReg'","compat.mutable('syncClockFace'","compat.mutable('stopClockQueue'","compat.mutable('runRelayQueue'","compat.mutable('tick'","compat.mutable('cancelLampTest'","compat.mutable('lampTest'"])if(clock.includes(token))throw new Error(`clock compatibility registry still owns implementation state: ${token}`);
 console.log('compat boundary smoke: PASS');
-console.log(`  registry confined to ${consumers.join(', ')}; renderer and audio implementation state is owner-held behind forwarded aliases`);
+console.log(`  registry confined to ${consumers.join(', ')}; renderer, audio, and clock implementation state is owner-held behind forwarded aliases`);
