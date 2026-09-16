@@ -14,7 +14,8 @@
   const controller = Object.freeze({
     authentic: () => true
   });
-  const api = window.AGCDSKY = window.AGCDSKY || {};
+  const api = window.AGCDSKY;
+  if (!api) throw new Error('AGCDSKY public facade unavailable');
   api.hardwareColorMode = controller;
   window.AGCDSKY_HARDWARE_COLOR_MODE = controller;
 })();
