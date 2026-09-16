@@ -9,16 +9,15 @@
  * - touch: samples the contact position without consuming the event
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
  * - Dream/display-only/reduced-motion: flat and inactive; screen-only keeps EL depth
+ * - user controls: independent persisted tilt and perceived-depth intensity, 0-200%
  *
  * Display-glass depth is scaled from drawing 2004745 geometry documented in
- * docs/DISPLAY_GLASS_GEOMETRY.md.  The external laminated panel has a
+ * docs/DISPLAY_GLASS_GEOMETRY.md. The external laminated panel has a
  * 2.354-in raised clear-view width, 0.109-in edge thickness, and a 0.025-in
  * raised central face, for 0.134 in from rear face to central viewing face.
  *
- * The 0.257/0.263-in SCD 1006315 dimension is the sealed digital-indicator
- * package thickness and is intentionally NOT used as cover-glass depth.
- *
- * No AGC, relay, channel, keycode, or persistence state is touched here.
+ * The DEPTH slider scales motion/parallax cues only. It never changes the
+ * drawing-backed 0.134-in physical glass spacing.
  */
 (() => {
   if (window.__DSKY_PARALLAX_3D__) return;
@@ -59,6 +58,12 @@
   const MAX_SENSOR_DELTA_DEG = 8;
   const NATIVE_PRIORITY_MS = 600;
 
+  // Restored v1.1.18 user tuning. 100% is the calibrated current default.
+  const TILT_STORAGE_KEY = 'dskyParallaxTiltPct';
+  const DEPTH_STORAGE_KEY = 'dskyParallaxDepthPct';
+  const DEFAULT_INTENSITY_PERCENT = 100;
+  const MAX_INTENSITY_PERCENT = 200;
+
   // Drawing-accurate 2004745 reconstructed glass geometry, in inches.
   const GLASS_CLEAR_WIDTH_IN = 2.354;
   const GLASS_EDGE_THICKNESS_IN = 0.109;
@@ -70,6 +75,11 @@
   let physicalGlassDepthPx = 0;
   let physicalGlassEdgeDepthPx = 0;
   let physicalGlassCenterRisePx = 0;
+
+  let tiltPercent = readStoredPercent(TILT_STORAGE_KEY, DEFAULT_INTENSITY_PERCENT);
+  let depthPercent = readStoredPercent(DEPTH_STORAGE_KEY, DEFAULT_INTENSITY_PERCENT);
+  let tiltOutput = null;
+  let depthOutput = null;
 
   let targetX = STATIC_X;
   let targetY = STATIC_Y;
@@ -85,6 +95,95 @@
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, Number(value) || 0));
+  }
+
+  function normalizePercent(value, fallback = DEFAULT_INTENSITY_PERCENT) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.round(clamp(numeric, 0, MAX_INTENSITY_PERCENT));
+  }
+
+  function readStoredPercent(key, fallback) {
+    if (typeof localStorage === 'undefined') return fallback;
+    try {
+      const stored = localStorage.getItem(key);
+      return stored == null ? fallback : normalizePercent(stored, fallback);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeStoredPercent(key, value) {
+    if (typeof localStorage === 'undefined') return;
+    try { localStorage.setItem(key, String(value)); } catch (_) {}
+  }
+
+  function updateIntensityReadouts() {
+    if (tiltOutput) tiltOutput.textContent = `${tiltPercent}%`;
+    if (depthOutput) depthOutput.textContent = `${depthPercent}%`;
+  }
+
+  function updateTiltPercent(value, persist = true) {
+    tiltPercent = normalizePercent(value);
+    if (persist) writeStoredPercent(TILT_STORAGE_KEY, tiltPercent);
+    updateIntensityReadouts();
+    scheduleFrame();
+    return tiltPercent;
+  }
+
+  function updateDepthPercent(value, persist = true) {
+    depthPercent = normalizePercent(value);
+    if (persist) writeStoredPercent(DEPTH_STORAGE_KEY, depthPercent);
+    updateIntensityReadouts();
+    scheduleFrame();
+    return depthPercent;
+  }
+
+  function buildIntensityControl(id, label, value, setValue) {
+    const wrapper = document.createElement('label');
+    wrapper.className = 'parallax-control';
+    wrapper.setAttribute('for', id);
+
+    const legend = document.createElement('span');
+    const name = document.createElement('b');
+    name.textContent = label;
+    const output = document.createElement('output');
+    output.setAttribute('for', id);
+    output.textContent = `${value}%`;
+    legend.appendChild(name);
+    legend.appendChild(output);
+
+    const input = document.createElement('input');
+    input.id = id;
+    input.type = 'range';
+    input.min = '0';
+    input.max = String(MAX_INTENSITY_PERCENT);
+    input.step = '5';
+    input.value = String(value);
+    input.setAttribute('aria-label', `${label} parallax intensity`);
+    input.addEventListener('input', () => setValue(input.value, false));
+    input.addEventListener('change', () => setValue(input.value, true));
+
+    wrapper.appendChild(legend);
+    wrapper.appendChild(input);
+    return {wrapper, output};
+  }
+
+  function installIntensityControls() {
+    const controls = document.getElementById('controls');
+    if (!controls || controls.querySelector('.parallax-controls')) return;
+    const group = document.createElement('div');
+    group.className = 'parallax-controls';
+    group.setAttribute('aria-label', 'Parallax intensity');
+
+    const tilt = buildIntensityControl('parallax-tilt-intensity', 'TILT', tiltPercent, updateTiltPercent);
+    const depth = buildIntensityControl('parallax-depth-intensity', 'DEPTH', depthPercent, updateDepthPercent);
+    tiltOutput = tilt.output;
+    depthOutput = depth.output;
+    group.appendChild(tilt.wrapper);
+    group.appendChild(depth.wrapper);
+    controls.appendChild(group);
+    updateIntensityReadouts();
   }
 
   function presentationAllowed() {
@@ -115,8 +214,6 @@
     physicalGlassEdgeDepthPx = edgeDepthPx;
     physicalGlassCenterRisePx = centerRisePx;
 
-    // Front central glass surface is the Z datum.  The rear glass interface
-    // and bonded EL face sit one physical 2004745 viewing thickness behind it.
     dsky.style.setProperty('--dsky-glass-rear-z', `${(-glassDepthPx).toFixed(3)}px`);
     dsky.style.setProperty('--dsky-el-z', `${(-glassDepthPx).toFixed(3)}px`);
     dsky.style.setProperty('--dsky-glass-depth-px', `${glassDepthPx.toFixed(3)}px`);
@@ -128,14 +225,16 @@
     const allowed = presentationAllowed();
     const x = allowed ? currentX : 0;
     const y = allowed ? currentY : 0;
-    const tiltX = -y * MAX_ROTATE_X_DEG;
-    const tiltY = x * MAX_ROTATE_Y_DEG;
-    const parallaxX = x * 3.8;
-    const parallaxY = y * 3.8;
-    const lightX = 50 + x * 28;
-    const lightY = 45 + y * 24;
-    const shadowX = -x * 7.0;
-    const shadowY = 6.0 - y * 3.2;
+    const tiltScale = tiltPercent / 100;
+    const depthScale = depthPercent / 100;
+    const tiltX = -y * MAX_ROTATE_X_DEG * tiltScale;
+    const tiltY = x * MAX_ROTATE_Y_DEG * tiltScale;
+    const parallaxX = x * 3.8 * depthScale;
+    const parallaxY = y * 3.8 * depthScale;
+    const lightX = 50 + x * 28 * depthScale;
+    const lightY = 45 + y * 24 * depthScale;
+    const shadowX = -x * 7.0 * depthScale;
+    const shadowY = 6.0 - y * 3.2 * depthScale;
 
     dsky.style.setProperty('--dsky-tilt-x', `${tiltX.toFixed(3)}deg`);
     dsky.style.setProperty('--dsky-tilt-y', `${tiltY.toFixed(3)}deg`);
@@ -369,6 +468,9 @@
     enabled:() => presentationAllowed(),
     source:() => source,
     nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS,
+    intensity:() => Object.freeze({tiltPercent, depthPercent}),
+    setTiltPercent:value => updateTiltPercent(value, true),
+    setDepthPercent:value => updateDepthPercent(value, true),
     reset:() => setTarget(STATIC_X, STATIC_Y, 'static'),
     geometry:() => Object.freeze({
       glassClearWidthIn:GLASS_CLEAR_WIDTH_IN,
@@ -385,6 +487,8 @@
       enabled:presentationAllowed(),
       source,
       nativeActive:performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS,
+      tiltPercent,
+      depthPercent,
       x:currentX,
       y:currentY,
       targetX,
@@ -394,6 +498,7 @@
   window.AGCDSKY_PARALLAX = controller;
   api.parallax3d = controller;
 
+  installIntensityControls();
   setPresentationClass();
   updatePhysicalDepth();
   apply();
