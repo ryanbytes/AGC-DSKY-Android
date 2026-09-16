@@ -57,7 +57,7 @@
     if (typeof window.showControls === 'function') window.showControls();
   }, {capture:true, passive:false});
 
-  window.AGCDSKY.lightingRheostatStop = Object.freeze({
+  window.AGCDSKY_LIGHTING_RHEOSTAT_STOP = Object.freeze({
     minimumNormalUiLevel:MIN_NORMAL_LEVEL,
     completeOffMethod:'open lighting feed / circuit breaker, not normal rheostat rotation',
     zeroReservedFor:'LIGHT BUS DEMO feed-open state',
