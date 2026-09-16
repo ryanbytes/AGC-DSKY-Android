@@ -2,6 +2,7 @@
 'use strict';
 
 const fs=require('fs'),path=require('path'),vm=require('vm');
+const {installServiceRegistry}=require('./test-service-registry');
 const source=fs.readFileSync(path.resolve(__dirname,'../app/src/main/assets/key-mechanical-spec.js'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 function button(key){const props=Object.create(null);return{dataset:{key},style:{setProperty(name,value){props[name]=value}},props}}
@@ -9,12 +10,13 @@ const buttons=['1','2','3','V','N','R','K','E','C','+','-','P'].map(button);
 const baseKeys=Object.fromEntries(buttons.map(b=>[b.dataset.key,{contactMs:31.7,returnSoundMs:22.3,travelVmin:.456,makePitch:500,returnPitch:320,soundGain:1.03}]));
 const baseService=Object.freeze({hardwarePersonality(){return{seed:'1234abcd',lamps:{},keys:baseKeys}}});
 const AGCDSKY={};
-const context={console,document:{querySelectorAll(selector){return selector==='[data-key]'?buttons:[]}},AGCDSKY,AGCDSKY_FLIGHT_HARDWARE_UI:baseService,window:null};context.window=context;
+const context={console,document:{querySelectorAll(selector){return selector==='[data-key]'?buttons:[]}},AGCDSKY,AGCDSKY_FLIGHT_HARDWARE_UI:baseService,window:null};context.window=context;installServiceRegistry(context);
 AGCDSKY.hardwarePersonality=function(){const service=context.AGCDSKY_KEY_MECHANICAL_SPEC;return service&&service.hardwarePersonality?service.hardwarePersonality():context.AGCDSKY_FLIGHT_HARDWARE_UI.hardwarePersonality()};
 AGCDSKY.keyMechanicalSpec=function(){const service=context.AGCDSKY_KEY_MECHANICAL_SPEC;return service&&service.spec?service.spec():null};
 const personalityIdentity=AGCDSKY.hardwarePersonality,specIdentity=AGCDSKY.keyMechanicalSpec;
 vm.createContext(context);vm.runInContext(source,context,{filename:'key-mechanical-spec.js'});
 assert(context.AGCDSKY_KEY_MECHANICAL_SPEC&&Object.isFrozen(context.AGCDSKY_KEY_MECHANICAL_SPEC),'key mechanical service missing/mutable');
+assert(source.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEY_MECHANICAL_SPEC',service"),'key mechanics explicit registry publication missing');
 assert(AGCDSKY.hardwarePersonality===personalityIdentity&&AGCDSKY.keyMechanicalSpec===specIdentity,'service publication replaced bootstrap compatibility functions');
 assert(!source.includes('window.AGCDSKY.hardwarePersonality =')&&!source.includes('window.AGCDSKY.keyMechanicalSpec ='),'key mechanics regained late facade mutation');
 const first=AGCDSKY.hardwarePersonality(),second=AGCDSKY.hardwarePersonality();
@@ -47,4 +49,4 @@ for(const [key,p] of Object.entries(first.keys)){
 assert(new Set(rates).size>1,'deterministic spring-rate personalities did not vary');
 for(const b of buttons){assert(b.dataset.keyStrokeIn==='0.2500',`${b.dataset.key}: stroke metadata missing`);assert(b.dataset.keyActuationIn==='0.1875',`${b.dataset.key}: contact-point metadata missing`);assert(b.props['--key-travel']==='0.42vmin',`${b.dataset.key}: screen-depth estimate drifted`)}
 console.log('key mechanical specification smoke: PASS');
-console.log('  composed service ownership, stable bootstrap delegates, stroke/switch data, and source-derived spring-force increments verified; total finger force remains unset');
+console.log('  explicit service publication, composed service ownership, stable bootstrap delegates, stroke/switch data, and source-derived spring-force increments verified; total finger force remains unset');
