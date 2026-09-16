@@ -20,7 +20,6 @@ shellState.tickSound=store.get('audioTickV4')!=='0';
 shellState.displayOnly=shellState.dream||store.get('displayOnly')==='1';
 store.set('agcMission','comanche055');
 const restoreAgcOnLoad=!shellState.dream&&store.get('runMode')!=='clock';
-let controlsTimer=0;
 
 function shellCore(){const session=window.AGCDSKY_CORE_SESSION;return session?session.core:null}
 function show(v,n){shellState.verb=v;shellState.noun=n;set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
@@ -36,7 +35,8 @@ function applyMissionButton(){const b=$('mission');if(b)b.textContent=missionSpe
 function rememberRunMode(next){if(!shellState.dream)store.set('runMode',next)}
 function cycleMission(){shellState.selectedMission='comanche055';store.set('agcMission','comanche055');applyMissionButton()}
 
-function showControls(){if(shellState.dream||shellState.displayOnly)return;document.body.classList.add('controls-visible');clearTimeout(controlsTimer);controlsTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),5500)}
+function showControls(){if(shellState.dream||shellState.displayOnly)return;document.body.classList.add('controls-visible')}
+function hideControls(){document.body.classList.remove('controls-visible')}
 
 let appShellInitialized=false;
 function initializeAppShell(api){
@@ -49,15 +49,21 @@ function initializeAppShell(api){
     throw new Error('Application API unavailable during shell initialization');
   }
   appShellInitialized=true;
-  let holdTimer=0;
+  let holdTimer=0,tapHideControls=false;
   document.addEventListener('pointerdown',e=>{
+    tapHideControls=false;
     if(shellState.dream)return;
     if(shellState.displayOnly){holdTimer=setTimeout(()=>{shellState.displayOnly=false;applyDisplayOnly();showControls()},1800);return}
-    if(e.target.closest('[data-key],.app-controls'))return;
-    holdTimer=setTimeout(showControls,620);
+    if(e.target.closest('.app-controls'))return;
+    if(document.body.classList.contains('controls-visible')){
+      if(!e.target.closest('[data-key]'))tapHideControls=true;
+      return;
+    }
+    if(e.target.closest('[data-key]'))return;
+    holdTimer=setTimeout(()=>{tapHideControls=false;showControls()},620);
   },{passive:true});
-  document.addEventListener('pointerup',()=>clearTimeout(holdTimer),{passive:true});
-  document.addEventListener('pointercancel',()=>clearTimeout(holdTimer),{passive:true});
+  document.addEventListener('pointerup',()=>{clearTimeout(holdTimer);if(tapHideControls)hideControls();tapHideControls=false},{passive:true});
+  document.addEventListener('pointercancel',()=>{clearTimeout(holdTimer);tapHideControls=false},{passive:true});
   document.addEventListener('visibilitychange',()=>api.setAppVisible(!document.hidden));
   addEventListener('pagehide',()=>{const core=shellCore();if(shellState.mode==='agc'&&core){core.stop();api.saveAgcState('page hide')}});
   $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;applyDim();showControls()});
