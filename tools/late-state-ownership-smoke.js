@@ -3,6 +3,15 @@
 const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
+function hasUnqualified(source,token){
+  let index=source.indexOf(token);
+  while(index>=0){
+    const previous=index>0?source[index-1]:'';
+    if(previous!=='.'&&!/[A-Za-z0-9_$]/.test(previous))return true;
+    index=source.indexOf(token,index+1);
+  }
+  return false;
+}
 const explicit=[
   ['app-shell-runtime.js','shellState'],['dsky-geometry.js','geometryState'],['hardware-fidelity.js','fidelityState'],
   ['background-audio-guard.js','guardState'],['relay-show.js','showState'],['screen-only.js','screenState'],
@@ -23,7 +32,7 @@ for(const [name,source,forbidden] of [
   ['agc-snapshot-runtime.js',snapshot,["agcCore","agcLoadedMission"]],
   ['agc-lifecycle-runtime.js',life,["agcCore","agcLoadedMission","agcSuspendedForClock","agcPausedForVisibility"]],
   ['agc-api-runtime.js',api,["agcCore"]]
-])for(const token of forbidden)assert(!source.includes(token),`${name} retained implicit state/core expression: ${token}`);
+])for(const token of forbidden)assert(!hasUnqualified(source,token),`${name} retained implicit state/core expression: ${token}`);
 assert(shell.includes('shellState.appVisible')&&shell.includes('function shellCore()')&&shell.includes('window.AGCDSKY_CORE_SESSION'),'shell does not use explicit visibility/core session');
 assert(geometry.includes("geometryState.mode==='agc'")&&geometry.includes('shell.show(geometryState.verb,geometryState.noun)')&&geometry.includes("geometryState.mode!=='clock'"),'geometry startup/repaint does not use explicit shared mode/command state through shell service');
 assert(identity.includes('!identityState.tickSound'),'relay identity audio does not read shared audio preference');
