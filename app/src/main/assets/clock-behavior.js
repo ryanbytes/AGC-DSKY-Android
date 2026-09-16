@@ -2,63 +2,105 @@
   'use strict';
 
   const api = window.AGCDSKY;
-  if (!api) return;
+  const transitions = api?.runtimeTransitions;
+  const input = api?.inputRuntime;
+  const AGC_KEY = window.AGCDSKY_KEY_CODES;
+  if (!api || !transitions || !input
+      || typeof transitions.requestAgc !== 'function'
+      || typeof transitions.mode !== 'function'
+      || typeof transitions.clockRequested !== 'function'
+      || typeof transitions.onBeforeClock !== 'function'
+      || typeof input.ready !== 'function'
+      || typeof input.keyMake !== 'function'
+      || !AGC_KEY) return;
 
-  // Clock mode remains visually passive. COMP ACTY is not synthesized here;
-  // once the real AGC is active, app.js owns that lamp from channel 011.
-  const AGC_KEY = Object.freeze({
-    '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
-    V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
-  });
+  // This layer owns only the document-level CLOCK keypad fallback. The
+  // parser-loaded CM electrical interlock normally captures physical normal
+  // keys earlier at window capture. Both paths share the same transition,
+  // keycode and electrical-input services, so this fallback cannot grow a
+  // second app/runtime/core interpretation.
   const pendingKeys = [];
-  let promoting = false;
+  let promotionPromise = null;
+  let promotionEpoch = 0;
 
-  async function promoteClockInput(key) {
-    pendingKeys.push(key);
-    if (promoting) return;
-    promoting = true;
+  function cancelClockInput() {
+    pendingKeys.length = 0;
+    promotionEpoch++;
+    promotionPromise = null;
+  }
 
+  async function drainClockInput(epoch) {
     try {
-      await api.enterAgc();
-      const core = api.getCore && api.getCore();
-      const status = api.appStatus();
-      if (!core || status.mode !== 'agc') {
-        pendingKeys.length = 0;
-        return;
+      await transitions.requestAgc('clock keypad fallback');
+      if (epoch !== promotionEpoch || transitions.clockRequested()) return;
+      if (transitions.mode() !== transitions.modes.AGC || !input.ready()) {
+        throw new Error('AGC input runtime unavailable after clock keypad handoff');
       }
-      while (pendingKeys.length) {
+      while (pendingKeys.length && epoch === promotionEpoch && !transitions.clockRequested()) {
         const next = pendingKeys.shift();
         const code = AGC_KEY[next];
-        if (code !== undefined) core.keyPress(code);
+        if (code !== undefined) input.keyMake(code);
       }
-      if (typeof api.scheduleAgcAutosave === 'function') api.scheduleAgcAutosave('clock keypad handoff');
+      if (epoch === promotionEpoch && !transitions.clockRequested()
+          && typeof api.scheduleAgcAutosave === 'function') {
+        api.scheduleAgcAutosave('clock keypad handoff');
+      }
     } catch (error) {
-      pendingKeys.length = 0;
-      console.error('Clock-to-AGC keypad handoff', error);
+      if (epoch === promotionEpoch && !transitions.clockRequested()) {
+        pendingKeys.length = 0;
+        console.error('Clock-to-AGC keypad handoff', error);
+      }
     } finally {
-      promoting = false;
+      // A canceled old drain must never clear a newer promotion Promise.
+      if (epoch === promotionEpoch) promotionPromise = null;
     }
+  }
+
+  function promoteClockInput(key) {
+    if (transitions.clockRequested()) return Promise.resolve(false);
+    pendingKeys.push(key);
+    if (!promotionPromise) {
+      const epoch = promotionEpoch;
+      promotionPromise = drainClockInput(epoch);
+    }
+    return promotionPromise;
   }
 
   document.addEventListener('pointerdown', event => {
     const key = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
     if (!key) return;
-    let mode = '';
-    try { mode = api.appStatus().mode; } catch (_) { return; }
-    if (mode !== 'clock' && mode !== 'agc-loading') return;
+    let currentMode;
+    try { currentMode = transitions.mode(); } catch (_) { return; }
+    if (currentMode !== transitions.modes.CLOCK && currentMode !== transitions.modes.AGC_LOADING) return;
 
-    // Stop app.js's local clock-entry handler from consuming the key. Other
-    // capture listeners on document still receive the completed user gesture.
+    // This is a fallback only. In the live CM path the parser-loaded electrical
+    // interlock owns window capture first and stops propagation before here.
     event.preventDefault();
     event.stopPropagation();
+    if (transitions.clockRequested()) return;
     key.classList.add('pressed');
     setTimeout(() => key.classList.remove('pressed'), 90);
-    promoteClockInput(key.dataset.key);
+    void promoteClockInput(key.dataset.key);
   }, {capture:true, passive:false});
 
-  window.AGCDSKY_CLOCK_BEHAVIOR = {
+  // If CLOCK is selected while a fallback promotion is awaiting AGC readiness,
+  // invalidate that queue immediately. Its async continuation may still settle,
+  // but the epoch check prevents any stale keycode or autosave from reappearing.
+  transitions.onBeforeClock(cancelClockInput);
+
+  const clockBehavior = Object.freeze({
     promoteClockInput,
-    isPromoting: () => promoting,
-    pendingCount: () => pendingKeys.length
-  };
+    cancel:cancelClockInput,
+    isPromoting:() => !!promotionPromise,
+    pendingCount:() => pendingKeys.length,
+    snapshot:() => ({
+      mode:transitions.mode(),
+      clockRequested:transitions.clockRequested(),
+      promotionInFlight:!!promotionPromise,
+      promotionEpoch,
+      pendingKeys:pendingKeys.slice()
+    })
+  });
+  window.AGCDSKY_CLOCK_BEHAVIOR = clockBehavior;
+  api.clockBehavior = clockBehavior;
 })();

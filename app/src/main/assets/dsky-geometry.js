@@ -4,13 +4,21 @@
  * Apollo Block II DSKY EL geometry.
  *
  * Source of truth: MIT/IL SCD 1006315G plus the metric segment trace from
- * DSKY V2.svg.  The trace already implements the drawing: 12.700 mm = .500 in
- * high, nominal .065-in segment thickness, 15-degree side slope, and the
- * drawing's .320-in REF datum-to-edge dimension.  Do not squeeze the trace to
- * a .320-in bounding box: .320 is a datum dimension in Detail C, not the full
- * slanted glyph bounding width.
+ * DSKY V2.svg. The renderer service owns the implementation slots; this late
+ * drawing-geometry layer replaces those slots explicitly through AGCDSKY_COMPAT
+ * and does not depend on parser-global helper bindings.
  */
 (() => {
+  const geometryState=window.AGCDSKY_APP_STATE;
+  const compat=window.AGCDSKY_COMPAT;
+  const renderer=window.AGCDSKY_RENDERER;
+  const shell=window.AGCDSKY_SHELL;
+  const clock=window.AGCDSKY_CLOCK;
+  const display=window.AGCDSKY_DISPLAY;
+  if(!geometryState)throw new Error('Shared application state unavailable');
+  if(!compat||!renderer||!shell||!clock||!display)throw new Error('DSKY geometry service dependencies unavailable');
+  const segments=compat.get('SEG');
+
   const SOURCE = Object.freeze({
     a: 'M 95.137274,86.827056 l 1.10725,-1.523997 h -6.1558 l 0.40836,1.523997 z',
     f: 'M 91.361734,91.526056 l -1.66745,-6.222997 h -1.57776 l 1.66745,6.222997 z',
@@ -23,8 +31,6 @@
 
   const SRC_X=88.116524,SRC_Y=85.303059,SRC_W=11.685430;
   const MIRROR_X=2*SRC_X+SRC_W;
-  // After horizontal mirroring, this is the Detail-C digit datum.  From this
-  // datum to the rightmost segment edge is exactly 8.128 mm = .320 in.
   const DATUM_X=MIRROR_X-96.244524;
   const SOURCE_FOR_LOGICAL=Object.freeze({a:'a',b:'f',c:'e',d:'d',e:'c',f:'b',g:'g'});
 
@@ -33,9 +39,6 @@
   const DIGIT_H=.500*U;
   const UPPER_ADVANCE=.420*U;
   const REGISTER_ADVANCE=.410*U;
-
-  // Sheet 2 register-bar dimension chain.  The three continuously lit bars
-  // are dimensioned from the bottom edge of the 4.060-in active face.
   const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);
   const BAR_H_IN=.060;
   const REGISTER_GAP_IN=.070;
@@ -47,17 +50,12 @@
     return `<path class="el-seg ${on?'on':'off'}" data-seg="${name}" d="${SOURCE[sourceName]}"/>`;
   }
 
-  glyph=function apolloGlyph(ch,x){
-    const lit=SEG[ch]||'';
+  function apolloGlyph(ch,x){
+    const lit=segments[ch]||'';
     const paths=['a','b','c','d','e','f','g'].map(name=>segment(name,lit.includes(name))).join('');
     return `<g class="el-glyph" transform="translate(${Number(x).toFixed(3)} 0) scale(${MM_TO_U.toFixed(6)}) translate(${-DATUM_X.toFixed(6)} ${-SRC_Y})"><g transform="matrix(-1 0 0 1 ${MIRROR_X.toFixed(6)} 0)">${paths}</g></g>`;
-  };
+  }
 
-  // 1006315G Detail A, position 6: the sign is THREE physical EL islands,
-  // not one continuous cross.  The two vertical islands are both segment A;
-  // the horizontal island is segment B.  A plus energizes A+B, a minus only B.
-  // Detail A gives a .338-in nominal overall envelope, .265-in nominal B width,
-  // .065-in nominal segment thickness, and .010 MIN TYP separation.
   const SIGN_W=.265*U,SIGN_H=.338*U,SIGN_T=.065*U,SIGN_X=.025*U,SIGN_GAP=.010*U;
   const SIGN_TOP=(DIGIT_H-SIGN_H)*.5;
   const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5;
@@ -70,21 +68,26 @@
     const bottom=`<path class="el-seg ${on?'on':'off'}" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_LOWER_Y.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
     return top+bottom;
   }
-  signGlyph=function apolloSignGlyph(sign){const a=sign==='+',b=a||sign==='-';return `<g class="el-sign">${signA(a)}${signB(b)}</g>`;};
+  function apolloSignGlyph(sign){const a=sign==='+',b=a||sign==='-';return `<g class="el-sign">${signA(a)}${signB(b)}</g>`;}
 
-  renderDigits=function apolloRenderDigits(el,text){let out='';String(text).split('').forEach((ch,i)=>{out+=glyph(ch,i*UPPER_ADVANCE);});el.innerHTML=out;};
+  function apolloRenderDigits(el,text){
+    let out='';
+    String(text).split('').forEach((ch,i)=>{out+=compat.get('glyph')(ch,i*UPPER_ADVANCE);});
+    el.innerHTML=out;
+  }
   const FIRST_DIGIT_X=.400*U;
-  renderReg=function apolloRenderReg(el,text){text=String(text);let out=signGlyph(text[0]);text.slice(1).split('').forEach((ch,i)=>{out+=glyph(ch,FIRST_DIGIT_X+i*REGISTER_ADVANCE);});el.innerHTML=out;};
+  function apolloRenderReg(el,text){
+    text=String(text);
+    let out=compat.get('signGlyph')(text[0]);
+    text.slice(1).split('').forEach((ch,i)=>{out+=compat.get('glyph')(ch,FIRST_DIGIT_X+i*REGISTER_ADVANCE);});
+    el.innerHTML=out;
+  }
 
-  // 1006315G sheet 2 is the authority for the upper-row electrode datums.
-  // The first continuously-lit separator is 2.280 in above the bottom of the
-  // 4.060-in active face, so its center is 1.780 in below the top.  The drawing
-  // dimensions the VERB/NOUN digit datum to that separator center at
-  // .555/.565 in (.560 nominal).  Therefore the digit top datum is 1.220 in,
-  // not 1.275 in.  With .500-in-high digits and a .060-in separator this leaves
-  // the drawing-correct .030-in clearance instead of a .025-in overlap.
-  // Horizontally, Detail C puts the first right-hand datum at 1.620 in and the
-  // exact upper-group separation is 1.470 in, placing VERB at .150 in.
+  compat.replace('glyph',apolloGlyph,'Apollo drawing geometry');
+  compat.replace('signGlyph',apolloSignGlyph,'Apollo drawing geometry');
+  compat.replace('renderDigits',apolloRenderDigits,'Apollo drawing geometry');
+  compat.replace('renderReg',apolloRenderReg,'Apollo drawing geometry');
+
   const RIGHT_FIELD_X_IN=1.620;
   const UPPER_GROUP_X_OFFSET_IN=1.470;
   const LEFT_FIELD_X_IN=RIGHT_FIELD_X_IN-UPPER_GROUP_X_OFFSET_IN;
@@ -109,25 +112,18 @@
     if(node)node.setAttribute('transform',transform);
   }
 
-  if(typeof mode!=='undefined'&&mode==='agc'&&typeof renderAgcField==='function'){
-    ['prog','verb','noun','r1','r2','r3'].forEach(renderAgcField);
+  if(geometryState.mode==='agc'||geometryState.mode==='agc-loading'){
+    display.renderSnapshot();
   }else{
-    if(typeof set2==='function')set2('prog','00');
-    if(typeof show==='function')show(verb,noun);
-    if(typeof renderClockReg==='function')['r1','r2','r3'].forEach(renderClockReg);
+    renderer.set2('prog','00');
+    shell.show(geometryState.verb,geometryState.noun);
+    ['r1','r2','r3'].forEach(name=>clock.renderReg(name));
   }
 
-  // app.js paints the synthetic clock face before the drawing renderer is
-  // installed, while the later hardware-fidelity layers seed their retained
-  // relay state after it.  Reassert only the clock-mode PROG field after the
-  // complete startup script stack has settled so row 11 cannot leave it blank.
-  // Real AGC/Comanche mode is never touched here: its PROG digits remain driven
-  // exclusively by channel 010 relay row 11.
   function restoreClockProg(){
-    if(typeof mode==='undefined'||mode!=='clock')return;
-    if(typeof lampTestActive!=='undefined'&&lampTestActive)return;
+    if(geometryState.mode!=='clock'||clock.lampTestActive())return;
     const prog=document.getElementById('prog');
-    if(prog)renderDigits(prog,'00');
+    if(prog)renderer.renderDigits(prog,'00');
   }
   setTimeout(restoreClockProg,0);
   window.addEventListener('load',restoreClockProg,{once:true});

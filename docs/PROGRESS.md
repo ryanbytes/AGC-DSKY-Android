@@ -1,6 +1,85 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14
+
+## 2026-09-14 DSKY runtime refactor phase 30
+
+`startup-defaults.js` had become a catch-all for four unrelated boot concerns: persistent run-mode defaulting, page-owned browser-resource teardown, chunked AGC snapshot transport, and camera console-error classification.
+
+Phase 30 narrows that startup ownership without changing AGC/DSKY semantics:
+
+- `startup-defaults.js` now owns only the first-run CLOCK persistence default;
+- `page-resource-lifecycle.js` owns timer/interval/animation-frame tracking, WebAudio wrapper cleanup, media/core teardown, and `AGCLifecycle`;
+- `agc-snapshot-codec.js` owns only the existing chunked `AgcCore` snapshot encoding/decoding path and preserves snapshot schema 1;
+- `camera-error-policy.js` owns only SXT camera console classification, downgrading expected permission/lifecycle outcomes while preserving unexpected failures as errors;
+- parser order is locked as `agc-core.js -> spacecraft-default.js -> startup-defaults.js -> page-resource-lifecycle.js -> agc-snapshot-codec.js -> camera-error-policy.js -> app-state-runtime.js`, so `AgcCore` exists before the codec patch, page-resource wrappers still install before application timers/audio work, and camera classification installs before `optics.js` can report camera failures;
+- `tools/startup-runtime-smoke.js` source-gates those ownership boundaries and behaviorally checks first-run mode defaulting, tracked resource cleanup, AudioContext closed-state removal, snapshot round-trip behavior, and camera-error classification;
+- `tools/audio-recovery-smoke.js` now reads `page-resource-lifecycle.js` directly for the closed-AudioContext lifecycle invariant instead of coupling that test to the old catch-all file;
+- `tools/asset-reference-smoke.js` requires the new startup modules and their parser order;
+- `tools/build-local.sh` includes the new startup runtime smoke in the canonical local gate.
+
+No channel mapping, Pinball key code, held-PRO behavior, relay model, display rendering, yaAGC startup sequence, Comanche rope input, or persisted snapshot schema changed in this phase.
+
+Observed in this execution environment against the phase-30 source staged from the committed branch:
+
+- `startup-defaults.js`, `page-resource-lifecycle.js`, `agc-snapshot-codec.js`, `camera-error-policy.js`, and `tools/startup-runtime-smoke.js` all passed `node --check`;
+- `node tools/startup-runtime-smoke.js` passed, including the snapshot memory round trip and page-resource/camera policy scenarios;
+- GitHub compare reports phase 30 as two commits ahead of phase 29 with only the intended startup/runtime-gate files changed.
+
+These are source-level checks only. The current execution environment still lacks the complete recursive checkout/Android SDK build path and its shell cannot resolve GitHub, so `bash tools/build-local.sh`, Gradle regular/Fire builds, APK verification, and Android/WebView/device smokes have **not** been run for this phase. Do not upgrade those gates to verified from the source smoke.
+
+## 2026-09-14 DSKY runtime refactor phase 1
+
+A second audit caught an important detail the first pass missed: `index.html` does not list `flight-hardware-ui.js` or `keyboard-electrical-interlock.js` directly, but the statically loaded `cm-mode.js` installs both scripts dynamically from its window-load handler. They are therefore part of the active CM runtime. The earlier Phase-1 note that treated them as dormant was wrong and has been removed.
+
+The effective input/transition ownership is now documented as follows:
+
+- `keyboard-electrical-interlock.js` owns the 18 normal keycoded switches at **window capture** and preserves the series-key / KEYRST electrical model;
+- `hardware-fidelity.js` owns the maintained PRO contact on channel `032`;
+- `runtime-transitions.js` loads synchronously after `app.js` and the required `dream-silence.js` guard, then owns one shared CLOCK -> AGC in-flight Promise exposed through `AGCDSKY.runtimeTransitions` / `AGCDSKY_RUNTIME`;
+- `runtime-transitions.js` replaces both the classic-script global `enterAgc` binding and `AGCDSKY.enterAgc` with the same serialized wrapper, so app startup, the AGC button, clock fallback input, and the electrical interlock all join the same transition;
+- `clock-behavior.js` now owns only the document-level clock keypad fallback/queue and consumes the shared transition service;
+- `app.js` remains the authoritative underlying AGC loader, channel decoder, display-state owner, and snapshot owner;
+- once the electrical interlock is dynamically installed, physical normal-key events are stopped at window capture before the document-level clock fallback can see them.
+
+The packaged synchronous script order for this slice is deliberately:
+
+```text
+app.js -> dream-silence.js -> runtime-transitions.js -> clock-behavior.js -> ... -> cm-mode.js
+```
+
+`dream-silence.js` remains immediately after `app.js` because the existing asset gate requires that safety guard before any later frontend layer. `runtime-transitions.js` still runs in the same script turn, before app startup timers or user input can execute.
+
+Phase 1 removes duplicate AGC-loading coordination while preserving the existing CM-only behavior:
+
+- the shared service serializes AGC entry through one Promise and returns that same Promise to later callers while the load is in flight;
+- the already-installed app startup/AGC-button closures resolve the replaced classic-script global `enterAgc` binding at call time, so they enter through the same service without rewriting the underlying `app.js` loader;
+- the previous 10 ms readiness polling fallback has been removed; an `agc-loading` state without the shared Promise is now treated as an invariant violation instead of being hidden by another polling loop;
+- `keyboard-electrical-interlock.js` awaits `runtimeTransitions.requestAgc('keyboard electrical contact')` and only then asserts the original Pinball keycode on channel `015`;
+- a fast touchscreen release during loading still preserves the physical cycle until the make is delivered and the minimum KEYRST dwell completes;
+- queued document-level fallback contacts remain ordered and are forwarded after AGC readiness;
+- direct AGC-button/startup entry preserves `app.js` failure compatibility: if the loader catches an error and falls back to clock, the app-entry Promise resolves with that final state, while keyboard/fallback callers get a derived rejection because they require a ready AGC before injecting a key;
+- transition diagnostics return copied state rather than mutable production structures;
+- synthetic CLOCK-mode COMP ACTY remains forbidden;
+- AGC/WASM startup ordering, channel mappings, relay state, PRO semantics, snapshot format, and display rendering are unchanged by this phase.
+
+Regression coverage was tightened in four places:
+
+- `tools/clock-mode-behavior-smoke.js` covers ordinary fallback promotion, ordered fallback contacts during one load, a direct app/startup-style `enterAgc` call followed by a keypad join with no polling or second loader start, and app-load failure compatibility;
+- `tools/keyboard-electrical-interlock-smoke.js` treats the shared transition API as the handoff contract while retaining the series-chain, PRO-bypass, fast-tap, and KEYRST checks;
+- `tools/runtime-transition-integration-smoke.js` checks script order, installs the extracted transition service plus clock fallback and electrical interlock together, propagates pointer events from window to document unless actually stopped, and requires a physical VERB fast-tap during a direct app AGC load to join one transition, generate one Pinball `021` make, avoid the clock fallback/legacy editor, avoid readiness polling, and end with one KEYRST;
+- `tools/asset-reference-smoke.js` now requires `runtime-transitions.js` to be packaged and locks the exact `app.js -> dream-silence.js -> runtime-transitions.js` ordering.
+
+The transition smokes are wired into `tools/build-local.sh`. The clock behavior smoke existed previously but was not part of the canonical build gate; Phase 1 added it, and the new integration smoke is adjacent to the electrical-interlock gate.
+
+Observed in this execution environment against source fetched from the current refactor branch:
+
+- current `runtime-transitions.js`, `clock-behavior.js`, and `keyboard-electrical-interlock.js` passed `node --check` in a reconstructed minimal source tree;
+- current transition/clock production source passed scenarios for ordinary first-key handoff, ordered fallback queuing, direct app-load joining with no second loader/poll loop, and app-load failure compatibility;
+- current electrical production source passed the physical fast-tap handoff scenario: window-capture ownership, no document fallback participation, no 10 ms readiness polling, one Pinball `021` make, one KEYRST, and no latched channel-015 cycle;
+- the execution container still cannot resolve `github.com`, so a complete recursive checkout and the repository's exact full smoke scripts cannot be executed directly in that container.
+
+These are source-level checks against the current fetched production files, not a canonical full-repository build. `bash tools/build-local.sh`, Gradle regular/Fire builds, APK verification, and Android/WebView/device smokes have **not** been run for this branch in this environment. The Android SDK/recursive-checkout limitations below still apply. No device/runtime claim is upgraded from these source checks.
 
 ## 2026-09-13 WebAudio renderer recovery
 
@@ -63,18 +142,18 @@ Normal DSKY keys use channel `015` with the Pinball codes. PRO remains a level-s
 
 The interactive phone Activity had regressed so normal DSKY commands entered while the display was in CLOCK mode no longer promoted the app into real AGC mode. The cause was the newer Block II series-key electrical interlock: it owns normal keys at **window capture** and stops propagation, while the older clock-handoff helper was listening later at **document capture**. The first physical key therefore never reached the handoff helper and fell through to the obsolete synthetic clock command-entry path instead.
 
-The electrical interlock now owns the transition at the actual key-contact point. For a normal key made in CLOCK mode it:
+The electrical interlock still owns the physical transition point, but transition serialization is now shared. For a normal key made in CLOCK mode it:
 
-- calls the authoritative `enterAgc()` transition;
-- waits through an already-running `agc-loading` transition rather than dropping the key;
+- requests the shared `AGCDSKY.runtimeTransitions.requestAgc()` transition;
+- joins an already-running AGC load rather than starting another one;
 - forwards that same physical keycode to channel `015` once the Comanche core is ready;
 - retains the existing minimum electrical dwell and separate `keyRelease()` / KEYRST path if the touchscreen key was released while the core was loading;
 - keeps PRO separate on channel `032` exactly as before;
 - does not invoke the old synthetic clock command editor for the handoff key.
 
-`tools/keyboard-electrical-interlock-smoke.js`, already part of the canonical `tools/build-local.sh` gate, now contains a regression case that fast-taps VERB from CLOCK mode and requires exactly one AGC transition, Pinball keycode `021`, no legacy clock edit, and exactly one eventual KEYRST with no channel-015 latch left behind.
+`tools/keyboard-electrical-interlock-smoke.js` remains the isolated electrical regression gate. `tools/runtime-transition-integration-smoke.js` is the corresponding multi-layer gate for the shared transition service, clock fallback, and physical electrical owner.
 
-The source and regression gate are committed. They are **not yet claimed as executed on the current revision** in this environment: the available shell cannot resolve GitHub for a fresh checkout and does not provide the Android build/device toolchain. The next acceptance step remains the canonical local source gate/build followed by the regular-phone device smoke.
+The source gates are committed. They are **not** substitutes for the current canonical local build and Android device smoke.
 
 ## 2026-09-11 original-drawing correction pass
 
@@ -252,17 +331,19 @@ Shortest next experiment: run `bash tools/build-local.sh` on a machine/container
 
 Historical v1.1.2 regular/Fire source checkpoints have previously completed the canonical local build and Fire-device HOME verification. Those results do **not** automatically apply to the 2026-09-11 drawing/relay revision.
 
-For the current drawing/relay revision plus the 2026-09-12 CLOCK→AGC input repair and 2026-09-13 WebAudio recovery:
+For the current drawing/relay revision plus the CLOCK→AGC transition refactor and WebAudio recovery:
 
-- [x] source changes are committed on the current repair branch;
+- [x] source changes are committed on the current repair/refactor branch;
 - [x] K1-K5 contact matrix is source-gated by `tools/dsky-mapping-smoke.js`;
 - [x] individual low-11 relay-change accounting is source-gated;
 - [x] WebView/native/generated-widget production EL color agreement is source-gated;
-- [x] CLOCK→AGC first-key behavior is encoded in the canonical keyboard-interlock regression gate;
+- [x] CLOCK→AGC first-key behavior is encoded in the keyboard-interlock regression gate;
+- [x] shared transition + electrical ownership is encoded in `tools/runtime-transition-integration-smoke.js`;
+- [x] both transition smokes are wired into the canonical local build gate;
 - [x] WebAudio renderer recovery is encoded in `tools/audio-recovery-smoke.js` and wired into the canonical local build gate;
 - [x] the staged audio-recovery source smoke passed in this execution environment;
 - [x] current host/source and real-Comanche WASM checks above passed for the earlier 2026-09-11 drawing/relay state;
-- [ ] the updated CLOCK→AGC keyboard-interlock smoke has been executed against the 2026-09-12 repair revision;
+- [ ] the complete current transition smoke set has been executed from a full checkout at the exact branch HEAD;
 - [ ] canonical `tools/build-local.sh` has been run successfully for this exact revision;
 - [ ] current regular APK has been installed/device-smoked;
 - [ ] current Fire APK has been installed/device-smoked;

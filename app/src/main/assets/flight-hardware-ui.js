@@ -8,10 +8,10 @@
  * - SCD 1006387 alarm legends use three incandescent lamps each.  The flown
  *   drawings specify construction/electrical/brightness limits but not optical
  *   rise/decay times, so the thermal constants below remain labeled estimates.
- * - Keycaps travel into the panel, make contact partway through the stroke,
- *   keep channel 015 asserted while held, and return channel 015 to zero on
- *   physical release.  PRO remains a separate channel-032 control owned by the
- *   source-backed hardware-fidelity layer.
+ * - This layer owns key/lamp presentation personalities only. The parser-loaded
+ *   keyboard-electrical-interlock.js is the single owner of normal keycoded
+ *   channel-015 make/KEYRST behavior. PRO remains a separate channel-032
+ *   control owned by the source-backed hardware-fidelity layer.
  * - Deterministic component personalities preserve small manufacturing-style
  *   differences between runs of the same simulated DSKY.
  * - LIGHT BUS DEMO opens the lighting feeds without pausing Comanche/clock.
@@ -24,11 +24,6 @@
   const controls = document.getElementById('controls');
   const modeLabel = document.getElementById('mode');
   const LEVELS = Object.freeze([1.00, 0.75, 0.50, 0.25, 0.00]);
-  const NORMAL_KEY_CHANNEL = 0o15;
-  const DSKY_KEY_CODE = Object.freeze({
-    '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
-    V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
-  });
   const KEY_CONTACT_BASE_MS = 36;
   const KEY_RETURN_SOUND_BASE_MS = 18;
   // Best-estimate optical timing only.  White legends use MS24367-713 lamps;
@@ -265,126 +260,6 @@
   function prepareKeys() {
     for (const button of document.querySelectorAll('[data-key]')) keyPersonality(button);
   }
-
-  function keySound(button, returning = false) {
-    try {
-      if (localStorage.getItem('audioTickV4') === '0') return;
-    } catch (_) {}
-    const ctx = typeof window.ensureAudio === 'function' ? window.ensureAudio() : null;
-    if (!ctx) return;
-    const p = keyPersonality(button);
-    const fire = () => {
-      const when = ctx.currentTime + 0.001;
-      const osc = ctx.createOscillator();
-      const body = ctx.createGain();
-      const startHz = returning ? p.returnPitch : p.makePitch;
-      const endHz = returning ? startHz * 0.64 : startHz * 0.48;
-      const gain = (returning ? .028 : .052) * p.soundGain;
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(startHz, when);
-      osc.frequency.exponentialRampToValueAtTime(endHz, when + (returning ? .010 : .007));
-      body.gain.setValueAtTime(gain, when);
-      body.gain.exponentialRampToValueAtTime(.0001, when + (returning ? .014 : .011));
-      osc.connect(body); body.connect(ctx.destination); osc.start(when); osc.stop(when + .016);
-    };
-    if (ctx.state === 'running') fire(); else ctx.resume().then(fire).catch(() => {});
-  }
-
-  function agcCoreNow() {
-    try { return window.AGCDSKY && typeof window.AGCDSKY.getCore === 'function' ? window.AGCDSKY.getCore() : null; }
-    catch (_) { return null; }
-  }
-
-  function releaseAgcKey(state) {
-    if (!state || !state.agcHeld) return;
-    const core = state.core || agcCoreNow();
-    state.agcHeld = false;
-    try {
-      if (core && typeof core.writeIo === 'function') core.writeIo(NORMAL_KEY_CHANNEL, 0);
-    } catch (error) { console.error('DSKY key-reset release failed', error); }
-  }
-
-  const keyState = new Map();
-  function fireKeyContact(button, state) {
-    if (!state || !state.down || state.fired) return;
-    state.fired = true;
-    keySound(button, false);
-    try {
-      const key = button.dataset.key;
-      const core = agcCoreNow();
-      if (core && typeof mode !== 'undefined' && mode === 'agc') {
-        const code = DSKY_KEY_CODE[key];
-        if (code !== undefined) {
-          if (typeof core.keyPress === 'function') core.keyPress(code);
-          else if (typeof core.writeIo === 'function') core.writeIo(NORMAL_KEY_CHANNEL, code);
-          state.agcHeld = true;
-          state.core = core;
-          state.keyCode = code;
-          if (window.AGCDSKY && typeof window.AGCDSKY.scheduleAgcAutosave === 'function') {
-            window.AGCDSKY.scheduleAgcAutosave('DSKY key make');
-          }
-          return;
-        }
-      }
-      if (typeof window.press === 'function') window.press(key);
-    } catch (error) { console.error('DSKY key contact failed', error); }
-  }
-
-  function onKeyDown(event) {
-    const button = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
-    if (!button) return;
-    // PRO is not a keyboard key. hardware-fidelity.js owns its dedicated
-    // channel-032 press-and-hold path and standby behavior.
-    if (button.dataset.key === 'P') return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    let state = keyState.get(button);
-    if (state && state.down) return;
-    const p = keyPersonality(button);
-    state = {down:true, fired:false, timer:0, pointerId:event.pointerId, agcHeld:false, core:null, keyCode:0};
-    keyState.set(button, state);
-    button.classList.add('pressed');
-    try { button.setPointerCapture(event.pointerId); } catch (_) {}
-    state.timer = setTimeout(() => fireKeyContact(button, state), p.contactMs);
-  }
-
-  function finishRelease(button, state, cancelled) {
-    clearTimeout(state.timer);
-    if (!cancelled && !state.fired) fireKeyContact(button, state);
-    releaseAgcKey(state);
-    state.down = false;
-    button.classList.remove('pressed');
-    if (state.fired) {
-      const p = keyPersonality(button);
-      setTimeout(() => keySound(button, true), p.returnSoundMs);
-    }
-    try { button.releasePointerCapture(state.pointerId); } catch (_) {}
-    keyState.delete(button);
-  }
-
-  function releaseKey(event, cancelled = false) {
-    const button = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
-    if (!button || button.dataset.key === 'P') return;
-    const state = keyState.get(button);
-    if (!state || !state.down) return;
-    finishRelease(button, state, cancelled);
-  }
-
-  function releaseAllKeys() {
-    for (const [button, state] of Array.from(keyState.entries())) {
-      if (!state || !state.down) continue;
-      finishRelease(button, state, true);
-    }
-  }
-
-  document.addEventListener('pointerdown', onKeyDown, {capture:true, passive:false});
-  document.addEventListener('pointerup', event => releaseKey(event, false), {capture:true, passive:true});
-  document.addEventListener('pointercancel', event => releaseKey(event, true), {capture:true, passive:true});
-  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAllKeys(); }, {capture:true});
-  window.addEventListener('blur', releaseAllKeys, {passive:true});
 
   prepareAnnunciatorLegends();
   prepareKeys();

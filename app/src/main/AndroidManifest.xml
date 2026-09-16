@@ -3,9 +3,10 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Native UDP SNTP only; WebView navigation remains restricted to packaged assets. -->
+    <!-- Native UDP SNTP and HTTPS self-update checks; WebView navigation remains packaged-asset only. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
@@ -15,12 +16,27 @@
         android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher_original"
         android:roundIcon="@mipmap/ic_launcher_original"
-        android:label="AGC DSKY v1.1.2"
+        android:label="AGC DSKY v1.1.15"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <meta-data
             android:name="android.webkit.WebView.MetricsOptOut"
             android:value="true" />
+
+        <!-- Initializes and periodically checks the native updater in both flavors. -->
+        <provider
+            android:name=".UpdateInitProvider"
+            android:authorities="${applicationId}.update-init"
+            android:exported="false"
+            android:initOrder="100" />
+
+        <receiver
+            android:name=".UpdateCheckReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".UpdateInstallReceiver"
+            android:exported="false" />
 
         <activity
             android:name=".SensorMainActivity"

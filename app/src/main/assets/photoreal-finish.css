@@ -1,0 +1,88 @@
+/*
+ * Restrained photographic material pass.
+ * Geometry, dimensions, relay timing and input behavior are untouched. These
+ * rules only add material roughness, recess depth, molded-key reflections,
+ * fastener metal and the thin EL-cover reflection visible on real hardware.
+ */
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky{
+  background:
+    radial-gradient(ellipse at 22% 8%,rgba(255,255,255,.105) 0%,rgba(255,255,255,.028) 24%,transparent 46%),
+    radial-gradient(ellipse at 83% 92%,rgba(0,0,0,.12) 0%,transparent 48%),
+    radial-gradient(circle at 13% 19%,rgba(255,255,255,.055) 0 .045vmin,transparent .07vmin),
+    radial-gradient(circle at 69% 31%,rgba(0,0,0,.065) 0 .05vmin,transparent .08vmin),
+    radial-gradient(circle at 43% 72%,rgba(255,255,255,.035) 0 .035vmin,transparent .065vmin),
+    repeating-linear-gradient(101deg,rgba(255,255,255,.008) 0 .06vmin,rgba(0,0,0,.009) .06vmin .14vmin),
+    linear-gradient(148deg,#878d89 0%,#777d79 28%,#686e6a 67%,#757b77 100%);
+  box-shadow:
+    inset 0 0 0 .18vmin rgba(188,193,188,.55),
+    inset 0 0 0 .52vmin rgba(65,70,66,.78),
+    inset .28vmin .22vmin .55vmin rgba(255,255,255,.09),
+    inset -.42vmin -.46vmin 1.35vmin rgba(0,0,0,.28),
+    inset 0 0 2.2vmin rgba(0,0,0,.23),
+    0 .34vmin .24vmin rgba(0,0,0,.34),
+    0 .78vmin 1.35vmin rgba(0,0,0,.56);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky:after{
+  background:
+    radial-gradient(ellipse at var(--dsky-light-x,28%) var(--dsky-light-y,18%),rgba(255,255,255,.075),transparent 33%),
+    linear-gradient(118deg,rgba(255,255,255,.038) 0%,transparent 24%,rgba(0,0,0,.022) 66%,rgba(255,255,255,.016) 100%);
+  mix-blend-mode:soft-light;
+  opacity:.78;
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .ann-well{
+  background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 21%),linear-gradient(145deg,#343633,#2a2c29 72%,#222421);
+  border-color:#51534e;
+  box-shadow:inset .42vmin .45vmin .95vmin rgba(0,0,0,.78),inset -.14vmin -.12vmin .26vmin rgba(255,255,255,.10),0 -.05vmin .08vmin rgba(255,255,255,.13),0 .16vmin .22vmin rgba(0,0,0,.60);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .display-well{
+  background:radial-gradient(ellipse at 32% 18%,rgba(74,84,77,.16),transparent 44%),linear-gradient(145deg,#0b0e0b 0%,#151a15 48%,#070907 100%);
+  border-color:#52544f;
+  box-shadow:inset .46vmin .52vmin 1.25vmin rgba(0,0,0,.96),inset -.16vmin -.13vmin .26vmin rgba(255,255,255,.07),0 -.05vmin .08vmin rgba(255,255,255,.12),0 .16vmin .22vmin rgba(0,0,0,.66);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .elpanel{filter:drop-shadow(.08vmin .14vmin .12vmin rgba(0,0,0,.55))}
+body.spacecraft-cm .el-glass-background{fill:#676d68}
+body.spacecraft-cm .el-ito-dot{fill:#a3a8a1;opacity:.70}
+body.spacecraft-cm .lamp{
+  background:linear-gradient(112deg,rgba(255,255,255,.08),transparent 31%),linear-gradient(180deg,#797a74 0%,#71726c 58%,#686963 100%);
+  border-color:#282a26;
+  box-shadow:inset .08vmin .10vmin .16vmin rgba(255,255,255,.14),inset -.10vmin -.12vmin .22vmin rgba(0,0,0,.36),0 .05vmin .10vmin rgba(255,255,255,.05);
+}
+body.spacecraft-cm .key{
+  border-color:#080908;
+  background:radial-gradient(ellipse at 27% 13%,rgba(255,255,255,.115) 0%,rgba(255,255,255,.026) 26%,transparent 47%),radial-gradient(circle at 72% 76%,rgba(255,255,255,.022) 0 .05vmin,transparent .08vmin),linear-gradient(153deg,#383a36 0%,#2b2d29 31%,#1b1c1a 72%,#111210 100%);
+  box-shadow:inset .18vmin .16vmin .20vmin rgba(255,255,255,.17),inset -.24vmin -.28vmin .30vmin rgba(0,0,0,.78),inset 0 -.05vmin 0 rgba(255,255,255,.035),0 .16vmin .08vmin #5a5c56,0 .26vmin .28vmin rgba(0,0,0,.48);
+}
+body.spacecraft-cm .key.pressed{
+  background:radial-gradient(ellipse at 28% 16%,rgba(255,255,255,.055),transparent 40%),linear-gradient(156deg,#20211f,#121310 82%);
+  box-shadow:inset .13vmin .18vmin .22vmin rgba(0,0,0,.88),inset -.05vmin -.05vmin .12vmin rgba(255,255,255,.035),0 .025vmin .04vmin #3b3c38;
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
+  border-color:#83857f;
+  background:radial-gradient(circle at 31% 25%,rgba(255,255,255,.38) 0 7%,transparent 8%),radial-gradient(circle at 37% 33%,#777972 0 13%,#4d4f4a 27%,#292a27 55%,#11120f 75%,#555750 84%,#1d1e1b 100%);
+  box-shadow:inset .05vmin .05vmin .08vmin rgba(255,255,255,.23),inset -.07vmin -.08vmin .12vmin rgba(0,0,0,.75),0 .10vmin .13vmin rgba(0,0,0,.70);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener:before{content:"";position:absolute;inset:9%;border-radius:50%;border:.035vmin solid rgba(255,255,255,.10);box-shadow:inset 0 0 .07vmin rgba(0,0,0,.72)}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener:after{background:linear-gradient(180deg,#999b94 0%,#4b4d48 42%,#191a18 58%,#767871 100%);box-shadow:0 -.025vmin rgba(255,255,255,.16),0 .035vmin rgba(0,0,0,.72)}
+
+/* Dynamic parallax stays restrained: broad matte-body response and a narrower
+   cover-glass streak, instead of a glossy/plastic full-panel sheen. */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
+  background:radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.090),rgba(255,255,255,.024) 22%,transparent 47%),radial-gradient(ellipse at calc(var(--dsky-light-x) + 14%) calc(var(--dsky-light-y) + 38%),rgba(255,255,255,.018),transparent 34%),linear-gradient(118deg,rgba(255,255,255,.030),transparent 30%,rgba(0,0,0,.025) 72%,rgba(255,255,255,.014));
+  mix-blend-mode:soft-light;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
+  background:linear-gradient(112deg,transparent 5%,rgba(255,255,255,.018) 23%,rgba(255,255,255,.12) 29%,rgba(255,255,255,.022) 35%,transparent 48%),radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.11),rgba(220,237,228,.025) 24%,transparent 48%),linear-gradient(180deg,rgba(255,255,255,.025),transparent 18%,transparent 78%,rgba(0,0,0,.055));
+  box-shadow:inset .06vmin .06vmin .10vmin rgba(255,255,255,.10),inset -.08vmin -.10vmin .18vmin rgba(0,0,0,.16),inset 0 0 .7vmin rgba(0,0,0,.08);
+  opacity:.52;
+}
+
+/* Tap-to-mark sight confirmation. */
+#sxt-eyepiece{cursor:crosshair;touch-action:none}
+#sxt-tap-mark{position:absolute;z-index:8;left:var(--tap-x,50%);top:var(--tap-y,50%);width:30px;height:30px;display:block;opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.72);transition:opacity 80ms linear,transform 120ms cubic-bezier(.2,.7,.2,1);filter:drop-shadow(0 0 3px rgba(0,0,0,.9))}
+#sxt-tap-mark::before,#sxt-tap-mark::after{content:"";position:absolute;left:50%;top:50%;background:rgba(255,225,168,.92);transform:translate(-50%,-50%)}
+#sxt-tap-mark::before{width:24px;height:1px}#sxt-tap-mark::after{width:1px;height:24px}
+#sxt-tap-mark span{position:absolute;inset:4px;border:1px solid rgba(255,225,168,.95);border-radius:50%;box-shadow:0 0 0 1px rgba(25,18,10,.72),inset 0 0 5px rgba(255,225,168,.18)}
+#sxt-tap-mark.active{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#sxt-tap-mark.marked::before,#sxt-tap-mark.marked::after{background:#f2f0d9}
+#sxt-tap-mark.marked span{border-color:#f2f0d9;box-shadow:0 0 7px rgba(242,240,217,.68),0 0 0 1px rgba(25,18,10,.72)}
+#sxt-tap-mark.busy{opacity:.72}#sxt-tap-mark.busy::before,#sxt-tap-mark.busy::after{background:#c6a66d}#sxt-tap-mark.busy span{border-color:#c6a66d}

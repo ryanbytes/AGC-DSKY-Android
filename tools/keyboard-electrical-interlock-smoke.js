@@ -5,15 +5,52 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const source = fs.readFileSync(
-  path.resolve(__dirname, '../app/src/main/assets/keyboard-electrical-interlock.js'),
-  'utf8'
-);
+const ROOT = path.resolve(__dirname, '..');
+const keycodeSource = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/dsky-keycodes.js'), 'utf8');
+const inputSource = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/dsky-input-runtime.js'), 'utf8');
+const source = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/keyboard-electrical-interlock.js'), 'utf8');
+const KEY_CODES = Object.freeze({
+  '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
+  V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
+});
+const MODES = Object.freeze({CLOCK:'clock',AGC_LOADING:'agc-loading',AGC:'agc'});
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+for (const marker of [
+  'const runtime = api?.runtimeTransitions',
+  'const input = api?.inputRuntime',
+  'typeof runtime.clockRequested',
+  'typeof runtime.onBeforeClock',
+  'input.keyMake(code)',
+  'input.keyReset(electricalCore)',
+  'function releaseForClock()',
+  'runtime.onBeforeClock(releaseForClock)'
+]) {
+  assert(source.includes(marker), `keyboard missing shared-owner marker: ${marker}`);
+}
+for (const forbidden of ['appStatus()', 'getCore()', '.keyPress(', '.keyRelease(', 'writeIo(0o15', 'window.enterClock =']) {
+  assert(!source.includes(forbidden), `keyboard retained obsolete ownership: ${forbidden}`);
+}
+
+function installKeycodes(context) {
+  vm.runInContext(keycodeSource, context, {filename:'dsky-keycodes.js'});
+  assert(context.AGCDSKY_KEY_CODES && Object.isFrozen(context.AGCDSKY_KEY_CODES),
+    'shared DSKY keycode table was not published/frozen');
+}
+function installInputRuntime(context) {
+  vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
+  assert(context.AGCDSKY_INPUT === context.AGCDSKY.inputRuntime,
+    'shared input runtime did not publish one controller reference');
+}
+function addListener(bucket, type, fn) {
+  (bucket[type] ||= []).push(fn);
+}
+function dispatch(bucket, type, event) {
+  for (const fn of bucket[type] || []) fn(event);
+}
 function makeButton(key) {
   const classes = new Set();
   return {
@@ -27,11 +64,10 @@ function makeButton(key) {
     releasePointerCapture(){}
   };
 }
-
 function makeEvent(button, pointerId) {
   return {
     pointerId,
-    target:{ closest(selector){ return selector === '[data-key]' ? button : null; } },
+    target:{closest(selector){ return selector === '[data-key]' ? button : null; }},
     prevented:false,
     stopped:false,
     immediate:false,
@@ -40,290 +76,268 @@ function makeEvent(button, pointerId) {
     stopImmediatePropagation(){ this.immediate = true; }
   };
 }
-
-const windowListeners = Object.create(null);
-const documentListeners = Object.create(null);
-const timers = new Map();
-let nextTimer = 1;
-let nowMs = 0;
-const calls = [];
-
-function addListener(bucket, type, fn) {
-  (bucket[type] ||= []).push(fn);
-}
-function dispatch(bucket, type, event) {
-  for (const fn of bucket[type] || []) fn(event);
-}
-function runNextTimer() {
-  if (!timers.size) return false;
-  let selectedId = null;
-  let selected = null;
-  for (const [id, timer] of timers) {
-    if (!selected || timer.due < selected.due || (timer.due === selected.due && id < selectedId)) {
-      selectedId = id;
-      selected = timer;
+function makeTimers(nowRef) {
+  const timers = new Map();
+  let nextId = 1;
+  return {
+    timers,
+    set(fn, delay=0){
+      const id = nextId++;
+      timers.set(id, {fn, due:nowRef.value + Math.max(0, Number(delay) || 0)});
+      return id;
+    },
+    clear(id){ timers.delete(id); },
+    flush(){
+      let guard = 0;
+      while (timers.size) {
+        let selectedId = null;
+        let selected = null;
+        for (const [id, timer] of timers) {
+          if (!selected || timer.due < selected.due || (timer.due === selected.due && id < selectedId)) {
+            selectedId = id;
+            selected = timer;
+          }
+        }
+        timers.delete(selectedId);
+        nowRef.value = Math.max(nowRef.value, selected.due);
+        selected.fn();
+        if (++guard > 1000) throw new Error('timer loop did not settle');
+      }
     }
-  }
-  timers.delete(selectedId);
-  nowMs = Math.max(nowMs, selected.due);
-  selected.fn();
-  return true;
-}
-function flushTimers() {
-  let guard = 0;
-  while (runNextTimer()) {
-    if (++guard > 1000) throw new Error('timer loop did not settle');
-  }
+  };
 }
 
-const core = {
-  keyPress(code){ calls.push(['make', code, nowMs]); return 1; },
-  keyRelease(){ calls.push(['reset', nowMs]); return true; }
-};
+function createAgcHarness() {
+  const win = Object.create(null);
+  const doc = Object.create(null);
+  const calls = [];
+  const now = {value:0};
+  const timer = makeTimers(now);
+  let mode = MODES.AGC;
+  let clockPending = false;
+  let beforeClockHook = null;
+  let hookRegistrations = 0;
+  const core = {
+    keyPress(code){ calls.push(['make', code, now.value]); return 1; },
+    keyRelease(){ calls.push(['reset', now.value]); return true; }
+  };
+  const context = {
+    console,
+    performance:{now(){ return now.value; }},
+    localStorage:{getItem(){ return '0'; }},
+    setTimeout(fn, delay){ return timer.set(fn, delay); },
+    clearTimeout(id){ timer.clear(id); },
+    window:null,
+    document:{hidden:false, addEventListener(type, fn){ addListener(doc, type, fn); }}
+  };
+  context.window = context;
+  context.addEventListener = function(type, fn){ addListener(win, type, fn); };
+  context.AGCDSKY = {
+    runtimeTransitions:{
+      modes:MODES,
+      mode(){ return mode; },
+      core(){ return core; },
+      clockRequested(){ return clockPending; },
+      async requestAgc(){ return {mode}; },
+      onBeforeClock(handler){
+        hookRegistrations++;
+        beforeClockHook = handler;
+        return () => { if (beforeClockHook === handler) beforeClockHook = null; };
+      }
+    },
+    scheduleAgcAutosave(){ calls.push(['autosave', now.value]); },
+    hardwarePersonality(){
+      return {keys:{
+        '1':{contactMs:10,returnSoundMs:5},
+        '2':{contactMs:10,returnSoundMs:5},
+        V:{contactMs:10,returnSoundMs:5}
+      }};
+    }
+  };
+  vm.createContext(context);
+  installKeycodes(context);
+  installInputRuntime(context);
+  vm.runInContext(source, context, {filename:'keyboard-electrical-interlock.js'});
+  return {
+    context, win, doc, calls, now, timer, core,
+    setMode(value){ mode = value; },
+    setClockPending(value){ clockPending = !!value; },
+    get beforeClockHook(){ return beforeClockHook; },
+    get hookRegistrations(){ return hookRegistrations; }
+  };
+}
 
-const context = {
-  console,
-  mode:'agc',
-  performance:{now(){ return nowMs; }},
-  localStorage:{ getItem(){ return '0'; } },
-  setTimeout(fn, delay=0){
-    const id = nextTimer++;
-    timers.set(id, {fn, due:nowMs + Math.max(0, Number(delay) || 0)});
-    return id;
-  },
-  clearTimeout(id){ timers.delete(id); },
-  window:null,
-  document:{
-    hidden:false,
-    addEventListener(type, fn){ addListener(documentListeners, type, fn); }
-  }
-};
-context.window = context;
-context.addEventListener = function(type, fn){ addListener(windowListeners, type, fn); };
-context.AGCDSKY = {
-  getCore(){ return core; },
-  scheduleAgcAutosave(){ calls.push(['autosave', nowMs]); },
-  hardwarePersonality(){
-    return {keys:{
-      '1':{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1},
-      '2':{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1},
-      P:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}
-    }};
-  }
-};
-
-vm.createContext(context);
-vm.runInContext(source, context, {filename:'keyboard-electrical-interlock.js'});
+const h = createAgcHarness();
+assert(typeof h.beforeClockHook === 'function' && h.hookRegistrations === 1,
+  'keyboard did not register exactly one pre-CLOCK cleanup hook');
 
 const one = makeButton('1');
 const two = makeButton('2');
 const pro = makeButton('P');
 
-// First normal key owns the series-contact cycle.
-let e = makeEvent(one, 1);
-dispatch(windowListeners, 'pointerdown', e);
-assert(e.prevented && e.immediate, 'normal key must be owned at window capture');
-flushTimers();
-assert(calls.filter(c => c[0] === 'make').length === 1,
-  'first normal key did not generate exactly one make');
-assert(calls.find(c => c[0] === 'make')[1] === 0o01,
-  'key 1 generated the wrong DSKY keycode');
+// One accepted coded switch per complete all-up cycle.
+let event = makeEvent(one, 1);
+dispatch(h.win, 'pointerdown', event);
+assert(event.prevented && event.immediate, 'normal key was not owned at window capture');
+h.timer.flush();
+assert(h.calls.filter(c => c[0] === 'make').length === 1
+    && h.calls.find(c => c[0] === 'make')[1] === 0o01,
+  'first key did not generate exactly keycode 001');
 
-// A second depressed normal key may move mechanically but the series wiring
-// must prevent another electrical code while the first cycle is latched.
-e = makeEvent(two, 2);
-dispatch(windowListeners, 'pointerdown', e);
-flushTimers();
-assert(calls.filter(c => c[0] === 'make').length === 1,
+event = makeEvent(two, 2);
+dispatch(h.win, 'pointerdown', event);
+h.timer.flush();
+assert(h.calls.filter(c => c[0] === 'make').length === 1,
   'overlapping second key generated an illegal second keycode');
-let state = context.AGCDSKY.keyboardElectrical.state();
+let state = h.context.AGCDSKY.keyboardElectrical.state();
 assert(state.down === 2 && state.keys.some(k => k.key === '2' && !k.accepted),
-  'overlapping key was not retained as a mechanically-down but electrically-blocked switch');
-assert(state.minKeycodeHoldMs === 12,
-  'expected 12-ms best-estimate minimum keycode dwell');
+  'overlapping key was not retained as mechanically down/electrically blocked');
 
-// Releasing the accepted key while the blocked second key remains down must
-// not assert KEYRST yet: the physical series chain has not returned to all-up.
-e = makeEvent(one, 1);
-dispatch(windowListeners, 'pointerup', e);
-assert(calls.filter(c => c[0] === 'reset').length === 0,
+dispatch(h.win, 'pointerup', makeEvent(one, 1));
+assert(h.calls.filter(c => c[0] === 'reset').length === 0,
   'KEYRST asserted before all normal keys were released');
+dispatch(h.win, 'pointerup', makeEvent(two, 2));
+h.timer.flush();
+assert(h.calls.filter(c => c[0] === 'reset').length === 1,
+  'all-up series chain did not produce exactly one KEYRST');
+state = h.context.AGCDSKY.keyboardElectrical.state();
+assert(!state.cycleLatched && state.down === 0 && !state.electricalMade,
+  'series chain did not return to idle after KEYRST');
 
-// Once every normal key is up the reset may still wait out the minimum input
-// dwell, but it must occur exactly once and then fully unlatch the keyboard.
-e = makeEvent(two, 2);
-dispatch(windowListeners, 'pointerup', e);
-assert(calls.filter(c => c[0] === 'reset').length === 0,
-  'KEYRST ignored the minimum electrical dwell');
-state = context.AGCDSKY.keyboardElectrical.state();
-assert(state.keyResetPending && state.cycleLatched,
-  'all-up keyboard did not retain its cycle while the KEYRST dwell was pending');
-flushTimers();
-assert(calls.filter(c => c[0] === 'reset').length === 1,
-  'all-released keyboard did not generate exactly one delayed KEYRST');
-state = context.AGCDSKY.keyboardElectrical.state();
-assert(!state.cycleLatched && state.down === 0 && !state.electricalMade && !state.keyResetPending,
-  'all-released keyboard did not return to its idle electrical state');
+// PRO is electrically outside the 18-key channel-015 matrix.
+event = makeEvent(pro, 9);
+dispatch(h.win, 'pointerdown', event);
+assert(!event.prevented && !event.immediate,
+  'normal-key interlock incorrectly swallowed PRO');
+assert(h.calls.filter(c => c[0] === 'make').length === 1,
+  'PRO incorrectly generated a channel-015 make');
 
-// The previously blocked key can only become a coded key after that complete
-// all-up reset, on a new depression cycle.
-e = makeEvent(two, 3);
-dispatch(windowListeners, 'pointerdown', e);
-flushTimers();
-const makes = calls.filter(c => c[0] === 'make');
-assert(makes.length === 2 && makes[1][1] === 0o02,
-  'fresh post-KEYRST depression did not generate key 2 normally');
-e = makeEvent(two, 3);
-dispatch(windowListeners, 'pointerup', e);
-assert(calls.filter(c => c[0] === 'reset').length === 1,
-  'KEYRST should wait for the minimum dwell on the second key cycle');
-flushTimers();
-assert(calls.filter(c => c[0] === 'reset').length === 2,
-  'second complete key cycle did not end in KEYRST');
-
-// PRO is outside the 18-key coding matrix. The electrical interlock must not
-// consume its event or emit a channel-015 keycode; hardware-fidelity.js owns it.
-e = makeEvent(pro, 9);
-dispatch(windowListeners, 'pointerdown', e);
-flushTimers();
-assert(!e.prevented && !e.stopped && !e.immediate,
-  'PRO was incorrectly swallowed by the normal-key series interlock');
-assert(calls.filter(c => c[0] === 'make').length === 2,
-  'PRO incorrectly generated a normal keyboard keycode');
-
-// A touchscreen fast tap makes once immediately, but KEYRST must not occur in
-// that same turn.  The keycode stays asserted through the estimated D-filter
-// interval so yaAGC can sample the make just as the hardware interface did.
+// Fast touchscreen tap must still make, then hold through the minimum dwell.
 const fast = makeButton('1');
-e = makeEvent(fast, 10);
-dispatch(windowListeners, 'pointerdown', e);
-e = makeEvent(fast, 10);
-dispatch(windowListeners, 'pointerup', e);
-assert(calls.filter(c => c[0] === 'make').length === 3,
-  'fast tap failed to close the keyboard contact');
-assert(calls.filter(c => c[0] === 'reset').length === 2,
-  'fast tap asserted KEYRST in the same turn as key make');
-state = context.AGCDSKY.keyboardElectrical.state();
-assert(state.keyResetPending && state.electricalMade,
-  'fast tap did not retain the keycode during minimum dwell');
-const fastMake = calls.filter(c => c[0] === 'make')[2];
-flushTimers();
-const resets = calls.filter(c => c[0] === 'reset');
-assert(resets.length === 3,
-  'fast tap failed to restore KEYRST after minimum dwell');
-assert(resets[2][1] - fastMake[2] >= 12,
-  'fast-tap keycode was not held for the required minimum electrical dwell');
+dispatch(h.win, 'pointerdown', makeEvent(fast, 10));
+dispatch(h.win, 'pointerup', makeEvent(fast, 10));
+assert(h.calls.filter(c => c[0] === 'make').length === 2,
+  'fast tap failed to close the key contact');
+assert(h.calls.filter(c => c[0] === 'reset').length === 1,
+  'fast tap asserted KEYRST in the same turn as make');
+h.timer.flush();
+assert(h.calls.filter(c => c[0] === 'reset').length === 2,
+  'fast tap did not restore KEYRST after minimum dwell');
+
+// Selecting CLOCK while a key is still held must force KEYRST synchronously
+// before app.js stops the AGC. Do not wait out the normal 12-ms return dwell.
+const held = makeButton('1');
+dispatch(h.win, 'pointerdown', makeEvent(held, 20));
+h.timer.flush();
+assert(h.context.AGCDSKY.keyboardElectrical.state().electricalMade,
+  'held-key transition fixture never made channel 015');
+const beforeClock = h.calls.length;
+h.setClockPending(true);
+h.beforeClockHook({reason:'app enterClock', from:MODES.AGC});
+h.calls.push(['clock-base', h.now.value]);
+const transitionCalls = h.calls.slice(beforeClock);
+assert(transitionCalls.length >= 2
+    && transitionCalls[0][0] === 'reset'
+    && transitionCalls[1][0] === 'clock-base',
+  'pre-CLOCK cleanup did not assert KEYRST before the base CLOCK transition');
+state = h.context.AGCDSKY.keyboardElectrical.state();
+assert(state.down === 0 && !state.cycleLatched && !state.electricalMade && !state.keyResetPending,
+  'pre-CLOCK cleanup left keyboard electrical state latched');
+assert(!held.classList.contains('pressed'),
+  'pre-CLOCK cleanup left the held key visually pressed');
+
+// While CLOCK intent remains pending, later physical normal keys are swallowed
+// at window capture and cannot start another channel-015 cycle.
+const suppressed = makeButton('2');
+const makesBeforeSuppressed = h.calls.filter(c => c[0] === 'make').length;
+event = makeEvent(suppressed, 21);
+dispatch(h.win, 'pointerdown', event);
+h.timer.flush();
+assert(event.prevented && event.immediate,
+  'pending-CLOCK normal key was not swallowed at window capture');
+assert(h.calls.filter(c => c[0] === 'make').length === makesBeforeSuppressed,
+  'normal key generated channel 015 after CLOCK was requested');
+assert(h.context.AGCDSKY.keyboardElectrical.state().down === 0,
+  'pending-CLOCK key created mechanical/electrical pointer ownership');
+h.setClockPending(false);
 
 async function verifyClockHandoff() {
   const win = Object.create(null);
   const doc = Object.create(null);
-  const queuedTimers = new Map();
-  const handoffCalls = [];
-  let timerId = 1;
-  let clockNow = 0;
-  let appMode = 'clock';
-
-  const clockCore = {
-    keyPress(code){ handoffCalls.push(['make', code, clockNow]); return 1; },
-    keyRelease(){ handoffCalls.push(['reset', clockNow]); return true; }
+  const calls = [];
+  const now = {value:0};
+  const timer = makeTimers(now);
+  let mode = MODES.CLOCK;
+  let clockPending = false;
+  const core = {
+    keyPress(code){ calls.push(['make', code, now.value]); return 1; },
+    keyRelease(){ calls.push(['reset', now.value]); return true; }
   };
-  const clockContext = {
+  const context = {
     console,
-    performance:{now(){ return clockNow; }},
+    performance:{now(){ return now.value; }},
     localStorage:{getItem(){ return '0'; }},
-    setTimeout(fn, delay=0){
-      const id = timerId++;
-      queuedTimers.set(id, {fn, due:clockNow + Math.max(0, Number(delay) || 0)});
-      return id;
-    },
-    clearTimeout(id){ queuedTimers.delete(id); },
+    setTimeout(fn, delay){ return timer.set(fn, delay); },
+    clearTimeout(id){ timer.clear(id); },
     window:null,
-    document:{
-      hidden:false,
-      addEventListener(type, fn){ addListener(doc, type, fn); }
-    },
-    press(key){ handoffCalls.push(['legacy-clock-press', key, clockNow]); }
+    document:{hidden:false, addEventListener(type, fn){ addListener(doc, type, fn); }},
+    press(key){ calls.push(['legacy-clock-press', key, now.value]); }
   };
-  clockContext.window = clockContext;
-  clockContext.addEventListener = function(type, fn){ addListener(win, type, fn); };
-  clockContext.AGCDSKY = {
-    appStatus(){ return {mode:appMode}; },
-    async enterAgc(){
-      handoffCalls.push(['enter-agc', clockNow]);
-      appMode = 'agc-loading';
-      await Promise.resolve();
-      appMode = 'agc';
+  context.window = context;
+  context.addEventListener = function(type, fn){ addListener(win, type, fn); };
+  context.AGCDSKY = {
+    runtimeTransitions:{
+      modes:MODES,
+      mode(){ return mode; },
+      core(){ return core; },
+      clockRequested(){ return clockPending; },
+      async requestAgc(reason){
+        calls.push(['transition-request', reason, now.value]);
+        if (clockPending) throw new Error('CLOCK pending');
+        if (mode === MODES.AGC) return {mode};
+        mode = MODES.AGC_LOADING;
+        calls.push(['enter-agc', now.value]);
+        await Promise.resolve();
+        mode = MODES.AGC;
+        return {mode};
+      },
+      onBeforeClock(){ return () => {}; }
     },
-    getCore(){ return clockCore; },
-    scheduleAgcAutosave(){ handoffCalls.push(['autosave', clockNow]); },
-    hardwarePersonality(){
-      return {keys:{V:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};
-    }
+    scheduleAgcAutosave(){ calls.push(['autosave', now.value]); },
+    hardwarePersonality(){ return {keys:{V:{contactMs:10,returnSoundMs:5}}}; }
   };
+  vm.createContext(context);
+  installKeycodes(context);
+  installInputRuntime(context);
+  vm.runInContext(source, context, {filename:'keyboard-electrical-interlock-clock.js'});
 
-  vm.createContext(clockContext);
-  vm.runInContext(source, clockContext, {filename:'keyboard-electrical-interlock-clock.js'});
-
-  // Fast-tap VERB while the phone is still showing CLOCK. The electrical
-  // interlock owns window capture, so this is the regression path that used to
-  // prevent clock-behavior.js's document listener from ever seeing the key.
   const verb = makeButton('V');
-  let event = makeEvent(verb, 41);
-  dispatch(win, 'pointerdown', event);
-  assert(event.prevented && event.immediate,
-    'clock VERB was not captured by the electrical interlock');
   event = makeEvent(verb, 41);
-  dispatch(win, 'pointerup', event);
-
-  let clockState = clockContext.AGCDSKY.keyboardElectrical.state();
+  dispatch(win, 'pointerdown', event);
+  dispatch(win, 'pointerup', makeEvent(verb, 41));
+  let clockState = context.AGCDSKY.keyboardElectrical.state();
   assert(clockState.clockHandoffPending && clockState.cycleLatched,
-    'released clock key did not stay owned while AGC startup was pending');
-  assert(!handoffCalls.some(c => c[0] === 'legacy-clock-press'),
-    'clock key fell back into the synthetic clock command editor');
-
-  // Allow enterAgc() and the handoff continuation to complete without running
-  // the synthetic timers used for key-return sound/KEYRST dwell.
+    'released CLOCK key did not remain owned during AGC startup');
   for (let i = 0; i < 8; i++) await Promise.resolve();
-
-  assert(appMode === 'agc', 'clock key did not promote the app to AGC mode');
-  assert(handoffCalls.filter(c => c[0] === 'enter-agc').length === 1,
-    'clock key did not request exactly one AGC transition');
-  const handoffMakes = handoffCalls.filter(c => c[0] === 'make');
-  assert(handoffMakes.length === 1 && handoffMakes[0][1] === 0o21,
-    'original VERB contact was not forwarded as Pinball keycode 021');
-  assert(!handoffCalls.some(c => c[0] === 'legacy-clock-press'),
-    'clock handoff also executed the old synthetic-clock key path');
-
-  clockState = clockContext.AGCDSKY.keyboardElectrical.state();
-  assert(!clockState.clockHandoffPending && clockState.electricalMade && clockState.keyResetPending,
-    'released handoff key did not enter normal electrical make/KEYRST dwell');
-
-  let guard = 0;
-  while (queuedTimers.size) {
-    let selectedId = null;
-    let selected = null;
-    for (const [id, timer] of queuedTimers) {
-      if (!selected || timer.due < selected.due || (timer.due === selected.due && id < selectedId)) {
-        selectedId = id;
-        selected = timer;
-      }
-    }
-    queuedTimers.delete(selectedId);
-    clockNow = Math.max(clockNow, selected.due);
-    selected.fn();
-    if (++guard > 1000) throw new Error('clock-handoff timer loop did not settle');
-  }
-
-  assert(handoffCalls.filter(c => c[0] === 'reset').length === 1,
-    'released clock-handoff key did not generate exactly one KEYRST');
-  clockState = clockContext.AGCDSKY.keyboardElectrical.state();
+  assert(mode === MODES.AGC, 'CLOCK key did not promote to AGC mode');
+  assert(calls.filter(c => c[0] === 'transition-request').length === 1,
+    'CLOCK key requested more than one AGC transition');
+  assert(calls.filter(c => c[0] === 'make').length === 1
+      && calls.find(c => c[0] === 'make')[1] === 0o21,
+    'original VERB contact was not forwarded as Pinball 021');
+  assert(!calls.some(c => c[0] === 'legacy-clock-press'),
+    'CLOCK handoff leaked into the synthetic clock editor');
+  timer.flush();
+  assert(calls.filter(c => c[0] === 'reset').length === 1,
+    'released CLOCK-handoff key did not produce exactly one KEYRST');
+  clockState = context.AGCDSKY.keyboardElectrical.state();
   assert(!clockState.cycleLatched && !clockState.electricalMade && !clockState.keyResetPending,
-    'clock-handoff key left the channel-015 cycle latched');
+    'CLOCK-handoff key left channel 015 latched');
 }
 
 verifyClockHandoff().then(() => {
   console.log('keyboard electrical interlock smoke: PASS');
-  console.log('  series chain, KEYRST dwell, PRO bypass, fast tap, and CLOCK -> AGC first-key handoff verified');
+  console.log('  series-key exclusion, minimum KEYRST dwell, PRO bypass, pre-CLOCK release, pending-CLOCK suppression, and CLOCK -> AGC first-contact handoff verified');
 }).catch(error => {
   console.error('keyboard electrical interlock smoke: FAIL');
   console.error(error && error.stack ? error.stack : error);

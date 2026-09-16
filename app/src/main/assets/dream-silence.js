@@ -5,14 +5,16 @@
 // preference untouched so leaving Dream mode restores the normal app exactly as
 // configured.
 (() => {
-  const isDream = new URLSearchParams(location.search).get('dream') === '1';
-  if (!isDream) return;
+  const state = window.AGCDSKY_APP_STATE;
+  if (!state || !state.dream) return;
+  const compat=window.AGCDSKY_COMPAT;
+  if(!compat)throw new Error('Runtime compatibility bridge unavailable');
 
-  // Prevent creation/resumption of WebAudio in Dream mode and make the direct
-  // clock relay-burst path a no-op. app.js has already established these global
-  // functions, and this synchronous script runs before timer callbacks can fire.
-  if (typeof ensureAudio === 'function') ensureAudio = () => null;
-  if (typeof playRelayBurst === 'function') playRelayBurst = () => {};
+  // Audio slots already exist before Dream mode is applied. Replace them
+  // explicitly rather than mutating parser globals; later recovery/personality
+  // layers still compose on top of these Dream-safe base implementations.
+  compat.replace('ensureAudio',()=>null,'DreamService silence');
+  compat.replace('playRelayBurst',()=>{},'DreamService silence');
 
   window.AGCDSKY_DREAM_SILENT = true;
 })();

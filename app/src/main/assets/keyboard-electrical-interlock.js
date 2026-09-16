@@ -10,25 +10,38 @@
  * active-low input on channel 032.
  *
  * This listener lives on window capture, ahead of the older document-level
- * mechanical handler.  It therefore owns the 18 keycoded switches without
- * changing PRO or the rest of flight-hardware-ui.js.  Because it owns the
- * earliest normal-key event, it also owns CLOCK -> AGC handoff so the first
- * physical contact is not swallowed before the older document listener sees it.
+ * mechanical handler. It owns the 18 keycoded switches and CLOCK -> AGC
+ * first-contact handoff. dsky-input-runtime.js owns channel-015 make/KEYRST;
+ * runtime-transitions.js owns CLOCK-entry cleanup ordering.
  */
 (() => {
+  const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;
+  if (!DSKY_KEY_CODE) throw new Error('Shared DSKY keycode table unavailable');
   if (window.__DSKY_KEYBOARD_ELECTRICAL_INTERLOCK__) return;
   window.__DSKY_KEYBOARD_ELECTRICAL_INTERLOCK__ = true;
 
-  const DSKY_KEY_CODE = Object.freeze({
-    '1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,
-    V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37
-  });
+  const api = window.AGCDSKY;
+  const runtime = api?.runtimeTransitions;
+  const input = api?.inputRuntime;
+  if (!api || !runtime || !input
+      || typeof runtime.mode !== 'function'
+      || typeof runtime.core !== 'function'
+      || typeof runtime.clockRequested !== 'function'
+      || typeof runtime.requestAgc !== 'function'
+      || typeof runtime.onBeforeClock !== 'function'
+      || typeof input.ready !== 'function'
+      || typeof input.keyMake !== 'function'
+      || typeof input.keyReset !== 'function'
+      || !runtime.modes) {
+    throw new Error('Shared AGC runtime/input authority unavailable');
+  }
+
   const FALLBACK_CONTACT_MS = 36;
   const FALLBACK_RETURN_MS = 18;
   // Best-estimate minimum electrical dwell, not a measured switch spec.
   // Block II keyboard lines enter the AGC through noise-filtering D circuits;
   // surviving descriptions place a valid sustained keyboard input around the
-  // 10-ms region.  Twelve milliseconds prevents an unrealistically short
+  // 10-ms region. Twelve milliseconds prevents an unrealistically short
   // touchscreen tap from making and resetting in the same JS turn while still
   // being far below an ordinary human key hold.
   const MIN_KEYCODE_HOLD_MS = 12;
@@ -51,7 +64,7 @@
   function personality(button) {
     const key = button?.dataset?.key || '?';
     try {
-      const all = window.AGCDSKY?.hardwarePersonality?.();
+      const all = api.hardwarePersonality?.();
       const p = all?.keys?.[key];
       if (p) return p;
     } catch (_) {}
@@ -84,90 +97,69 @@
     if (ctx.state === 'running') fire(); else ctx.resume().then(fire).catch(() => {});
   }
 
-  function currentCore() {
-    try { return window.AGCDSKY && typeof window.AGCDSKY.getCore === 'function' ? window.AGCDSKY.getCore() : null; }
-    catch (_) { return null; }
-  }
-
   function currentMode() {
-    try {
-      if (window.AGCDSKY && typeof window.AGCDSKY.appStatus === 'function') {
-        return String(window.AGCDSKY.appStatus().mode || '');
-      }
-    } catch (_) {}
-    try { return typeof mode !== 'undefined' ? String(mode) : ''; }
+    try { return String(runtime.mode() || ''); }
     catch (_) { return ''; }
   }
 
-  function registerElectricalMake(core, code) {
-    const accepted = typeof core.keyPress === 'function'
-      ? core.keyPress(code)
-      : (typeof core.writeIo === 'function' ? core.writeIo(0o15, code) : 0);
+  function registerElectricalMake(code) {
+    if (runtime.clockRequested() || !input.ready()) return false;
+    let core = null;
+    try { core = runtime.core(); } catch (_) { return false; }
+    if (!core) return false;
+    const accepted = input.keyMake(code);
     if (!(accepted > 0)) return false;
     electricalCore = core;
     electricalKeyCode = code;
     electricalMade = true;
     electricalMadeAt = performance.now();
-    if (window.AGCDSKY && typeof window.AGCDSKY.scheduleAgcAutosave === 'function') {
-      window.AGCDSKY.scheduleAgcAutosave('DSKY key make');
+    if (typeof api.scheduleAgcAutosave === 'function') {
+      api.scheduleAgcAutosave('DSKY key make');
     }
     return true;
   }
 
-  function waitForAgcLoad(api) {
-    return new Promise((resolve, reject) => {
-      const check = () => {
-        let status;
-        try { status = api.appStatus(); }
-        catch (error) { reject(error); return; }
-        if (status && status.mode === 'agc') { resolve(); return; }
-        if (!status || status.mode !== 'agc-loading') {
-          reject(new Error(`AGC handoff ended in ${status?.mode || 'unknown'} mode`));
-          return;
-        }
-        setTimeout(check, 10);
-      };
-      check();
-    });
-  }
-
   async function promoteClockContact(state, code) {
-    const api = window.AGCDSKY;
     try {
-      if (!api || typeof api.enterAgc !== 'function' || typeof api.appStatus !== 'function') {
-        throw new Error('AGC mode API unavailable');
+      // runtime-transitions.js owns transition serialization and mode/core
+      // authority; dsky-input-runtime.js owns channel-015 electrical access.
+      await runtime.requestAgc('keyboard electrical contact');
+
+      // Blur/visibility/CLOCK cleanup may have canceled this exact physical
+      // switch cycle while the AGC was loading. Never resurrect that stale
+      // contact after the async transition completes.
+      if (state.cancelled || !clockHandoffPending || runtime.clockRequested()) return;
+      if (currentMode() !== runtime.modes.AGC || !input.ready()) {
+        throw new Error('AGC input runtime not ready after clock handoff');
       }
-
-      // enterAgc() is the authoritative transition.  If another caller already
-      // has the core in agc-loading, enterAgc() intentionally returns early;
-      // wait for that in-flight load rather than dropping this physical key.
-      await api.enterAgc();
-      if (currentMode() === 'agc-loading') await waitForAgcLoad(api);
-
-      const core = currentCore();
-      if (!core || currentMode() !== 'agc') throw new Error('AGC core not ready after clock handoff');
-      if (!registerElectricalMake(core, code)) throw new Error('AGC rejected clock-handoff keycode');
+      if (!registerElectricalMake(code)) throw new Error('AGC rejected clock-handoff keycode');
 
       clockHandoffPending = false;
       // A touchscreen tap may have physically returned while the WASM/rope was
-      // loading.  In that case the make still happened, so assert its keycode
+      // loading. In that case the make still happened, so assert its keycode
       // first and then let the normal minimum-dwell/KEYRST path release it.
       if (!state.down) assertKeyResetIfReady();
     } catch (error) {
       clockHandoffPending = false;
-      console.error('DSKY clock-to-AGC key handoff failed', error);
+      if (!state.cancelled && !runtime.clockRequested()) {
+        console.error('DSKY clock-to-AGC key handoff failed', error);
+      }
       if (!state.down && allNormalKeysReleased()) clearElectricalCycle();
     }
   }
 
   function makeContact(state) {
     if (!state || !state.down || state.made) return;
+    if (runtime.clockRequested()) {
+      state.cancelled = true;
+      return;
+    }
     state.made = true;
     keySound(state.button, false);
 
     // A mechanically depressed second key is real, but the series contact
     // network prevents it from generating another keycode until every normal
-    // key has first returned to released.  It must not become the new owner
+    // key has first returned to released. It must not become the new owner
     // merely because the original key is subsequently released.
     if (!state.accepted) return;
 
@@ -176,10 +168,10 @@
     if (code === undefined) return;
     try {
       const modeNow = currentMode();
-      if (modeNow === 'clock' || modeNow === 'agc-loading') {
-        // The window-capture electrical layer stops propagation before
-        // clock-behavior.js can see the pointer.  Promote here, at the real
-        // contact point, and preserve this same contact through AGC startup.
+      if (modeNow === runtime.modes.CLOCK || modeNow === runtime.modes.AGC_LOADING) {
+        // The window-capture electrical layer stops propagation before the
+        // document-level clock listener. Preserve this same physical contact
+        // while the shared transition coordinator gets the real AGC ready.
         if (!clockHandoffPending) {
           clockHandoffPending = true;
           void promoteClockContact(state, code);
@@ -187,12 +179,9 @@
         return;
       }
 
-      const core = currentCore();
-      if (core && modeNow === 'agc') {
-        registerElectricalMake(core, code);
-        return;
+      if (modeNow === runtime.modes.AGC && input.ready()) {
+        registerElectricalMake(code);
       }
-      if (typeof window.press === 'function') window.press(key);
     } catch (error) {
       console.error('DSKY series-key contact failed', error);
     }
@@ -215,7 +204,7 @@
   function assertKeyResetIfReady() {
     if (!allNormalKeysReleased()) return;
     // While CLOCK -> AGC startup is in flight, retain ownership of this
-    // physical cycle.  Clearing it here would let the async handoff assert a
+    // physical cycle. Clearing it here would let the async handoff assert a
     // keycode after KEYRST had already been declared, leaving channel 015 held.
     if (clockHandoffPending && !electricalMade) return;
 
@@ -234,16 +223,50 @@
         }
         return;
       }
-      const core = electricalCore || currentCore();
       try {
-        if (core && typeof core.keyRelease === 'function') core.keyRelease();
-        else if (core && typeof core.writeIo === 'function') core.writeIo(0o15, 0);
+        if (electricalCore) input.keyReset(electricalCore);
+        else if (input.ready()) input.keyReset();
       } catch (error) {
         console.error('DSKY KEYRST failed', error);
       }
     }
     if (keyResetTimer) clearTimeout(keyResetTimer);
     keyResetTimer = 0;
+    clearElectricalCycle();
+  }
+
+  function clearPointers() {
+    for (const state of Array.from(pointers.values())) {
+      clearTimeout(state.timer);
+      state.cancelled = true;
+      state.down = false;
+      state.button.classList.remove('pressed');
+      try { state.button.releasePointerCapture(state.pointerId); } catch (_) {}
+      pointers.delete(state.pointerId);
+    }
+  }
+
+  function releaseEverything() {
+    clearPointers();
+    if (clockHandoffPending && !electricalMade) {
+      clearElectricalCycle();
+      return;
+    }
+    assertKeyResetIfReady();
+  }
+
+  function releaseForClock() {
+    clearPointers();
+    if (keyResetTimer) clearTimeout(keyResetTimer);
+    keyResetTimer = 0;
+    if (electricalMade) {
+      try {
+        if (electricalCore) input.keyReset(electricalCore);
+        else if (input.ready()) input.keyReset();
+      } catch (error) {
+        console.error('DSKY KEYRST before CLOCK failed', error);
+      }
+    }
     clearElectricalCycle();
   }
 
@@ -254,12 +277,15 @@
     event.stopPropagation();
     event.stopImmediatePropagation();
 
+    // CLOCK intent wins over any new physical input while an already-running
+    // AGC load is merely being allowed to settle before the base mode switch.
+    if (runtime.clockRequested()) return;
     if (pointers.has(event.pointerId)) return;
     const accepted = !cycleLatched;
     if (accepted) cycleLatched = true;
     const p = personality(button);
     const state = {
-      button, pointerId:event.pointerId, down:true, accepted, made:false, timer:0
+      button, pointerId:event.pointerId, down:true, accepted, made:false, cancelled:false, timer:0
     };
     pointers.set(event.pointerId, state);
     button.classList.add('pressed');
@@ -288,17 +314,6 @@
     return true;
   }
 
-  function releaseEverything() {
-    for (const state of Array.from(pointers.values())) {
-      clearTimeout(state.timer);
-      state.down = false;
-      state.button.classList.remove('pressed');
-      try { state.button.releasePointerCapture(state.pointerId); } catch (_) {}
-      pointers.delete(state.pointerId);
-    }
-    assertKeyResetIfReady();
-  }
-
   // Window capture executes before the document-capture handler in
   // flight-hardware-ui.js. PRO is deliberately allowed to continue downward.
   window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false});
@@ -313,8 +328,12 @@
   window.addEventListener('blur', releaseEverything, {passive:true});
   document.addEventListener('visibilitychange', () => { if (document.hidden) releaseEverything(); }, {capture:true});
 
-  window.AGCDSKY = window.AGCDSKY || {};
-  window.AGCDSKY.keyboardElectrical = Object.freeze({
+  // CLOCK entry is an application mode transition, not a physical key return.
+  // Release any held/pending matrix state synchronously before app.js stops the
+  // AGC so channel 015 cannot remain asserted across the mode boundary.
+  runtime.onBeforeClock(releaseForClock);
+
+  api.keyboardElectrical = Object.freeze({
     state: () => ({
       cycleLatched,
       down:pointers.size,

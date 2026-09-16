@@ -13,6 +13,10 @@ const reporter = fs.readFileSync(
     path.join(ROOT, 'app/src/main/java/org/apollo/agcdsky/DebugReporter.java'), 'utf8');
 const diagnostics = fs.readFileSync(
     path.join(ROOT, 'app/src/main/assets/diagnostics.js'), 'utf8');
+const proceed = fs.readFileSync(
+    path.join(ROOT, 'app/src/main/assets/proceed-electrical.js'), 'utf8');
+const input = fs.readFileSync(
+    path.join(ROOT, 'app/src/main/assets/dsky-input-runtime.js'), 'utf8');
 const fidelity = fs.readFileSync(
     path.join(ROOT, 'app/src/main/assets/hardware-fidelity.js'), 'utf8');
 
@@ -44,12 +48,19 @@ assert(compact(activity).includes('newDebugReporter.JsBridge(this),"DebugBridge"
 assert(activity.includes('AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)'),
     'SensorMainActivity resume must force a hidden transition before visible resume');
 
-assert(fidelity.includes('function releaseProceed()'),
-    'hardware fidelity layer must retain the held-PRO release helper');
-assert(fidelity.includes('agcCore.proceedKey(false)'),
-    'held PRO release must deassert the AGC proceed input');
-assert(fidelity.includes("document.addEventListener('visibilitychange'"),
+assert(proceed.includes('function releaseProceed()'),
+    'PRO electrical controller must retain the held-contact release helper');
+assert(proceed.includes('input.proceed(false)'),
+    'held PRO release must deassert channel 032 through the shared input runtime');
+assert(proceed.includes("document.addEventListener('visibilitychange'"),
     'held PRO must be released when the document becomes hidden');
+assert(proceed.includes('runtime.onBeforeClock(releaseProceed)'),
+    'held PRO must release before CLOCK transition ownership changes');
+assert(input.includes('core.proceedKey(!!pressed)'),
+    'input runtime must remain the single direct AGC PRO primitive');
+for (const obsolete of ['function releaseProceed()','agcCore.proceedKey(false)','proceedKey(true)','proceedKey(false)']) {
+    assert(!fidelity.includes(obsolete), `hardware fidelity regained obsolete PRO ownership: ${obsolete}`);
+}
 
 const reporterCompact = compact(reporter);
 assert(reporterCompact.includes('newFile(context.getFilesDir(),REPORT_FILE)'),
@@ -77,4 +88,4 @@ assert(diagnostics.includes("api.openDiagnostics=open"),
     'diagnostics module must expose the current openDiagnostics entry point');
 
 console.log('native diagnostic source smoke: PASS');
-console.log('  local native crash/error reporting, sensor activity resume, held-PRO release, and diagnostics surface verified');
+console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, and diagnostics surface verified');
