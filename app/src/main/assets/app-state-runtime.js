@@ -3,8 +3,8 @@
 // Explicit application-state bootstrap. Session/presentation fields and AGC
 // core-lifecycle fields remain separate sealed objects. This bootstrap also
 // installs the one audited compatibility registry used by later classic-script
-// fidelity layers; compatibility names are accessor-backed service slots, not
-// duplicate application state.
+// fidelity layers; compatibility names are accessor-backed service slots or
+// forwarded aliases, not duplicate application state.
 (() => {
   if (!window.AGCDSKY_APP_STATE) {
     window.AGCDSKY_APP_STATE = Object.seal({
@@ -101,6 +101,32 @@
       });
       return entry;
     }
+    function alias(name, getter, setter = null, versionGetter = null, historyGetter = null) {
+      assertName(name);
+      if (typeof getter !== 'function') throw new TypeError(`Getter required for ${name}`);
+      if (setter !== null && typeof setter !== 'function') throw new TypeError(`Setter must be a function for ${name}`);
+      if (versionGetter !== null && typeof versionGetter !== 'function') throw new TypeError(`Version getter must be a function for ${name}`);
+      if (historyGetter !== null && typeof historyGetter !== 'function') throw new TypeError(`History getter must be a function for ${name}`);
+      const entry = Object.freeze({
+        kind:setter?'alias':'readonly-alias',
+        get:getter,
+        set:setter ? (next, reason='direct assignment') => {
+          const prior = getter();
+          setter(next, reason);
+          return prior;
+        } : undefined,
+        version:()=>versionGetter ? (Number(versionGetter())||0) : 0,
+        history:()=>historyGetter ? historyGetter().map(item=>({...item})) : []
+      });
+      entries.set(name, entry);
+      Object.defineProperty(window, name, {
+        configurable:false,
+        enumerable:false,
+        get:getter,
+        set:setter ? next=>entry.set(next) : undefined
+      });
+      return entry;
+    }
     function readonly(name, valueOrGetter) {
       return accessor(name, typeof valueOrGetter === 'function' ? valueOrGetter : () => valueOrGetter, null);
     }
@@ -118,6 +144,6 @@
     function describe() {
       return Array.from(entries, ([name,entry]) => ({name,kind:entry.kind,version:entry.version()}));
     }
-    window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,replace,describe});
+    window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,alias,readonly,get,replace,describe});
   }
 })();

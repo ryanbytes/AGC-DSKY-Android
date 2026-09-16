@@ -27,11 +27,18 @@ assert(context.compatProbe()===3&&probe.version()===2,'explicit compatibility re
 assert(probe.history().length===2&&probe.history()[1].reason==='explicit smoke replacement','compatibility replacement provenance changed');
 assert(compat.describe().some(item=>item.name==='compatProbe'&&item.version===2),'compatibility registry diagnostics changed');
 
+let forwarded=1,forwardedVersion=0;const forwardedHistory=[];
+compat.alias('forwardedProbe',()=>forwarded,(next,reason)=>{forwarded=Number(next);forwardedVersion++;forwardedHistory.push({version:forwardedVersion,reason})},()=>forwardedVersion,()=>forwardedHistory);
+assert(context.forwardedProbe===1&&compat.get('forwardedProbe')===1,'forwarded compatibility alias bootstrap changed');
+context.forwardedProbe=2;assert(forwarded===2&&forwardedVersion===1,'forwarded compatibility assignment did not reach owner');
+compat.replace('forwardedProbe',3,'forwarded replacement');assert(forwarded===3&&forwardedVersion===2,'forwarded explicit replacement did not reach owner');
+const forwardedDescription=compat.describe().find(item=>item.name==='forwardedProbe');assert(forwardedDescription&&forwardedDescription.kind==='alias'&&forwardedDescription.version===2,'forwarded compatibility diagnostics do not reflect owner version');
+
 state.mode='agc';state.verb='35';state.noun='00';state.tickSound=false;state.dream=true;state.displayOnly=true;state.dreamMode='solar';state.dim=true;state.appVisible=false;core.loadedMission='comanche055';core.suspendedForClock=true;core.pausedForVisibility=true;core.core={running:false};
 assert(state.mode==='agc'&&state.verb==='35'&&state.noun==='00'&&state.tickSound===false&&state.dream&&state.displayOnly&&state.dreamMode==='solar'&&state.dim&&state.appVisible===false,'direct shared-state writes changed');
 assert(core.core&&core.loadedMission==='comanche055'&&core.suspendedForClock&&core.pausedForVisibility,'direct core-session writes changed');
 const originalState=state,originalCore=core,originalCompat=compat;new vm.Script(source).runInContext(context);assert(context.AGCDSKY_APP_STATE===originalState&&context.AGCDSKY_CORE_SESSION===originalCore&&context.AGCDSKY_COMPAT===originalCompat&&state.mode==='agc'&&core.loadedMission==='comanche055','bootstrap reinitialized an existing session/registry');
-assert(source.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,replace,describe});'),'audited compatibility registry publication missing explicit replacement API');
+assert(source.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,alias,readonly,get,replace,describe});'),'audited compatibility registry publication missing forwarded-alias API');
 assert(source.includes('Object.defineProperty(window, name'),'compatibility registry must own its accessor boundary');
 
 const stateIndex=html.indexOf('src="app-state-runtime.js"'),shellIndex=html.indexOf('src="app-shell-runtime.js"');
@@ -53,4 +60,4 @@ for(const [name,alias] of coreExpected){const s=read(name);assert(s.includes(`${
 const shell=read('app-shell-runtime.js');assert(shell.includes('function shellCore()')&&shell.includes('window.AGCDSKY_CORE_SESSION'),'shell does not dynamically resolve the explicit core session');
 for(const forbidden of ['let selectedMission=','let verb=','let noun=','let mode=','let ntpStatus=','let dreamMode=','let dim=','let tickSound=','let displayOnly=','let appVisible=','let agcCore=','let agcLoadedMission=','let agcSuspendedForClock=','let agcPausedForVisibility='])assert(!shell.includes(forbidden),`shell regained implicit session/core state: ${forbidden}`);
 console.log('app state runtime smoke: PASS');
-console.log('  sealed explicit app/core state, audited service-slot registry, explicit replacement provenance, idempotent bootstrap, and explicit consumers verified');
+console.log('  sealed explicit app/core state, audited compatibility registry, forwarded owner-backed aliases, explicit replacement provenance, idempotent bootstrap, and explicit consumers verified');
