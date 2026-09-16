@@ -102,8 +102,9 @@
     return lo + (hi - lo) * u;
   }
 
-  const previous = window.AGCDSKY && typeof window.AGCDSKY.hardwarePersonality === 'function'
-    ? window.AGCDSKY.hardwarePersonality
+  const baseService = window.AGCDSKY_FLIGHT_HARDWARE_UI;
+  const previous = baseService && typeof baseService.hardwarePersonality === 'function'
+    ? baseService.hardwarePersonality
     : null;
 
   function build() {
@@ -163,8 +164,10 @@
 
   let cached = null;
   const get = () => cached || (cached = build());
-  if (!window.AGCDSKY) throw new Error('AGCDSKY public facade unavailable');
-  window.AGCDSKY.hardwarePersonality = get;
-  window.AGCDSKY.keyMechanicalSpec = () => get().keyMechanicalSpec;
+  const service=Object.freeze({
+    hardwarePersonality:get,
+    spec:() => get().keyMechanicalSpec
+  });
+  window.AGCDSKY_KEY_MECHANICAL_SPEC=service;
   get();
 })();
