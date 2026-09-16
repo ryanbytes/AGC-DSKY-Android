@@ -10,17 +10,24 @@ const req=(t,n,l)=>{if(!t.includes(n))fail(`${l} missing: ${n}`);};
 const no=(t,n,l)=>{if(t.includes(n))fail(`${l} must not contain: ${n}`);};
 
 const show=read('app/src/main/assets/relay-show.js');
+const html=read('app/src/main/assets/index.html');
 const cm=read('app/src/main/assets/cm-mode.js');
 const perceptual=read('app/src/main/assets/relay-perceptual-personality.js');
 
 try{new vm.Script(show,{filename:'relay-show.js'});}catch(error){fail(`relay-show syntax error: ${error.message}`);}
 try{new vm.Script(perceptual,{filename:'relay-perceptual-personality.js'});}catch(error){fail(`relay personality syntax error: ${error.message}`);}
 
-req(cm,"button.id = 'relay-show'",'controls button');
-req(cm,"button.textContent = 'RELAY SHOW'",'controls button label');
-req(cm,"script.src = 'relay-show.js'",'feature loader');
-req(cm,"script.src = 'relay-perceptual-personality.js'",'perceptible relay personality loader');
-req(cm,'installRelayPerceptualPersonality();','perceptible relay personality install order');
+// CM configuration no longer injects presentation features. The button and
+// scripts are parser-owned by index.html, so test the actual owner and order.
+req(cm,'this module owns configuration only and performs no script injection','CM parser-ownership contract');
+req(html,'<button id="relay-show">RELAY SHOW</button>','controls button');
+req(html,'<script src="relay-perceptual-personality.js" data-feature="relay-perceptual-personality"></script>','perceptible relay personality parser entry');
+req(html,'<script src="relay-show.js" data-feature="relay-show"></script>','relay show parser entry');
+const personalityInstall=html.indexOf('<script src="relay-perceptual-personality.js"');
+const relayShowInstall=html.indexOf('<script src="relay-show.js"');
+if(!(personalityInstall>=0&&relayShowInstall>personalityInstall)) {
+  fail('relay personality layer must load before RELAY SHOW');
+}
 
 // Runtime-service refactor: RELAY SHOW must use the explicit shared services,
 // not reach back into the retired page globals that those services replaced.
@@ -136,12 +143,6 @@ if(!(runningCapture>=0&&agcStop>runningCapture&&settledCapture>agcStop&&runningR
   fail('AGC running state must be captured before stop and restored onto the settled snapshot');
 }
 
-const personalityInstall=cm.indexOf('installRelayPerceptualPersonality();');
-const relayShowInstall=cm.indexOf('installRelayShow();');
-if(!(personalityInstall>=0&&relayShowInstall>personalityInstall)) {
-  fail('relay personality layer must load before RELAY SHOW is installed');
-}
-
 // The refactored module must not regain ownership through its retired globals.
 for(const retired of [
   'saveAgcState(',
@@ -158,4 +159,4 @@ no(show,'filter:','CSS/filter flare');
 no(show,"classList.add('relay-flare'",'relay flare class');
 
 console.log('Relay show smoke: PASS');
-console.log('  runtime-service ownership, relay identities, visibility-safe resume, exception-safe restore, and stretched-callback cancellation verified');
+console.log('  parser-owned loading, runtime-service ownership, relay identities, visibility-safe resume, exception-safe restore, and stretched-callback cancellation verified');
