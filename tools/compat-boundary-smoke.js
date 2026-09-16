@@ -27,11 +27,15 @@ if(consumers.length!==OWNERS.size)throw new Error(`compatibility owner count cha
 for(const name of consumers){
   const source=fs.readFileSync(path.join(ASSETS,name),'utf8');
   if(name==='app-state-runtime.js'){
-    if(!source.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,readonly,get,replace,describe});'))throw new Error('compatibility registry publication changed');
+    if(!source.includes('window.AGCDSKY_COMPAT = Object.freeze({mutable,accessor,alias,readonly,get,replace,describe});'))throw new Error('compatibility registry publication changed');
+    if(!source.includes('function alias(name, getter, setter = null, versionGetter = null, historyGetter = null)'))throw new Error('forwarded compatibility alias primitive missing');
     continue;
   }
   if(!source.includes('const compat=window.AGCDSKY_COMPAT;'))throw new Error(`${name} does not bind registry only at its service boundary`);
   if(!source.includes('window.AGCDSKY_'))throw new Error(`${name} no longer publishes an owning service`);
 }
+const renderer=fs.readFileSync(path.join(ASSETS,'dsky-display-renderer.js'),'utf8');
+if(!renderer.includes('createImplementationSlot(')||!renderer.includes('compat.alias(name,slot.get'))throw new Error('renderer does not own implementation slots behind forwarded compatibility aliases');
+if(renderer.includes("compat.mutable('glyph'")||renderer.includes("compat.mutable('renderDigits'")||renderer.includes("compat.mutable('set2'"))throw new Error('renderer compatibility registry still owns implementation state');
 console.log('compat boundary smoke: PASS');
-console.log(`  registry confined to ${consumers.join(', ')}`);
+console.log(`  registry confined to ${consumers.join(', ')}; renderer implementation slots are owner-backed aliases`);
