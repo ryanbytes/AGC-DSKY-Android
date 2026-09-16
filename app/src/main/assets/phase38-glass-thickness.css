@@ -1,0 +1,102 @@
+/* Phase 38: make EL-only parallax read as finite cover-glass thickness.
+   The phosphor face, rear glass surface and front glass surface intentionally
+   use three different motion gains. Reflections stay local and faint. */
+body.spacecraft-cm:not(.dream) .el-glass-back{
+  display:none;
+  pointer-events:none;
+}
+body.spacecraft-cm:not(.dream) .el-glass-sheen{
+  overflow:hidden;
+  box-sizing:border-box;
+  background:transparent!important;
+  mix-blend-mode:normal!important;
+  opacity:1!important;
+  border:.045vmin solid rgba(220,232,227,.18);
+  border-radius:.16vmin;
+  box-shadow:
+    inset .05vmin .05vmin .10vmin rgba(255,255,255,.10),
+    inset -.08vmin -.08vmin .18vmin rgba(0,0,0,.20)!important;
+}
+body.spacecraft-cm:not(.dream) .el-glass-sheen::before,
+body.spacecraft-cm:not(.dream) .el-glass-sheen::after{
+  content:"";
+  position:absolute;
+  pointer-events:none;
+}
+body.spacecraft-cm:not(.dream) .el-glass-sheen::before{
+  inset:1.2%;
+  background:
+    radial-gradient(ellipse 23% 12% at var(--dsky-light-x,52%) var(--dsky-light-y,44%),rgba(248,255,252,.17),rgba(235,248,242,.035) 52%,transparent 78%),
+    linear-gradient(116deg,transparent 24%,rgba(248,255,252,.055) 37%,rgba(255,255,255,.14) 43%,rgba(245,253,249,.035) 48%,transparent 61%);
+  opacity:.46;
+  filter:blur(.08vmin);
+}
+body.spacecraft-cm:not(.dream) .el-glass-sheen::after{
+  inset:.65%;
+  border:.045vmin solid rgba(4,10,8,.22);
+  border-radius:.12vmin;
+  box-shadow:inset 0 0 .24vmin rgba(0,0,0,.12);
+  opacity:.66;
+}
+
+/* EL substrate is deepest. */
+body.parallax-3d.screen-only:not(.dream) .elpanel{
+  transform:translate(-50%,-50%)
+    translate3d(calc(var(--dsky-el-parallax-x) * .30px),calc(var(--dsky-el-parallax-y) * .30px),2px)
+    rotateX(var(--dsky-el-tilt-x)) rotateY(var(--dsky-el-tilt-y))!important;
+  filter:drop-shadow(var(--dsky-el-shadow-x) var(--dsky-el-shadow-y) 2px rgba(0,0,0,.18))!important;
+}
+
+/* Rear surface sits between phosphor and front cover. */
+body.parallax-3d.screen-only:not(.dream) .el-glass-back{
+  display:block;
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:min(100vw,calc(100vh * 106 / 182.356));
+  height:min(100vh,calc(100vw * 182.356 / 106));
+  z-index:5;
+  box-sizing:border-box;
+  border:.11vmin solid rgba(8,16,13,.30);
+  border-radius:.18vmin;
+  background:transparent;
+  box-shadow:
+    inset .16vmin .12vmin .30vmin rgba(5,12,10,.13),
+    inset -.18vmin -.14vmin .34vmin rgba(0,0,0,.25),
+    0 .04vmin .10vmin rgba(0,0,0,.18);
+  transform:translate(-50%,-50%)
+    translate3d(calc(var(--dsky-el-parallax-x) * .68px),calc(var(--dsky-el-parallax-y) * .68px),9px)
+    rotateX(var(--dsky-el-tilt-x)) rotateY(var(--dsky-el-tilt-y));
+  transform-origin:50% 50%;
+  will-change:transform;
+  opacity:.82;
+}
+
+/* Front surface moves most; the relative displacement is the thickness cue. */
+body.parallax-3d.screen-only:not(.dream) .el-glass-sheen{
+  transform:translate(-50%,-50%)
+    translate3d(calc(var(--dsky-el-parallax-x) * 1.24px),calc(var(--dsky-el-parallax-y) * 1.24px),17px)
+    rotateX(var(--dsky-el-tilt-x)) rotateY(var(--dsky-el-tilt-y))!important;
+  transform-origin:50% 50%!important;
+  border:.075vmin solid rgba(224,237,231,.24);
+  box-shadow:
+    inset .07vmin .06vmin .12vmin rgba(255,255,255,.13),
+    inset -.10vmin -.10vmin .20vmin rgba(0,0,0,.18),
+    0 .07vmin .16vmin rgba(0,0,0,.18)!important;
+}
+body.parallax-3d.screen-only:not(.dream) .el-glass-sheen::before{
+  background:
+    radial-gradient(ellipse 20% 10% at var(--dsky-el-light-x,52%) var(--dsky-el-light-y,44%),rgba(250,255,253,.21),rgba(235,248,242,.04) 50%,transparent 78%),
+    linear-gradient(116deg,transparent 27%,rgba(248,255,252,.045) 38%,rgba(255,255,255,.13) 43%,rgba(245,253,249,.03) 49%,transparent 58%);
+  opacity:.50;
+}
+body.parallax-3d.screen-only:not(.dream) .el-glass-sheen::after{
+  transform:translate3d(calc(var(--dsky-el-parallax-x) * -.16px),calc(var(--dsky-el-parallax-y) * -.16px),0);
+  opacity:.58;
+}
+
+@media (prefers-reduced-motion:reduce){
+  body.parallax-3d.screen-only .el-glass-back{
+    transform:translate(-50%,-50%)!important;
+  }
+}
