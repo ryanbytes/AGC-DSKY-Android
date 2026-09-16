@@ -4,12 +4,10 @@
  * Couple visible EL/contact output to the individual relay that drives it.
  * AUTHENTIC mode follows modeled per-relay travel inside the 20-ms bank settle.
  * STRETCHED is presentation-only: AGC/latch timing stays authentic while contact
- * transitions are frame-separated for visibility. Channel-010 interception
- * remains behind the audited compatibility registry; rendering/audio/state
- * flow through their owning services.
+ * transitions are frame-separated for visibility. Channel-010 interception and
+ * rendering flow through AGCDSKY_DISPLAY; audio/state use their owning services.
  */
 (() => {
-  const compat=window.AGCDSKY_COMPAT;
   const visualState=window.AGCDSKY_APP_STATE;
   const display=window.AGCDSKY_DISPLAY;
   const audio=window.AGCDSKY_AUDIO;
@@ -18,8 +16,8 @@
   const hardware=window.AGCDSKY_HARDWARE;
   const audioModel=window.DSKY_RELAY_AUDIO;
   const relayMatrix=window.DSKY_RELAY_MATRIX;
-  if(!compat||!visualState||!display||!audio||!environment||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');
-  const baseDecodeChannel10=compat.get('decodeChannel10');
+  if(!visualState||!display||!audio||!environment||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');
+  const baseDecodeChannel10=display.implementation('decodeChannel10');
   const baseIdentityEmitTick=audio.implementation('emitTick');
   if(typeof baseDecodeChannel10!=='function'||typeof baseIdentityEmitTick!=='function')throw new Error('Relay visual implementation hooks unavailable');
 
@@ -105,7 +103,7 @@
     if(row>=1&&row<=12){const prior=currentSettledWord(row);scheduleContactVisuals(row,prior,target)}
     return baseDecodeChannel10(value);
   }
-  compat.replace('decodeChannel10',relayContactVisualDecode,'relay contact visual coupling');
+  display.installImplementation('decodeChannel10',relayContactVisualDecode,'relay contact visual coupling');
   hardware.registerSettledPaintPolicy('relay-visual-coupling',()=>timingMode!==MODE_STRETCHED);
 
   window.DSKY_RELAY_VISUAL=Object.freeze({
