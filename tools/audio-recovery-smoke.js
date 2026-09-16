@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 const fs=require('fs'),path=require('path'),vm=require('vm');
+const {installServiceRegistry}=require('./test-service-registry');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 const guardSource=read('background-audio-guard.js'),audioSource=read('relay-audio-runtime.js'),pageResourceLifecycleSource=read('page-resource-lifecycle.js'),debugReporterSource=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/DebugReporter.java'),'utf8');
@@ -19,7 +20,7 @@ function makeHarness({dream=false,hidden=false}={}){
   const environment={tickLevel:()=>1};
   const clock={stopQueue(){}};
   const context={console,window:null,globalThis:null,document:{hidden,getElementById:id=>id==='sound'?soundButton:null,addEventListener(){}},AGCDSKY_SHELL:shell,AGCDSKY_ENVIRONMENT:environment,AGCDSKY_CLOCK:clock,AudioContext:FakeAudioContext,webkitAudioContext:undefined,DebugBridge:{report(detail){reports.push(String(detail))}},Promise,WeakSet,Map,Object,Number,String,Math,Error,TypeError,setTimeout(fn){const id=++timerId;scheduled.set(id,fn);return id},clearTimeout(id){scheduled.delete(id)}};
-  context.window=context;context.globalThis=context;vm.createContext(context);
+  context.window=context;context.globalThis=context;installServiceRegistry(context);vm.createContext(context);
   for(const name of ['app-state-runtime.js','relay-audio-runtime.js'])new vm.Script(read(name),{filename:name}).runInContext(context);
   const state=context.AGCDSKY_APP_STATE;state.dream=dream;state.tickSound=true;state.appVisible=!hidden;
   new vm.Script(guardSource,{filename:'background-audio-guard.js'}).runInContext(context);
@@ -35,6 +36,7 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   assert(guardSource.includes("audio.installImplementation('emitTick'"),'audio guard must install tick visibility gate through audio service');
   assert(guardSource.includes("audio.installImplementation('playBurst'"),'audio guard must install burst visibility gate through audio service');
   assert(guardSource.includes("audio.setContext(value,'audio recovery context')"),'audio recovery must replace context through audio service');
+  assert(guardSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_AUDIO_RECOVERY'"),'audio recovery must publish explicitly through the service registry');
   assert(!guardSource.includes('AGCDSKY_COMPAT')&&!guardSource.includes('compat.'),'audio recovery must not depend directly on compatibility registry');
   assert(guardSource.includes("ctx.addEventListener('error'"),'audio guard must listen for renderer errors');
   assert(guardSource.includes('AUDIO_FAILURE_LIMIT=2'),'audio guard failure limit changed');
@@ -53,5 +55,5 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   const p=makeHarness();p.FakeAudioContext.nextState='suspended';const policy=new Error('gesture required');policy.name='NotAllowedError';p.FakeAudioContext.nextResumeError=policy;const policyCtx=p.audio.ensure();await flush();assert(p.recovery.status().state==='suspended'&&p.recovery.status().failures===0&&policyCtx.closeCount===0,'NotAllowedError must retain suspended context without failure count');
   const dream=makeHarness({dream:true});assert(dream.audio.ensure()===null&&dream.instances.length===0,'Dream mode must remain silent');
   const hidden=makeHarness({hidden:true});assert(hidden.audio.ensure()===null&&hidden.instances.length===0,'hidden app must not create/resume relay audio');
-  console.log('audio recovery smoke: PASS');console.log('  explicit audio-service recovery ownership, circuit breaker, closed-context replacement, policy rejection, and Dream/hidden silence verified');
+  console.log('audio recovery smoke: PASS');console.log('  explicit audio-service recovery publication/ownership, circuit breaker, closed-context replacement, policy rejection, and Dream/hidden silence verified');
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});
