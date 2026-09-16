@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const INDEX = path.join(ROOT, 'app/src/main/assets/index.html');
+const ASSET_ROOT = path.join(ROOT, 'app/src/main/assets');
+const INDEX = path.join(ASSET_ROOT, 'index.html');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -46,31 +47,44 @@ assert(/\bid="dsky-solo"/i.test(styles[0][1]),
 assert(!/@import\b/i.test(styles[0][2]), '#dsky-solo must not import external CSS');
 assert(!/url\s*\(/i.test(styles[0][2]), '#dsky-solo must not reference external resources');
 
-const scripts = [
+// Keep this smoke focused on CSP/local-asset isolation rather than duplicating
+// the full runtime architecture tests. Verify every external script is local,
+// present on disk, unique, and that the major boot/runtime boundaries retain
+// their required relative order.
+const scriptRefs = [...html.matchAll(/<script\s+[^>]*src="([^"]+)"[^>]*><\/script>/gi)]
+  .map((match) => match[1]);
+assert(scriptRefs.length > 0, 'frontend must load external local scripts');
+assert(new Set(scriptRefs).size === scriptRefs.length, 'frontend must not load duplicate scripts');
+for (const script of scriptRefs) {
+  assert(fs.existsSync(path.join(ASSET_ROOT, script)), `referenced frontend script missing on disk: ${script}`);
+}
+
+const orderedAnchors = [
   'agc-core.js',
   'spacecraft-default.js',
-  'app.js',
-  'phone-icdu.js',
-  'apollo-stars.js',
-  'optics.js',
-  'cm-mode.js',
-  'relay-audio-refine.js',
-  'dsky-geometry.js',
+  'startup-defaults.js',
+  'app-state-runtime.js',
+  'app-shell-runtime.js',
+  'dsky-display-renderer.js',
+  'agc-api-runtime.js',
+  'runtime-transitions.js',
+  'dsky-input-runtime.js',
+  'clock-behavior.js',
   'hardware-fidelity.js',
-  'background-audio-guard.js',
   'screen-only.js',
-  'cheatsheet.js',
-  'diagnostics.js'
+  'parallax-3d.js',
+  'dream-agc.js'
 ];
 let previous = -1;
-for (const script of scripts) {
-  const tag = `<script src="${script}"></script>`;
-  const index = html.indexOf(tag);
+for (const script of orderedAnchors) {
+  const index = scriptRefs.indexOf(script);
   assert(index >= 0, `expected external script missing: ${script}`);
   assert(index > previous, `frontend script order changed around ${script}`);
   previous = index;
 }
+
 for (const stale of [
+  'app.js',
   'runtime-debug.js',
   'app-refine.js',
   'v35-audio-refine.js',
@@ -81,4 +95,4 @@ for (const stale of [
 }
 
 console.log('frontend isolation smoke: PASS');
-console.log(`  ${assetRefs.length} local asset references; ${scripts.length} scripts in verified order`);
+console.log(`  ${assetRefs.length} local asset references; ${scriptRefs.length} scripts; ${orderedAnchors.length} order anchors verified`);
