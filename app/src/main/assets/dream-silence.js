@@ -7,14 +7,14 @@
 (() => {
   const state = window.AGCDSKY_APP_STATE;
   if (!state || !state.dream) return;
-  const compat=window.AGCDSKY_COMPAT;
-  if(!compat)throw new Error('Runtime compatibility bridge unavailable');
+  const audio=window.AGCDSKY_AUDIO;
+  if(!audio)throw new Error('Relay audio service unavailable');
 
-  // Audio slots already exist before Dream mode is applied. Replace them
-  // explicitly rather than mutating parser globals; later recovery/personality
-  // layers still compose on top of these Dream-safe base implementations.
-  compat.replace('ensureAudio',()=>null,'DreamService silence');
-  compat.replace('playRelayBurst',()=>{},'DreamService silence');
+  // Audio slots already exist before Dream mode is applied. Install Dream-safe
+  // base implementations through the owning service; later recovery/personality
+  // layers still compose on top of these implementations.
+  audio.installImplementation('ensure',()=>null,'DreamService silence');
+  audio.installImplementation('playBurst',()=>{},'DreamService silence');
 
   window.AGCDSKY_DREAM_SILENT = true;
 })();
