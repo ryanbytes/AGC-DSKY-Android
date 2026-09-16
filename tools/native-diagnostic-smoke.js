@@ -77,7 +77,7 @@ for (const token of [
     "api.getCore",
     "api.phoneIcduStatus",
     "api.sextantStatus",
-    "api.parallax3d",
+    "window.AGCDSKY_PARALLAX",
     "api.saveAgcState",
     "api.verifySnapshotRoundTrip",
     "api.clearSavedAgcState",
@@ -90,10 +90,12 @@ for (const token of [
 ]) {
     assert(diagnostics.includes(token), `diagnostics surface missing: ${token}`);
 }
-assert(diagnostics.includes("typeof api.parallax3d.state==='function'"),
-    'diagnostics must read live parallax controller state without owning it');
-assert(diagnostics.includes("typeof api.parallax3d.geometry==='function'"),
-    'diagnostics must read physical parallax geometry without owning it');
+assert(diagnostics.includes("typeof parallaxService.state==='function'"),
+    'diagnostics must read live parallax controller state from the owning service');
+assert(diagnostics.includes("typeof parallaxService.geometry==='function'"),
+    'diagnostics must read physical parallax geometry from the owning service');
+assert(!diagnostics.includes('api.parallax3d'),
+    'diagnostics must not depend on a duplicate parallax public-facade alias');
 assert(diagnostics.includes('const api=window.AGCDSKY;')&&!diagnostics.includes('window.AGCDSKY=window.AGCDSKY||{}'),
     'diagnostics must consume the existing public facade instead of creating it');
 assert(diagnostics.includes('window.AGCDSKY_DIAGNOSTICS=Object.freeze({open,close})'),
@@ -102,4 +104,4 @@ assert(!diagnostics.includes('api.openDiagnostics=')&&!diagnostics.includes('api
     'diagnostics module must not append open/close methods onto the public facade');
 
 console.log('native diagnostic source smoke: PASS');
-console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, parallax presentation telemetry, and diagnostics service ownership verified');
+console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, parallax owner telemetry, and diagnostics service ownership verified');
