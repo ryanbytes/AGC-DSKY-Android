@@ -26,9 +26,6 @@
   const LEVELS = Object.freeze([1.00, 0.75, 0.50, 0.25, 0.00]);
   const KEY_CONTACT_BASE_MS = 36;
   const KEY_RETURN_SOUND_BASE_MS = 18;
-  // Best-estimate optical timing only.  White legends use MS24367-713 lamps;
-  // yellow legends use MS24367-680.  No surviving Apollo/MS24367 source found
-  // so far specifies transient light-output timing for either part.
   const LAMP_MODEL = Object.freeze({
     white: Object.freeze({part:'MS24367-713', riseMs:32, fallMs:48}),
     yellow:Object.freeze({part:'MS24367-680', riseMs:40, fallMs:58})
@@ -281,5 +278,5 @@
       keys:Object.fromEntries(Object.entries(keyPersonalities).map(([name, value]) => [name, {...value}]))
     };
   }
-  window.AGCDSKY_FLIGHT_HARDWARE_UI=Object.freeze({lighting,hardwarePersonality});
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_FLIGHT_HARDWARE_UI',Object.freeze({lighting,hardwarePersonality}),'flight-hardware-ui publication');
 })();
