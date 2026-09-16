@@ -178,5 +178,5 @@
     })
   });
 
-  window.AGCDSKY_RUNTIME = runtime;
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_RUNTIME',runtime,'runtime-transitions publication');
 })();

@@ -2,13 +2,14 @@
 'use strict';
 
 const fs=require('fs'),path=require('path'),vm=require('vm');
+const {installServiceRegistry}=require('./test-service-registry');
 const ROOT=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(ROOT,'app/src/main/assets/proceed-electrical.js'),'utf8');
 const inputSource=fs.readFileSync(path.join(ROOT,'app/src/main/assets/dsky-input-runtime.js'),'utf8');
 const hardware=fs.readFileSync(path.join(ROOT,'app/src/main/assets/hardware-fidelity.js'),'utf8');
 const html=fs.readFileSync(path.join(ROOT,'app/src/main/assets/index.html'),'utf8');
 function fail(m){console.error('PRO ELECTRICAL SMOKE FAIL: '+m);process.exit(1)}function assert(c,m){if(!c)fail(m)}
-for(const marker of ['window.__DSKY_PROCEED_ELECTRICAL__','const runtime = api?.runtimeTransitions','const input = api?.inputRuntime','typeof runtime.clockRequested','typeof runtime.onBeforeClock',"document.querySelector('[data-key=\"P\"]')","pro.addEventListener('pointerdown'","pro.addEventListener('pointerup'","pro.addEventListener('pointercancel'","document.addEventListener('visibilitychange'",'input.proceed(true)','input.proceed(false)','runtime.onBeforeClock(releaseProceed)','window.AGCDSKY_PROCEED = Object.freeze({'])assert(source.includes(marker),`PRO controller missing lifecycle marker: ${marker}`);
+for(const marker of ['window.__DSKY_PROCEED_ELECTRICAL__','const runtime = api?.runtimeTransitions','const input = api?.inputRuntime','typeof runtime.clockRequested','typeof runtime.onBeforeClock',"document.querySelector('[data-key=\"P\"]')","pro.addEventListener('pointerdown'","pro.addEventListener('pointerup'","pro.addEventListener('pointercancel'","document.addEventListener('visibilitychange'",'input.proceed(true)','input.proceed(false)','runtime.onBeforeClock(releaseProceed)',"window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_PROCEED',Object.freeze({"])assert(source.includes(marker),`PRO controller missing lifecycle marker: ${marker}`);
 for(const forbidden of ['api.proceedElectrical =','proceedPulse(','.proceedKey(','window.enterClock =','api.appStatus','api.getCore'])assert(!source.includes(forbidden),`PRO controller retained obsolete ownership: ${forbidden}`);
 for(const forbidden of ["document.querySelector('[data-key=\"P\"]')",'proPointer','releaseProceed','proceedKey(true)','proceedKey(false)','hardwareEnterClock'])assert(!hardware.includes(forbidden),`hardware-fidelity.js retained PRO ownership: ${forbidden}`);
 const runtimeIndex=html.indexOf('<script src="runtime-transitions.js"></script>'),inputIndex=html.indexOf('<script src="dsky-input-runtime.js"></script>'),hardwareIndex=html.indexOf('<script src="hardware-fidelity.js"></script>'),proceedIndex=html.indexOf('<script src="proceed-electrical.js"></script>');assert(runtimeIndex>=0&&inputIndex>runtimeIndex&&hardwareIndex>inputIndex&&proceedIndex>hardwareIndex,'PRO controller load order changed');
@@ -20,7 +21,7 @@ const documentObject={hidden:false,querySelector(selector){return selector==='[d
 const MODES=Object.freeze({CLOCK:'clock',AGC_LOADING:'agc-loading',AGC:'agc'});
 const runtimeTransitions=Object.freeze({modes:MODES,mode(){return mode},core(){return core},clockRequested(){return clockPending},onBeforeClock(handler){beforeClockRegistrations++;beforeClockHook=handler;return()=>{if(beforeClockHook===handler)beforeClockHook=null}}});
 const AGCDSKY={};
-const context={console,document:documentObject,AGCDSKY,AGCDSKY_RUNTIME:runtimeTransitions,agcFailure(error){failures.push(String(error&&error.message||error))},__baseEnterClock(...args){calls.push(['enterClock',...args]);mode=MODES.CLOCK;return'clock-result'},window:null};context.window=context;
+const context={console,document:documentObject,AGCDSKY,AGCDSKY_RUNTIME:runtimeTransitions,agcFailure(error){failures.push(String(error&&error.message||error))},__baseEnterClock(...args){calls.push(['enterClock',...args]);mode=MODES.CLOCK;return'clock-result'},window:null};context.window=context;installServiceRegistry(context);
 Object.defineProperties(AGCDSKY,{runtimeTransitions:{enumerable:true,get:()=>context.AGCDSKY_RUNTIME||null},inputRuntime:{enumerable:true,get:()=>context.AGCDSKY_INPUT||null},proceedElectrical:{enumerable:true,get:()=>context.AGCDSKY_PROCEED||null}});
 vm.createContext(context);vm.runInContext(inputSource,context,{filename:'dsky-input-runtime.js'});assert(context.AGCDSKY_INPUT===AGCDSKY.inputRuntime,'shared input getter did not resolve controller');vm.runInContext(source,context,{filename:'proceed-electrical.js'});
 assert(AGCDSKY.proceedElectrical===context.AGCDSKY_PROCEED&&Object.isFrozen(AGCDSKY.proceedElectrical),'bootstrap PRO getter did not resolve frozen dedicated service');
@@ -34,4 +35,4 @@ mode=MODES.AGC;clockPending=true;const makesBefore=calls.filter(c=>c[0]==='proce
 mode=MODES.CLOCK;const beforeClockMode=calls.filter(c=>c[0]==='proceed'&&c[1]===true).length;event=makeEvent(81);proListeners.pointerdown(event);assert(!event.prevented&&!event.immediate&&calls.filter(c=>c[0]==='proceed'&&c[1]===true).length===beforeClockMode,'PRO asserted outside AGC mode');
 mode=MODES.AGC;throwOnPress=true;event=makeEvent(91);proListeners.pointerdown(event);throwOnPress=false;assert(failures.length===1&&failures[0]==='synthetic PRO failure','failed PRO make did not reach agcFailure');assert(!classes.has('pressed')&&!AGCDSKY.proceedElectrical.state().held,'failed PRO make left ownership held');assert(calls.filter(c=>c[0]==='proceed'&&c[1]===false).length===5,'failed PRO make did not restore released level');
 console.log('PRO electrical smoke: PASS');
-console.log('  dedicated frozen service, bootstrap getter, maintained contact, lifecycle/CLOCK cleanup, suppression, idempotence, and failure cleanup verified');
+console.log('  dedicated frozen service, explicit registry publication, bootstrap getter, maintained contact, lifecycle/CLOCK cleanup, suppression, idempotence, and failure cleanup verified');

@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const {installServiceRegistry} = require('./test-service-registry');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'app/src/main/assets/index.html'), 'utf8');
@@ -64,6 +65,7 @@ const context = {
   window:null
 };
 context.window = context;
+installServiceRegistry(context);
 Object.defineProperty(AGCDSKY, 'applyCmMode', {
   enumerable:true,
   get(){
@@ -82,10 +84,12 @@ assert(typeof context.AGCDSKY.applyCmMode === 'function',
   'bootstrap-owned applyCmMode facade did not resolve the CM service');
 assert(!cm.includes('window.AGCDSKY.applyCmMode ='),
   'cm-mode.js regained late public-facade mutation');
+assert(cm.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CM_MODE',service"),
+  'cm-mode.js must publish explicitly through the service registry');
 
 context.AGCDSKY.applyCmMode();
 assert(classes.has('spacecraft-cm') && storage.get('agcMission') === 'comanche055',
   'repeat CM-mode application changed the locked CM state');
 
 console.log('CM feature load smoke: PASS');
-console.log('  parser-loaded CM features plus dedicated CM service and bootstrap-owned applyCmMode compatibility verified');
+console.log('  parser-loaded CM features plus explicit dedicated-service publication and bootstrap-owned applyCmMode compatibility verified');

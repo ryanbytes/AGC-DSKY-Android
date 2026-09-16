@@ -9,22 +9,6 @@
   if(!isDream){try{enabled=localStorage.getItem(key)==='1'}catch(_){}}
   const displayButton=document.getElementById('display'),el=document.getElementById('elpanel'),comp=document.getElementById('comp'),dsky=document.getElementById('dsky');
 
-  /*
-   * Full-screen EL physical stack, from the Apollo hardware specs.
-   *
-   * 1006315G SCD sheet 2:
-   *   active digital-indicator face width = 2.360 in REF
-   *   active face height = 4.055..4.065 in (4.060 nominal)
-   *   digital-indicator package depth = 0.257..0.263 in (0.260 nominal)
-   *
-   * 2004745 / 2003988 cover assembly:
-   *   raised clear-view width = 2.354 in
-   *   outer cover front to indicator glass interface = 0.134 in
-   *
-   * R-700 3.10.1.4 confirms the laminated cover panel is optically bonded to
-   * the digital indicator's own glass face. The 0.260-in indicator package
-   * depth therefore belongs BEHIND that face; it is not phosphor setback.
-   */
   const COVER_CLEAR_WIDTH_IN=2.354;
   const COVER_VIEW_THICKNESS_IN=0.134;
   const INDICATOR_FACE_WIDTH_IN=2.360;
@@ -67,9 +51,6 @@
     indicatorPackageDepthPx=nextIndicatorDepth;
     totalAssemblyDepthPx=nextTotalDepth;
 
-    /* Outer cover front is the Z datum. parallax-3d.js already places the EL
-       face one 2004745 cover thickness behind it. This variable places only
-       the 1006315 package rear at cover + package depth. */
     dsky.style.setProperty('--dsky-screen-indicator-package-depth-px',`${nextIndicatorDepth.toFixed(3)}px`);
     dsky.style.setProperty('--dsky-screen-assembly-depth-px',`${nextTotalDepth.toFixed(3)}px`);
     dsky.style.setProperty('--dsky-screen-indicator-back-z',`${(-nextTotalDepth).toFixed(3)}px`);
@@ -110,7 +91,7 @@
   window.addEventListener('resize',scheduleIndicatorGeometry,{passive:true});
   if(typeof ResizeObserver==='function'&&el)new ResizeObserver(scheduleIndicatorGeometry).observe(el);
 
-  window.AGCDSKY_SCREEN_ONLY_GEOMETRY=Object.freeze({
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_SCREEN_ONLY_GEOMETRY',Object.freeze({
     indicatorFaceWidthIn:INDICATOR_FACE_WIDTH_IN,
     indicatorFaceHeightIn:INDICATOR_FACE_HEIGHT_IN,
     indicatorFaceHeightMinIn:INDICATOR_FACE_HEIGHT_MIN_IN,
@@ -126,7 +107,7 @@
       indicatorPackageDepthPx,
       totalAssemblyDepthPx
     })
-  });
+  }),'screen-only geometry publication');
 
   if(isDream)enabled=true;
   apply();

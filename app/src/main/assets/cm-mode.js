@@ -11,6 +11,6 @@
   }
 
   const service=Object.freeze({apply:applyCmMode});
-  window.AGCDSKY_CM_MODE=service;
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CM_MODE',service,'cm-mode publication');
   applyCmMode();
 })();

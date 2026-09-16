@@ -16,7 +16,7 @@ const expected=[
   'nativePipaSensorStatus','nativePhoneLinearAcceleration','phoneIcduStatus','recenterPhoneImu'
 ];
 for(const marker of [
-  'window.AGCDSKY_PHONE=Object.freeze({','implementation,','installImplementation,','installImplementations,','compatibilityVersions:',
+  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_PHONE',Object.freeze({",'implementation,','installImplementation,','installImplementations,','compatibilityVersions:',
   "Object.prototype.hasOwnProperty.call(source,name)","Phone API module missing implementation: ${name}"
 ])assert(runtime.includes(marker),`phone API registry marker missing: ${marker}`);
 for(const forbidden of ['Object.defineProperty(api','set:next=>','legacy phone-icdu registration','const api=window.AGCDSKY'])assert(!runtime.includes(forbidden),`phone API registry retained root-facade mutation path: ${forbidden}`);

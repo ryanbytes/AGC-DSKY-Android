@@ -91,5 +91,5 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source {
       curveSource:'engineering estimate; Apollo documents specify branch/rating, not lamp dimmer transfer curve'
     })
   });
-  window.AGCDSKY_LIGHTING_ELECTRICAL = controller;
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_LIGHTING_ELECTRICAL',controller,'lighting-electrical-model publication');
 })();

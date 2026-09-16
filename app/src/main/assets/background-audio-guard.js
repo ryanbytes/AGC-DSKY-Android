@@ -68,7 +68,7 @@
   audio.installImplementation('playBurst',guardedRelayBurst,'background relay burst guard');
 
   function status(){const ctx=getContext();return{state:ctx?ctx.state:'none',failures:audioFailureCount,circuitOpen:audioCircuitOpen}}
-  window.AGCDSKY_AUDIO_RECOVERY=Object.freeze({status,resetCircuit:resetAudioCircuit});
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_AUDIO_RECOVERY',Object.freeze({status,resetCircuit:resetAudioCircuit}),'background-audio-guard publication');
 
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!guardState.dream)clock.stopQueue()});
 })();

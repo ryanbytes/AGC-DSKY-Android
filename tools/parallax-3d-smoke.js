@@ -2,6 +2,7 @@
 'use strict';
 
 const fs=require('fs'),path=require('path'),vm=require('vm');
+const {installServiceRegistry}=require('./test-service-registry');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets');
 const read=name=>fs.readFileSync(path.join(ASSETS,name),'utf8');
 const html=read('index.html'),css=read('parallax-3d.css'),js=read('parallax-3d.js'),controls=read('controls-layout.css');
@@ -77,7 +78,7 @@ for(const token of [
   "body.classList.contains('dream')",
   "body.classList.contains('display-only')",
   "glassFront.className = 'el-glass-sheen'",
-  'window.AGCDSKY_PARALLAX = controller',
+  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_PARALLAX',controller",
   "const TILT_STORAGE_KEY = 'dskyParallaxTiltPct'",
   "const DEPTH_STORAGE_KEY = 'dskyParallaxDepthPct'",
   'const MAX_INTENSITY_PERCENT = 200',
@@ -213,6 +214,7 @@ function runtimeNativeParallaxSmoke(){
     addEventListener:addListener,
     dispatchEvent:event=>{for(const fn of listeners.get(event.type)||[])fn(event);return true;}
   };
+  installServiceRegistry(window);
   const localStorage={data:new Map(),getItem(k){return this.data.has(k)?this.data.get(k):null;},setItem(k,v){this.data.set(k,String(v));}};
   const context={
     window,document,localStorage,CustomEvent:CustomEventShim,
@@ -260,7 +262,7 @@ const runtime=runtimeNativeParallaxSmoke();
 console.log('parallax 3D smoke: PASS');
 console.log(`  geometric tilt: X ${rx.toFixed(2)} deg / Y ${ry.toFixed(2)} deg; full sensor response by ${sensor.toFixed(1)} deg`);
 console.log('  native path: Android bridge -> unchanged phone callback -> read-only quaternion event -> presentation consumer');
-console.log('  ownership: AGCDSKY_PARALLAX only; no root AGCDSKY alias');
+console.log('  ownership: AGCDSKY_PARALLAX registry slot only; no root AGCDSKY alias');
 console.log('  synthetic glint/reflection: forbidden');
 console.log('  controls: TILT 0–200% + DEPTH 0–200%, persisted independently');
 console.log(`  physical glass: ${edgeDepth.toFixed(3)} + ${centerRise.toFixed(3)} = ${viewDepth.toFixed(3)} in -> ${baseGlassPx.toFixed(3)} px at 106-unit width`);

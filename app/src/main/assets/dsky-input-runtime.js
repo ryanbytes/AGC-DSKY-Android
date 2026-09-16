@@ -69,5 +69,5 @@
     })
   });
 
-  window.AGCDSKY_INPUT = input;
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_INPUT',input,'dsky-input-runtime publication');
 })();

@@ -57,10 +57,10 @@
     if (typeof window.showControls === 'function') window.showControls();
   }, {capture:true, passive:false});
 
-  window.AGCDSKY_LIGHTING_RHEOSTAT_STOP = Object.freeze({
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_LIGHTING_RHEOSTAT_STOP',Object.freeze({
     minimumNormalUiLevel:MIN_NORMAL_LEVEL,
     completeOffMethod:'open lighting feed / circuit breaker, not normal rheostat rotation',
     zeroReservedFor:'LIGHT BUS DEMO feed-open state',
     state:() => ({...lighting.levels()})
-  });
+  }),'lighting-rheostat-stop publication');
 })();

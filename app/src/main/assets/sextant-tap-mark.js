@@ -227,9 +227,9 @@
     if (document.hidden) { pointer = null; markToken++; }
   });
 
-  window.AGCDSKY_SEXTANT_TAP_MARK = Object.freeze({
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_SEXTANT_TAP_MARK',Object.freeze({
     enabled:() => true,
     lastMark:() => lastMark ? JSON.parse(JSON.stringify(lastMark)) : null,
     cancel:() => { pointer = null; markToken++; }
-  });
+  }),'sextant-tap-mark publication');
 })();

@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const {installServiceRegistry} = require('./test-service-registry');
 
 const SOURCE = path.resolve(__dirname, '../app/src/main/assets/dsky-input-runtime.js');
 const source = fs.readFileSync(SOURCE, 'utf8');
@@ -27,7 +28,7 @@ for (const marker of [
   'core.keyPress(value)',
   'core.keyRelease()',
   'core.proceedKey(!!pressed)',
-  'window.AGCDSKY_INPUT = input'
+  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_INPUT',input"
 ]) {
   assert(source.includes(marker), `input runtime missing marker: ${marker}`);
 }
@@ -52,6 +53,7 @@ const runtime = Object.freeze({
 const AGCDSKY = {};
 const context = {AGCDSKY, AGCDSKY_RUNTIME:runtime, console, window:null};
 context.window = context;
+installServiceRegistry(context);
 Object.defineProperties(AGCDSKY, {
   runtimeTransitions:{enumerable:true,get(){ return context.AGCDSKY_RUNTIME || null; }},
   inputRuntime:{enumerable:true,get(){ return context.AGCDSKY_INPUT || null; }}
@@ -117,4 +119,4 @@ assert(AGCDSKY.inputRuntime === prior && context.AGCDSKY_INPUT === prior,
   'second input-runtime load replaced the published controller');
 
 console.log('DSKY input runtime smoke: PASS');
-console.log('  bootstrap-owned getter, AGC gating, positive key makes, KEYRST-only zero, retained-core release, PRO maintained contact, validation, and idempotence verified');
+console.log('  explicit registry publication, bootstrap-owned getter, AGC gating, positive key makes, KEYRST-only zero, retained-core release, PRO maintained contact, validation, and idempotence verified');

@@ -97,12 +97,12 @@
   // to its released level before app.js stops the core and switches to CLOCK.
   runtime.onBeforeClock(releaseProceed);
 
-  window.AGCDSKY_PROCEED = Object.freeze({
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_PROCEED',Object.freeze({
     release:releaseProceed,
     state:() => ({
       held:proPointer !== null,
       pointerId:proPointer,
       mode:currentMode()
     })
-  });
+  }),'proceed-electrical publication');
 })();

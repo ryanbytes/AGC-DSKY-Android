@@ -268,5 +268,5 @@
   function registerSnapshotExtension(name,extension){if(typeof name!=='string'||!name||typeof extension!=='function')throw new TypeError('Hardware snapshot extension requires name/function');snapshotExtensions.set(name,extension);return()=>snapshotExtensions.delete(name)}
   function registerSettledPaintPolicy(name,policy){if(typeof name!=='string'||!name||typeof policy!=='function')throw new TypeError('Settled-paint policy requires name/function');settledPaintPolicies.set(name,policy);return()=>settledPaintPolicies.delete(name)}
 
-  window.AGCDSKY_HARDWARE=Object.freeze({snapshot,baseSnapshot,registerSnapshotExtension,registerSettledPaintPolicy,beginRelayDrive:(relay,word,render=true)=>beginRelayDrive(relay,word,render),relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS});
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE',Object.freeze({snapshot,baseSnapshot,registerSnapshotExtension,registerSettledPaintPolicy,beginRelayDrive:(relay,word,render=true)=>beginRelayDrive(relay,word,render),relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS}),'hardware-fidelity publication');
 })();

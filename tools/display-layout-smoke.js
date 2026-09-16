@@ -79,7 +79,7 @@ for (const marker of [
   "'--dsky-screen-indicator-back-z'",
   "indicatorBack.className='el-indicator-back'",
   'dsky.insertBefore(indicatorBack,el)',
-  'window.AGCDSKY_SCREEN_ONLY_GEOMETRY=Object.freeze({'
+  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_SCREEN_ONLY_GEOMETRY',Object.freeze({"
 ]) assert(SCREEN_ONLY_JS.includes(marker), '1006315 screen-only geometry missing: ' + marker);
 assert(!SCREEN_ONLY_JS.includes("setProperty('--dsky-el-z'"),
   'screen-only package geometry must never repurpose package depth as EL/phosphor depth');

@@ -64,7 +64,6 @@
     testHz: 400
   });
   const SPRING_FORCE_ENVELOPE = Object.freeze({
-    // F = kx. These are DELTAS from the unknown installed/rest spring force.
     forceIncreaseToActuationOzMin: COMPRESSION_SPRING.rateLbPerInMin * ASSEMBLY.actuationTravelIn * 16,
     forceIncreaseToActuationOzMax: COMPRESSION_SPRING.rateLbPerInMax * ASSEMBLY.actuationTravelIn * 16,
     forceIncreaseToBottomOzMin: COMPRESSION_SPRING.rateLbPerInMin * ASSEMBLY.totalTravelIn * 16,
@@ -121,8 +120,6 @@
       const springIncrementAtActuationOz = springRate * ASSEMBLY.actuationTravelIn * 16;
       const springIncrementAtBottomOz = springRate * ASSEMBLY.totalTravelIn * 16;
 
-      // Keep the existing on-screen depth calibration, but stop pretending its
-      // small per-key spread is a documented hardware tolerance.
       button.style.setProperty('--key-travel', `${PRESENTATION_ESTIMATES.visualTravelVmin}vmin`);
       button.dataset.keyStrokeIn = ASSEMBLY.totalTravelIn.toFixed(4);
       button.dataset.keyActuationIn = ASSEMBLY.actuationTravelIn.toFixed(4);
@@ -168,6 +165,6 @@
     hardwarePersonality:get,
     spec:() => get().keyMechanicalSpec
   });
-  window.AGCDSKY_KEY_MECHANICAL_SPEC=service;
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEY_MECHANICAL_SPEC',service,'key-mechanical-spec publication');
   get();
 })();

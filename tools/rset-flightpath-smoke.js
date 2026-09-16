@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const {installServiceRegistry} = require('./test-service-registry');
 
 const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'app/src/main/assets');
@@ -51,6 +52,14 @@ for (const [file, source] of [
 }
 assert(!keyboardSource.includes('api.keyboardElectrical ='),
   'keyboard electrical service regained late public-facade mutation');
+assert(transitionsSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_RUNTIME',runtime"),
+  'runtime transition service must publish explicitly through the registry');
+assert(inputSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_INPUT',input"),
+  'input service must publish explicitly through the registry');
+assert(clockSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior"),
+  'clock behavior service must publish explicitly through the registry');
+assert(keyboardSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEYBOARD_ELECTRICAL',Object.freeze({"),
+  'keyboard electrical service must publish explicitly through the registry');
 
 function addListener(bucket, type, fn) {
   (bucket[type] ||= []).push(fn);
@@ -146,6 +155,7 @@ async function main() {
   };
   context.window=context;
   context.addEventListener=function(type,fn){addListener(win,type,fn);};
+  installServiceRegistry(context);
   Object.defineProperties(AGCDSKY, {
     runtimeTransitions:{enumerable:true,get(){ return context.AGCDSKY_RUNTIME || null; }},
     inputRuntime:{enumerable:true,get(){ return context.AGCDSKY_INPUT || null; }},
@@ -231,7 +241,7 @@ async function main() {
     'two physical RSET cycles did not produce exactly two KEYRST releases');
 
   console.log('RSET flight path smoke: PASS');
-  console.log('  bootstrap runtime/input/clock/keyboard getters preserve CLOCK handoff and AGC-mode physical RSET as Pinball 022 + KEYRST with no synthetic JavaScript reset path');
+  console.log('  explicit registry publication plus bootstrap runtime/input/clock/keyboard getters preserve CLOCK handoff and AGC-mode physical RSET as Pinball 022 + KEYRST with no synthetic JavaScript reset path');
 }
 
 main().catch(error=>fail(error && error.stack ? error.stack : String(error)));

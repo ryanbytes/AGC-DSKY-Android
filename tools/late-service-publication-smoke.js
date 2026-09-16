@@ -12,6 +12,7 @@ const EXPECTED=[
   'AGCDSKY_LIGHTING_ELECTRICAL','AGCDSKY_RELAY_SHOW','AGCDSKY_HARDWARE_COLOR_MODE','AGCDSKY_DIAGNOSTICS',
   'AGCDSKY_APOLLO_STARS','AGCDSKY_PARALLAX','AGCDSKY_SCREEN_ONLY_GEOMETRY'
 ];
+const EXPECTED_SET=new Set(EXPECTED);
 const NON_LATE=new Set([
   'AGCDSKY_APP_STATE','AGCDSKY_CORE_SESSION','AGCDSKY_COMPAT','AGCDSKY_SHELL','AGCDSKY_RENDERER',
   'AGCDSKY_ENVIRONMENT','AGCDSKY_AUDIO','AGCDSKY_CLOCK','AGCDSKY_DISPLAY','AGCDSKY_SNAPSHOT',
@@ -47,6 +48,9 @@ for(const name of EXPECTED){
   assert(descriptor&&!descriptor.configurable&&typeof descriptor.get==='function'&&typeof descriptor.set==='function',`registry does not own accessor slot ${name}`);
   assert(window[name]===null,`${name} must be null before publication`);
 }
+// Compatibility assignment remains supported only for pre-bootstrap/external
+// stubs and backward compatibility; production feature modules must publish
+// explicitly through AGCDSKY_SERVICE_REGISTRY.publish().
 const first=Object.freeze({kind:'runtime'});
 window.AGCDSKY_RUNTIME=first;
 assert(window.AGCDSKY_RUNTIME===first&&registry.get('AGCDSKY_RUNTIME')===first,'compatibility assignment did not publish through registry');
@@ -65,28 +69,38 @@ const priorOptics=Object.freeze({kind:'preexisting-optics'}),preWindow={AGCDSKY_
 const preRegistry=boot(preWindow);
 assert(preRegistry.get('AGCDSKY_OPTICS')===priorOptics&&preWindow.AGCDSKY_OPTICS===priorOptics,'registry failed to absorb configurable pre-bootstrap service');
 
-const writers=new Map(EXPECTED.map(name=>[name,[]])),unknown=[];
+const explicitPublishers=new Map(EXPECTED.map(name=>[name,[]]));
+const violations=[];
 for(const file of fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js')).sort()){
   if(file===OWNER)continue;
   const source=read(file);
   let match;
+
   const direct=/\bwindow\.(AGCDSKY_[A-Z0-9_]+)\s*=\s*(?!=|>)/g;
   while((match=direct.exec(source))){
     const name=match[1];
-    if(writers.has(name))writers.get(name).push(file);
-    else if(!NON_LATE.has(name))unknown.push(`${file}:${name}`);
+    if(EXPECTED_SET.has(name))violations.push(`${file}:${name} uses compatibility assignment instead of registry.publish`);
+    else if(!NON_LATE.has(name))violations.push(`${file}:${name} is an unregistered AGCDSKY global publication`);
   }
+
   const define=/Object\.defineProperty\(window\s*,\s*['"](AGCDSKY_[A-Z0-9_]+)['"]/g;
   while((match=define.exec(source))){
     const name=match[1];
-    if(writers.has(name))unknown.push(`${file}:${name} redefines registry accessor`);
+    if(EXPECTED_SET.has(name))violations.push(`${file}:${name} redefines registry-owned accessor`);
+  }
+
+  const publish=/\b(?:window\.)?AGCDSKY_SERVICE_REGISTRY\.publish\(\s*['"](AGCDSKY_[A-Z0-9_]+)['"]/g;
+  while((match=publish.exec(source))){
+    const name=match[1];
+    if(EXPECTED_SET.has(name))explicitPublishers.get(name).push(file);
+    else violations.push(`${file}:${name} explicitly publishes an unregistered late service`);
   }
 }
-assert(!unknown.length,`unregistered or conflicting AGCDSKY service publication: ${unknown.join(', ')}`);
-for(const [name,files] of writers){
+assert(!violations.length,`late service publication boundary violation: ${violations.join(', ')}`);
+for(const [name,files] of explicitPublishers){
   const unique=[...new Set(files)];
-  assert(unique.length===1,`${name} expected one compatibility publisher, found ${unique.length}: ${unique.join(', ')||'none'}`);
+  assert(unique.length===1,`${name} expected one explicit registry publisher, found ${unique.length}: ${unique.join(', ')||'none'}`);
 }
 
 console.log('late service publication smoke: PASS');
-console.log(`  ${EXPECTED.length} late services use bootstrap-owned non-configurable publication slots; first publication wins and every producer is inventoried`);
+console.log(`  ${EXPECTED.length} late services publish explicitly through the bootstrap-owned registry; no production compatibility-setter writers remain`);
