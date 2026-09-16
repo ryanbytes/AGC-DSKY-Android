@@ -3,7 +3,7 @@
 /*
  * Lightweight presentation-only parallax controller.
  *
- * - native Android quaternion: primary motion source in the packaged app
+ * - native Android quaternion event: primary motion source in the packaged app
  * - device orientation: browser/PWA fallback
  * - fine pointer: follows the cursor over the DSKY
  * - touch: samples the contact position without consuming the event
@@ -370,17 +370,11 @@
     setTarget(dx, dy, 'native-quaternion');
   }
 
-  function installNativeQuaternionTap() {
-    const prior = api.nativePhoneQuaternion;
-    if (typeof prior !== 'function' || prior.__dskyParallaxWrapped) return false;
-    const wrapped = function(w,x,y,z,displayAngle) {
-      prior.call(api, w,x,y,z,displayAngle);
-      try { onNativeQuaternion(w,x,y,z,displayAngle); } catch (_) {}
-    };
-    try { Object.defineProperty(wrapped, '__dskyParallaxWrapped', {value:true}); }
-    catch (_) { wrapped.__dskyParallaxWrapped = true; }
-    api.nativePhoneQuaternion = wrapped;
-    return true;
+  function onNativeQuaternionEvent(event) {
+    const detail = event && event.detail;
+    const q = detail && detail.rawQuaternion;
+    if (!Array.isArray(q) || q.length !== 4) return;
+    onNativeQuaternion(q[0], q[1], q[2], q[3], detail.displayAngle);
   }
 
   function onPointerMove(event) {
@@ -437,8 +431,8 @@
   dsky.addEventListener('pointerdown', onPointerDown, {passive:true});
   dsky.addEventListener('pointerleave', onPointerLeave, {passive:true});
   window.addEventListener('deviceorientation', onDeviceOrientation, {passive:true});
+  window.addEventListener('agcdsky-phonequaternion', onNativeQuaternionEvent, {passive:true});
   window.addEventListener('resize', refreshPhysicalDepthSoon, {passive:true});
-  installNativeQuaternionTap();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       targetX = 0;
