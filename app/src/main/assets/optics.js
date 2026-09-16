@@ -9,7 +9,8 @@
  * here writes nouns, display fields, or AGC guidance state directly.
  */
 (() => {
-  const api = window.AGCDSKY = window.AGCDSKY || {};
+  const api = window.AGCDSKY;
+  if (!api) throw new Error('AGCDSKY public facade unavailable');
   const COUNTS_PER_REV = 32768;
   const COUNTS_PER_DEG = COUNTS_PER_REV / 360;
   const SHAFT_CH = 0o200 | 0o36;
@@ -110,9 +111,6 @@
   }
 
   function releaseCamera(){
-    // Invalidate any unresolved acquireCamera() continuation. The underlying
-    // getUserMedia promise cannot be cancelled, so a stale result is stopped
-    // when it eventually resolves instead of being attached after close/pause.
     cameraGeneration++;
     stopStream(stream);
     stream = null;
@@ -124,9 +122,6 @@
   function acquireCamera(){
     const view = document.getElementById('sxt-view');
     if (!view || !view.classList.contains('open') || document.hidden || stream) return Promise.resolve();
-    // A permission/visibility transition can re-enter this path while the first
-    // getUserMedia call is unresolved. Return the same local request so only one
-    // continuation can attach/configure the stream.
     if (cameraAcquire) return cameraAcquire;
     const status = document.getElementById('sxt-status');
     if (status) status.textContent = 'SXT · REQUESTING CAMERA';
@@ -157,8 +152,6 @@
         video.srcObject = nextStream;
         await video.play();
 
-        // close(), visibility pause, or another lifecycle invalidation may have
-        // happened while play() was awaiting Chromium. Never resurrect that stream.
         if (generation !== cameraGeneration || document.hidden
             || !view.classList.contains('open') || stream !== nextStream) {
           stopStream(nextStream);
@@ -175,9 +168,6 @@
         configureCameraZoom();
         updateReadout();
       } catch (err) {
-        // Acquisition failure is not a lifecycle invalidation. Do not advance
-        // cameraGeneration here: doing so would make finally() treat a denied or
-        // broken camera as a pause/reopen event and immediately retry forever.
         if (nextStream) stopStream(nextStream);
         if (stream === nextStream) {
           stream = null;
@@ -196,9 +186,6 @@
     request.finally(() => {
       if (cameraAcquire === request) cameraAcquire = null;
       const currentView = document.getElementById('sxt-view');
-      // If close/pause invalidated the request and the user has already returned
-      // to an open/visible SXT, start one fresh acquisition after the stale one
-      // fully settles. This avoids overlapping native opens and stale setup.
       if (generation !== cameraGeneration && !stream && !document.hidden
           && currentView && currentView.classList.contains('open')) {
         queueMicrotask(() => acquireCamera());
@@ -215,8 +202,6 @@
     if (typeof api.setOpticsCaptureActive === 'function') api.setOpticsCaptureActive(true);
     requestSkyLocation();
     updateReadout();
-    // Keep the pointing display alive independently of camera permission or
-    // camera startup. The star cue is phone-sensor driven, not video driven.
     if (!readoutTimer) readoutTimer = setInterval(updateReadout, 100);
     await acquireCamera();
   }
@@ -250,13 +235,9 @@
     try {
       const caps = track.getCapabilities();
       if (caps && caps.zoom && Number.isFinite(caps.zoom.max)) {
-        // Use optical/device zoom when available, but never fabricate a 28x
-        // claim when the phone cannot provide it.
         const z = Math.min(caps.zoom.max, Math.max(caps.zoom.min || 1, 4));
         track.applyConstraints({advanced:[{zoom:z}]}).catch(()=>{});
       } else {
-        // Mild crop keeps the reticle usable without pretending the phone has
-        // the SXT's 28-power optics.
         cameraZoom = 1.8;
       }
     } catch (_) {}
@@ -378,7 +359,6 @@
     const projected=typeof api.projectSkyTarget==='function'?api.projectSkyTarget(targetPos.az,targetPos.alt):null;
     const d=projected?{distance:projected.distance,angle:projected.screenAngle}:cat.bearingDelta(pointing,targetPos);
     arrow.style.transform=`rotate(${d.angle.toFixed(1)}deg)`;
-    // Project into the 1.8-degree eyepiece. Outside targets clamp to the rim.
     if(cue){
       const eye=document.getElementById('sxt-eyepiece');
       const radius=Math.max(20,Math.min(eye?.clientWidth||200,eye?.clientHeight||200)*.43);
@@ -414,9 +394,6 @@
       return;
     }
 
-    // With the rear camera aimed forward, turning the handset left/right is
-    // principally rotation about the screen Y axis; tilting it up/down is
-    // rotation about screen X.  Map those motions to SXT shaft/trunnion.
     const current = [a.pitch, -a.roll];
     if (!lastPhoneAngles) { lastPhoneAngles = current; return; }
     const dShaft = wrap180(current[0] - lastPhoneAngles[0]);
