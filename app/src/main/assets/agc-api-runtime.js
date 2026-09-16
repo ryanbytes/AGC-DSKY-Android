@@ -42,7 +42,7 @@ function createLateServiceRegistry(){
   for(const name of LATE_SERVICE_GLOBALS){
     const descriptor=Object.getOwnPropertyDescriptor(window,name),prior=descriptor?window[name]:undefined;
     if(descriptor&&!descriptor.configurable)throw new Error(`Late AGC service global is already non-configurable: ${name}`);
-    Object.defineProperty(window,name,{configurable:false,enumerable:false,get:()=>values[name]||null,set:service=>publish(name,service,`compatibility global publication: ${name}`)});
+    Object.defineProperty(window,name,{configurable:false,enumerable:false,get:()=>values[name]||null});
     if(prior!==undefined&&prior!==null)publish(name,prior,`pre-bootstrap publication: ${name}`);
   }
   return Object.freeze({
