@@ -25,13 +25,12 @@
  * contacts instead of waiting for the entire bank's final settled render.
  */
 (() => {
-  const compat=window.AGCDSKY_COMPAT;
+  const renderer=window.AGCDSKY_RENDERER;
   const display=window.AGCDSKY_DISPLAY;
-  if(!compat||!display)throw new Error('DSKY relay matrix services unavailable');
-  const segments=compat.get('SEG');
-  const relayDigits=compat.get('RELAY_DIGIT');
+  if(!renderer||!display)throw new Error('DSKY relay matrix services unavailable');
+  if(typeof renderer.registerSegmentPattern!=='function'||typeof display.baseRelayDigit!=='function')throw new Error('DSKY relay matrix owner APIs unavailable');
   const baseRelayDigit=display.implementation('relayDigit');
-  if(typeof baseRelayDigit!=='function'||!segments||typeof segments!=='object'||!relayDigits||typeof relayDigits!=='object')throw new Error('DSKY relay matrix dependencies unavailable');
+  if(typeof baseRelayDigit!=='function')throw new Error('DSKY relay matrix base decoder unavailable');
 
   function segmentsForRelayCode(value) {
     const code = Number(value) & 0x1f;
@@ -64,13 +63,13 @@
 
   const physicalChars = new Array(32);
   for (let code = 0; code < 32; code++) {
-    const known = relayDigits[code];
+    const known = display.baseRelayDigit(code);
     if (known !== undefined) {
       physicalChars[code] = known;
       continue;
     }
     const ch = String.fromCharCode(0xe000 + code);
-    segments[ch] = segmentsForRelayCode(code);
+    renderer.registerSegmentPattern(ch,segmentsForRelayCode(code));
     physicalChars[code] = ch;
   }
 
