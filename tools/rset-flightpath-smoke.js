@@ -121,6 +121,10 @@ async function main() {
       return {keys:{R:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};
     }
   };
+  AGCDSKY.lifecycle=Object.freeze({
+    enterAgc(){ return AGCDSKY.enterAgc(); },
+    enterClock(){ mode='clock'; return {mode}; }
+  });
   const context = {
     console,
     Promise,
