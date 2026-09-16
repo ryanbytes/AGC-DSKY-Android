@@ -10,7 +10,7 @@
         android:layout_width="117.678dp"
         android:layout_height="198.525dp"
         android:layout_gravity="center"
-        android:background="#565A56">
+        android:background="#7C8183">
 
         <ImageView
             android:id="@+id/el_widget_image"
@@ -55,5 +55,14 @@
             android:animateFirstView="false"
             android:loopViews="true"
             android:flipInterval="1000" />
+
+        <!-- Deliberately last: this transparent bitmap is the physical cover
+             glass and must remain in front of the live register flippers. -->
+        <ImageView
+            android:id="@+id/el_widget_glass"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY"
+            android:importantForAccessibility="no" />
     </FrameLayout>
 </FrameLayout>
