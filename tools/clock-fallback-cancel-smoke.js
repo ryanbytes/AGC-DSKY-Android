@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const {installServiceRegistry} = require('./test-service-registry');
 
 const ROOT = path.resolve(__dirname, '..');
 const keycodeSource = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/dsky-keycodes.js'), 'utf8');
@@ -23,7 +24,8 @@ for (const marker of [
   'let promotionEpoch = 0',
   'function cancelClockInput()',
   'epoch !== promotionEpoch || transitions.clockRequested()',
-  'transitions.onBeforeClock(cancelClockInput)'
+  'transitions.onBeforeClock(cancelClockInput)',
+  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior"
 ]) {
   assert(clockSource.includes(marker), `clock fallback cancellation marker missing: ${marker}`);
 }
@@ -83,6 +85,7 @@ const context = {
   window:null
 };
 context.window = context;
+installServiceRegistry(context);
 Object.defineProperties(AGCDSKY,{
   runtimeTransitions:{enumerable:true,get:()=>context.AGCDSKY_RUNTIME||null},
   inputRuntime:{enumerable:true,get:()=>context.AGCDSKY_INPUT||null},
@@ -131,14 +134,12 @@ async function flush(count = 12) {
   assert(calls.filter(call => call[0] === 'request-agc').length === 1,
     'fallback queue started more than one AGC request');
 
-  // Runtime transition authority marks CLOCK intent before invoking hooks.
   clockPending = true;
   beforeClockHook({reason:'app enterClock', from:MODES.AGC_LOADING});
   snap = AGCDSKY.clockBehavior.snapshot();
   assert(!snap.promotionInFlight && snap.pendingKeys.length === 0,
     'pre-CLOCK hook did not invalidate the fallback queue');
 
-  // A new fallback key during the deferred window is consumed but not queued.
   press('V');
   snap = AGCDSKY.clockBehavior.snapshot();
   assert(snap.pendingKeys.length === 0 && !snap.promotionInFlight,
