@@ -9,7 +9,7 @@
  * here writes nouns, display fields, or AGC guidance state directly.
  */
 (() => {
-  const api = window.AGCDSKY = window.AGCDSKY || {};
+  const api = window.AGCDSKY;
   const COUNTS_PER_REV = 32768;
   const COUNTS_PER_DEG = COUNTS_PER_REV / 360;
   const SHAFT_CH = 0o200 | 0o36;

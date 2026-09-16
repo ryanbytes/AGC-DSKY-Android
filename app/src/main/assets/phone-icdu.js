@@ -16,7 +16,7 @@
  * CDU resolution is 2^15 counts/revolution (32768 / 360 degrees).
  */
 (() => {
-  const api = window.AGCDSKY = window.AGCDSKY || {};
+  const api = window.AGCDSKY;
   const CDU_CHANNEL = [0o200 | 0o32, 0o200 | 0o33, 0o200 | 0o34];
   // Socket t-bit 0200 marks an unprogrammed counter sequence.
   // Counter 032/033/034 are CDUX/CDUY/CDUZ.  Fictitious 0174/0175/0176

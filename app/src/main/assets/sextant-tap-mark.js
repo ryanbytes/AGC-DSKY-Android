@@ -12,7 +12,8 @@
   if (window.__AGCDSKY_SEXTANT_TAP_MARK__) return;
   window.__AGCDSKY_SEXTANT_TAP_MARK__ = true;
 
-  const api = window.AGCDSKY = window.AGCDSKY || {};
+  const api = window.AGCDSKY;
+  if (!api) throw new Error('AGCDSKY public facade unavailable');
   const COUNTS_PER_DEG = 32768 / 360;
   const SHAFT_CH = 0o200 | 0o36;
   const TRUNNION_CH = 0o200 | 0o35;
