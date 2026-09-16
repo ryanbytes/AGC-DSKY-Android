@@ -174,7 +174,10 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) #app{
   perspective-origin:50% 50%!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .dsky{
-  transform:translate(-50%,-50%)!important;
+  transform:
+    translate(-50%,-50%)
+    rotateX(var(--dsky-tilt-x))
+    rotateY(var(--dsky-tilt-y))!important;
   transform-style:preserve-3d!important;
   will-change:transform!important;
 }
