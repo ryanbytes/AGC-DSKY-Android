@@ -1,6 +1,7 @@
 'use strict';
 (() => {
-  const api=window.AGCDSKY=window.AGCDSKY||{};
+  const api=window.AGCDSKY;
+  if(!api)throw new Error('AGCDSKY public facade unavailable');
   let timer=0,pipaTest=null,pipaTestTimer=0;
   const oct=(v,n=5)=>v==null?'-----':((Number(v)>>>0)&0x7fff).toString(8).padStart(n,'0');
   const cduDeg=v=>v==null?NaN:((v&0x7fff)*360/32768+360)%360;
@@ -100,5 +101,5 @@
   function open(){build();document.getElementById('diag-view').classList.add('open');update();if(!timer)timer=setInterval(update,250)}
   function close(){document.getElementById('diag-view')?.classList.remove('open');if(timer){clearInterval(timer);timer=0}}
   addEventListener('DOMContentLoaded',()=>{build();const b=document.getElementById('diagnostics');if(b)b.addEventListener('click',open)});
-  api.openDiagnostics=open;api.closeDiagnostics=close;
+  window.AGCDSKY_DIAGNOSTICS=Object.freeze({open,close});
 })();
