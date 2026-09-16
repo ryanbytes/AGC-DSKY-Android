@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const {installServiceRegistry} = require('./test-service-registry');
 
 const keycodeSource = fs.readFileSync(
   path.resolve(__dirname, '../app/src/main/assets/dsky-keycodes.js'), 'utf8');
@@ -28,7 +29,7 @@ for (const marker of [
   'ready:next.mode === MODES.AGC',
   'classicTransitionGlobals:false',
   'publicApiDelegates:true',
-  'window.AGCDSKY_RUNTIME = runtime'
+  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_RUNTIME',runtime"
 ]) {
   if (!transitionSource.includes(marker)) fail('missing runtime-transition marker: ' + marker);
 }
@@ -45,7 +46,7 @@ for (const marker of [
   "requestAgc('clock keypad fallback')",
   'input.keyMake(code)',
   "scheduleAgcAutosave('clock keypad handoff')",
-  'window.AGCDSKY_CLOCK_BEHAVIOR = clockBehavior'
+  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior"
 ]) {
   if (!clockSource.includes(marker)) fail('missing clock-fallback marker: ' + marker);
 }
@@ -106,6 +107,7 @@ function createHarness(initialMode = 'clock') {
     window:null
   };
   context.window = context;
+  installServiceRegistry(context);
   Object.defineProperties(AGCDSKY,{
     runtimeTransitions:{enumerable:true,get:()=>context.AGCDSKY_RUNTIME||null},
     inputRuntime:{enumerable:true,get:()=>context.AGCDSKY_INPUT||null},
@@ -289,5 +291,5 @@ async function flush(count = 20) {
   }
 
   console.log('Clock mode behavior: PASS');
-  console.log('  stable public compatibility getters, lifecycle-backed shared transition/input entry, fallback queue, no polling/globals, and lifecycle-failure compatibility verified');
+  console.log('  explicit service publication, stable public compatibility getters, lifecycle-backed shared transition/input entry, fallback queue, no polling/globals, and lifecycle-failure compatibility verified');
 })().catch(error => fail(error.stack || String(error)));
