@@ -10,6 +10,14 @@
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
  * - Dream/display-only/reduced-motion: flat and inactive; screen-only keeps EL depth
  *
+ * Display depth is scaled from Apollo dimensions instead of hand-tuned pixels:
+ * - 2.360 in: EL face width (SCD 1006315G)
+ * - 0.260 in: .263/.257 indicator package thickness midpoint (SCD 1006315G)
+ * - 0.300 in: indicator-cover frame total depth envelope (2004699A-001 model)
+ *
+ * The 0.260-in value is used as the visual luminous-plane depth envelope; it is
+ * not a claim that phosphor-to-cover-glass spacing itself was 0.260 in.
+ *
  * No AGC, relay, channel, keycode, or persistence state is touched here.
  */
 (() => {
@@ -43,6 +51,17 @@
   const MAX_SENSOR_DELTA_DEG = 8;
   const NATIVE_PRIORITY_MS = 600;
 
+  // Dimensional authority for the display-depth scale.  The package-depth value
+  // is deliberately bounded by the 0.300-in indicator-cover frame envelope.
+  const DISPLAY_FACE_WIDTH_IN = 2.360;
+  const DISPLAY_PACKAGE_DEPTH_IN = 0.260;
+  const FRAME_DEPTH_IN = 0.300;
+
+  let physicalFaceWidthPx = 0;
+  let physicalPxPerIn = 0;
+  let physicalPackageDepthPx = 0;
+  let physicalFrameDepthPx = 0;
+
   let targetX = STATIC_X;
   let targetY = STATIC_Y;
   let currentX = STATIC_X;
@@ -70,6 +89,24 @@
     document.body.classList.toggle('parallax-3d', presentationAllowed());
   }
 
+  function updatePhysicalDepth() {
+    if (!elPanel) return;
+    const widthPx = Number(elPanel.offsetWidth) || elPanel.getBoundingClientRect().width || 0;
+    if (!(widthPx > 0)) return;
+    const pxPerIn = widthPx / DISPLAY_FACE_WIDTH_IN;
+    const packageDepthPx = pxPerIn * DISPLAY_PACKAGE_DEPTH_IN;
+    const frameDepthPx = pxPerIn * FRAME_DEPTH_IN;
+
+    physicalFaceWidthPx = widthPx;
+    physicalPxPerIn = pxPerIn;
+    physicalPackageDepthPx = packageDepthPx;
+    physicalFrameDepthPx = frameDepthPx;
+
+    dsky.style.setProperty('--dsky-el-z', `${(-packageDepthPx).toFixed(3)}px`);
+    dsky.style.setProperty('--dsky-package-depth-px', `${packageDepthPx.toFixed(3)}px`);
+    dsky.style.setProperty('--dsky-frame-depth-px', `${frameDepthPx.toFixed(3)}px`);
+  }
+
   function apply() {
     const allowed = presentationAllowed();
     const x = allowed ? currentX : 0;
@@ -92,10 +129,6 @@
     setPx('--dsky-recess-y', parallaxY * -0.55);
     setPx('--dsky-ann-x', parallaxX * 0.65);
     setPx('--dsky-ann-y', parallaxY * 0.65);
-    setPx('--dsky-el-x', parallaxX * -1.70);
-    setPx('--dsky-el-y', parallaxY * -1.55);
-    setPx('--dsky-glass-x', parallaxX * 2.40);
-    setPx('--dsky-glass-y', parallaxY * 2.15);
     setPx('--dsky-key-x', parallaxX * 1.25);
     setPx('--dsky-key-y', parallaxY * 1.25);
     setPx('--dsky-key-pressed-x', parallaxX * 0.72);
@@ -110,10 +143,6 @@
     setPx('--dsky-edge-dark-y', parallaxY * 0.90);
     setPx('--dsky-edge-light-x', parallaxX * -0.40);
     setPx('--dsky-edge-light-y', parallaxY * -0.36);
-    setPx('--dsky-fs-el-x', parallaxX * -2.65);
-    setPx('--dsky-fs-el-y', parallaxY * -2.40);
-    setPx('--dsky-fs-glass-x', parallaxX * 3.60);
-    setPx('--dsky-fs-glass-y', parallaxY * 3.25);
     setPx('--dsky-fs-shadow-dark-x', parallaxX * 1.55);
     setPx('--dsky-fs-shadow-dark-y', parallaxY * 1.45);
     setPx('--dsky-fs-shadow-light-x', parallaxX * -0.72);
@@ -126,34 +155,6 @@
     dsky.style.setProperty('--dsky-light-y', `${lightY.toFixed(2)}%`);
     dsky.style.setProperty('--dsky-shadow-x', `${shadowX.toFixed(2)}px`);
     dsky.style.setProperty('--dsky-shadow-y', `${shadowY.toFixed(2)}px`);
-
-    // Fullscreen EL uses direct inline !important transforms. This deliberately
-    // bypasses every stylesheet transform/calc path so Android WebView cannot
-    // flatten the effect. The separation is intentionally obvious on a phone.
-    const fullscreen = document.body.classList.contains('screen-only')
-      && !document.body.classList.contains('dream')
-      && !document.body.classList.contains('display-only');
-    if (fullscreen && elPanel) {
-      const phosphorX = -x * 24.0;
-      const phosphorY = -y * 20.0;
-      const glassX = x * 34.0;
-      const glassY = y * 28.0;
-      elPanel.style.setProperty(
-        'transform',
-        `translate(-50%,-50%) translate(${phosphorX.toFixed(2)}px,${phosphorY.toFixed(2)}px) scale(1.012)`,
-        'important'
-      );
-      glassSheen.style.setProperty(
-        'transform',
-        `translate(-50%,-50%) translate(${glassX.toFixed(2)}px,${glassY.toFixed(2)}px) scale(.994)`,
-        'important'
-      );
-      glassSheen.style.setProperty('opacity', '.94', 'important');
-    } else {
-      if (elPanel) elPanel.style.removeProperty('transform');
-      glassSheen.style.removeProperty('transform');
-      glassSheen.style.removeProperty('opacity');
-    }
   }
 
   function scheduleFrame() {
@@ -301,12 +302,18 @@
     setTarget(dx, dy * 0.90, 'deviceorientation');
   }
 
+  function refreshPhysicalDepthSoon() {
+    const raf = window.requestAnimationFrame || (fn => setTimeout(fn, 16));
+    raf(updatePhysicalDepth);
+  }
+
   function flatten() {
     orientationBase = null;
     nativeBaseQ = null;
     nativeDisplayAngle = null;
     targetX = presentationAllowed() ? STATIC_X : 0;
     targetY = presentationAllowed() ? STATIC_Y : 0;
+    refreshPhysicalDepthSoon();
     scheduleFrame();
   }
 
@@ -314,6 +321,7 @@
   dsky.addEventListener('pointerdown', onPointerDown, {passive:true});
   dsky.addEventListener('pointerleave', onPointerLeave, {passive:true});
   window.addEventListener('deviceorientation', onDeviceOrientation, {passive:true});
+  window.addEventListener('resize', refreshPhysicalDepthSoon, {passive:true});
   installNativeQuaternionTap();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -335,11 +343,24 @@
     new MutationObserver(flatten).observe(document.body, {attributes:true, attributeFilter:['class']});
   }
 
+  if (typeof ResizeObserver === 'function' && elPanel) {
+    new ResizeObserver(updatePhysicalDepth).observe(elPanel);
+  }
+
   const controller = Object.freeze({
     enabled:() => presentationAllowed(),
     source:() => source,
     nativeActive:() => performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS,
     reset:() => setTarget(STATIC_X, STATIC_Y, 'static'),
+    geometry:() => Object.freeze({
+      displayFaceWidthIn:DISPLAY_FACE_WIDTH_IN,
+      displayPackageDepthIn:DISPLAY_PACKAGE_DEPTH_IN,
+      frameDepthIn:FRAME_DEPTH_IN,
+      renderedFaceWidthPx:physicalFaceWidthPx,
+      pxPerIn:physicalPxPerIn,
+      packageDepthPx:physicalPackageDepthPx,
+      frameDepthPx:physicalFrameDepthPx
+    }),
     state:() => Object.freeze({
       enabled:presentationAllowed(),
       source,
@@ -354,5 +375,6 @@
   api.parallax3d = controller;
 
   setPresentationClass();
+  updatePhysicalDepth();
   apply();
 })();
