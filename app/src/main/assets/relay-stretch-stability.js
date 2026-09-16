@@ -15,7 +15,7 @@
   const hardware=window.AGCDSKY_HARDWARE;
   const relayMatrix=window.DSKY_RELAY_MATRIX;
   if(!compat||!visual||!display||!hardware||!relayMatrix)throw new Error('Relay stretch stability dependencies unavailable');
-  const baseDecodeChannel10=compat.get('decodeChannel10');
+  const baseDecodeChannel10=display.implementation('decodeChannel10');
   const segments=compat.get('SEG');
   if(typeof baseDecodeChannel10!=='function'||typeof visual.withSettledWordOverride!=='function')throw new Error('Relay stretch implementation hooks unavailable');
 
@@ -89,7 +89,7 @@
     const result=visual.withSettledWordOverride(row,presentedWord,()=>baseDecodeChannel10(value));
     visual.renderWord(row,presentedWord);return result;
   }
-  compat.replace('decodeChannel10',stableStretchedRelayDecode,'stretched relay settle stability');
+  display.installImplementation('decodeChannel10',stableStretchedRelayDecode,'stretched relay settle stability');
 
   window.DSKY_RELAY_STRETCH_STABILITY=Object.freeze({mode:'same-task-settle-shield',settleShieldMs:FINAL_SETTLE_MS,settleRepaintSameTask:true,settleCrewFacingWriteSuppressed:true,eventDrivenDomWrites:true,monotonicSegments:true,capturePresentedWord});
 })();
