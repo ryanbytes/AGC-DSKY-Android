@@ -79,7 +79,7 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source {
   });
   observer.observe(root, {attributes:true, attributeFilter:['style']});
 
-  window.AGCDSKY = window.AGCDSKY || {};
+  if (!window.AGCDSKY) throw new Error('AGCDSKY public facade unavailable');
   window.AGCDSKY.lightingElectrical = Object.freeze({
     apply,
     incandescentFlux,
