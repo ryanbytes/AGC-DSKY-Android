@@ -15,7 +15,7 @@ for(const [name,source,markers] of [
  ['audio runtime',audioRuntime,['window.AGCDSKY_AUDIO=Object.freeze({','implementation,','installImplementation,','setContext,',"compat.mutable('emitTick'", "compat.mutable('playRelayBurst'"]],
  ['audio refine',audioRefine,["audio.implementation('emitTick')","audio.installImplementation('emitTick'","audio.installImplementation('playBurst'",'audio.relayClickSpreadMs()']],
  ['identity',identity,["audio.implementation('emitTick')","audio.installImplementation('emitTick'",'hardware.registerSnapshotExtension','const environment=window.AGCDSKY_ENVIRONMENT;']],
- ['visual',visual,["audio.implementation('emitTick')","audio.installImplementation('emitTick'","compat.replace('decodeChannel10'",'hardware.registerSettledPaintPolicy','display.renderRelayWord']],
+ ['visual',visual,["audio.implementation('emitTick')","audio.installImplementation('emitTick'","display.implementation('decodeChannel10')","display.installImplementation('decodeChannel10'",'hardware.registerSettledPaintPolicy','display.renderRelayWord']],
  ['stretch',stretch,["compat.replace('set2'","compat.replace('setReg'","compat.replace('decodeChannel10'",'visual.withSettledWordOverride']],
  ['guard',guard,["audio.installImplementation('ensure'","audio.installImplementation('applySetting'","audio.installImplementation('emitTick'","audio.installImplementation('playBurst'",'window.AGCDSKY_AUDIO_RECOVERY=Object.freeze({']],
  ['perceptual',perceptual,["audio.implementation('emitTick')","audio.installImplementation('emitTick'",'const hardware=window.AGCDSKY_HARDWARE;','const environment=window.AGCDSKY_ENVIRONMENT;']],
@@ -27,11 +27,11 @@ for(const [name,source] of [['audio refine',audioRefine],['identity',identity],[
   assert(!source.includes('AGCDSKY_COMPAT')&&!source.includes('compat.'),`${name} bypasses audio service and depends directly on compatibility registry`);
 }
 assert(!matrix.includes("compat.replace('relayDigit'"),'relay matrix must install relayDigit through AGCDSKY_DISPLAY');
-assert(!visual.includes("compat.get('emitTick'")&&!visual.includes("compat.replace('emitTick'"),'visual layer must route audio hook through AGCDSKY_AUDIO');
+assert(!visual.includes('AGCDSKY_COMPAT')&&!visual.includes('compat.'),'relay visual layer must route channel/audio implementation ownership through AGCDSKY_DISPLAY/AGCDSKY_AUDIO');
 assert(!stretch.includes('host.setTimeout =')&&!stretch.includes('window.AGCDSKY.hardware ='),'stretch stability regained global timer/hardware monkey-patching');
 assert(!guard.includes('applySnapshotUi =')&&!guard.includes('renderAgcReg =')&&!guard.includes('agcDisplay.')&&!guard.includes('agcRelayWords'),'audio recovery guard regained display/snapshot ownership');
 assert(!relayShow.includes('entryMode')&&!/\bentry\s*=/.test(relayShow),'relay show retained dead pre-service entry state');assert(!relayShow.includes('window.AGCDSKY.relayShow ='),'relay show must not replace stable public facade delegate');
 assert(perceptual.includes("localStorage.getItem('relayPerceptualAudioV1')==='1'"),'perceptual relay exaggeration must remain explicit opt-in');
 assert(perceptual.includes("enabled:false,model:'source-faithful-default'"),'source-faithful relay audio must remain the default');
 assert(api.includes('hardware:publicHardware')&&api.includes('audioStatus:publicAudioStatus')&&api.includes('relayShow:publicRelayShow'),'public facade late-service delegates missing');assert(display.includes('function projectRelayWord(')&&display.includes('function commitRelayWord(')&&display.includes('setChannelState')&&display.includes('implementation,installImplementation'),'display service does not own relay projection/channel backing/implementation state');
-console.log('late service boundary smoke: PASS');console.log('  late geometry/hardware/display hooks use audited compat where still required; relay-digit/audio wrappers route through owning services; perceptual exaggeration stays opt-in; no bare slot, timer, or public-API monkey-patching remains');
+console.log('late service boundary smoke: PASS');console.log('  late geometry/hardware hooks use audited compat where still required; relay digit/channel visual/audio wrappers route through owning services; perceptual exaggeration stays opt-in; no bare slot, timer, or public-API monkey-patching remains');
