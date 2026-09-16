@@ -61,3 +61,4 @@ console.log(`  ${RESERVED.length} stable AGCDSKY facade keys remain owned by ${O
 require('./root-facade-creation-smoke.js');
 require('./phone-api-runtime-smoke.js');
 require('./optics-service-smoke.js');
+require('./late-public-facade-mutation-smoke.js');
