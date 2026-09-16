@@ -1,0 +1,22 @@
+/*
+ * Recovered v1.1.21+ hardware palette.
+ *
+ * Color only: physical glass geometry/parallax remains authoritative in
+ * parallax-3d.css and must not be overridden here.
+ */
+body.authentic-colors.spacecraft-cm:not(.dream):not(.screen-only) .dsky{
+  background:
+    radial-gradient(ellipse at 22% 8%,rgba(255,255,255,.10) 0%,rgba(255,255,255,.025) 24%,transparent 46%),
+    radial-gradient(ellipse at 83% 92%,rgba(0,0,0,.13) 0%,transparent 48%),
+    repeating-linear-gradient(101deg,rgba(255,255,255,.008) 0 .06vmin,rgba(0,0,0,.010) .06vmin .14vmin),
+    linear-gradient(148deg,#8d9294 0%,#7c8183 30%,#6d7275 68%,#797e80 100%)!important;
+}
+body.authentic-colors.spacecraft-cm .el-glass-background{fill:#4e535a!important}
+body.authentic-colors.spacecraft-cm .el-ito-dot{fill:#91999c!important;opacity:.68!important}
+body.authentic-colors.spacecraft-cm .lamp:not(.on){
+  background:linear-gradient(112deg,rgba(255,255,255,.075),transparent 31%),linear-gradient(180deg,#858a8c 0%,#7c8183 58%,#707578 100%)!important;
+}
+body.authentic-colors.screen-only,
+body.authentic-colors.screen-only #app,
+body.authentic-colors.screen-only .dsky,
+body.authentic-colors.screen-only .elpanel{background:#4e535a!important}
