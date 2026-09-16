@@ -4,8 +4,9 @@
  * Couple visible EL/contact output to the individual relay that drives it.
  * AUTHENTIC mode follows modeled per-relay travel inside the 20-ms bank settle.
  * STRETCHED is presentation-only: AGC/latch timing stays authentic while contact
- * transitions are frame-separated for visibility. All core hooks are explicit
- * compatibility registrations; rendering/audio/state flow through services.
+ * transitions are frame-separated for visibility. Channel-010 interception
+ * remains behind the audited compatibility registry; rendering/audio/state
+ * flow through their owning services.
  */
 (() => {
   const compat=window.AGCDSKY_COMPAT;
@@ -19,7 +20,7 @@
   const relayMatrix=window.DSKY_RELAY_MATRIX;
   if(!compat||!visualState||!display||!audio||!environment||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');
   const baseDecodeChannel10=compat.get('decodeChannel10');
-  const baseIdentityEmitTick=compat.get('emitTick');
+  const baseIdentityEmitTick=audio.implementation('emitTick');
   if(typeof baseDecodeChannel10!=='function'||typeof baseIdentityEmitTick!=='function')throw new Error('Relay visual implementation hooks unavailable');
 
   const STORAGE_KEY='relayVisualTimingV1',MODE_AUTHENTIC='authentic',MODE_STRETCHED='stretched',FINAL_SETTLE_MS=20;
@@ -38,7 +39,7 @@
     }
     return baseIdentityEmitTick(ctx,when,strength);
   }
-  compat.replace('emitTick',relayVisualTimingAwareTick,'relay visual timing audio gate');
+  audio.installImplementation('emitTick',relayVisualTimingAwareTick,'relay visual timing audio gate');
 
   function currentSettledWord(row){
     if(Object.prototype.hasOwnProperty.call(settledWordOverride,row))return settledWordOverride[row]&0o3777;
