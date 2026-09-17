@@ -120,14 +120,20 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
 }
 
 /* Screen-only is the same EL-only effect at the large size. The full-screen
-   container itself stays centered and rigid; only the EL package moves. */
+   DSKY is deliberately an untransformed flat viewport. Making that 100vw x
+   100vh layer preserve-3d causes a GPU/WebView compositor tile seam on some
+   devices. Perspective therefore belongs to this fixed parent, while only the
+   EL package children receive 3D transforms. */
 body.parallax-3d.screen-only:not(.dream):not(.display-only) #app{
-  perspective:520px!important;
-  perspective-origin:50% 50%!important;
+  perspective:none!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .dsky{
-  transform:translate(-50%,-50%)!important;
-  transform-style:preserve-3d!important;
+  left:0!important;
+  top:0!important;
+  transform:none!important;
+  perspective:520px!important;
+  perspective-origin:50% 50%!important;
+  transform-style:flat!important;
   will-change:auto!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel{
