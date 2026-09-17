@@ -73,20 +73,26 @@ assert(reporter.includes('location coordinates are intentionally not included'),
     'native report must continue excluding saved location coordinates');
 
 for (const token of [
-    "api.appStatus",
-    "api.getCore",
-    "api.phoneIcduStatus",
-    "api.sextantStatus",
-    "window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_PARALLAX')",
-    "api.saveAgcState",
-    "api.verifySnapshotRoundTrip",
-    "api.clearSavedAgcState",
-    "ARM 5-SECOND PIPA MOTION TEST",
-    "PARALLAX / DISPLAY DEPTH",
-    "Parallax state",
-    "Parallax current → target",
-    "Parallax intensity",
-    "Glass view depth"
+    'const appState=window.AGCDSKY_APP_STATE;',
+    'const coreSession=window.AGCDSKY_CORE_SESSION;',
+    'const lifecycle=window.AGCDSKY_LIFECYCLE;',
+    'const snapshot=window.AGCDSKY_SNAPSHOT;',
+    'const registry=window.AGCDSKY_SERVICE_REGISTRY;',
+    'const app=lifecycle.status();',
+    'const ntp={...appState.ntpStatus};',
+    'const core=coreSession.core;',
+    "phone.implementation('phoneIcduStatus')",
+    "lateService('AGCDSKY_OPTICS')",
+    "lateService('AGCDSKY_PARALLAX')",
+    "snapshot.save('diagnostics')",
+    'snapshot.verifyRoundTrip()',
+    'snapshot.clear()',
+    'ARM 5-SECOND PIPA MOTION TEST',
+    'PARALLAX / DISPLAY DEPTH',
+    'Parallax state',
+    'Parallax current → target',
+    'Parallax intensity',
+    'Glass view depth'
 ]) {
     assert(diagnostics.includes(token), `diagnostics surface missing: ${token}`);
 }
@@ -98,12 +104,14 @@ assert(!diagnostics.includes('window.AGCDSKY_PARALLAX'),
     'diagnostics must not consume the parallax compatibility-global view internally');
 assert(!diagnostics.includes('api.parallax3d'),
     'diagnostics must not depend on a duplicate parallax public-facade alias');
-assert(diagnostics.includes('const api=window.AGCDSKY;')&&!diagnostics.includes('window.AGCDSKY=window.AGCDSKY||{}'),
-    'diagnostics must consume the existing public facade instead of creating it');
+assert(!diagnostics.includes('const api=window.AGCDSKY')&&!diagnostics.includes('api.appStatus')&&!diagnostics.includes('api.getCore')&&!diagnostics.includes('api.phoneIcduStatus')&&!diagnostics.includes('api.sextantStatus'),
+    'diagnostics must not consume the root public facade for internal runtime state');
+assert(!diagnostics.includes('api.saveAgcState')&&!diagnostics.includes('api.verifySnapshotRoundTrip')&&!diagnostics.includes('api.clearSavedAgcState'),
+    'diagnostics snapshot actions must stay on the owning snapshot service');
 assert(diagnostics.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_DIAGNOSTICS',Object.freeze({open,close})"),
     'diagnostics module must publish open/close explicitly through the dedicated diagnostics service registry slot');
 assert(!diagnostics.includes('api.openDiagnostics=')&&!diagnostics.includes('api.closeDiagnostics='),
     'diagnostics module must not append open/close methods onto the public facade');
 
 console.log('native diagnostic source smoke: PASS');
-console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, registry-backed parallax telemetry, and explicit diagnostics service publication verified');
+console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, direct diagnostics core-service ownership, registry-backed telemetry, and explicit diagnostics service publication verified');

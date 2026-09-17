@@ -1,28 +1,39 @@
 'use strict';
 (() => {
-  const api=window.AGCDSKY;
-  if(!api)throw new Error('AGCDSKY public facade unavailable');
+  const appState=window.AGCDSKY_APP_STATE;
+  const coreSession=window.AGCDSKY_CORE_SESSION;
+  const lifecycle=window.AGCDSKY_LIFECYCLE;
+  const snapshot=window.AGCDSKY_SNAPSHOT;
+  const registry=window.AGCDSKY_SERVICE_REGISTRY;
+  if(!appState)throw new Error('Shared application state unavailable');
+  if(!coreSession)throw new Error('Shared AGC core session unavailable');
+  if(!lifecycle)throw new Error('AGC lifecycle service unavailable');
+  if(!snapshot)throw new Error('AGC snapshot service unavailable');
+  if(!registry)throw new Error('AGC late-service registry unavailable');
   let timer=0,pipaTest=null,pipaTestTimer=0;
   const oct=(v,n=5)=>v==null?'-----':((Number(v)>>>0)&0x7fff).toString(8).padStart(n,'0');
   const cduDeg=v=>v==null?NaN:((v&0x7fff)*360/32768+360)%360;
   const s15=v=>{if(v==null)return null;v&=0x7fff;return (v&0x4000)?-((~v)&0x7fff):v};
   const f=(v,d=3)=>Number.isFinite(Number(v))?Number(v).toFixed(d):'---';
+  const lateService=name=>registry.get(name);
+  function phoneStatus(){const phone=lateService('AGCDSKY_PHONE'),impl=phone&&typeof phone.implementation==='function'?phone.implementation('phoneIcduStatus'):null;return typeof impl==='function'?impl():null}
+  function opticsStatus(){const optics=lateService('AGCDSKY_OPTICS');return optics&&typeof optics.status==='function'?optics.status():null}
   function build(){
     if(document.getElementById('diag-view'))return;
     const el=document.createElement('section');el.id='diag-view';el.setAttribute('aria-label','AGC diagnostics');
     el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
-    document.getElementById('diag-save').onclick=()=>{if(typeof api.saveAgcState==='function')api.saveAgcState('diagnostics');update()};
-    document.getElementById('diag-verify').onclick=()=>{if(typeof api.verifySnapshotRoundTrip==='function')api.verifySnapshotRoundTrip();update()};
+    document.getElementById('diag-save').onclick=()=>{snapshot.save('diagnostics');update()};
+    document.getElementById('diag-verify').onclick=()=>{snapshot.verifyRoundTrip();update()};
     document.getElementById('diag-pipa-test').onclick=startPipaTest;
-    document.getElementById('diag-clear').onclick=()=>{if(typeof api.clearSavedAgcState==='function')api.clearSavedAgcState();update()};
+    document.getElementById('diag-clear').onclick=()=>{snapshot.clear();update()};
   }
   function row(k,v){return `<tr><td>${k}</td><td>${v}</td></tr>`}
   function section(name){return `<tr><th colspan="2">${name}</th></tr>`}
   function pipaWords(core){if(!core||typeof core.readErasable!=='function')return null;return [0o37,0o40,0o41].map(a=>core.readErasable(0,a)&0x7fff)}
   function startPipaTest(){
-    const core=typeof api.getCore==='function'?api.getCore():null,start=pipaWords(core),b=document.getElementById('diag-pipa-test');
+    const core=coreSession.core,start=pipaWords(core),b=document.getElementById('diag-pipa-test');
     if(!core||!core.running||!start){pipaTest={ok:false,message:'AGC MUST BE RUNNING'};update();return}
     pipaTest={running:true,start,timestamp:Date.now(),message:'MOVE PHONE NOW'};if(b)b.textContent='MOVE PHONE · TEST RUNNING';
     clearTimeout(pipaTestTimer);pipaTestTimer=setTimeout(()=>{const end=pipaWords(core),delta=end?end.map((v,i)=>((v-start[i]+16384)&0x7fff)-16384):null;const moved=delta&&delta.some(v=>v!==0);pipaTest={running:false,ok:!!moved,start,end,delta,timestamp:Date.now(),message:moved?'PIPA COUNTERS RESPONDED':'NO PIPA COUNTER CHANGE'};if(b)b.textContent='ARM 5-SECOND PIPA MOTION TEST';update()},5000);update();
@@ -31,12 +42,12 @@
   function hzText(h){return Number.isFinite(Number(h))?Number(h).toFixed(1)+' Hz':'---'}
   function update(){
     const t=document.getElementById('diag-table');if(!t)return;
-    const app=typeof api.appStatus==='function'?api.appStatus():{};
-    const ntp=typeof api.ntpStatus==='function'?api.ntpStatus():null;
-    const core=typeof api.getCore==='function'?api.getCore():null;
-    const phone=typeof api.phoneIcduStatus==='function'?api.phoneIcduStatus():null;
-    const sxt=typeof api.sextantStatus==='function'?api.sextantStatus():null;
-    const parallaxService=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_PARALLAX');
+    const app=lifecycle.status();
+    const ntp={...appState.ntpStatus};
+    const core=coreSession.core;
+    const phone=phoneStatus();
+    const sxt=opticsStatus();
+    const parallaxService=lateService('AGCDSKY_PARALLAX');
     const parallax=parallaxService&&typeof parallaxService.state==='function'?parallaxService.state():null;
     const parallaxGeometry=parallaxService&&typeof parallaxService.geometry==='function'?parallaxService.geometry():null;
     const r=(bank,addr)=>core&&typeof core.readErasable==='function'?core.readErasable(bank,addr):null;
