@@ -51,9 +51,6 @@ for(const name of EXPECTED){
   assert(window[name]===null,`${name} must be null before publication`);
 }
 
-// After bootstrap the compatibility globals are read-only views. Publication is
-// explicit through the registry; direct assignment must never become a hidden
-// registration path again.
 const first=Object.freeze({kind:'runtime'});
 let threw=false;try{window.AGCDSKY_RUNTIME=first}catch(_){threw=true}
 assert(threw&&window.AGCDSKY_RUNTIME===null&&registry.get('AGCDSKY_RUNTIME')===null,'getter-only runtime view accepted direct publication');
@@ -71,8 +68,6 @@ const described=registry.describe();
 assert(described.find(x=>x.name==='AGCDSKY_RUNTIME').reason==='smoke explicit runtime publication','explicit runtime publication reason missing');
 assert(described.find(x=>x.name==='AGCDSKY_INPUT').reason==='smoke explicit publication','explicit input publication reason missing');
 
-// A configurable value that genuinely exists before bootstrap is absorbed once,
-// then becomes the same getter-only registry view as every normal late service.
 const priorOptics=Object.freeze({kind:'preexisting-optics'}),preWindow={AGCDSKY_OPTICS:priorOptics};
 const preRegistry=boot(preWindow);
 const preDescriptor=Object.getOwnPropertyDescriptor(preWindow,'AGCDSKY_OPTICS');
@@ -101,16 +96,19 @@ for(const file of fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js')).sort
     if(EXPECTED_SET.has(name))violations.push(`${file}:${name} redefines registry-owned accessor`);
   }
 
-  const publish=/\b(?:window\.)?AGCDSKY_SERVICE_REGISTRY\.publish\(\s*['"](AGCDSKY_[A-Z0-9_]+)['"]/g;
-  while((match=publish.exec(source))){
-    const name=match[1];
-    if(EXPECTED_SET.has(name))explicitPublishers.get(name).push(file);
-    else violations.push(`${file}:${name} explicitly publishes an unregistered late service`);
+  const registryAliases=new Set(['AGCDSKY_SERVICE_REGISTRY']);
+  const aliasDecl=/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*window\.AGCDSKY_SERVICE_REGISTRY\s*;/g;
+  while((match=aliasDecl.exec(source)))registryAliases.add(match[1]);
+  for(const alias of registryAliases){
+    const escaped=alias.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const publish=new RegExp(`\\b(?:window\\.)?${escaped}\\.publish\\(\\s*['\"](AGCDSKY_[A-Z0-9_]+)['\"]`,'g');
+    while((match=publish.exec(source))){
+      const name=match[1];
+      if(EXPECTED_SET.has(name))explicitPublishers.get(name).push(file);
+      else violations.push(`${file}:${name} explicitly publishes an unregistered late service`);
+    }
   }
 
-  // Production modules must consume late services through the registry, not
-  // through the legacy window.AGCDSKY_* getter views. Those views remain only
-  // as an external/backward-compatibility surface.
   const readCompat=/\bwindow\.(AGCDSKY_[A-Z0-9_]+)\b/g;
   while((match=readCompat.exec(source))){
     const name=match[1];
@@ -129,4 +127,4 @@ for(const [name,files] of explicitPublishers){
 }
 
 console.log('late service publication smoke: PASS');
-console.log(`  ${EXPECTED.length} getter-only late-service views have exactly one post-bootstrap explicit publisher; production consumers use the registry, not compatibility globals`);
+console.log(`  ${EXPECTED.length} getter-only late-service views have exactly one post-bootstrap explicit publisher; direct registry aliases are accepted while compatibility globals remain consumer-free`);
