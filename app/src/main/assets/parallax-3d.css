@@ -2,8 +2,8 @@
  * Restrained 3D/parallax presentation for the physical DSKY face.
  *
  * This file changes presentation only. It never changes DSKY geometry, relay
- * timing, channel state, or input behavior. Dream/display-only and
- * reduced-motion presentations remain flat and stable.
+ * timing, channel state, or input behavior. Dream/display-only remain flat.
+ * Reduced-motion remains flat unless the user explicitly enables parallax.
  */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) #app{
   perspective:680px;
@@ -151,19 +151,19 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
 }
 
 @media (prefers-reduced-motion:reduce){
-  body.parallax-3d .dsky,
-  body.parallax-3d .ann-well,
-  body.parallax-3d .display-well,
-  body.parallax-3d .ann-grid,
-  body.parallax-3d .elpanel,
-  body.parallax-3d .el-glass-rear,
-  body.parallax-3d .el-glass-sheen,
-  body.parallax-3d .key,
-  body.parallax-3d .fastener{
+  body.parallax-3d:not(.parallax-user-motion) .dsky,
+  body.parallax-3d:not(.parallax-user-motion) .ann-well,
+  body.parallax-3d:not(.parallax-user-motion) .display-well,
+  body.parallax-3d:not(.parallax-user-motion) .ann-grid,
+  body.parallax-3d:not(.parallax-user-motion) .elpanel,
+  body.parallax-3d:not(.parallax-user-motion) .el-glass-rear,
+  body.parallax-3d:not(.parallax-user-motion) .el-glass-sheen,
+  body.parallax-3d:not(.parallax-user-motion) .key,
+  body.parallax-3d:not(.parallax-user-motion) .fastener{
     transform:none!important;
     will-change:auto!important;
   }
-  body.parallax-3d .dsky{filter:none!important}
+  body.parallax-3d:not(.parallax-user-motion) .dsky{filter:none!important}
 }
 
 /* Screen-only keeps the identical 0.134-in depth ratio. The parent DSKY must

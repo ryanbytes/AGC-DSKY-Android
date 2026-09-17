@@ -8,7 +8,8 @@
  * - fine pointer: follows the cursor over the DSKY
  * - touch: samples the contact position without consuming the event
  * - no input: uses a tiny static bias so depth is still visible on a mounted Fire
- * - Dream/display-only/reduced-motion: flat and inactive; screen-only keeps EL depth
+ * - Dream/display-only: flat and inactive; reduced-motion stays flat until the
+ *   user explicitly adjusts a parallax control; screen-only keeps EL depth
  * - user controls: independent persisted tilt and perceived-depth intensity, 0-200%
  *
  * Display-glass depth is scaled from drawing 2004745 geometry documented in
@@ -75,6 +76,7 @@
 
   let tiltPercent = readStoredPercent(TILT_STORAGE_KEY, DEFAULT_INTENSITY_PERCENT);
   let depthPercent = readStoredPercent(DEPTH_STORAGE_KEY, DEFAULT_INTENSITY_PERCENT);
+  let userMotionOverride = hasStoredPercent(TILT_STORAGE_KEY) || hasStoredPercent(DEPTH_STORAGE_KEY);
   let tiltOutput = null;
   let depthOutput = null;
 
@@ -110,6 +112,11 @@
     }
   }
 
+  function hasStoredPercent(key) {
+    if (typeof localStorage === 'undefined') return false;
+    try { return localStorage.getItem(key) != null; } catch (_) { return false; }
+  }
+
   function writeStoredPercent(key, value) {
     if (typeof localStorage === 'undefined') return;
     try { localStorage.setItem(key, String(value)); } catch (_) {}
@@ -121,6 +128,7 @@
   }
 
   function updateTiltPercent(value, persist = true) {
+    userMotionOverride = true;
     tiltPercent = normalizePercent(value);
     if (persist) writeStoredPercent(TILT_STORAGE_KEY, tiltPercent);
     updateIntensityReadouts();
@@ -129,6 +137,7 @@
   }
 
   function updateDepthPercent(value, persist = true) {
+    userMotionOverride = true;
     depthPercent = normalizePercent(value);
     if (persist) writeStoredPercent(DEPTH_STORAGE_KEY, depthPercent);
     updateIntensityReadouts();
@@ -184,13 +193,14 @@
   }
 
   function presentationAllowed() {
-    if (reduceMotion && reduceMotion.matches) return false;
+    if (reduceMotion && reduceMotion.matches && !userMotionOverride) return false;
     const body = document.body;
     return !body.classList.contains('dream')
       && !body.classList.contains('display-only');
   }
 
   function setPresentationClass() {
+    document.body.classList.toggle('parallax-user-motion', userMotionOverride);
     document.body.classList.toggle('parallax-3d', presentationAllowed());
   }
 
@@ -478,6 +488,8 @@
       enabled:presentationAllowed(),
       source,
       nativeActive:performance.now() - nativeSeenAt < NATIVE_PRIORITY_MS,
+      reducedMotion:!!(reduceMotion && reduceMotion.matches),
+      userMotionOverride,
       tiltPercent,
       depthPercent,
       x:currentX,
