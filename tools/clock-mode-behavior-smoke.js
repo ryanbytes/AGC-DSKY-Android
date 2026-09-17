@@ -21,7 +21,9 @@ const KEY_CODES = Object.freeze({
 });
 
 for (const marker of [
-  'const lifecycle = api.lifecycle;',
+  'const registry = window.AGCDSKY_SERVICE_REGISTRY;',
+  'const lifecycle = window.AGCDSKY_LIFECYCLE;',
+  'const coreSession = window.AGCDSKY_CORE_SESSION;',
   'const baseEnterAgc = lifecycle.enterAgc;',
   'function beginAgc(',
   'await baseEnterAgc()',
@@ -29,13 +31,14 @@ for (const marker of [
   'ready:next.mode === MODES.AGC',
   'classicTransitionGlobals:false',
   'publicApiDelegates:true',
-  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_RUNTIME',runtime"
+  "registry.publish('AGCDSKY_RUNTIME',runtime"
 ]) {
   if (!transitionSource.includes(marker)) fail('missing runtime-transition marker: ' + marker);
 }
 for (const forbidden of [
   'waitForAgcReady','LOAD_POLL_MS','MAX_LOAD_POLLS','api.enterAgc =','api.enterClock =',
-  'api.runtimeTransitions =','window.enterAgc','window.enterClock','sharedEnterAgc','sharedEnterClock'
+  'api.runtimeTransitions =','window.enterAgc','window.enterClock','sharedEnterAgc','sharedEnterClock',
+  'const api = window.AGCDSKY;','api.lifecycle','api.appStatus(','api.getCore('
 ]) {
   if (transitionSource.includes(forbidden)) fail('runtime transition service contains obsolete ownership/polling marker: ' + forbidden);
 }
@@ -88,8 +91,10 @@ function createHarness(initialMode = 'clock') {
   };
   const lifecycle = {
     enterAgc(){ return enterImpl(); },
-    enterClock(){ mode = 'clock'; return {mode}; }
+    enterClock(){ mode = 'clock'; return {mode}; },
+    status(){ return {mode}; }
   };
+  const coreSession = {core};
   const AGCDSKY = {
     lifecycle,
     appStatus(){ return {mode}; },
@@ -99,6 +104,8 @@ function createHarness(initialMode = 'clock') {
   const documentObject = {addEventListener(name,fn){ handlers[name] = fn; }};
   const context = {
     AGCDSKY,
+    AGCDSKY_LIFECYCLE:lifecycle,
+    AGCDSKY_CORE_SESSION:coreSession,
     document:documentObject,
     console,
     setTimeout(fn,delay){ timers.push({fn,delay}); return timers.length; },
@@ -291,5 +298,5 @@ async function flush(count = 20) {
   }
 
   console.log('Clock mode behavior: PASS');
-  console.log('  explicit service publication, stable public compatibility getters, lifecycle-backed shared transition/input entry, fallback queue, no polling/globals, and lifecycle-failure compatibility verified');
+  console.log('  direct lifecycle/core-session runtime ownership, stable public compatibility getters, shared transition/input entry, fallback queue, no polling/globals, and lifecycle-failure compatibility verified');
 })().catch(error => fail(error.stack || String(error)));
