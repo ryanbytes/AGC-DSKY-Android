@@ -38,11 +38,13 @@ jobs:
           Imported only as the photographic surround reference for the CM DSKY presentation.
           EOF
 
-      - name: Upload source photo for visual inspection
+      - name: Upload source photo and current DSKY screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: cm-mounted-dsky-photo
-          path: app/src/main/assets/cm-panel/dsky-mounted-cm-panel.jpg
+          name: cm-photo-and-live-dsky
+          path: |
+            app/src/main/assets/cm-panel/dsky-mounted-cm-panel.jpg
+            docs/screenshots/main-dsky.webp
           if-no-files-found: error
 
       - name: Commit imported reference
