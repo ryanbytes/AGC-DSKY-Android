@@ -1,11 +1,11 @@
 (() => {
   'use strict';
 
-  const api = window.AGCDSKY;
-  if (!api) throw new Error('AGC application API unavailable');
-  if (window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_INPUT')) return;
+  const registry = window.AGCDSKY_SERVICE_REGISTRY;
+  if (!registry) throw new Error('AGC service registry unavailable');
+  if (registry.get('AGCDSKY_INPUT')) return;
 
-  const runtime = api.runtimeTransitions;
+  const runtime = registry.get('AGCDSKY_RUNTIME');
   if (!runtime
       || typeof runtime.mode !== 'function'
       || typeof runtime.core !== 'function'
@@ -69,5 +69,5 @@
     })
   });
 
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_INPUT',input,'dsky-input-runtime publication');
+  registry.publish('AGCDSKY_INPUT',input,'dsky-input-runtime publication');
 })();
