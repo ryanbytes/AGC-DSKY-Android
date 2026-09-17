@@ -52,9 +52,17 @@ for (const [file, source] of [
 }
 assert(!keyboardSource.includes('api.keyboardElectrical ='),
   'keyboard electrical service regained late public-facade mutation');
-assert(transitionsSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_RUNTIME',runtime"),
-  'runtime transition service must publish explicitly through the registry');
-assert(inputSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_INPUT',input"),
+assert(transitionsSource.includes("registry.publish('AGCDSKY_RUNTIME',runtime"),
+  'runtime transition service must publish explicitly through its registry owner');
+assert(transitionsSource.includes('const lifecycle = window.AGCDSKY_LIFECYCLE;'),
+  'runtime transition service must consume the lifecycle owner directly');
+assert(transitionsSource.includes('const coreSession = window.AGCDSKY_CORE_SESSION;'),
+  'runtime transition service must consume the core-session owner directly');
+assert(!transitionsSource.includes('const api = window.AGCDSKY;')
+    && !transitionsSource.includes('api.appStatus(')
+    && !transitionsSource.includes('api.getCore('),
+  'runtime transition service regained public-facade authority');
+assert(inputSource.includes("registry.publish('AGCDSKY_INPUT',input"),
   'input service must publish explicitly through the registry');
 assert(clockSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior"),
   'clock behavior service must publish explicitly through the registry');
@@ -113,29 +121,38 @@ async function main() {
 
   const core = {
     keyPress(code){ calls.push(['make', code, nowMs]); return 1; },
-    keyRelease(){ calls.push(['reset', nowMs]); return true; }
+    keyRelease(){ calls.push(['reset', nowMs]); return true; },
+    proceedKey(){ return 1; }
   };
+  async function baseEnterAgc(){
+    enterCount++;
+    if (mode === 'agc') return {mode};
+    if (mode === 'agc-loading') return {mode};
+    mode = 'agc-loading';
+    calls.push(['enter', nowMs]);
+    await loadGate;
+    mode = 'agc';
+    return {mode};
+  }
+  function baseEnterClock(){
+    mode='clock';
+    return {mode};
+  }
+  const lifecycle=Object.freeze({
+    enterAgc:baseEnterAgc,
+    enterClock:baseEnterClock,
+    status(){ return {mode}; }
+  });
+  const coreSession={core};
   const AGCDSKY = {
+    lifecycle,
     appStatus(){ return {mode}; },
-    async enterAgc(){
-      enterCount++;
-      if (mode === 'agc') return;
-      if (mode === 'agc-loading') return;
-      mode = 'agc-loading';
-      calls.push(['enter', nowMs]);
-      await loadGate;
-      mode = 'agc';
-    },
     getCore(){ return core; },
     scheduleAgcAutosave(reason){ calls.push(['autosave', reason, nowMs]); },
     hardwarePersonality(){
       return {keys:{R:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};
     }
   };
-  AGCDSKY.lifecycle=Object.freeze({
-    enterAgc(){ return AGCDSKY.enterAgc(); },
-    enterClock(){ mode='clock'; return {mode}; }
-  });
   const context = {
     console,
     Promise,
@@ -149,6 +166,8 @@ async function main() {
     },
     clearTimeout(id){timers.delete(id);},
     AGCDSKY,
+    AGCDSKY_LIFECYCLE:lifecycle,
+    AGCDSKY_CORE_SESSION:coreSession,
     window:null,
     document:{hidden:false,addEventListener(type,fn){addListener(doc,type,fn);}},
     press(key){calls.push(['legacy-press',key,nowMs]);}
@@ -162,7 +181,18 @@ async function main() {
     clockBehavior:{enumerable:true,get(){ return context.AGCDSKY_CLOCK_BEHAVIOR || null; }},
     keyboardElectrical:{enumerable:true,get(){ return context.AGCDSKY_KEYBOARD_ELECTRICAL || null; }}
   });
-  context.enterAgc=AGCDSKY.enterAgc;
+  AGCDSKY.enterAgc=function(){
+    const runtime=context.AGCDSKY_RUNTIME;
+    return runtime&&typeof runtime.enterAgc==='function'
+      ? runtime.enterAgc('public AGCDSKY.enterAgc')
+      : lifecycle.enterAgc();
+  };
+  AGCDSKY.enterClock=function(){
+    const runtime=context.AGCDSKY_RUNTIME;
+    return runtime&&typeof runtime.enterClock==='function'
+      ? runtime.enterClock('CLOCK',true,'public AGCDSKY.enterClock')
+      : lifecycle.enterClock('CLOCK',true);
+  };
 
   vm.createContext(context);
   vm.runInContext(keycodesSource,context,{filename:'dsky-keycodes.js'});
@@ -171,6 +201,8 @@ async function main() {
   vm.runInContext(transitionsSource,context,{filename:'runtime-transitions.js'});
   assert(context.AGCDSKY_RUNTIME === AGCDSKY.runtimeTransitions,
     'bootstrap-owned runtime getter did not resolve the transition service');
+  assert(context.enterAgc === undefined && context.enterClock === undefined,
+    'runtime transition service published classic global transition shims');
   vm.runInContext(inputSource,context,{filename:'dsky-input-runtime.js'});
   assert(context.AGCDSKY_INPUT === AGCDSKY.inputRuntime,
     'RSET harness did not initialize the shared input runtime');
@@ -241,7 +273,7 @@ async function main() {
     'two physical RSET cycles did not produce exactly two KEYRST releases');
 
   console.log('RSET flight path smoke: PASS');
-  console.log('  explicit registry publication plus bootstrap runtime/input/clock/keyboard getters preserve CLOCK handoff and AGC-mode physical RSET as Pinball 022 + KEYRST with no synthetic JavaScript reset path');
+  console.log('  direct lifecycle/core-session runtime ownership plus registry runtime/input/clock/keyboard publication preserves CLOCK handoff and AGC-mode physical RSET as Pinball 022 + KEYRST with no synthetic JavaScript reset path');
 }
 
 main().catch(error=>fail(error && error.stack ? error.stack : String(error)));
