@@ -6,9 +6,13 @@
 
   function markup(){
     return `
-    <section id="agc-cheat-sheet" aria-label="AGC cheat sheet">
+    <section id="agc-cheat-sheet" aria-label="Apollo DSKY flight crew checklist">
       <div class="cheat-head" id="cheat-drag">
-        <span class="cheat-title">AGC QUICK SHEET</span>
+        <div class="cheat-head-copy">
+          <span class="cheat-kicker">APOLLO · FLIGHT CREW CHECKLIST</span>
+          <span class="cheat-title">CMC / DSKY QUICK REFERENCE</span>
+          <span class="cheat-ref">CM · COMANCHE 055 · CREW USE</span>
+        </div>
         <div class="cheat-head-actions">
           <button id="cheat-min" type="button" aria-label="Minimize cheat sheet">MIN</button>
           <button id="cheat-close" type="button" aria-label="Close cheat sheet">X</button>
