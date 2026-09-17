@@ -1,14 +1,18 @@
 (() => {
   'use strict';
 
-  const api = window.AGCDSKY;
-  if (!api || window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_RUNTIME')) return;
-  const lifecycle = api.lifecycle;
+  const registry = window.AGCDSKY_SERVICE_REGISTRY;
+  const lifecycle = window.AGCDSKY_LIFECYCLE;
+  const coreSession = window.AGCDSKY_CORE_SESSION;
+  if (!registry) throw new Error('AGC service registry unavailable');
+  if (registry.get('AGCDSKY_RUNTIME')) return;
   if (!lifecycle
       || typeof lifecycle.enterAgc !== 'function'
-      || typeof lifecycle.enterClock !== 'function') {
+      || typeof lifecycle.enterClock !== 'function'
+      || typeof lifecycle.status !== 'function') {
     throw new Error('AGC lifecycle service unavailable');
   }
+  if (!coreSession) throw new Error('Shared AGC core session unavailable');
 
   // The transition coordinator owns serialization; lifecycle owns the actual
   // core/mode mutation. Public AGCDSKY methods dynamically delegate here after
@@ -32,8 +36,7 @@
   const beforeClockHooks = new Set();
 
   function status() {
-    if (typeof api.appStatus !== 'function') throw new Error('AGC runtime status API unavailable');
-    const value = api.appStatus();
+    const value = lifecycle.status();
     if (!value || typeof value.mode !== 'string') throw new Error('AGC runtime returned invalid mode state');
     return value;
   }
@@ -43,8 +46,7 @@
   }
 
   function core() {
-    if (typeof api.getCore !== 'function') throw new Error('AGC runtime core API unavailable');
-    return api.getCore();
+    return coreSession.core || null;
   }
 
   function clockRequested() {
@@ -178,5 +180,5 @@
     })
   });
 
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_RUNTIME',runtime,'runtime-transitions publication');
+  registry.publish('AGCDSKY_RUNTIME',runtime,'runtime-transitions publication');
 })();
