@@ -1,17 +1,19 @@
 (() => {
   'use strict';
 
-  const api = window.AGCDSKY;
-  const transitions = api?.runtimeTransitions;
-  const input = api?.inputRuntime;
+  const registry = window.AGCDSKY_SERVICE_REGISTRY;
+  const transitions = registry?.get('AGCDSKY_RUNTIME');
+  const input = registry?.get('AGCDSKY_INPUT');
+  const snapshot = window.AGCDSKY_SNAPSHOT;
   const AGC_KEY = window.AGCDSKY_KEY_CODES;
-  if (!api || !transitions || !input
+  if (!registry || !transitions || !input || !snapshot
       || typeof transitions.requestAgc !== 'function'
       || typeof transitions.mode !== 'function'
       || typeof transitions.clockRequested !== 'function'
       || typeof transitions.onBeforeClock !== 'function'
       || typeof input.ready !== 'function'
       || typeof input.keyMake !== 'function'
+      || typeof snapshot.scheduleAutosave !== 'function'
       || !AGC_KEY) return;
 
   // This layer owns only the document-level CLOCK keypad fallback. The
@@ -41,9 +43,8 @@
         const code = AGC_KEY[next];
         if (code !== undefined) input.keyMake(code);
       }
-      if (epoch === promotionEpoch && !transitions.clockRequested()
-          && typeof api.scheduleAgcAutosave === 'function') {
-        api.scheduleAgcAutosave('clock keypad handoff');
+      if (epoch === promotionEpoch && !transitions.clockRequested()) {
+        snapshot.scheduleAutosave('clock keypad handoff');
       }
     } catch (error) {
       if (epoch === promotionEpoch && !transitions.clockRequested()) {
@@ -101,5 +102,5 @@
       pendingKeys:pendingKeys.slice()
     })
   });
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior,'clock-behavior publication');
+  registry.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior,'clock-behavior publication');
 })();
