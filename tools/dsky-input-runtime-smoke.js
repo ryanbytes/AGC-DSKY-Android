@@ -18,7 +18,8 @@ function assert(condition, message) {
 }
 
 for (const marker of [
-  'const runtime = api.runtimeTransitions',
+  'const registry = window.AGCDSKY_SERVICE_REGISTRY;',
+  "const runtime = registry.get('AGCDSKY_RUNTIME');",
   'function currentCore(action)',
   'function ready()',
   'function keyMake(code)',
@@ -28,12 +29,17 @@ for (const marker of [
   'core.keyPress(value)',
   'core.keyRelease()',
   'core.proceedKey(!!pressed)',
-  "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_INPUT',input"
+  "registry.publish('AGCDSKY_INPUT',input"
 ]) {
   assert(source.includes(marker), `input runtime missing marker: ${marker}`);
 }
-assert(!source.includes('api.inputRuntime ='),
-  'input runtime must not mutate the public facade after bootstrap');
+for (const forbidden of [
+  'const api = window.AGCDSKY',
+  'api.runtimeTransitions',
+  'api.inputRuntime ='
+]) {
+  assert(!source.includes(forbidden), `input runtime regained public-facade dependency: ${forbidden}`);
+}
 assert(!/fetch\s*\(/.test(source) && !/XMLHttpRequest/.test(source),
   'input runtime must not depend on network activity');
 
@@ -51,9 +57,10 @@ const runtime = Object.freeze({
   core(){ return core; }
 });
 const AGCDSKY = {};
-const context = {AGCDSKY, AGCDSKY_RUNTIME:runtime, console, window:null};
+const context = {AGCDSKY, console, window:null};
 context.window = context;
-installServiceRegistry(context);
+const registry = installServiceRegistry(context);
+registry.publish('AGCDSKY_RUNTIME', runtime, 'input smoke runtime fixture');
 Object.defineProperties(AGCDSKY, {
   runtimeTransitions:{enumerable:true,get(){ return context.AGCDSKY_RUNTIME || null; }},
   inputRuntime:{enumerable:true,get(){ return context.AGCDSKY_INPUT || null; }}
@@ -119,4 +126,4 @@ assert(AGCDSKY.inputRuntime === prior && context.AGCDSKY_INPUT === prior,
   'second input-runtime load replaced the published controller');
 
 console.log('DSKY input runtime smoke: PASS');
-console.log('  explicit registry publication, bootstrap-owned getter, AGC gating, positive key makes, KEYRST-only zero, retained-core release, PRO maintained contact, validation, and idempotence verified');
+console.log('  registry-owned runtime lookup, bootstrap-owned getter, AGC gating, positive key makes, KEYRST-only zero, retained-core release, PRO maintained contact, validation, and idempotence verified');
