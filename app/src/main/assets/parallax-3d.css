@@ -88,7 +88,6 @@ body.screen-only .el-glass-sheen::after{
 body.parallax-3d .dsky,
 body.parallax-3d .elpanel,
 body.parallax-3d .el-indicator-back{
-  perspective:none!important;
   transform-style:flat!important;
   will-change:auto!important;
 }
