@@ -1,79 +1,193 @@
 /*
- * Restrained photographic material pass.
- * Geometry, dimensions, relay timing and input behavior are untouched. These
- * rules only add material roughness, recess depth, molded-key reflections,
- * fastener metal and the thin EL-cover reflection visible on real hardware.
+ * Restrained photographic material pass for the Apollo Block II DSKY.
+ *
+ * Geometry is deliberately owned elsewhere.  This file must not move, resize,
+ * rotate, crop, or otherwise reinterpret the drawing-derived face.  It only
+ * models the visual finish of the 2004968 front housing, the recessed upper
+ * assemblies, the 2004745 cover glass, molded keycaps, and exposed fasteners.
+ *
+ * Reference intent:
+ * - 2004968: front housing / physical surround construction
+ * - 2003988 + 2004745: EL cover assembly and laminated AR-treated glass
+ * - 1006315G: EL face and register geometry (unchanged here)
+ *
+ * The result should read as coated cast/machined flight hardware, not brushed
+ * consumer aluminum and not a glossy CGI prop.
  */
 body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky{
+  isolation:isolate;
   background:
-    radial-gradient(ellipse at 22% 8%,rgba(255,255,255,.105) 0%,rgba(255,255,255,.028) 24%,transparent 46%),
-    radial-gradient(ellipse at 83% 92%,rgba(0,0,0,.12) 0%,transparent 48%),
-    radial-gradient(circle at 13% 19%,rgba(255,255,255,.055) 0 .045vmin,transparent .07vmin),
-    radial-gradient(circle at 69% 31%,rgba(0,0,0,.065) 0 .05vmin,transparent .08vmin),
-    radial-gradient(circle at 43% 72%,rgba(255,255,255,.035) 0 .035vmin,transparent .065vmin),
-    repeating-linear-gradient(101deg,rgba(255,255,255,.008) 0 .06vmin,rgba(0,0,0,.009) .06vmin .14vmin),
-    linear-gradient(148deg,#878d89 0%,#777d79 28%,#686e6a 67%,#757b77 100%);
+    /* broad paint response: shallow, diffuse, never mirror-like */
+    radial-gradient(ellipse at 24% 7%,rgba(255,255,255,.105) 0%,rgba(255,255,255,.038) 19%,transparent 43%),
+    radial-gradient(ellipse at 87% 92%,rgba(0,0,0,.14) 0%,rgba(0,0,0,.045) 29%,transparent 53%),
+    /* minute coating/casting variation */
+    radial-gradient(circle at 11% 22%,rgba(255,255,255,.050) 0 .035vmin,transparent .072vmin),
+    radial-gradient(circle at 72% 33%,rgba(0,0,0,.055) 0 .040vmin,transparent .078vmin),
+    radial-gradient(circle at 41% 71%,rgba(255,255,255,.034) 0 .030vmin,transparent .068vmin),
+    radial-gradient(circle at 86% 56%,rgba(0,0,0,.040) 0 .026vmin,transparent .064vmin),
+    /* very fine sprayed/coated surface grain */
+    repeating-linear-gradient(97deg,rgba(255,255,255,.007) 0 .055vmin,rgba(0,0,0,.008) .055vmin .125vmin),
+    repeating-linear-gradient(7deg,rgba(0,0,0,.004) 0 .08vmin,rgba(255,255,255,.004) .08vmin .17vmin),
+    linear-gradient(147deg,#858b87 0%,#797f7b 25%,#6d736f 55%,#646a66 78%,#747a76 100%);
   box-shadow:
-    inset 0 0 0 .18vmin rgba(188,193,188,.55),
-    inset 0 0 0 .52vmin rgba(65,70,66,.78),
-    inset .28vmin .22vmin .55vmin rgba(255,255,255,.09),
-    inset -.42vmin -.46vmin 1.35vmin rgba(0,0,0,.28),
-    inset 0 0 2.2vmin rgba(0,0,0,.23),
-    0 .34vmin .24vmin rgba(0,0,0,.34),
-    0 .78vmin 1.35vmin rgba(0,0,0,.56);
+    /* narrow exposed rim */
+    inset 0 0 0 .16vmin rgba(192,197,192,.48),
+    inset 0 0 0 .46vmin rgba(72,77,73,.82),
+    /* low, asymmetric housing relief */
+    inset .24vmin .20vmin .42vmin rgba(255,255,255,.085),
+    inset -.38vmin -.42vmin 1.10vmin rgba(0,0,0,.27),
+    inset 0 0 1.75vmin rgba(0,0,0,.19),
+    /* contact shadow against spacecraft panel */
+    0 .20vmin .16vmin rgba(0,0,0,.38),
+    0 .64vmin 1.08vmin rgba(0,0,0,.58);
 }
+
+/* The inner line reads as the front-housing step/seam rather than a decorative
+   UI border.  Keep it matte and slightly irregular in luminance. */
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky:before{
+  border-color:rgba(37,40,37,.80);
+  box-shadow:
+    inset .05vmin .06vmin .10vmin rgba(255,255,255,.18),
+    inset -.04vmin -.05vmin .10vmin rgba(0,0,0,.28),
+    0 .055vmin .075vmin rgba(255,255,255,.065);
+}
+
+/* Ambient response across the painted casting.  This is intentionally broad
+   and weak; there is no full-panel glossy highlight on the real finish. */
 body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky:after{
   background:
-    radial-gradient(ellipse at var(--dsky-light-x,28%) var(--dsky-light-y,18%),rgba(255,255,255,.075),transparent 33%),
-    linear-gradient(118deg,rgba(255,255,255,.038) 0%,transparent 24%,rgba(0,0,0,.022) 66%,rgba(255,255,255,.016) 100%);
+    radial-gradient(ellipse at var(--dsky-light-x,28%) var(--dsky-light-y,18%),rgba(255,255,255,.060),rgba(255,255,255,.018) 25%,transparent 48%),
+    linear-gradient(119deg,rgba(255,255,255,.026) 0%,transparent 29%,rgba(0,0,0,.018) 69%,rgba(255,255,255,.010) 100%);
   mix-blend-mode:soft-light;
-  opacity:.78;
+  opacity:.74;
 }
+
+/* Upper annunciator cavity: painted/coated frame around a genuinely recessed
+   assembly.  Highlights stay narrow on the viewer-facing lip and fall quickly
+   into the well. */
 body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .ann-well{
-  background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 21%),linear-gradient(145deg,#343633,#2a2c29 72%,#222421);
-  border-color:#51534e;
-  box-shadow:inset .42vmin .45vmin .95vmin rgba(0,0,0,.78),inset -.14vmin -.12vmin .26vmin rgba(255,255,255,.10),0 -.05vmin .08vmin rgba(255,255,255,.13),0 .16vmin .22vmin rgba(0,0,0,.60);
+  background:
+    linear-gradient(143deg,rgba(255,255,255,.030),transparent 22%),
+    linear-gradient(143deg,#343633 0%,#2c2e2b 57%,#242623 100%);
+  border-color:#4b4e49;
+  outline-color:#171917;
+  box-shadow:
+    inset .46vmin .49vmin .92vmin rgba(0,0,0,.80),
+    inset -.12vmin -.11vmin .22vmin rgba(255,255,255,.075),
+    0 -.045vmin .07vmin rgba(255,255,255,.105),
+    0 .14vmin .20vmin rgba(0,0,0,.64);
 }
+
+/* 2004745/2003988 opening.  The cavity is deep, but the bonded EL/glass stack
+   must not look like a thick floating phone screen. */
 body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .display-well{
-  background:radial-gradient(ellipse at 32% 18%,rgba(74,84,77,.16),transparent 44%),linear-gradient(145deg,#0b0e0b 0%,#151a15 48%,#070907 100%);
-  border-color:#52544f;
-  box-shadow:inset .46vmin .52vmin 1.25vmin rgba(0,0,0,.96),inset -.16vmin -.13vmin .26vmin rgba(255,255,255,.07),0 -.05vmin .08vmin rgba(255,255,255,.12),0 .16vmin .22vmin rgba(0,0,0,.66);
+  background:
+    radial-gradient(ellipse at 31% 16%,rgba(72,83,75,.12),transparent 45%),
+    linear-gradient(145deg,#090c09 0%,#131713 51%,#070907 100%);
+  border-color:#4d504b;
+  outline-color:#151715;
+  box-shadow:
+    inset .49vmin .56vmin 1.18vmin rgba(0,0,0,.97),
+    inset -.13vmin -.11vmin .22vmin rgba(255,255,255,.052),
+    0 -.045vmin .07vmin rgba(255,255,255,.095),
+    0 .15vmin .21vmin rgba(0,0,0,.69);
 }
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .elpanel{filter:drop-shadow(.08vmin .14vmin .12vmin rgba(0,0,0,.55))}
-body.spacecraft-cm .el-glass-background{fill:#676d68}
-body.spacecraft-cm .el-ito-dot{fill:#a3a8a1;opacity:.70}
+
+/* The EL panel remains at its exact drawing-derived coordinates.  Give the
+   bonded assembly only a minute contact shadow, not a floating-card effect. */
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .elpanel{
+  filter:drop-shadow(.055vmin .09vmin .09vmin rgba(0,0,0,.48));
+}
+
+/* 2004745 laminated glass / EL face.  Neutral gray, low-reflection, slightly
+   green-biased only through the underlying display. */
+body.spacecraft-cm .el-glass-background{fill:#666c67}
+body.spacecraft-cm .el-ito-dot{fill:#9da39c;opacity:.68}
+
+/* Annunciator windows are diffuse translucent hardware, not flat web buttons. */
 body.spacecraft-cm .lamp{
-  background:linear-gradient(112deg,rgba(255,255,255,.08),transparent 31%),linear-gradient(180deg,#797a74 0%,#71726c 58%,#686963 100%);
-  border-color:#282a26;
-  box-shadow:inset .08vmin .10vmin .16vmin rgba(255,255,255,.14),inset -.10vmin -.12vmin .22vmin rgba(0,0,0,.36),0 .05vmin .10vmin rgba(255,255,255,.05);
+  background:
+    linear-gradient(112deg,rgba(255,255,255,.070),transparent 29%),
+    linear-gradient(180deg,#787a74 0%,#71736d 55%,#686a64 100%);
+  border-color:#272925;
+  box-shadow:
+    inset .07vmin .085vmin .14vmin rgba(255,255,255,.12),
+    inset -.09vmin -.11vmin .19vmin rgba(0,0,0,.34),
+    0 .045vmin .085vmin rgba(255,255,255,.040);
 }
+
+/* Molded black keycap.  The highlight is broad/weak and the lower edge carries
+   more weight, matching a low-gloss phenolic/plastic part rather than piano
+   black plastic. */
 body.spacecraft-cm .key{
   border-color:#080908;
-  background:radial-gradient(ellipse at 27% 13%,rgba(255,255,255,.115) 0%,rgba(255,255,255,.026) 26%,transparent 47%),radial-gradient(circle at 72% 76%,rgba(255,255,255,.022) 0 .05vmin,transparent .08vmin),linear-gradient(153deg,#383a36 0%,#2b2d29 31%,#1b1c1a 72%,#111210 100%);
-  box-shadow:inset .18vmin .16vmin .20vmin rgba(255,255,255,.17),inset -.24vmin -.28vmin .30vmin rgba(0,0,0,.78),inset 0 -.05vmin 0 rgba(255,255,255,.035),0 .16vmin .08vmin #5a5c56,0 .26vmin .28vmin rgba(0,0,0,.48);
+  background:
+    radial-gradient(ellipse at 26% 12%,rgba(255,255,255,.090) 0%,rgba(255,255,255,.022) 26%,transparent 48%),
+    radial-gradient(circle at 72% 76%,rgba(255,255,255,.018) 0 .045vmin,transparent .078vmin),
+    linear-gradient(153deg,#363834 0%,#2a2c28 31%,#1b1c1a 72%,#111210 100%);
+  box-shadow:
+    inset .16vmin .14vmin .18vmin rgba(255,255,255,.14),
+    inset -.23vmin -.27vmin .28vmin rgba(0,0,0,.80),
+    inset 0 -.045vmin 0 rgba(255,255,255,.028),
+    0 .14vmin .075vmin #555851,
+    0 .24vmin .26vmin rgba(0,0,0,.50);
 }
 body.spacecraft-cm .key.pressed{
-  background:radial-gradient(ellipse at 28% 16%,rgba(255,255,255,.055),transparent 40%),linear-gradient(156deg,#20211f,#121310 82%);
-  box-shadow:inset .13vmin .18vmin .22vmin rgba(0,0,0,.88),inset -.05vmin -.05vmin .12vmin rgba(255,255,255,.035),0 .025vmin .04vmin #3b3c38;
+  background:
+    radial-gradient(ellipse at 28% 16%,rgba(255,255,255,.045),transparent 41%),
+    linear-gradient(156deg,#20211f,#121310 82%);
+  box-shadow:
+    inset .13vmin .18vmin .22vmin rgba(0,0,0,.89),
+    inset -.05vmin -.05vmin .11vmin rgba(255,255,255,.030),
+    0 .022vmin .035vmin #393b36;
 }
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
-  border-color:#83857f;
-  background:radial-gradient(circle at 31% 25%,rgba(255,255,255,.38) 0 7%,transparent 8%),radial-gradient(circle at 37% 33%,#777972 0 13%,#4d4f4a 27%,#292a27 55%,#11120f 75%,#555750 84%,#1d1e1b 100%);
-  box-shadow:inset .05vmin .05vmin .08vmin rgba(255,255,255,.23),inset -.07vmin -.08vmin .12vmin rgba(0,0,0,.75),0 .10vmin .13vmin rgba(0,0,0,.70);
-}
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener:before{content:"";position:absolute;inset:9%;border-radius:50%;border:.035vmin solid rgba(255,255,255,.10);box-shadow:inset 0 0 .07vmin rgba(0,0,0,.72)}
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener:after{background:linear-gradient(180deg,#999b94 0%,#4b4d48 42%,#191a18 58%,#767871 100%);box-shadow:0 -.025vmin rgba(255,255,255,.16),0 .035vmin rgba(0,0,0,.72)}
 
-/* Dynamic parallax stays restrained: broad matte-body response and a narrower
-   cover-glass streak, instead of a glossy/plastic full-panel sheen. */
+/* Exposed slotted fasteners: dull plated/aged metal with a real conical/rim
+   response.  Keep the slot crisp; random decorative Phillips geometry would be
+   wrong for this face. */
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
+  border-color:#777b74;
+  background:
+    radial-gradient(circle at 30% 24%,rgba(255,255,255,.32) 0 6%,transparent 7%),
+    radial-gradient(circle at 38% 34%,#747770 0 14%,#555851 28%,#30322e 53%,#151714 73%,#4f524c 86%,#1a1c19 100%);
+  box-shadow:
+    inset .045vmin .045vmin .07vmin rgba(255,255,255,.19),
+    inset -.065vmin -.075vmin .11vmin rgba(0,0,0,.76),
+    0 .085vmin .115vmin rgba(0,0,0,.72);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener:before{
+  content:"";
+  position:absolute;
+  inset:9%;
+  border-radius:50%;
+  border:.030vmin solid rgba(255,255,255,.085);
+  box-shadow:inset 0 0 .065vmin rgba(0,0,0,.70);
+}
+body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener:after{
+  background:linear-gradient(180deg,#8e928a 0%,#484b45 41%,#171916 59%,#686c64 100%);
+  box-shadow:0 -.022vmin rgba(255,255,255,.14),0 .032vmin rgba(0,0,0,.75);
+}
+
+/* Dynamic parallax remains an optical/material cue only.  The 2004745 glass
+   depth is handled by the dedicated geometry/parallax layer; this stylesheet
+   must not add independent front-glass/phosphor translation. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
-  background:radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.090),rgba(255,255,255,.024) 22%,transparent 47%),radial-gradient(ellipse at calc(var(--dsky-light-x) + 14%) calc(var(--dsky-light-y) + 38%),rgba(255,255,255,.018),transparent 34%),linear-gradient(118deg,rgba(255,255,255,.030),transparent 30%,rgba(0,0,0,.025) 72%,rgba(255,255,255,.014));
+  background:
+    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.072),rgba(255,255,255,.020) 23%,transparent 48%),
+    radial-gradient(ellipse at calc(var(--dsky-light-x) + 14%) calc(var(--dsky-light-y) + 38%),rgba(255,255,255,.014),transparent 34%),
+    linear-gradient(118deg,rgba(255,255,255,.022),transparent 31%,rgba(0,0,0,.020) 72%,rgba(255,255,255,.010));
   mix-blend-mode:soft-light;
 }
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
-  background:linear-gradient(112deg,transparent 5%,rgba(255,255,255,.018) 23%,rgba(255,255,255,.12) 29%,rgba(255,255,255,.022) 35%,transparent 48%),radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.11),rgba(220,237,228,.025) 24%,transparent 48%),linear-gradient(180deg,rgba(255,255,255,.025),transparent 18%,transparent 78%,rgba(0,0,0,.055));
-  box-shadow:inset .06vmin .06vmin .10vmin rgba(255,255,255,.10),inset -.08vmin -.10vmin .18vmin rgba(0,0,0,.16),inset 0 0 .7vmin rgba(0,0,0,.08);
-  opacity:.52;
+  background:
+    linear-gradient(112deg,transparent 7%,rgba(255,255,255,.010) 24%,rgba(255,255,255,.070) 29%,rgba(255,255,255,.014) 34%,transparent 47%),
+    radial-gradient(ellipse at var(--dsky-light-x) var(--dsky-light-y),rgba(255,255,255,.070),rgba(220,237,228,.018) 24%,transparent 48%),
+    linear-gradient(180deg,rgba(255,255,255,.018),transparent 19%,transparent 79%,rgba(0,0,0,.045));
+  box-shadow:
+    inset .05vmin .05vmin .085vmin rgba(255,255,255,.080),
+    inset -.07vmin -.09vmin .15vmin rgba(0,0,0,.15),
+    inset 0 0 .62vmin rgba(0,0,0,.065);
+  opacity:.43;
 }
 
 /* Tap-to-mark sight confirmation. */
