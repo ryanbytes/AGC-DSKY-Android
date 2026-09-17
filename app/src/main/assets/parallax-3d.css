@@ -29,6 +29,13 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky{
   will-change:auto;
 }
 
+/* photoreal-finish.css loads later and normally moves a whole-face highlight
+   with --dsky-light-x/y. EL-only mode deliberately freezes that response. */
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
+  background:linear-gradient(118deg,rgba(255,255,255,.030),transparent 30%,rgba(0,0,0,.025) 72%,rgba(255,255,255,.014))!important;
+  mix-blend-mode:soft-light!important;
+}
+
 /* The metal hardware never follows device tilt. Mechanical key travel remains
    intact, but there is no parallax translation on the keyboard or face. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-well,
@@ -50,14 +57,7 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key.pressed{
 /* The EL artwork sits behind the fixed cover glass. Viewer motion shifts and
    tips only this package, producing parallax through the stationary aperture. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .elpanel{
-  transform:
-    translate3d(
-      var(--dsky-recess-x,0px),
-      var(--dsky-recess-y,0px),
-      var(--dsky-el-z,-6.034px)
-    )
-    rotateX(var(--dsky-tilt-x))
-    rotateY(var(--dsky-tilt-y));
+  transform:translate3d(var(--dsky-recess-x,0px),var(--dsky-recess-y,0px),var(--dsky-el-z,-6.034px)) rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y));
   transform-origin:50% 50%;
   transform-style:preserve-3d;
   will-change:transform;
@@ -111,6 +111,7 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
 }
 
 @media (prefers-reduced-motion:reduce){
+  body.parallax-3d:not(.parallax-user-motion) .dsky,
   body.parallax-3d:not(.parallax-user-motion) .elpanel,
   body.parallax-3d:not(.parallax-user-motion) .el-indicator-back{
     transform:none!important;
@@ -130,29 +131,13 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) .dsky{
   will-change:auto!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel{
-  transform:
-    translate(-50%,-50%)
-    translate3d(
-      var(--dsky-fs-shadow-light-x,0px),
-      var(--dsky-fs-shadow-light-y,0px),
-      var(--dsky-el-z,-6.034px)
-    )
-    rotateX(var(--dsky-tilt-x))
-    rotateY(var(--dsky-tilt-y))!important;
+  transform:translate(-50%,-50%) translate3d(var(--dsky-fs-shadow-light-x,0px),var(--dsky-fs-shadow-light-y,0px),var(--dsky-el-z,-6.034px)) rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y))!important;
   transform-origin:50% 50%!important;
   transform-style:preserve-3d!important;
   will-change:transform!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-indicator-back{
-  transform:
-    translate(-50%,-50%)
-    translate3d(
-      var(--dsky-fs-shadow-light-x,0px),
-      var(--dsky-fs-shadow-light-y,0px),
-      var(--dsky-screen-indicator-back-z,-17.712px)
-    )
-    rotateX(var(--dsky-tilt-x))
-    rotateY(var(--dsky-tilt-y))!important;
+  transform:translate(-50%,-50%) translate3d(var(--dsky-fs-shadow-light-x,0px),var(--dsky-fs-shadow-light-y,0px),var(--dsky-screen-indicator-back-z,-17.712px)) rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y))!important;
   transform-origin:50% 50%!important;
   transform-style:preserve-3d!important;
   will-change:transform!important;
