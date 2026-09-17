@@ -33,7 +33,9 @@ for(const feature of features){
   no(cm,`script.src = '${feature}.js'`,'CM configuration module');
 }
 no(cm,"createElement('script')",'CM configuration module');
-req(cm,"localStorage.setItem('agcMission','comanche055')",'CM mission lock');
+req(cm,"const shell=window.AGCDSKY_SHELL",'CM shell storage owner');
+req(cm,"shell.store.set('agcMission','comanche055')",'CM mission lock');
+no(cm,"localStorage.",'CM configuration storage ownership');
 req(cm,"document.body.classList.add('spacecraft-cm')",'CM body mode');
 for(const feature of ['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','keyboard-electrical-interlock'])req(sw,`'./${feature}.js'`,'offline PWA cache');
 
@@ -61,4 +63,4 @@ for(const marker of ['--key-el-color','--key-el-shadow','.key.pressed','translat
 req(ui,"oldDim.hidden = true",'retired whole-panel dimmer');req(ui,"document.body.classList.remove('dim')",'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');
-console.log('  parser-loaded CM features, explicit registry-backed presentation/mechanics/keyboard services, centralized normal-key/PRO input, rheostat stops, source-backed key mechanics, and three-bulb annunciators gated');
+console.log('  parser-loaded CM features, shell-owned CM persistence, explicit registry-backed presentation/mechanics/keyboard services, centralized normal-key/PRO input, rheostat stops, source-backed key mechanics, and three-bulb annunciators gated');

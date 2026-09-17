@@ -56,12 +56,18 @@ assert((html.match(/src="relay-show\.js"/g) || []).length === 1,
 
 const classes = new Set();
 const storage = new Map();
+const shellWrites = [];
 const AGCDSKY = {};
 const context = {
   console,
   document:{body:{classList:{add(name){ classes.add(name); }}}},
-  localStorage:{setItem(key,value){ storage.set(String(key), String(value)); }},
+  localStorage:{setItem(){ throw new Error('cm-mode.js bypassed AGCDSKY_SHELL storage ownership'); }},
   AGCDSKY,
+  AGCDSKY_SHELL:{store:{set(key,value){
+    shellWrites.push([String(key), String(value)]);
+    storage.set(String(key), String(value));
+    return true;
+  }}},
   window:null
 };
 context.window = context;
@@ -77,11 +83,17 @@ vm.createContext(context);
 vm.runInContext(cm, context, {filename:'cm-mode.js'});
 
 assert(classes.has('spacecraft-cm'), 'cm-mode.js did not apply the CM body class synchronously');
-assert(storage.get('agcMission') === 'comanche055', 'cm-mode.js did not lock the Comanche mission');
+assert(storage.get('agcMission') === 'comanche055', 'cm-mode.js did not lock the Comanche mission through shell storage');
+assert(shellWrites.length === 1 && shellWrites[0][0] === 'agcMission' && shellWrites[0][1] === 'comanche055',
+  'cm-mode.js did not delegate its initial mission lock exactly once to AGCDSKY_SHELL.store');
 assert(context.AGCDSKY_CM_MODE && Object.isFrozen(context.AGCDSKY_CM_MODE),
   'cm-mode.js did not publish a frozen dedicated service');
 assert(typeof context.AGCDSKY.applyCmMode === 'function',
   'bootstrap-owned applyCmMode facade did not resolve the CM service');
+assert(!cm.includes('localStorage'),
+  'cm-mode.js regained direct persistent-storage ownership');
+assert(cm.includes("shell.store.set('agcMission','comanche055')"),
+  'cm-mode.js must persist the mission through the shell storage service');
 assert(!cm.includes('window.AGCDSKY.applyCmMode ='),
   'cm-mode.js regained late public-facade mutation');
 assert(cm.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CM_MODE',service"),
@@ -90,6 +102,21 @@ assert(cm.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CM_MODE',se
 context.AGCDSKY.applyCmMode();
 assert(classes.has('spacecraft-cm') && storage.get('agcMission') === 'comanche055',
   'repeat CM-mode application changed the locked CM state');
+assert(shellWrites.length === 2,
+  'repeat CM-mode application did not remain inside the shell storage boundary');
+
+const missingShell = {
+  console,
+  document:{body:{classList:{add(){}}}},
+  window:null
+};
+missingShell.window=missingShell;
+installServiceRegistry(missingShell);
+vm.createContext(missingShell);
+let missingShellFailed=false;
+try { vm.runInContext(cm, missingShell, {filename:'cm-mode-no-shell.js'}); }
+catch (error) { missingShellFailed=/shell storage service unavailable/i.test(String(error&&error.message)); }
+assert(missingShellFailed, 'cm-mode.js did not fail closed when shell storage ownership was unavailable');
 
 console.log('CM feature load smoke: PASS');
-console.log('  parser-loaded CM features plus explicit dedicated-service publication and bootstrap-owned applyCmMode compatibility verified');
+console.log('  parser-loaded CM features plus shell-owned mission persistence and explicit dedicated-service publication verified');
