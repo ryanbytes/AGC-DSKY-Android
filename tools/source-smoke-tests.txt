@@ -57,6 +57,7 @@ device-v35-policy-smoke.js
 display-layout-smoke.js
 parallax-3d-smoke.js
 parallax-reduced-motion-override-smoke.js
+el-only-parallax-smoke.js
 el-widget-smoke.js
 widget-relay-model-smoke.js
 solar-model-smoke.js
