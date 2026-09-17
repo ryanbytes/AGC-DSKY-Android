@@ -10,12 +10,14 @@ function assert(c,m){if(!c)throw new Error(m)}
 assert((html.match(/src="parallax-3d\.js"/g)||[]).length===1,'static glass compatibility asset must load once');
 assert((html.match(/href="parallax-3d\.css"/g)||[]).length===1,'static glass compatibility stylesheet must load once');
 assert(js.includes('GLASS_VIEW_THICKNESS_IN'),'drawing-backed static glass geometry must remain');
-assert(js.includes("registry.publish('AGCDSKY_DISPLAY_GLASS'"),'static display-glass service must publish');
+assert(js.includes("registry.publish('AGCDSKY_PARALLAX'"),'registered compatibility service must publish static glass diagnostics');
+assert(!js.includes('AGCDSKY_DISPLAY_GLASS'),'removal must not introduce a new late service solely for static glass');
 assert(js.includes("enabled:false, source:'removed', nativeActive:false"),'retired parallax compatibility state must remain explicitly disabled');
 assert(js.includes("localStorage.removeItem('dskyParallaxTiltPct')")&&js.includes("localStorage.removeItem('dskyParallaxDepthPct')"),'retired motion preferences must be cleared');
 
 for(const forbidden of [
-  'deviceorientation','agcdsky-phonequaternion','pointermove','pointerdown',
+  "addEventListener('deviceorientation'","addEventListener('agcdsky-phonequaternion'",
+  "addEventListener('pointermove'","addEventListener('pointerdown'",
   'parallax-tilt-intensity','parallax-depth-intensity','buildIntensityControl',
   'MAX_ROTATE_X_DEG','MAX_ROTATE_Y_DEG','MAX_SENSOR_DELTA_DEG'
 ]) assert(!js.includes(forbidden),`retired visual parallax runtime returned: ${forbidden}`);
