@@ -1,7 +1,7 @@
 # Canonical source-level smoke suite.
-# Keep device/ADB-only and explicitly retired smokes out of this manifest; every
-# exclusion must be documented in source-smoke-exclusions.txt. Both Android CI
-# and build-local.sh consume this file so source coverage cannot silently drift.
+# Keep device/ADB-only smokes out of this manifest; every exclusion must be
+# documented in source-smoke-exclusions.txt. Both Android CI and build-local.sh
+# consume this file so source coverage cannot silently drift.
 
 source-smoke-manifest-smoke.js
 branding-smoke.js
@@ -52,6 +52,7 @@ relay-stretch-stability-smoke.js
 
 dream-mode-smoke.js
 dream-orientation-smoke.js
+dream-agc-runtime-smoke.js
 device-v35-policy-smoke.js
 display-layout-smoke.js
 parallax-3d-smoke.js

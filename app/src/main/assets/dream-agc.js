@@ -2,9 +2,17 @@
 (() => {
   const dreamState = window.AGCDSKY_APP_STATE;
   const dreamCore = window.AGCDSKY_CORE_SESSION;
+  const dreamShell = window.AGCDSKY_SHELL;
+  const dreamClock = window.AGCDSKY_CLOCK;
+  const dreamDisplay = window.AGCDSKY_DISPLAY;
+  const DreamAgcCore = window.AgcCore;
   if (!dreamState) throw new Error('Shared application state unavailable');
   if (!dreamCore) throw new Error('Shared AGC core session unavailable');
-  const params = new URLSearchParams(location.search);
+  if (!dreamShell) throw new Error('Application shell service unavailable');
+  if (!dreamClock) throw new Error('Clock service unavailable');
+  if (!dreamDisplay) throw new Error('AGC display service unavailable');
+  if (typeof DreamAgcCore !== 'function') throw new Error('AGC core constructor unavailable');
+  const params = new URLSearchParams(window.location.search);
   const dreamAgc = params.get('dream') === '1' && params.get('agc') === '1';
   if (!dreamAgc) return;
 
@@ -12,11 +20,13 @@
 
   function routeDreamChannel(channel, value) {
     // Dream mode deliberately uses its own channel route instead of the normal
-    // interactive onAgcChannel() path, which is gated on mode === 'agc'.
-    if (channel === 0o10) decodeChannel10(value);
-    else if (channel === 0o11) decodeChannel11(value);
-    else if (channel === 0o13) decodeChannel13(value);
-    else if (channel === 0o163) decodeChannel163(value);
+    // interactive display.onChannel() path, which is gated on interactive AGC
+    // mode. Resolve the display-owned implementation slot at dispatch time so
+    // late fidelity wrappers remain authoritative.
+    if (channel === 0o10) dreamDisplay.implementation('decodeChannel10')(value);
+    else if (channel === 0o11) dreamDisplay.implementation('decodeChannel11')(value);
+    else if (channel === 0o13) dreamDisplay.implementation('decodeChannel13')(value);
+    else if (channel === 0o163) dreamDisplay.implementation('decodeChannel163')(value);
   }
 
   function restoreDreamClone() {
@@ -25,14 +35,14 @@
     // data that helper deletes the user's saved snapshot. A dream is read-only
     // with respect to the interactive app's state.
     try {
-      const raw = localStorage.getItem('agcSnapshotV1');
+      const raw = dreamShell.store.get('agcSnapshotV1');
       if (!raw) return false;
       const payload = JSON.parse(raw);
       if (!payload || payload.schema !== 1 || payload.mission !== dreamState.selectedMission || !payload.core) {
         return false;
       }
       dreamCore.core.importSnapshot(payload.core);
-      applySnapshotUi(payload.ui);
+      dreamDisplay.applySnapshotUi(payload.ui);
       return true;
     } catch (error) {
       console.warn('Dream AGC snapshot clone ignored', String(error && error.message || error));
@@ -44,24 +54,24 @@
     console.error('Dream AGC core stopped', error);
     try { if (dreamCore.core) dreamCore.core.stop(); } catch (_) {}
     dreamState.mode = 'dream-agc-error';
-    stopClockQueue();
-    resetAgcFace();
-    const status = $('mode');
+    dreamClock.stopQueue();
+    dreamDisplay.resetFace();
+    const status = dreamShell.element('mode');
     if (status) status.textContent = 'AGC ERROR · DREAM';
   }
 
   async function startDreamAgc() {
-    cancelLampTest();
-    stopClockQueue();
+    dreamClock.cancelLampTest();
+    dreamClock.stopQueue();
     dreamState.mode = 'dream-agc-loading';
-    resetAgcFace();
+    dreamDisplay.resetFace();
 
     try {
-      const selected = missionSpec();
+      const selected = dreamShell.missionSpec();
       // The dream owns this page's core session. It may clone the last saved
       // interactive AGC state, but it never saves back or changes runMode.
       if (dreamCore.core) dreamCore.core.stop();
-      dreamCore.core = new AgcCore({
+      dreamCore.core = new DreamAgcCore({
         onChannelUpdate: routeDreamChannel,
         onError: failDreamAgc
       });
@@ -69,8 +79,8 @@
       dreamCore.loadedMission = dreamState.selectedMission;
       const restored = restoreDreamClone();
       dreamState.mode = 'dream-agc';
-      if (restored) renderAgcSnapshot();
-      const status = $('mode');
+      if (restored) dreamDisplay.renderSnapshot();
+      const status = dreamShell.element('mode');
       if (status) status.textContent = `${selected.label} · DREAM · ${dreamCore.core.version()}${restored ? ' · STATE CLONED' : ''}`;
       if (!document.hidden) dreamCore.core.start(1);
       else stoppedForVisibility = true;
@@ -92,7 +102,7 @@
     }
   });
 
-  addEventListener('pagehide', () => {
+  window.addEventListener('pagehide', () => {
     try { if (dreamCore.core) dreamCore.core.stop(); } catch (_) {}
   });
 
