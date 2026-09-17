@@ -5,8 +5,9 @@
  *
  * The historical filename is retained so packaged/PWA caches do not need a
  * coordinated asset migration. Visual parallax itself is intentionally gone:
- * this module does not consume attitude sensors, deviceorientation, pointer or
- * touch input, does not create motion controls, and never moves the EL panel.
+ * this module does not consume attitude sensors, browser orientation events,
+ * pointer or touch input, does not create motion controls, and never moves the
+ * EL panel.
  *
  * Drawing-backed 2004745 cover-glass dimensions remain available for the
  * fixed glass/depth presentation and diagnostics.
@@ -100,9 +101,7 @@
     glassCenterRisePx: physicalGlassCenterRisePx
   });
 
-  registry.publish('AGCDSKY_DISPLAY_GLASS', Object.freeze({geometry}), 'static display-glass publication');
-
-  /* Compatibility-only diagnostic surface. There is no parallax controller. */
+  /* Registered compatibility service only. There is no motion controller. */
   registry.publish('AGCDSKY_PARALLAX', Object.freeze({
     state: () => Object.freeze({
       enabled:false, source:'removed', nativeActive:false,
