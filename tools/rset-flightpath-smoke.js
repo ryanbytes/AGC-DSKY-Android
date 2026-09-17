@@ -64,8 +64,14 @@ assert(!transitionsSource.includes('const api = window.AGCDSKY;')
   'runtime transition service regained public-facade authority');
 assert(inputSource.includes("registry.publish('AGCDSKY_INPUT',input"),
   'input service must publish explicitly through the registry');
-assert(clockSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior"),
-  'clock behavior service must publish explicitly through the registry');
+assert(clockSource.includes('const registry = window.AGCDSKY_SERVICE_REGISTRY;')
+    && clockSource.includes('const snapshot = window.AGCDSKY_SNAPSHOT;')
+    && clockSource.includes("registry.publish('AGCDSKY_CLOCK_BEHAVIOR',clockBehavior"),
+  'clock behavior service must consume direct owners and publish explicitly through the registry');
+assert(!clockSource.includes('const api = window.AGCDSKY;')
+    && !clockSource.includes('api.scheduleAgcAutosave')
+    && !clockSource.includes('AGCDSKY.scheduleAgcAutosave'),
+  'clock behavior regained public-facade runtime or snapshot authority');
 assert(keyboardSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEYBOARD_ELECTRICAL',Object.freeze({"),
   'keyboard electrical service must publish explicitly through the registry');
 
@@ -144,11 +150,13 @@ async function main() {
     status(){ return {mode}; }
   });
   const coreSession={core};
+  const snapshot=Object.freeze({
+    scheduleAutosave(reason){ calls.push(['autosave', reason, nowMs]); }
+  });
   const AGCDSKY = {
     lifecycle,
     appStatus(){ return {mode}; },
     getCore(){ return core; },
-    scheduleAgcAutosave(reason){ calls.push(['autosave', reason, nowMs]); },
     hardwarePersonality(){
       return {keys:{R:{contactMs:10,returnSoundMs:5,makePitch:520,returnPitch:330,soundGain:1}}};
     }
@@ -168,6 +176,7 @@ async function main() {
     AGCDSKY,
     AGCDSKY_LIFECYCLE:lifecycle,
     AGCDSKY_CORE_SESSION:coreSession,
+    AGCDSKY_SNAPSHOT:snapshot,
     window:null,
     document:{hidden:false,addEventListener(type,fn){addListener(doc,type,fn);}},
     press(key){calls.push(['legacy-press',key,nowMs]);}
