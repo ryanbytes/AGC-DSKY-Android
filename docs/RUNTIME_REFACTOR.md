@@ -1,129 +1,140 @@
 # DSKY runtime refactor status
 
-Updated: 2026-09-14
+Updated: 2026-09-17
+Status: **open-ended runtime refactor complete at Phase 83**
 
-This note records the current runtime/input ownership after refactor phases 7-14. It is intentionally narrower and more current than the older phase-by-phase history in `PROGRESS.md`.
+This document is the cutoff record for the DSKY runtime refactor. Detailed service ownership is documented in `CORE_SERVICE_GRAPH.md`; phase-by-phase history remains in `PROGRESS.md` and the individual phase notes.
 
-## Current parser-ordered runtime
+## Cutoff decision
+
+Phase 83 is the end of the open-ended cleanup/refactor series.
+
+Do **not** start Phase 84 or another broad architecture-cleanup pass merely to reduce indirection, rename services, move ownership boundaries, or make the graph look cleaner. A future refactor is justified only when all of the following are true:
+
+1. there is a concrete user-visible bug, demonstrated runtime failure mode, or specific ownership violation;
+2. the exact failure can be reproduced or statically demonstrated;
+3. the proposed change is the smallest reasonable change that addresses that failure;
+4. an acceptance/regression test is added or identified before the change is considered complete;
+5. APK/build verification is performed when the changed surface can affect packaged Android behavior.
+
+If a proposed refactor cannot identify the failure it fixes and the acceptance test that proves the fix, treat it as churn and do not do it.
+
+## Current architecture boundary
+
+The runtime is no longer organized around one application script owning unrelated behavior. Production state and behavior are separated behind explicit owners for:
+
+- application/core state;
+- shell/configuration/time;
+- renderer state;
+- relay audio;
+- PHONE CLOCK state;
+- AGC display/channel state;
+- snapshots/autosave;
+- lifecycle and CLOCK/AGC transitions;
+- DSKY normal-key electrical input;
+- maintained PRO input;
+- Block II hardware timing/latches;
+- late presentation, diagnostics, optics and parallax services.
+
+`AGCDSKY_COMPAT` remains an audited compatibility adapter rather than a second mutable authority. The root `AGCDSKY` object remains a stable public facade; production runtime modules are not supposed to use it as their internal source of truth.
+
+The canonical service/dependency graph and detailed ownership rules are in `docs/CORE_SERVICE_GRAPH.md`.
+
+## Phase 82 / 83 closeout
+
+Phase 82 removed remaining runtime/input dependence on the public `AGCDSKY` facade by routing transition and DSKY input authority directly through the owning lifecycle/core-session/service-registry layers.
+
+Phase 83 completed the same ownership correction for the CLOCK fallback path:
+
+- `clock-behavior.js` consumes the runtime, input and snapshot owners directly;
+- the CLOCK fallback queue no longer uses the public facade as internal authority;
+- cancellation semantics remain epoch-protected so stale contacts cannot reappear after CLOCK wins;
+- physical keyboard capture still remains the normal live CM input owner;
+- RSET remains a physical Pinball `022` make followed by KEYRST, with no synthetic JavaScript reset path.
+
+A stale Phase-83 RSET smoke fixture initially expected the older CLOCK publication spelling. That fixture was corrected without changing production runtime behavior. The corrected fixture also requires direct snapshot ownership so the test cannot accidentally pass through the public facade.
+
+## Verified CI checkpoint
+
+Verified production/test head before merge:
 
 ```text
-dsky-keycodes.js
-  -> app.js
-  -> dream-silence.js
-  -> runtime-transitions.js
-  -> dsky-input-runtime.js
-  -> clock-behavior.js
-  -> ... hardware fidelity layers ...
-  -> proceed-electrical.js
-  -> ... presentation layers ...
-  -> keyboard-electrical-interlock.js
-  -> ...
-  -> relay-show.js
-  -> dream-agc.js
+fa0c9d2da745ba5eb7b3e59c9965db5d548a547c
 ```
 
-`dsky-keycodes.js` is the single frozen literal source for the 18 normal Block II DSKY/Pinball keycodes. The only normal-key consumers are `clock-behavior.js` and `keyboard-electrical-interlock.js`. PRO remains separate on channel 032.
+GitHub Actions run:
 
-## Ownership boundaries
+```text
+35240669652
+```
 
-### `app.js`
+The run completed successfully and passed:
 
-Still owns the underlying application state and mechanisms:
+- canonical source smoke tests;
+- release, EL-test and unique install-fix APK builds;
+- APK output existence checks;
+- signing of installable regular and Fire APKs;
+- side-by-side signature/package/icon/restored-asset verification;
+- artifact uploads.
 
-- actual Comanche/yaAGC loading and reset;
-- the real `enterAgc()` and `enterClock()` implementations;
-- AGC core reference and app mode state;
-- channel decoding and display backing state;
-- snapshot/autosave persistence;
-- synthetic phone-clock display/relay presentation.
+That verified Phase-83 head was then fast-forwarded to `main` without a force push.
 
-It no longer owns any DSKY input path. Specifically, `app.js` now has:
+## Regression gates that define the boundary
 
-- no Pinball keycode table/reference;
-- no `keyPress()`, `keyRelease()`, `proceedKey()`, or channel-015/channel-032 electrical access;
-- no `[data-key]` target-level pointer listener;
-- no legacy `press(k)` helper;
-- no synthetic CLOCK DSKY command editor or `executeClock()` path.
+The canonical suite now guards the architecture rather than relying on convention alone. Important gates include:
 
-The old phone-clock `V35 · REAL AGC MODE REQUIRED` command gate disappeared with that editor. Real AGC/Comanche V35 behavior remains authoritative through the hardware/relay model.
+- `compat-boundary-smoke.js`;
+- `public-facade-boundary-smoke.js`;
+- `root-facade-creation-smoke.js`;
+- `late-public-facade-mutation-smoke.js`;
+- `late-service-publication-smoke.js`;
+- `core-service-graph-smoke.js`;
+- `late-service-boundary-smoke.js`;
+- `late-state-ownership-smoke.js`;
+- `runtime-authority-smoke.js`;
+- `runtime-clock-transition-smoke.js`;
+- `runtime-transition-integration-smoke.js`;
+- `dsky-input-runtime-smoke.js`;
+- `clock-mode-behavior-smoke.js`;
+- `clock-fallback-cancel-smoke.js`;
+- `keyboard-electrical-interlock-smoke.js`;
+- `keyboard-clock-cancel-smoke.js`;
+- `proceed-electrical-smoke.js`;
+- `rset-flightpath-smoke.js`;
+- `dsky-keycode-consistency-smoke.js`;
+- `asset-reference-smoke.js`.
 
-### `runtime-transitions.js`
+These tests are the reason future architecture work should be demand-driven: they already prevent the known spaghetti failure modes from silently returning.
 
-Owns application transition coordination:
+## What is still allowed
 
-- one shared CLOCK -> AGC Promise;
-- replacement of the classic-script/global and `AGCDSKY` AGC entry surfaces;
-- validated mode/core access for extracted runtime layers;
-- pre-CLOCK cleanup hooks;
-- replacement of CLOCK entry surfaces when available;
-- explicit pending-CLOCK intent through `clockRequested()`;
-- serialization of a CLOCK request behind an already-running AGC load.
+The end of open-ended refactoring does **not** mean the application is frozen. Continue work when there is a concrete reason, including:
 
-A CLOCK request made during `agc-loading` marks CLOCK intent first, runs physical-input cleanup immediately, and delays only the underlying `app.js` CLOCK switch until the owned AGC load settles. New input cannot join that load once CLOCK intent is set.
+- a reproducible user-visible bug;
+- a device-specific failure;
+- incorrect Apollo/Block-II behavior;
+- a measurable performance/reliability problem;
+- a regression exposed by an existing gate;
+- a new feature that cannot be implemented cleanly through an existing owner;
+- a demonstrated ownership violation caught in review or testing.
 
-### `dsky-input-runtime.js`
+In those cases, change the smallest relevant boundary and add/adjust the corresponding regression gate.
 
-Owns the extracted electrical primitives:
+## Outstanding acceptance
 
-- channel `015` normal-key make;
-- channel `015` KEYRST/all-released level;
-- channel `032` maintained PRO contact.
+The Phase-83 source and Android CI build/signing/package gates are verified.
 
-`keyMake(0)` is invalid; zero is reserved for KEYRST through `keyReset()`.
+**Physical-device verification remains outstanding for this exact Phase-83 revision.** Do not describe Pixel/regular-phone or Fire-tablet behavior as device-verified until the APK from this source revision is actually installed and exercised on the intended hardware.
 
-### `keyboard-electrical-interlock.js`
+At minimum, the device smoke should cover:
 
-Owns physical behavior for the 18 normal keycoded switches:
+- launch/startup behavior;
+- CLOCK -> AGC first-key handoff;
+- normal DSKY key make/release and RSET;
+- maintained PRO behavior;
+- return to CLOCK during/after AGC activity;
+- parallax/IMU path on the regular phone;
+- Fire HOME/startup behavior on the Fire build;
+- relay audio/display behavior sufficiently to catch WebView/device-only regressions.
 
-- window-capture event ownership;
-- one coded switch per complete all-up series-contact cycle;
-- contact timing/mechanical presentation;
-- minimum KEYRST dwell;
-- first-contact CLOCK -> AGC handoff;
-- retained-core KEYRST;
-- pre-CLOCK cleanup and pending-CLOCK suppression.
-
-It delegates make/KEYRST to `dsky-input-runtime.js`. Phase 14 removed its final `window.press`/legacy-app fallback, so unknown runtime states no longer fall into a synthetic editor path.
-
-### `proceed-electrical.js`
-
-Owns physical pointer/lifecycle state for PRO only. Electrical make/release is delegated to `dsky-input-runtime.js`. PRO releases through the shared pre-CLOCK hook and suppresses new makes once CLOCK intent exists.
-
-### `clock-behavior.js`
-
-Owns the document-level CLOCK keypad fallback/queue. It consumes the shared keycode table, uses `runtimeTransitions.requestAgc()` for promotion, and delegates channel-015 makes to `dsky-input-runtime.js`.
-
-Its queue is canceled on CLOCK intent so stale fallback contacts cannot reappear after asynchronous AGC loading.
-
-## Current regression gates
-
-The canonical local source gate includes checks for these boundaries:
-
-- `app-input-boundary-smoke.js` — app cannot regain DSKY electrical ownership, a DSKY target handler, `press()`, or the synthetic command editor;
-- `dsky-keycode-consistency-smoke.js` — one frozen Pinball map, consumed only by extracted normal-key owners;
-- `asset-reference-smoke.js` — parser order, required assets, and absence of the removed app input/editor surface;
-- `runtime-authority-smoke.js` — transition/input ownership and forbidden direct primitives;
-- `runtime-clock-transition-smoke.js` — CLOCK semantics, cleanup hooks, AGC-load serialization and diagnostics;
-- `dsky-input-runtime-smoke.js` — make, KEYRST, retained-core release, PRO and keycode validation;
-- `clock-mode-behavior-smoke.js` and `clock-fallback-cancel-smoke.js` — CLOCK fallback promotion/cancellation;
-- `keyboard-electrical-interlock-smoke.js` and `keyboard-clock-cancel-smoke.js` — physical keyboard series-chain, KEYRST and transition behavior;
-- `proceed-electrical-smoke.js` — maintained PRO behavior and pre-CLOCK release;
-- `rset-flightpath-smoke.js` — RSET remains Pinball `022` plus KEYRST;
-- `runtime-transition-integration-smoke.js` — multi-layer transition/input integration;
-- `v35-model-smoke.js` — real Comanche V35 relay/hardware model remains intact and the synthetic phone-command path stays absent.
-
-## Remaining major boundaries
-
-The frontend input refactor is now substantially separated from `app.js`. The next useful seams are display/runtime state rather than DSKY input:
-
-- clock relay/display presentation helpers;
-- AGC display decoder/render state;
-- snapshot UI-state serialization helpers.
-
-The actual AGC loader, channel decoder and snapshot authority should only be extracted when one authoritative mutable-state path can be preserved. Avoid adapters that duplicate or mirror those structures.
-
-## Verification limits
-
-Connector/diff checks verified that the production edits remained narrow through phases 11-14. The complete recursive checkout, canonical `tools/build-local.sh`, Android SDK/Gradle build, APK verification, Pixel device smoke, and Fire-device smoke have **not** been run for these phase branches in this environment.
-
-Do not treat source-level checks as a verified APK/device result. Canonical acceptance remains `bash tools/build-local.sh` from a clean recursive checkout, followed by the regular-phone and Fire device smokes.
+Until those device checks are run, the correct status is: **refactor complete; source/build verified; physical-device acceptance pending.**
