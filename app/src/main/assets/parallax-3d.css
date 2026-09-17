@@ -1,13 +1,15 @@
 /*
- * Restrained 3D/parallax presentation for the physical DSKY face.
+ * Restrained 3D/parallax presentation for the physical DSKY EL display.
  *
  * This file changes presentation only. It never changes DSKY geometry, relay
- * timing, channel state, or input behavior. Dream/display-only remain flat.
- * Reduced-motion remains flat unless the user explicitly enables parallax.
+ * timing, channel state, or input behavior. The faceplate, annunciators,
+ * fasteners and keys remain rigid; only the EL package responds to motion.
+ * Dream/display-only remain flat. Reduced-motion remains flat unless the user
+ * explicitly enables parallax.
  */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) #app{
   perspective:680px;
-  perspective-origin:50% 48%;
+  perspective-origin:75% 31%;
 }
 
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky{
@@ -22,60 +24,47 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky{
   /* 106 px / 2.354 in * 0.134 in. JS replaces this at runtime. */
   --dsky-glass-rear-z:-6.034px;
   --dsky-el-z:-6.034px;
-  transform:rotateX(var(--dsky-tilt-x)) rotateY(var(--dsky-tilt-y));
+  transform:none;
   transform-style:preserve-3d;
-  will-change:transform;
-  filter:drop-shadow(var(--dsky-shadow-x) var(--dsky-shadow-y) 7px rgba(0,0,0,.72));
+  will-change:auto;
 }
 
-/* No synthetic face highlight. Parallax must come from geometry and motion,
-   not a moving lighting effect painted over the DSKY. */
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .dsky:after{
-  background:none!important;
-  mix-blend-mode:normal!important;
-}
-
-/* Recesses move slightly opposite the viewer. Pixel offsets are computed in
-   JavaScript so Android WebView never has to evaluate CSS multiplication. */
+/* The metal hardware never follows device tilt. Mechanical key travel remains
+   intact, but there is no parallax translation on the keyboard or face. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-well,
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .display-well{
-  transform:translate3d(
-    var(--dsky-recess-x,0px),
-    var(--dsky-recess-y,0px),
-    0
-  );
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .display-well,
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-grid,
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
+  transform:none;
+  will-change:auto;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key{
+  transform:none;
+  will-change:auto;
+}
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key:active,
+body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key.pressed{
+  transform:translateY(var(--key-travel,.42vmin));
 }
 
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .ann-grid{
-  transform:translate3d(
-    var(--dsky-ann-x,0px),
-    var(--dsky-ann-y,0px),
-    8px
-  );
-  transform-style:preserve-3d;
-}
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp{
-  transform-style:preserve-3d;
-}
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-legend{
-  transform:translateZ(1.2px);
-}
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .lamp .lamp-source{
-  transform:translateZ(-.6px);
-}
-
-/* 2003988 optically bonds the 2004745 laminated-glass panel to the glass face
-   of the digital indicator. The EL artwork therefore sits at the rear cover
-   interface, one 0.134-in central viewing thickness behind the front surface. */
+/* The EL artwork sits behind the fixed cover glass. Viewer motion shifts and
+   tips only this package, producing parallax through the stationary aperture. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .elpanel{
-  transform:translate3d(0,0,var(--dsky-el-z,-6.034px));
+  transform:
+    translate3d(
+      var(--dsky-recess-x,0px),
+      var(--dsky-recess-y,0px),
+      var(--dsky-el-z,-6.034px)
+    )
+    rotateX(var(--dsky-tilt-x))
+    rotateY(var(--dsky-tilt-y));
+  transform-origin:50% 50%;
   transform-style:preserve-3d;
   will-change:transform;
 }
 
-/* Both optical surfaces use the real clear-view opening. No fake glare,
-   glint, reflection sweep, or glossy slab is drawn. Depth comes from the real
-   Z separation, perspective, edge occlusion, and device-driven rotation. */
+/* The bonded cover-glass surfaces remain fixed to the DSKY face. They preserve
+   the real 2004745 depth/edge cues while the EL image moves behind them. */
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-rear,
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-sheen{
   position:absolute;
@@ -85,7 +74,7 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
   height:49.0204%;
   pointer-events:none;
   transform-style:preserve-3d;
-  will-change:transform;
+  will-change:auto;
 }
 body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-rear{
   z-index:4;
@@ -121,69 +110,50 @@ body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .el-glass-shee
   background:none!important;
 }
 
-/* Keycaps are the strongest foreground plane. Existing Apollo-derived travel
-   remains authoritative: a pressed key moves toward the face and loses most of
-   its virtual Z height rather than receiving a second fake press animation. */
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key{
-  transform:translate3d(
-    var(--dsky-key-x,0px),
-    var(--dsky-key-y,0px),
-    22px
-  );
-  transform-style:preserve-3d;
-  will-change:transform;
-}
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key:active,
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .key.pressed{
-  transform:translate3d(
-    var(--dsky-key-pressed-x,0px),
-    var(--dsky-key-pressed-y,0px),
-    5px
-  ) translateY(var(--key-travel,.42vmin));
-}
-
-body.parallax-3d:not(.dream):not(.display-only):not(.screen-only) .fastener{
-  transform:translate3d(
-    var(--dsky-fastener-x,0px),
-    var(--dsky-fastener-y,0px),
-    6px
-  );
-}
-
 @media (prefers-reduced-motion:reduce){
-  body.parallax-3d:not(.parallax-user-motion) .dsky,
-  body.parallax-3d:not(.parallax-user-motion) .ann-well,
-  body.parallax-3d:not(.parallax-user-motion) .display-well,
-  body.parallax-3d:not(.parallax-user-motion) .ann-grid,
   body.parallax-3d:not(.parallax-user-motion) .elpanel,
-  body.parallax-3d:not(.parallax-user-motion) .el-glass-rear,
-  body.parallax-3d:not(.parallax-user-motion) .el-glass-sheen,
-  body.parallax-3d:not(.parallax-user-motion) .key,
-  body.parallax-3d:not(.parallax-user-motion) .fastener{
+  body.parallax-3d:not(.parallax-user-motion) .el-indicator-back{
     transform:none!important;
     will-change:auto!important;
   }
-  body.parallax-3d:not(.parallax-user-motion) .dsky{filter:none!important}
 }
 
-/* Screen-only keeps the identical 0.134-in depth ratio. The parent DSKY must
-   rotate here too; otherwise the separated optical planes produce no parallax. */
+/* Screen-only is the same EL-only effect at the large size. The full-screen
+   container itself stays centered and rigid; only the EL package moves. */
 body.parallax-3d.screen-only:not(.dream):not(.display-only) #app{
   perspective:520px!important;
   perspective-origin:50% 50%!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .dsky{
-  transform:
-    translate(-50%,-50%)
-    rotateX(var(--dsky-tilt-x))
-    rotateY(var(--dsky-tilt-y))!important;
+  transform:translate(-50%,-50%)!important;
   transform-style:preserve-3d!important;
-  will-change:transform!important;
+  will-change:auto!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .elpanel{
   transform:
     translate(-50%,-50%)
-    translate3d(0,0,var(--dsky-el-z,-6.034px))!important;
+    translate3d(
+      var(--dsky-fs-shadow-light-x,0px),
+      var(--dsky-fs-shadow-light-y,0px),
+      var(--dsky-el-z,-6.034px)
+    )
+    rotateX(var(--dsky-tilt-x))
+    rotateY(var(--dsky-tilt-y))!important;
+  transform-origin:50% 50%!important;
+  transform-style:preserve-3d!important;
+  will-change:transform!important;
+}
+body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-indicator-back{
+  transform:
+    translate(-50%,-50%)
+    translate3d(
+      var(--dsky-fs-shadow-light-x,0px),
+      var(--dsky-fs-shadow-light-y,0px),
+      var(--dsky-screen-indicator-back-z,-17.712px)
+    )
+    rotateX(var(--dsky-tilt-x))
+    rotateY(var(--dsky-tilt-y))!important;
+  transform-origin:50% 50%!important;
   transform-style:preserve-3d!important;
   will-change:transform!important;
 }
@@ -195,7 +165,7 @@ body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-sheen{
   width:min(100vw,calc(100vh * 106 / 182.356))!important;
   height:min(100vh,calc(100vw * 182.356 / 106))!important;
   transform-style:preserve-3d!important;
-  will-change:transform!important;
+  will-change:auto!important;
 }
 body.parallax-3d.screen-only:not(.dream):not(.display-only) .el-glass-rear{
   transform:translate(-50%,-50%) translate3d(0,0,var(--dsky-glass-rear-z,-6.034px))!important;
