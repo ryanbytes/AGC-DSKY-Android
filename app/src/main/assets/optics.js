@@ -367,13 +367,15 @@
     if(!pointing||!pointing.seen||Date.now()-(pointing.timestamp||0)>1500){
       const webStatus=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function'
         ?window.AGCDSKYPWA.parityStatus():null;
-      err.textContent=webStatus?.absoluteOrientation==='denied'
-        ?'COMPASS / ORIENTATION PERMISSION DENIED · ALLOW SENSOR ACCESS, THEN RELOAD'
-        :webStatus?.absoluteOrientation==='error'
-          ?'COMPASS PERMISSION ERROR · TAP STAR FINDER OFF / ON'
-          :webStatus?.absoluteOrientation==='unsupported'
-            ?'ABSOLUTE COMPASS UNAVAILABLE IN THIS BROWSER'
-            :'PHONE TRUE POINTING WAITING';
+      err.textContent=webStatus?.sensorBlock==='brave-ios-motion-denied'
+        ?'BRAVE IOS BLOCKED MOTION SENSORS · USE SAFARI OR NATIVE APP'
+        :webStatus?.absoluteOrientation==='denied'
+          ?'COMPASS / ORIENTATION PERMISSION DENIED'
+          :webStatus?.absoluteOrientation==='error'
+            ?'COMPASS PERMISSION ERROR · TAP STAR FINDER OFF / ON'
+            :webStatus?.absoluteOrientation==='unsupported'
+              ?'ABSOLUTE COMPASS UNAVAILABLE IN THIS BROWSER'
+              :'PHONE TRUE POINTING WAITING';
       arrow.style.transform='rotate(0deg)';
       if(cue){cue.classList.remove('active','outside','centered');cue.style.removeProperty('--cue-x');cue.style.removeProperty('--cue-y')}
       return
