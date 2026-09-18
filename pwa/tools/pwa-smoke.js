@@ -135,7 +135,7 @@ for (const marker of [
   "clone.querySelectorAll('[data-cheat-check]')",
   "box.setAttribute('checked', '')",
   'PRINT / SAVE PDF',
-  '2 LARGE MODEL PAGES PER LANDSCAPE LETTER SHEET',
+  '2 LARGE CHECKLIST PAGES PER LANDSCAPE LETTER SHEET',
   "new URL('cheatsheet.css', location.href)"
 ]) {
   if (!pwaPrint.includes(marker)) fail('PWA checklist print bridge missing ' + marker);
