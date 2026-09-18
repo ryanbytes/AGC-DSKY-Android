@@ -102,15 +102,30 @@
   function loadPos(){try{const p=JSON.parse(localStorage.getItem(POS)||'{}');if(Number.isFinite(p.x))pos.x=p.x;if(Number.isFinite(p.y))pos.y=p.y}catch(_){};applyPos()}
   function savePos(){try{localStorage.setItem(POS,JSON.stringify(pos))}catch(_){} }
   function applyPos(){sheet.style.setProperty('--sheet-x',`${pos.x}px`);sheet.style.setProperty('--sheet-y',`${pos.y}px`)}
-  function fitAboveDsky(){
+  function fitDockedSheet(){
     const d=document.querySelector('.dsky');
-    if(!d)return;
+    if(!d||!sheet.classList.contains('open'))return;
     const dr=d.getBoundingClientRect();
-    const sr=sheet.getBoundingClientRect();
-    const top=Math.max(3,sr.top-pos.y);
-    const room=dr.top-top-5;
-    const cap=innerWidth>innerHeight?Math.min(innerHeight*.30,230):Math.min(innerHeight*.22,280);
-    sheet.style.setProperty('--sheet-max-h',`${Math.max(96,Math.min(cap,room>96?room:cap))}px`);
+    const room=Math.max(96,innerHeight-dr.bottom-6);
+    sheet.style.setProperty('--sheet-max-h',`${room}px`);
+  }
+  function animateLayout(mutator){
+    const d=document.querySelector('.dsky');
+    if(!d){mutator();return}
+    const before=d.getBoundingClientRect();
+    mutator();
+    requestAnimationFrame(()=>{
+      const after=d.getBoundingClientRect(),dy=before.top-after.top;
+      if(Math.abs(dy)<1){fitDockedSheet();return}
+      d.style.transition='none';
+      d.style.transform=`translateY(${dy}px)`;
+      void d.offsetHeight;
+      requestAnimationFrame(()=>{
+        d.style.transition='transform 280ms cubic-bezier(.22,.76,.22,1)';
+        d.style.transform='translateY(0)';
+        setTimeout(()=>{d.style.removeProperty('transition');d.style.removeProperty('transform');fitDockedSheet()},310);
+      });
+    });
   }
   function clampPos(){
     const r=sheet.getBoundingClientRect();let dx=0,dy=0;
@@ -118,24 +133,48 @@
     if(r.top<2)dy=2-r.top;if(r.bottom>innerHeight-2)dy=(innerHeight-2)-r.bottom;
     pos.x+=dx;pos.y+=dy;applyPos();savePos();
   }
-  function open(){sheet.classList.add('open');sheet.classList.remove('minimized');const min=document.getElementById('cheat-min');if(min)min.textContent='MIN';requestAnimationFrame(()=>{fitAboveDsky();clampPos()})}
-  function close(){dragging=false;sheet.classList.remove('open','minimized');const min=document.getElementById('cheat-min');if(min)min.textContent='MIN'}
+  function open(){
+    animateLayout(()=>{
+      sheet.classList.add('open');
+      sheet.classList.remove('minimized');
+      document.body.classList.add('cheat-sheet-open');
+      document.body.classList.remove('cheat-sheet-minimized');
+      const min=document.getElementById('cheat-min');if(min)min.textContent='MIN';
+    });
+  }
+  function close(){
+    dragging=false;
+    animateLayout(()=>{
+      sheet.classList.remove('open','minimized');
+      document.body.classList.remove('cheat-sheet-open','cheat-sheet-minimized');
+      const min=document.getElementById('cheat-min');if(min)min.textContent='MIN';
+    });
+  }
   function init(){
-    document.body.insertAdjacentHTML('beforeend',markup());sheet=document.getElementById('agc-cheat-sheet');loadChecks();loadPos();
+    const dsky=document.getElementById('dsky');
+    if(dsky)dsky.insertAdjacentHTML('afterend',markup());else document.body.insertAdjacentHTML('beforeend',markup());
+    sheet=document.getElementById('agc-cheat-sheet');loadChecks();loadPos();
     const launch=document.getElementById('cheat');if(launch)launch.addEventListener('click',()=>sheet.classList.contains('open')?close():open());
     document.getElementById('cheat-close').addEventListener('click',e=>{e.stopPropagation();close()});
-    document.getElementById('cheat-min').addEventListener('click',e=>{e.stopPropagation();sheet.classList.toggle('minimized');e.currentTarget.textContent=sheet.classList.contains('minimized')?'OPEN':'MIN';requestAnimationFrame(clampPos)});
+    document.getElementById('cheat-min').addEventListener('click',e=>{
+      e.stopPropagation();
+      animateLayout(()=>{
+        const minimized=sheet.classList.toggle('minimized');
+        document.body.classList.toggle('cheat-sheet-minimized',minimized);
+        e.currentTarget.textContent=minimized?'OPEN':'MIN';
+      });
+    });
     document.getElementById('cheat-reset').addEventListener('click',()=>{sheet.querySelectorAll('[data-cheat-check]').forEach(c=>c.checked=false);saveChecks()});
     sheet.addEventListener('change',e=>{if(e.target.matches('[data-cheat-check]'))saveChecks()});
     sheet.querySelectorAll('[data-cheat-tab]').forEach(b=>b.addEventListener('click',()=>{
       const t=b.dataset.cheatTab;sheet.querySelectorAll('[data-cheat-tab]').forEach(x=>x.classList.toggle('active',x===b));sheet.querySelectorAll('[data-cheat-pane]').forEach(p=>p.classList.toggle('active',p.dataset.cheatPane===t));
     }));
     const head=document.getElementById('cheat-drag');
-    head.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;dragging=true;dragStart={x:e.clientX,y:e.clientY,px:pos.x,py:pos.y};head.setPointerCapture(e.pointerId);e.preventDefault()});
+    head.addEventListener('pointerdown',e=>{if(document.body.classList.contains('cheat-sheet-open')||e.target.closest('button'))return;dragging=true;dragStart={x:e.clientX,y:e.clientY,px:pos.x,py:pos.y};head.setPointerCapture(e.pointerId);e.preventDefault()});
     head.addEventListener('pointermove',e=>{if(!dragging)return;pos.x=dragStart.px+e.clientX-dragStart.x;pos.y=dragStart.py+e.clientY-dragStart.y;applyPos();e.preventDefault()});
     head.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;try{head.releasePointerCapture(e.pointerId)}catch(_){};clampPos()});
     head.addEventListener('pointercancel',()=>{dragging=false;clampPos()});
-    addEventListener('resize',()=>requestAnimationFrame(()=>{fitAboveDsky();clampPos()}));
+    addEventListener('resize',()=>requestAnimationFrame(()=>{fitDockedSheet();if(!document.body.classList.contains('cheat-sheet-open'))clampPos()}));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
