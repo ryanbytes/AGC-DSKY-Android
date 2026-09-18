@@ -72,4 +72,20 @@ body.screen-only.parallax-3d:not(.dream):not(.display-only) #dsky .el-indicator-
 
 /* parallax-3d.css owns the bonded 2004745 front-glass surface at Z=0 and the
    EL/1006315 front face at -0.134 in. This file only adds the package rear. */
-body.dream.screen-only .dsky{transition:left 1.6s ease,top 1.6s ease!important}
+
+/* Dream burn-in protection moves the DSKY center by a few pixels. A viewport-
+   sized surface exposes the unfiltered parent on the opposite edge during that
+   drift, which appears as bright right/bottom seams. Keep the compositor layer
+   well outside every viewport edge and use black only as a last-resort parent
+   fallback if Android exposes a transient frame during resize/rotation. */
+body.dream.screen-only,
+body.dream.screen-only #app{
+  background:#000!important;
+}
+body.dream.screen-only .dsky{
+  width:calc(100vw + 64px)!important;
+  height:calc(100vh + 64px)!important;
+  max-width:none!important;
+  max-height:none!important;
+  transition:left 1.6s ease,top 1.6s ease!important;
+}
