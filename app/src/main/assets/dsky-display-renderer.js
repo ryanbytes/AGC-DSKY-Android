@@ -17,15 +17,19 @@
     e:'M0.26 11.92 L1.32 12.44 L0.46 19.18 L-0.56 19.76 L-0.94 19.20 L-0.08 12.48 Z',
     c:'M10.34 11.92 L11.40 12.44 L10.54 19.18 L9.52 19.76 L9.14 19.20 L10.00 12.48 Z'
   };
-  function pathEl(name,on){return `<path class="el-seg ${on?'on':'off'}" data-seg="${name}" d="${PATH[name]}"/>`}
-  function baseGlyph(ch,x){const lit=SEG[ch]||'';return `<g class="el-glyph" transform="translate(${x} 0)">${['a','b','c','d','e','f','g'].map(s=>pathEl(s,lit.includes(s))).join('')}</g>`}
+  // Emit energized phosphor only. Unlit electrodes are deliberately absent
+  // from the SVG so they cannot leave a gray trace, antialias fringe, or filter shadow.
+  function pathEl(name){return `<path class="el-seg on" data-seg="${name}" d="${PATH[name]}"/>`}
+  function baseGlyph(ch,x){const lit=SEG[ch]||'';return `<g class="el-glyph" transform="translate(${x} 0)">${Array.from(lit).map(pathEl).join('')}</g>`}
   function baseSignGlyph(sign){
     const plus=sign==='+',bar=plus||sign==='-';
-    return `<g class="el-sign">`+
-      `<path class="el-seg ${bar?'on':'off'}" d="M.54 10.92 L1.12 10.34 L5.74 10.34 L6.32 10.92 L5.72 11.50 L1.10 11.50 Z"/>`+
-      `<path class="el-seg ${plus?'on':'off'}" d="M3.56 4.26 L4.46 4.72 L3.76 10.06 L2.90 10.56 L2.58 10.10 L3.26 4.76 Z"/>`+
-      `<path class="el-seg ${plus?'on':'off'}" d="M2.70 11.88 L3.60 12.34 L2.90 17.70 L2.04 18.20 L1.72 17.74 L2.40 12.38 Z"/>`+
-      `</g>`;
+    let out=`<g class="el-sign">`;
+    if(bar)out+=`<path class="el-seg on" d="M.54 10.92 L1.12 10.34 L5.74 10.34 L6.32 10.92 L5.72 11.50 L1.10 11.50 Z"/>`;
+    if(plus){
+      out+=`<path class="el-seg on" d="M3.56 4.26 L4.46 4.72 L3.76 10.06 L2.90 10.56 L2.58 10.10 L3.26 4.76 Z"/>`;
+      out+=`<path class="el-seg on" d="M2.70 11.88 L3.60 12.34 L2.90 17.70 L2.04 18.20 L1.72 17.74 L2.40 12.38 Z"/>`;
+    }
+    return out+`</g>`;
   }
 
   function createImplementationSlot(name,initial,validate=null){
