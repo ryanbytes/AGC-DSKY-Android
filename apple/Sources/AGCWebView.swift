@@ -77,7 +77,7 @@ final class AGCWebViewModel: ObservableObject {
 }
 
 @MainActor
-final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
     let model: AGCWebViewModel
     private let assetHandler = AGCAssetSchemeHandler()
 
@@ -93,6 +93,14 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         configuration.setURLSchemeHandler(assetHandler, forURLScheme: AGCAssetSchemeHandler.scheme)
+        configuration.userContentController.add(self, name: "PrintBridge")
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: "window.PrintBridge=Object.freeze({printChecklist:function(){window.webkit.messageHandlers.PrintBridge.postMessage('print')}});",
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            )
+        )
 
 #if os(iOS)
         configuration.allowsInlineMediaPlayback = true
@@ -133,9 +141,55 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 
     func dismantle(_ webView: WKWebView) {
         webView.stopLoading()
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "PrintBridge")
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         model.detach(webView: webView)
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "PrintBridge", (message.body as? String) == "print", let webView = model.webView else { return }
+        printChecklist(from: webView)
+    }
+
+    private func printChecklist(from webView: WKWebView) {
+#if os(iOS)
+        let controller = UIPrintInteractionController.shared
+        let printInfo = UIPrintInfo(dictionary: nil)
+        printInfo.outputType = .general
+        printInfo.jobName = "Apollo DSKY Checklist"
+        printInfo.orientation = .portrait
+
+        let renderer = UIPrintPageRenderer()
+        let paper = CGRect(x: 0, y: 0, width: 5.5 * 72.0, height: 8.0 * 72.0)
+        let printable = CGRect(
+            x: 0.42 * 72.0,
+            y: 0.30 * 72.0,
+            width: paper.width - (0.42 + 0.25) * 72.0,
+            height: paper.height - (0.30 + 0.34) * 72.0
+        )
+        renderer.setValue(NSValue(cgRect: paper), forKey: "paperRect")
+        renderer.setValue(NSValue(cgRect: printable), forKey: "printableRect")
+        renderer.addPrintFormatter(webView.viewPrintFormatter(), startingAtPageAt: 0)
+
+        controller.printInfo = printInfo
+        controller.printPageRenderer = renderer
+        controller.present(animated: true, completionHandler: nil)
+#elseif os(macOS)
+        let printInfo = NSPrintInfo.shared.copy() as! NSPrintInfo
+        printInfo.paperSize = NSSize(width: 5.5 * 72.0, height: 8.0 * 72.0)
+        printInfo.orientation = .portrait
+        printInfo.topMargin = 0.30 * 72.0
+        printInfo.bottomMargin = 0.34 * 72.0
+        printInfo.leftMargin = 0.42 * 72.0
+        printInfo.rightMargin = 0.25 * 72.0
+        printInfo.isHorizontallyCentered = false
+        printInfo.isVerticallyCentered = false
+
+        let operation = NSPrintOperation(view: webView, printInfo: printInfo)
+        operation.jobTitle = "Apollo DSKY Checklist"
+        operation.run()
+#endif
     }
 
     private func loadStartPage(in webView: WKWebView) {
