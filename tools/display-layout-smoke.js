@@ -192,6 +192,11 @@ for (const marker of [
   'radial-gradient(ellipse 23% 12%',
   'border:.045vmin solid rgba(220,232,227,.18)'
 ]) assert(HARDWARE_COLORS.includes(marker), 'recovered FS595/glass marker missing: ' + marker);
+assert(HARDWARE_COLORS.includes('body.spacecraft-cm.screen-only:not(.dream) .el-glass-rear') &&
+       HARDWARE_COLORS.includes('body.spacecraft-cm.screen-only:not(.dream) .el-glass-sheen') &&
+       HARDWARE_COLORS.includes('border:0!important') &&
+       HARDWARE_COLORS.includes('box-shadow:none!important'),
+  'screen-only cover-glass overlays must not draw internal border/shadow seams');
 assert(HTML.includes('<link rel="stylesheet" href="hardware-color-mode.css">'),
   'hardware-color-mode.css must be parser-loaded');
 assert(HTML.includes('<script src="hardware-color-mode.js"></script>'),

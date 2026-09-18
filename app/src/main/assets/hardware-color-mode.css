@@ -65,3 +65,12 @@ body.parallax-3d.screen-only:not(.dream) .el-glass-sheen::before{
   opacity:.50;
 }
 body.parallax-3d.screen-only:not(.dream) .el-glass-sheen::after{opacity:.58}
+
+/* Screen-only is a borderless view of the active EL face. Do not let the
+   physical cover-glass edge treatment become an internal one-pixel seam when
+   the transparent overlay is centered/scaled by a mobile browser. */
+body.spacecraft-cm.screen-only:not(.dream) .el-glass-rear,
+body.spacecraft-cm.screen-only:not(.dream) .el-glass-sheen{
+  border:0!important;
+  box-shadow:none!important;
+}
