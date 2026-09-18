@@ -35,8 +35,8 @@ for(const marker of [
   'pointingCalibration:typeof api.skyCalibrationStatus',
   'function requestWebStarFinderSensors()',
   "typeof pwa.requestSensorPermissions!=='function'",
-  'pwa.requestSensorPermissions()',
-  'COMPASS / MOTION PERMISSION DENIED',
+  'pwa.requestSensorPermissions({absolute:true})',
+  'COMPASS / ORIENTATION PERMISSION DENIED',
   'ABSOLUTE COMPASS UNAVAILABLE IN THIS BROWSER'
 ])assert(source.includes(marker),`optics behavior marker missing: ${marker}`);
 const apiIndex=html.indexOf('<script src="agc-api-runtime.js"></script>');
