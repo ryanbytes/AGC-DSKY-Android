@@ -14,6 +14,7 @@
           <span class="cheat-ref">CM · COMANCHE 055 · CREW USE</span>
         </div>
         <div class="cheat-head-actions">
+          <button id="cheat-print" type="button" aria-label="Print Apollo checklist">PRINT</button>
           <button id="cheat-min" type="button" aria-label="Minimize cheat sheet">MIN</button>
           <button id="cheat-close" type="button" aria-label="Close cheat sheet">X</button>
         </div>
@@ -156,6 +157,11 @@
     sheet=document.getElementById('agc-cheat-sheet');loadChecks();loadPos();
     const launch=document.getElementById('cheat');if(launch)launch.addEventListener('click',()=>sheet.classList.contains('open')?close():open());
     document.getElementById('cheat-close').addEventListener('click',e=>{e.stopPropagation();close()});
+    document.getElementById('cheat-print').addEventListener('click',e=>{
+      e.stopPropagation();
+      if(window.PrintBridge&&typeof PrintBridge.printChecklist==='function')PrintBridge.printChecklist();
+      else if(typeof window.print==='function')window.print();
+    });
     document.getElementById('cheat-min').addEventListener('click',e=>{
       e.stopPropagation();
       animateLayout(()=>{
