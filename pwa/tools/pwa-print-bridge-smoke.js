@@ -72,7 +72,7 @@ assert(focused,'print window was not focused');
 assert(written.includes('Apollo CMC / DSKY Checklist'),'print document title missing');
 assert(written.includes('cheatsheet.css'),'print document does not load checklist print stylesheet');
 assert(written.includes('PRINT / SAVE PDF'),'print/PDF action missing');
-assert(written.includes('ANDROID: use the browser menu'),'Android print guidance missing');
+assert(written.includes('4 MINI CHECKLIST PAGES PER LETTER SHEET'),'Letter 4-up model checklist guidance missing');
 assert(written.includes('data-cheat-check="1" checked'),'checked checklist state was not preserved');
 assert(!written.includes('data-cheat-check="2" checked'),'unchecked checklist state was incorrectly printed as checked');
 assert(written.includes('<main id="app"><section id="agc-cheat-sheet"'),'print document does not preserve checklist print-layout wrapper');
@@ -82,4 +82,4 @@ assert(windowObject.PrintBridge.printChecklist()===false,'blocked print window s
 assert(windowObject.AGCDSKYPWA.lastChecklistPrint?.error==='print window blocked','blocked print window diagnostic missing');
 
 console.log('PWA checklist print bridge behavior: PASS');
-console.log('  Android print view, checked-state preservation, popup failure telemetry verified');
+console.log('  Android Letter 4-up print view, checked-state preservation, popup failure telemetry verified');
