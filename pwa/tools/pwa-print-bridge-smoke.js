@@ -72,7 +72,7 @@ assert(focused,'print window was not focused');
 assert(written.includes('Apollo CMC / DSKY Checklist'),'print document title missing');
 assert(written.includes('cheatsheet.css'),'print document does not load checklist print stylesheet');
 assert(written.includes('PRINT / SAVE PDF'),'print/PDF action missing');
-assert(written.includes('2 LARGE MODEL PAGES PER LANDSCAPE LETTER SHEET'),'Letter landscape two-up guidance missing');
+assert(written.includes('2 LARGE CHECKLIST PAGES PER LANDSCAPE LETTER SHEET'),'Letter landscape two-up guidance missing');
 assert(written.includes('data-cheat-check="1" checked'),'checked checklist state was not preserved');
 assert(!written.includes('data-cheat-check="2" checked'),'unchecked checklist state was incorrectly printed as checked');
 assert(written.includes('<main id="app"><section id="agc-cheat-sheet"'),'print document does not preserve checklist print-layout wrapper');
