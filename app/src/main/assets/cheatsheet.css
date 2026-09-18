@@ -179,6 +179,8 @@ body.cheat-sheet-open .dsky{
 }
 
 .cheat-body{
+  flex:1 1 auto;
+  min-height:0;
   overflow:auto;
   overscroll-behavior:contain;
   touch-action:pan-y;
