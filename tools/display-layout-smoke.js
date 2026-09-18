@@ -100,6 +100,13 @@ close(nominalIndicatorDepthAt106, 11.678, 0.002,
 close(nominalTotalDepthAt106, 17.712, 0.003,
   'full cover-plus-indicator stack depth at the 106-unit reference width');
 
+assert(!STYLE.includes('--el:'),
+  'base style must not define a competing EL color authority');
+assert(CM.includes('--el:#6decb4'),
+  'CM finish must remain the single EL color authority');
+assert(!STYLE.includes('#79ef4f') && !CM.includes('#79ef4f'),
+  'obsolete lime EL color must not reappear');
+
 assert(!STYLE.includes('.el-field,.comp-el{filter:url(#elGlow)}'),
   'EL glow must not filter complete multi-glyph fields');
 assert(STYLE.includes('.comp-el{filter:url(#elGlow)}'),
