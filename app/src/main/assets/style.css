@@ -134,5 +134,15 @@ body.display-only .dsky{
   transform:translate(-50%,-29.57%);transform-origin:center top;
   clip-path:inset(0 0 40.86% 0);box-shadow:none;
 }
-body.dream.display-only .dsky{transition:left 1.6s ease,top 1.6s ease}
-@media (orientation:landscape){.dsky,.dream .dsky{width:min(92vw,calc(99vh * 320 / 372))}body.display-only .dsky{width:min(100vw,calc(100vh * 320 / 220))}}
+body.dream.display-only .dsky{
+  /* Dream is a full-bleed crop of the upper 320x220 DSKY area. Use cover,
+     not contain, and overscan enough that the ±3 px burn-in drift can never
+     expose the WebView edge. The viewport itself crops the keyboard, avoiding
+     clip-path antialias seams on the left/bottom edges. */
+  width:max(calc(100vw + 16px),calc((100vh + 16px) * 320 / 220));
+  max-width:none;
+  clip-path:none;
+  border-radius:0;
+  transition:left 1.6s ease,top 1.6s ease;
+}
+@media (orientation:landscape){.dsky,.dream .dsky{width:min(92vw,calc(99vh * 320 / 372))}body.display-only .dsky{width:min(100vw,calc(100vh * 320 / 220))}body.dream.display-only .dsky{width:max(calc(100vw + 16px),calc((100vh + 16px) * 320 / 220));max-width:none;clip-path:none}}
