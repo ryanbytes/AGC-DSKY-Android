@@ -133,3 +133,60 @@
 #sxt-star-cue.centered span{font-size:20px;text-shadow:0 0 3px #000,0 0 8px #fff4c6}
 #sxt-calibrate,#sxt-cal-clear{font-size:10px}
 @media (max-width:430px){#sxt-ui{gap:4px;padding-left:5px;padding-right:5px}#sxt-ui button,#sxt-star-buttons button{min-height:34px;padding:8px 8px 7px;font-size:7.3px}#sxt-readout{min-width:145px;font-size:10px}}
+
+
+/* Combined SXT + live DSKY workspace.
+   The sextant owns the upper viewport while the existing live DSKY stays
+   fully interactive in a fixed bottom dock. No duplicate DSKY is created. */
+body.sxt-combined{
+  --sxt-dsky-h:44vh;
+}
+body.sxt-combined #sxt-view{
+  inset:0 0 var(--sxt-dsky-h) 0;
+}
+body.sxt-combined #sxt-eyepiece{
+  width:min(94vw,calc(100vh - var(--sxt-dsky-h) - 8px));
+  height:min(94vw,calc(100vh - var(--sxt-dsky-h) - 8px));
+}
+body.sxt-combined #sxt-ui{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+}
+body.sxt-combined #sxt-status{
+  position:absolute;
+}
+body.sxt-combined #sxt-starbox{
+  position:absolute;
+}
+body.sxt-combined #dsky{
+  position:fixed!important;
+  left:50%!important;
+  right:auto!important;
+  top:auto!important;
+  bottom:0!important;
+  width:calc(var(--sxt-dsky-h) * 320 / 372)!important;
+  height:var(--sxt-dsky-h)!important;
+  max-width:none!important;
+  max-height:none!important;
+  flex:none!important;
+  transform:translateX(-50%)!important;
+  transform-origin:center bottom!important;
+  z-index:10001!important;
+  clip-path:none!important;
+}
+body.sxt-combined .app-controls,
+body.sxt-combined .hint{
+  display:none!important;
+}
+@media (max-width:430px){
+  body.sxt-combined{--sxt-dsky-h:42vh}
+}
+@media (orientation:landscape){
+  body.sxt-combined{--sxt-dsky-h:44vh}
+  body.sxt-combined #sxt-eyepiece{
+    width:min(88vw,calc(100vh - var(--sxt-dsky-h) - 6px));
+    height:min(88vw,calc(100vh - var(--sxt-dsky-h) - 6px));
+  }
+}

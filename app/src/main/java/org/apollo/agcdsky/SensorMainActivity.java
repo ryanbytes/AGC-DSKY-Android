@@ -2,6 +2,7 @@ package org.apollo.agcdsky;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.hardware.GeomagneticField;
@@ -14,6 +15,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.view.Display;
 import android.view.Surface;
 import android.view.View;
@@ -72,6 +76,12 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     private volatile double skyAltitudeM;
     private final NtpTime.Listener ntpListener = status -> pushNtpStatus(status);
 
+    private final class ChecklistPrintBridge {
+        @JavascriptInterface public void printChecklist() {
+            runOnUiThread(SensorMainActivity.this::printChecklistNow);
+        }
+    }
+
     private final class TimeBridge {
         @JavascriptInterface public String getStatus() { return NtpTime.status(SensorMainActivity.this).toJson(); }
     }
@@ -123,7 +133,7 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     void startDsky(){
         if(webView!=null)return;if((getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0)WebView.setWebContentsDebuggingEnabled(true);
         webView=new WebView(this);webView.setBackgroundColor(CM_PANEL_COLOR);WebSettings settings=webView.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setGeolocationEnabled(true);settings.setMediaPlaybackRequiresUserGesture(false);settings.setBlockNetworkLoads(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);
-        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.addJavascriptInterface(new SkyBridge(),"SkyBridge");webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");webView.setWebViewClient(new NetClient(this));
+        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.addJavascriptInterface(new SkyBridge(),"SkyBridge");webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");webView.addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge");webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient(){
             @Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){if(!isLocalAssetOrigin(origin)){callback.invoke(origin,false,false);return;}if(hasLocationPermission()){callback.invoke(origin,true,false);return;}pendingGeoOrigin=origin;pendingGeoCallback=callback;requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},GEO_PERMISSION_REQUEST);}
             @Override public void onPermissionRequest(PermissionRequest request){if(request==null||request.getOrigin()==null||!isLocalAssetOrigin(request.getOrigin().toString())){if(request!=null)request.deny();return;}boolean asksForVideo=false;for(String resource:request.getResources()){if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)){asksForVideo=true;break;}}if(!asksForVideo){request.deny();return;}if(hasCameraPermission()){request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});return;}if(pendingCameraRequest!=null)pendingCameraRequest.deny();pendingCameraRequest=request;requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION_REQUEST);}
@@ -154,6 +164,18 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     @Override protected void onResume(){super.onResume();configureWindow();registerSensors();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);pushSensorAvailability();}}
     @Override protected void onPause(){unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge");}
+    private void printChecklistNow(){
+        WebView view=webView;if(view==null)return;
+        PrintManager manager=(PrintManager)getSystemService(Context.PRINT_SERVICE);if(manager==null)return;
+        PrintDocumentAdapter adapter=view.createPrintDocumentAdapter("Apollo DSKY Checklist");
+        PrintAttributes.MediaSize media=new PrintAttributes.MediaSize("APOLLO_CHECKLIST_5_5X8","Apollo Checklist 5.5 x 8 in",5500,8000);
+        PrintAttributes attributes=new PrintAttributes.Builder()
+                .setMediaSize(media)
+                .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                .setColorMode(PrintAttributes.COLOR_MODE_MONOCHROME)
+                .build();
+        manager.print("Apollo DSKY Checklist",adapter,attributes);
+    }
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","PrintBridge");}
     @Override protected void onDestroy(){DebugReporter.dismissPendingReport(this);NtpTime.removeListener(ntpListener);unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;if(pendingCameraRequest!=null){pendingCameraRequest.deny();pendingCameraRequest=null;}destroyWebView();sensorManager=null;attitudeSensor=null;magneticAttitudeSensor=null;linearAccelerationSensor=null;accelerometerSensor=null;gravitySensor=null;super.onDestroy();}
 }

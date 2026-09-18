@@ -167,3 +167,13 @@
 }
 body.dream #app,body.display-only #app,body.screen-only #app{gap:0}
 body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}
+
+/* DreamService must ignore the interactive landscape control-strip reservation.
+   Cover the whole viewport with the visible 320x220 upper DSKY crop and retain
+   a small overscan margin for the burn-in drift. */
+body.dream.display-only .dsky{
+  width:max(calc(100vw + 16px),calc((100vh + 16px) * 320 / 220))!important;
+  height:auto!important;
+  max-width:none!important;
+  clip-path:none!important;
+}

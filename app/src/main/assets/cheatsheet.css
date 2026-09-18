@@ -1,57 +1,413 @@
 #agc-cheat-sheet{
   --sheet-x:0px;
   --sheet-y:0px;
-  position:fixed;
-  left:50%;
-  top:max(6px,env(safe-area-inset-top));
-  width:min(94vw,720px);
-  max-height:min(35vh,360px);
-  transform:translate(calc(-50% + var(--sheet-x)),var(--sheet-y));
+  --paper:#e7dfc9;
+  --paper-deep:#d6ccb2;
+  --ink:#171714;
+  --rule:#2a2923;
+  --muted:#5d594d;
+  --tab:#c8bea4;
+  position:relative;
+  left:auto;
+  top:auto;
+  width:min(calc(100vw - 8px),720px);
+  max-height:var(--sheet-max-h,42vh);
+  transform:none;
+  flex:0 1 auto;
   z-index:48;
   display:none;
   overflow:hidden;
-  color:#d8e6d2;
-  background:rgba(8,11,8,.94);
-  border:1px solid #667363;
-  border-radius:6px;
-  box-shadow:0 3px 18px rgba(0,0,0,.72),inset 0 0 0 1px rgba(210,240,202,.05);
-  font:600 12px/1.25 Arial,Helvetica,sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 12% 16%,rgba(255,255,255,.24) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 78% 68%,rgba(36,31,20,.05) 0 1px,transparent 1.5px),
+    linear-gradient(96deg,rgba(79,67,44,.045),transparent 18%,rgba(255,255,255,.08) 52%,transparent 78%),
+    var(--paper);
+  background-size:17px 19px,23px 21px,100% 100%,auto;
+  border:2px solid var(--rule);
+  border-radius:2px;
+  box-shadow:
+    0 7px 24px rgba(0,0,0,.58),
+    inset 0 0 0 1px rgba(255,255,255,.28),
+    inset 8px 0 0 rgba(79,68,48,.08);
+  font:700 12px/1.28 "Courier New","Liberation Mono",monospace;
   user-select:none;
   -webkit-user-select:none;
   touch-action:none;
 }
+#agc-cheat-sheet::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:3px;
+  top:0;
+  bottom:0;
+  width:12px;
+  pointer-events:none;
+  opacity:.42;
+  background:
+    radial-gradient(circle at 6px 18%,#8b816d 0 2.2px,#2c2a24 2.4px 3.1px,transparent 3.3px),
+    radial-gradient(circle at 6px 50%,#8b816d 0 2.2px,#2c2a24 2.4px 3.1px,transparent 3.3px),
+    radial-gradient(circle at 6px 82%,#8b816d 0 2.2px,#2c2a24 2.4px 3.1px,transparent 3.3px);
+}
+#agc-cheat-sheet>*{position:relative;z-index:1}
 #agc-cheat-sheet.open{display:flex;flex-direction:column}
-#agc-cheat-sheet.minimized{width:auto;max-width:94vw}
+#agc-cheat-sheet.minimized{width:min(calc(100vw - 8px),720px);max-height:60px;flex:0 0 auto}
 #agc-cheat-sheet.minimized .cheat-tabs,
 #agc-cheat-sheet.minimized .cheat-body{display:none}
+
+/* Docked checklist mode: the DSKY moves to the top of the viewport and the
+   checklist becomes the lower working area instead of covering flight hardware. */
+body.cheat-sheet-open:not(.cheat-sheet-minimized) #app{
+  justify-content:flex-start;
+  gap:4px;
+  padding-top:max(2px,env(safe-area-inset-top));
+  padding-bottom:max(2px,env(safe-area-inset-bottom));
+}
+body.cheat-sheet-open .app-controls,
+body.cheat-sheet-open .hint{display:none!important}
+body.cheat-sheet-open:not(.cheat-sheet-minimized) #agc-cheat-sheet{
+  flex:1 1 0;
+  min-height:0;
+  max-height:none;
+}
+body.cheat-sheet-open.cheat-sheet-minimized #app{
+  justify-content:center;
+  gap:6px;
+}
+body.cheat-sheet-open .dsky{
+  flex:0 0 auto;
+  will-change:transform;
+}
+
 .cheat-head{
-  display:flex;align-items:center;gap:6px;min-height:36px;padding:5px 6px 5px 10px;
-  background:linear-gradient(#1b211b,#111611);border-bottom:1px solid #3c493a;
-  cursor:move;touch-action:none
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:58px;
+  padding:7px 7px 7px 22px;
+  background:
+    linear-gradient(rgba(255,255,255,.12),rgba(0,0,0,.025)),
+    var(--paper);
+  border-bottom:2px solid var(--rule);
+  cursor:default;
+  touch-action:none;
 }
-.cheat-title{font:800 12px/1 monospace;letter-spacing:.08em;white-space:nowrap;color:#c9f5bd;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.cheat-head-actions{display:flex;gap:6px;flex:0 0 auto}
-#cheat-min,#cheat-close{min-width:44px;min-height:36px;flex:0 0 auto;position:relative;z-index:1}
+.cheat-head-copy{
+  min-width:0;
+  flex:1;
+  display:grid;
+  gap:1px;
+  text-transform:uppercase;
+}
+.cheat-kicker{
+  font:800 9px/1.1 Arial,Helvetica,sans-serif;
+  letter-spacing:.19em;
+  color:#403d34;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.cheat-title{
+  font:900 15px/1.03 "Arial Narrow","Roboto Condensed",Arial,sans-serif;
+  letter-spacing:.075em;
+  color:#11110f;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.cheat-ref{
+  font:700 9px/1.05 "Courier New","Liberation Mono",monospace;
+  letter-spacing:.055em;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.cheat-head-actions{display:flex;gap:5px;flex:0 0 auto}
+#cheat-print,#cheat-min,#cheat-close{
+  min-width:44px;
+  min-height:36px;
+  flex:0 0 auto;
+  position:relative;
+  z-index:1;
+}
+
 .cheat-head button,.cheat-tabs button,.cheat-reset{
-  border:1px solid #596458;background:#171c17;color:#d8e6d2;border-radius:3px;
-  padding:6px 9px;font:800 10px/1 Arial,Helvetica,sans-serif
+  border:1.5px solid var(--rule);
+  background:#eee7d5;
+  color:var(--ink);
+  border-radius:1px;
+  padding:6px 9px;
+  font:900 10px/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+  box-shadow:inset 0 1px rgba(255,255,255,.48);
 }
-.cheat-head button:active,.cheat-tabs button:active,.cheat-reset:active{background:#2a3329}
-.cheat-tabs{display:flex;gap:4px;padding:5px 6px;background:#0c100c;border-bottom:1px solid #283027;overflow-x:auto;overscroll-behavior-x:contain;touch-action:pan-x;flex:0 0 auto}
-.cheat-tabs button{flex:0 0 auto}
-.cheat-tabs button.active{background:#334032;color:#eaffdf;border-color:#71806f}
-.cheat-body{overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:4px 7px 7px}
-.cheat-pane{display:none}.cheat-pane.active{display:block}
-.cheat-step{display:grid;grid-template-columns:24px 1fr;gap:5px;align-items:start;padding:5px 1px;border-bottom:1px solid rgba(190,220,183,.09)}
+.cheat-head button:active,.cheat-tabs button:active,.cheat-reset:active{
+  background:#b8ae95;
+  transform:translateY(1px);
+}
+
+.cheat-tabs{
+  display:flex;
+  gap:0;
+  padding:0 6px 0 20px;
+  background:#bdb39b;
+  border-bottom:2px solid var(--rule);
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  touch-action:pan-x;
+  flex:0 0 auto;
+}
+.cheat-tabs button{
+  flex:0 0 auto;
+  min-height:34px;
+  border-width:0 1px 0 0;
+  border-color:#686154;
+  background:#cec4aa;
+  padding:6px 11px 5px;
+  color:#29271f;
+  box-shadow:none;
+}
+.cheat-tabs button:first-child{border-left:1px solid #686154}
+.cheat-tabs button.active{
+  background:#1a1a17;
+  color:#f1ead8;
+  border-color:#1a1a17;
+  box-shadow:inset 0 -3px #d8cfb8;
+}
+
+.cheat-body{
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+  padding:5px 10px 9px 22px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 24px,
+      rgba(64,59,47,.055) 24px,
+      rgba(64,59,47,.055) 25px
+    );
+}
+.cheat-pane{display:none}
+.cheat-pane.active{display:block}
+
+.cheat-step{
+  display:grid;
+  grid-template-columns:25px 1fr;
+  gap:5px;
+  align-items:start;
+  padding:6px 2px;
+  border-bottom:1px solid rgba(42,41,35,.24);
+}
 .cheat-step:last-child{border-bottom:0}
-.cheat-step input{width:17px;height:17px;margin:0;accent-color:#91c687}
-.cheat-step code,.cheat-code{font:800 12px/1.25 monospace;color:#c9f5bd;user-select:text;-webkit-user-select:text}
-.cheat-muted{color:#96a491;font-weight:600;font-size:10px}
-.cheat-key{display:inline-block;padding:1px 4px;margin:0 1px;border:1px solid #637060;border-radius:2px;background:#1b201b;color:#e0e9dc;font:800 10px monospace}
-.cheat-row{padding:5px 2px;border-bottom:1px solid rgba(190,220,183,.09)}
+.cheat-step input{
+  width:17px;
+  height:17px;
+  margin:0;
+  accent-color:#1b1b18;
+}
+.cheat-step code,.cheat-code{
+  font:900 12px/1.25 "Courier New","Liberation Mono",monospace;
+  color:#11110f;
+  user-select:text;
+  -webkit-user-select:text;
+}
+.cheat-step code::before,.cheat-code::before{content:"["}
+.cheat-step code::after,.cheat-code::after{content:"]"}
+
+.cheat-muted{
+  color:var(--muted);
+  font-weight:700;
+  font-size:10px;
+}
+.cheat-key{
+  display:inline-block;
+  padding:1px 5px;
+  margin:0 1px;
+  border:1.5px solid #25241f;
+  border-radius:1px;
+  background:#24231f;
+  color:#eee8d8;
+  font:900 10px/1.15 "Arial Narrow","Roboto Condensed",Arial,sans-serif;
+  letter-spacing:.04em;
+  box-shadow:inset 0 1px rgba(255,255,255,.11);
+}
+.cheat-row{
+  padding:7px 3px;
+  border-bottom:1px solid rgba(42,41,35,.24);
+}
 .cheat-row:last-child{border-bottom:0}
-.cheat-actions{display:flex;justify-content:flex-end;padding-top:6px}
-body.dream #agc-cheat-sheet,body.display-only #agc-cheat-sheet,body.screen-only #agc-cheat-sheet{display:none!important}
+.cheat-row b{
+  font-family:"Arial Narrow","Roboto Condensed",Arial,sans-serif;
+  font-weight:900;
+  letter-spacing:.035em;
+  text-transform:uppercase;
+}
+.cheat-actions{
+  display:flex;
+  justify-content:flex-end;
+  padding-top:8px;
+}
+.cheat-reset{
+  background:#d7ccb1;
+  min-height:32px;
+}
+
+body.dream #agc-cheat-sheet,
+body.display-only #agc-cheat-sheet,
+body.screen-only #agc-cheat-sheet{display:none!important}
+
+@media (max-width:460px){
+  .cheat-kicker{font-size:8px;letter-spacing:.13em}
+  .cheat-title{font-size:13px;letter-spacing:.045em}
+  .cheat-ref{font-size:8px}
+  .cheat-tabs button{padding-inline:9px}
+}
 @media (orientation:landscape){
-  #agc-cheat-sheet{left:auto;right:6px;top:max(6px,env(safe-area-inset-top));width:min(38vw,520px);max-height:92vh;transform:translate(var(--sheet-x),var(--sheet-y))}
+  body.cheat-sheet-open:not(.cheat-sheet-minimized) .dsky{
+    width:min(calc(100vw - 4px),calc(62vh * 320 / 372))!important;
+    height:auto!important;
+    max-width:92vw;
+  }
+  #agc-cheat-sheet{
+    width:min(calc(100vw - 8px),920px);
+  }
+}
+
+
+/* Apollo 11 CM checklist pages in the Smithsonian collection are 5.5 x 8 in.
+   The native Android print bridge requests this same physical media size. */
+@page{
+  size:5.5in 8in;
+  margin:.30in .25in .34in .42in;
+}
+@media print{
+  html,body{
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    overflow:visible!important;
+    background:#fff!important;
+  }
+  body{
+    color:#111!important;
+    user-select:text!important;
+    -webkit-user-select:text!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  #app{
+    position:static!important;
+    inset:auto!important;
+    display:block!important;
+    width:auto!important;
+    height:auto!important;
+    overflow:visible!important;
+    padding:0!important;
+    background:#fff!important;
+  }
+  #app>*:not(#agc-cheat-sheet){display:none!important}
+  #agc-cheat-sheet{
+    display:block!important;
+    position:static!important;
+    width:auto!important;
+    max-width:none!important;
+    max-height:none!important;
+    min-height:0!important;
+    overflow:visible!important;
+    margin:0!important;
+    border:1.4pt solid #191919!important;
+    box-shadow:none!important;
+    transform:none!important;
+    background:#fff!important;
+    color:#111!important;
+    font:700 7.8pt/1.24 "Courier New","Liberation Mono",monospace!important;
+    touch-action:auto!important;
+  }
+  #agc-cheat-sheet::before{
+    left:.04in!important;
+    width:.13in!important;
+    opacity:.58!important;
+  }
+  .cheat-head{
+    min-height:0!important;
+    padding:.09in .08in .08in .20in!important;
+    background:#fff!important;
+    border-bottom:1.5pt solid #111!important;
+  }
+  .cheat-kicker{font-size:6.5pt!important;letter-spacing:.15em!important;color:#111!important}
+  .cheat-title{font-size:11pt!important;letter-spacing:.06em!important;color:#000!important}
+  .cheat-ref{font-size:6.5pt!important;color:#333!important}
+  .cheat-head-actions,.cheat-tabs,.cheat-actions{display:none!important}
+  .cheat-body{
+    display:block!important;
+    overflow:visible!important;
+    min-height:0!important;
+    padding:.04in .08in .08in .20in!important;
+    background:#fff!important;
+  }
+  .cheat-pane{
+    display:block!important;
+    break-before:page;
+    page-break-before:always;
+  }
+  .cheat-pane:first-child{
+    break-before:auto;
+    page-break-before:auto;
+  }
+  .cheat-pane::before{
+    display:block;
+    margin:.02in 0 .06in;
+    padding:0 0 .035in;
+    border-bottom:1.1pt solid #111;
+    font:900 9pt/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif;
+    letter-spacing:.07em;
+  }
+  .cheat-pane[data-cheat-pane="p51"]::before{content:"P51 TEST"}
+  .cheat-pane[data-cheat-pane="p51real"]::before{content:"P51 REAL SKY"}
+  .cheat-pane[data-cheat-pane="quick"]::before{content:"QUICK REFERENCE"}
+  .cheat-pane[data-cheat-pane="sxt"]::before{content:"SEXTANT"}
+  .cheat-pane[data-cheat-pane="verify"]::before{content:"VERIFY / TEST"}
+  .cheat-step,.cheat-row{
+    break-inside:avoid;
+    page-break-inside:avoid;
+    border-bottom:.55pt solid #777!important;
+  }
+  .cheat-step{
+    grid-template-columns:.18in 1fr!important;
+    gap:.045in!important;
+    padding:.045in .015in!important;
+  }
+  .cheat-step input{
+    appearance:none!important;
+    -webkit-appearance:none!important;
+    width:.135in!important;
+    height:.135in!important;
+    margin:.005in 0 0!important;
+    border:1.15pt solid #111!important;
+    background:#fff!important;
+  }
+  .cheat-step input:checked{
+    background:
+      linear-gradient(45deg,transparent 43%,#111 44% 56%,transparent 57%),
+      linear-gradient(-45deg,transparent 43%,#111 44% 56%,transparent 57%),
+      #fff!important;
+  }
+  .cheat-row{padding:.055in .015in!important}
+  .cheat-step code,.cheat-code{font-size:7.8pt!important;color:#000!important}
+  .cheat-key{
+    padding:.5pt 3pt!important;
+    border:.8pt solid #111!important;
+    background:#222!important;
+    color:#fff!important;
+    font-size:6.7pt!important;
+    box-shadow:none!important;
+  }
+  .cheat-muted{font-size:6.8pt!important;color:#333!important}
 }
