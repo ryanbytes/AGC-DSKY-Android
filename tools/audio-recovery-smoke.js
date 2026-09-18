@@ -45,8 +45,10 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   assert(guardSource.includes("ctx.addEventListener('error'"),'audio guard must listen for renderer errors');
   assert(guardSource.includes('AUDIO_FAILURE_LIMIT=2'),'audio guard failure limit changed');
   assert(guardSource.includes("ctx.state!=='running'&&typeof ctx.resume==='function'"),'audio guard must resume any recoverable non-running WebAudio state');
-  assert(shellSource.includes("shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)requestRelayAudioStart(true)"),'sound toggle must enable state before acquiring/resuming relay audio');
-  assert(shellSource.includes("document.addEventListener('pointerdown',()=>{if(shellState.tickSound)requestRelayAudioStart(false)"),'user gesture must explicitly unlock relay audio');
+  assert(shellSource.includes("function requestRelayAudioStart(audio,playConfirmation=false)"),'relay audio start helper must receive audio service explicitly');
+  assert(shellSource.includes("shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)requestRelayAudioStart(audio,true)"),'sound toggle must enable state before acquiring/resuming relay audio');
+  assert(shellSource.includes("document.addEventListener('pointerdown',()=>{if(shellState.tickSound)requestRelayAudioStart(audio,false)"),'user gesture must explicitly unlock relay audio');
+  assert(!shellSource.includes("function requestRelayAudioStart(playConfirmation=false)"),'relay audio helper must not capture an undefined outer audio binding');
   assert(!guardSource.includes('applySnapshotUi =')&&!guardSource.includes('renderAgcReg ='),'audio recovery guard must not own display/snapshot projection');
   assert(pageResourceLifecycleSource.includes("if (context.state === 'closed') audioContexts.delete(context);"),'lifecycle tracker must release closed AudioContexts');
   const chromiumMessage='The AudioContext encountered an error from the audio device or the WebAudio renderer.';assert(debugReporterSource.includes(chromiumMessage)&&debugReporterSource.includes('isRecoverableWebAudioRenderError(detail)'),'native reporter must recognize/filter recoverable Chromium WebAudio renderer errors');
