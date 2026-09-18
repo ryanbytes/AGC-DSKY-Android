@@ -14,13 +14,20 @@
 
   let motionStarted = false;
   let absoluteStarted = false;
-  let permissionState = 'unrequested';
+  let permissionRequest = null;
   let wakeLock = null;
   const gravity = [0, 0, 0];
   let gravityValid = false;
 
   const rad = degrees => degrees * Math.PI / 180;
   const normAngle = degrees => ((Number(degrees) % 360) + 360) % 360;
+
+  function isAppleMobileWebKit() {
+    const ua = String(navigator.userAgent || '');
+    const platform = String(navigator.platform || '');
+    const touch = Number(navigator.maxTouchPoints) || 0;
+    return /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && touch > 1);
+  }
 
   function publish() {
     try {
@@ -127,55 +134,67 @@
     window.addEventListener('deviceorientation', onAbsoluteOrientation, {capture:true, passive:true});
   }
 
-  async function requestSensorPermissions() {
-    if (permissionState === 'granted' || permissionState === 'denied' || permissionState === 'unsupported') {
-      return {...status};
-    }
-    if (permissionState === 'requesting') return {...status};
-    permissionState = 'requesting';
+  async function requestSensorPermissions(options={}) {
+    const absolute = options === true || !!(options && options.absolute);
+    if (permissionRequest) return permissionRequest;
 
-    // Star finding needs an Earth-referenced heading, not merely relative
-    // orientation. requestPermission(true) explicitly includes the
-    // magnetometer/absolute-orientation permission where the browser supports
-    // the modern API. Older WebKit accepts the extra argument harmlessly.
-    //
-    // On iOS both orientation and motion permission calls must begin while the
-    // same transient user activation is live, so create both promises before
-    // awaiting either one.
-    let orientationRequest = Promise.resolve(window.DeviceOrientationEvent ? 'granted' : 'unsupported');
-    let motionRequest = Promise.resolve(window.DeviceMotionEvent ? 'granted' : 'unsupported');
-    try {
-      const Orientation = window.DeviceOrientationEvent;
-      if (Orientation && typeof Orientation.requestPermission === 'function') {
-        orientationRequest = Orientation.requestPermission(true);
+    // iPhone/iPad WebKit exposes the usable magnetic heading through
+    // deviceorientation.webkitCompassHeading after the ordinary orientation
+    // permission grant. Passing the newer absolute=true form there can produce
+    // a denial even though the legacy WebKit compass path is available.
+    const appleWebKitCompass = isAppleMobileWebKit();
+
+    const run = (async () => {
+      let orientationRequest = Promise.resolve(window.DeviceOrientationEvent ? 'granted' : 'unsupported');
+      let motionRequest = Promise.resolve(window.DeviceMotionEvent ? 'granted' : 'unsupported');
+
+      try {
+        const Orientation = window.DeviceOrientationEvent;
+        if (Orientation && typeof Orientation.requestPermission === 'function') {
+          orientationRequest = absolute && !appleWebKitCompass
+            ? Orientation.requestPermission(true)
+            : Orientation.requestPermission();
+        }
+      } catch (_) { orientationRequest = Promise.resolve('error'); }
+
+      try {
+        const Motion = window.DeviceMotionEvent;
+        if (Motion && typeof Motion.requestPermission === 'function') {
+          motionRequest = Motion.requestPermission();
+        }
+      } catch (_) { motionRequest = Promise.resolve('error'); }
+
+      const [orientationState, motionState] = await Promise.all([
+        Promise.resolve(orientationRequest).catch(() => 'error'),
+        Promise.resolve(motionRequest).catch(() => 'error')
+      ]);
+
+      const orientationAllowed = orientationState === 'granted';
+      const motionAllowed = motionState === 'granted';
+
+      status.orientation = orientationAllowed ? 'enabled'
+        : orientationState === 'unsupported' ? 'unsupported'
+        : orientationState === 'error' ? 'error' : 'denied';
+      status.motion = motionAllowed ? 'enabled'
+        : motionState === 'unsupported' ? 'unsupported'
+        : motionState === 'error' ? 'error' : 'denied';
+
+      // For Apple WebKit, webkitCompassHeading is the absolute-heading source
+      // carried by the ordinary deviceorientation stream. Other browsers use
+      // deviceorientationabsolute after requestPermission(true).
+      if (absolute) {
+        status.absoluteOrientation = orientationAllowed ? 'enabled' : status.orientation;
+      } else if (!orientationAllowed && status.absoluteOrientation !== 'active') {
+        status.absoluteOrientation = status.orientation;
       }
-    } catch (_) { orientationRequest = Promise.resolve('error'); }
-    try {
-      const Motion = window.DeviceMotionEvent;
-      if (Motion && typeof Motion.requestPermission === 'function') motionRequest = Motion.requestPermission();
-    } catch (_) { motionRequest = Promise.resolve('error'); }
 
-    const [orientationState, motionState] = await Promise.all([
-      Promise.resolve(orientationRequest).catch(() => 'error'),
-      Promise.resolve(motionRequest).catch(() => 'error')
-    ]);
-    const orientationAllowed = orientationState === 'granted';
-    const motionAllowed = motionState === 'granted';
-    const retryable = orientationState === 'error' || motionState === 'error';
-    const unsupported = orientationState === 'unsupported' && motionState === 'unsupported';
+      publish();
+      return {...status};
+    })();
 
-    status.orientation = orientationAllowed ? 'enabled'
-      : orientationState === 'unsupported' ? 'unsupported'
-      : orientationState === 'error' ? 'error' : 'denied';
-    status.motion = motionAllowed ? 'enabled'
-      : motionState === 'unsupported' ? 'unsupported'
-      : motionState === 'error' ? 'error' : 'denied';
-    status.absoluteOrientation = status.orientation;
-    permissionState = retryable ? 'retryable'
-      : unsupported ? 'unsupported'
-      : (orientationAllowed || motionAllowed) ? 'granted' : 'denied';
-    publish();
-    return {...status};
+    permissionRequest = run;
+    try { return await run; }
+    finally { if (permissionRequest === run) permissionRequest = null; }
   }
 
   async function acquireWakeLock() {
@@ -198,7 +217,8 @@
   }
 
   function completedGesture() {
-    requestSensorPermissions();
+    // Sensor prompts belong to the control that needs them (not an arbitrary
+    // first tap on the page). Keep only the wake-lock opportunistic request.
     acquireWakeLock();
   }
 
