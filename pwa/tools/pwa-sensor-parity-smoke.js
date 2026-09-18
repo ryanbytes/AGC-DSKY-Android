@@ -14,6 +14,7 @@ const documentHandlers = new Map();
 const calls = [];
 let orientationPermissionCalls = 0;
 const orientationPermissionArgs = [];
+let orientationPermissionResult = 'granted';
 let motionPermissionCalls = 0;
 let wakeLockCalls = 0;
 
@@ -49,7 +50,7 @@ function DeviceOrientationEvent() {}
 DeviceOrientationEvent.requestPermission = (...args) => {
   orientationPermissionCalls++;
   orientationPermissionArgs.push(args);
-  return Promise.resolve('granted');
+  return Promise.resolve(orientationPermissionResult);
 };
 function DeviceMotionEvent() {}
 DeviceMotionEvent.requestPermission = () => {
@@ -61,8 +62,9 @@ const context = {
   window: windowObject,
   document: documentObject,
   navigator: {
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1',
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1 Brave',
     platform: 'iPhone',
+    brave: {isBrave: async () => true},
     maxTouchPoints: 5,
     mediaDevices: {getUserMedia() {}},
     geolocation: {},
@@ -158,11 +160,28 @@ catch (error) { fail('script execution failed: ' + error.stack); }
   });
   if (calls.filter(c => c[0] === 'mag-q').length !== afterIosCompass) fail('invalid iOS compass heading was not rejected');
 
-  const status = windowObject.AGCDSKYPWA.parityStatus();
+  let status = windowObject.AGCDSKYPWA.parityStatus();
+  if (status.browser !== 'brave-ios') fail('Brave iOS browser detection failed');
   if (status.motion !== 'active') fail('motion capability did not become active');
   if (status.absoluteOrientation !== 'active') fail('absolute orientation capability did not become active');
   if (status.wakeLock !== 'active') fail('wake-lock capability did not become active');
 
+  orientationPermissionResult = 'denied';
+  await windowObject.AGCDSKYPWA.requestSensorPermissions({absolute:true});
+  status = windowObject.AGCDSKYPWA.parityStatus();
+  if (status.sensorBlock !== 'brave-ios-motion-denied') fail('Brave iOS denied state was not identified');
+
+  fire(windowHandlers, 'deviceorientation', {
+    alpha: 12,
+    beta: 82,
+    gamma: 3,
+    absolute: false,
+    webkitCompassHeading: 90,
+    webkitCompassAccuracy: 12
+  });
+  status = windowObject.AGCDSKYPWA.parityStatus();
+  if (status.sensorBlock !== null || status.absoluteOrientation !== 'active') fail('live compass data did not clear stale Brave iOS denial');
+
   console.log('PWA sensor parity behavior: PASS');
-  console.log('  wake lock, explicit star-finder permission, iOS compass heading, PIPA motion and display rotation verified');
+  console.log('  wake lock, Brave iOS denial reporting, iOS compass heading, PIPA motion and display rotation verified');
 })().catch(error => fail(error.stack || String(error)));
