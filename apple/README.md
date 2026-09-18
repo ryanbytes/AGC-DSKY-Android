@@ -53,6 +53,8 @@ Using a WebKit scheme handler avoids fragile `file://` WebAssembly fetches while
 
 The existing JavaScript remains authoritative for DSKY relay behavior, V35, `COMP ACTY`, VERB/NOUN input, snapshots, and AGC timing. iOS also keeps the screen awake while the app is active; macOS uses a process activity assertion for the same purpose.
 
+The in-app Apollo checklist uses the same shared HTML/CSS/JavaScript as Android and the PWA. Its PRINT button is bridged into native Apple printing. The requested checklist media is 5.5 × 8 inches, matching the shared print stylesheet; iOS/iPadOS uses a custom `UIPrintPageRenderer` page rectangle and macOS uses an `NSPrintInfo` paper size of 5.5 × 8 inches.
+
 ## Current Apple-specific limitations
 
 The core DSKY/AGC path is shared. Android-only native integrations such as the `SensorMainActivity` Core Motion equivalent and Android widget/dream/home-launcher features are not part of this first Apple target. Browser `DeviceOrientation` remains available as a WebKit fallback where supported. Camera/sextant permission plumbing is present, but device runtime behavior must be verified on an actual iPhone before claiming parity.
