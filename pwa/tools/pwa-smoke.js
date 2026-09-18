@@ -152,8 +152,10 @@ for (const marker of [
 if (!checklistCss.includes('size:Letter landscape')) fail('checklist print page must use US Letter landscape');
 if (!checklistCss.includes('@media print')) fail('checklist print stylesheet missing');
 if (!checklistCss.includes('grid-template-columns:repeat(2,5.15in)!important')) fail('checklist print must impose two large model pages across');
-if (!checklistCss.includes('grid-auto-rows:7.50in!important')) fail('checklist model pages must preserve tall proportions');
+if (!checklistCss.includes('grid-auto-rows:7.75in!important')) fail('checklist model pages must preserve tall proportions');
 if (!checklistCss.includes('.cheat-pane:nth-child(2n+1):not(:first-child)')) fail('checklist print must page-break after two model pages');
+if (!checklistCss.includes('column-gap:.20in!important')) fail('checklist print center cutting gutter missing');
+if (!checklistCss.includes('PAGE 1 / 5 · CUT ON DASHED GUIDE') || !checklistCss.includes('PAGE 5 / 5 · CUT ON DASHED GUIDE')) fail('checklist print page-numbered cut footers missing');
 if (!checklistCss.includes('outline:.45pt dashed #888!important')) fail('checklist print cut guides missing');
 if (sharedStyle.includes('.el-seg.off')) fail('unlit numeric EL segments must not have a visible style');
 if (sharedStyle.includes('.comp-el:not(.on){display:none}')) fail('COMP ACTY printed legend must remain visible while de-energized');
