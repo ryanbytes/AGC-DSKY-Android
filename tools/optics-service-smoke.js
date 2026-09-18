@@ -36,6 +36,7 @@ for(const marker of [
   'function requestWebStarFinderSensors()',
   "typeof pwa.requestSensorPermissions!=='function'",
   'pwa.requestSensorPermissions({absolute:true})',
+  'BRAVE: ENABLE SETTINGS › SITE SETTINGS › MOTION SENSORS',
   'COMPASS / ORIENTATION PERMISSION DENIED',
   'ABSOLUTE COMPASS UNAVAILABLE IN THIS BROWSER'
 ])assert(source.includes(marker),`optics behavior marker missing: ${marker}`);

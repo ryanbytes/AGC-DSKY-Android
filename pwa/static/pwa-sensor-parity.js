@@ -14,7 +14,12 @@
 
   let motionStarted = false;
   let absoluteStarted = false;
+  let relativeSensorStarted = false;
+  let linearSensorStarted = false;
   let permissionRequest = null;
+  let absoluteSensor = null;
+  let relativeSensor = null;
+  let linearSensor = null;
   let wakeLock = null;
   const gravity = [0, 0, 0];
   let gravityValid = false;
@@ -28,6 +33,23 @@
     const touch = Number(navigator.maxTouchPoints) || 0;
     return /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && touch > 1);
   }
+
+  function isAndroid() {
+    return /Android/i.test(String(navigator.userAgent || ''));
+  }
+
+  function isBraveBrowser() {
+    return !!navigator.brave;
+  }
+
+  status.browser = isAndroid() && isBraveBrowser() ? 'brave-android'
+    : isAndroid() ? 'chromium-android'
+    : isAppleMobileWebKit() ? 'webkit-ios'
+    : 'other';
+  status.genericAbsolute = typeof window.AbsoluteOrientationSensor === 'function' ? 'available' : 'unsupported';
+  status.genericRelative = typeof window.RelativeOrientationSensor === 'function' ? 'available' : 'unsupported';
+  status.genericLinearAcceleration = typeof window.LinearAccelerationSensor === 'function' ? 'available' : 'unsupported';
+  status.sensorBlock = null;
 
   function publish() {
     try {
@@ -128,6 +150,113 @@
     dsky.nativeMagneticQuaternion(q[0], q[1], q[2], q[3], screenAngle(), orientationAccuracy(event));
   }
 
+
+  function sensorError(kind, event) {
+    const name = String(event?.error?.name || event?.name || 'SensorError');
+    status[kind] = 'error:' + name;
+    if (status.browser === 'brave-android' && (name === 'NotAllowedError' || name === 'SecurityError')) {
+      status.sensorBlock = 'brave-android-motion-sensors-blocked';
+    }
+    publish();
+  }
+
+  function startGenericSensorFallback() {
+    if (isAppleMobileWebKit()) return;
+
+    if (!absoluteSensor && typeof window.AbsoluteOrientationSensor === 'function') {
+      try {
+        absoluteSensor = new window.AbsoluteOrientationSensor({frequency:30, referenceFrame:'device'});
+        absoluteSensor.addEventListener('reading', () => {
+          const q = absoluteSensor && absoluteSensor.quaternion;
+          if (!q || q.length < 4 || !Array.from(q).every(Number.isFinite)
+              || typeof dsky.nativeMagneticQuaternion !== 'function') return;
+          if (!absoluteStarted) {
+            absoluteStarted = true;
+            status.absoluteOrientation = 'active';
+            status.genericAbsolute = 'active';
+            status.sensorBlock = null;
+            if (typeof dsky.nativeMagneticSensorStatus === 'function') {
+              dsky.nativeMagneticSensorStatus('web-absolute-orientation-sensor', true, true);
+            }
+            publish();
+          }
+          // Generic Sensor quaternion order is [x,y,z,w]; the shared bridge
+          // accepts [w,x,y,z].
+          dsky.nativeMagneticQuaternion(q[3], q[0], q[1], q[2], screenAngle(), 1);
+        });
+        absoluteSensor.addEventListener('error', e => {
+          sensorError('genericAbsolute', e);
+          absoluteSensor = null;
+        });
+        status.genericAbsolute = 'starting';
+        absoluteSensor.start();
+      } catch (e) {
+        sensorError('genericAbsolute', e);
+        absoluteSensor = null;
+      }
+    }
+
+    if (!relativeSensor && typeof window.RelativeOrientationSensor === 'function') {
+      try {
+        relativeSensor = new window.RelativeOrientationSensor({frequency:30, referenceFrame:'device'});
+        relativeSensor.addEventListener('reading', () => {
+          const q = relativeSensor && relativeSensor.quaternion;
+          if (!q || q.length < 4 || !Array.from(q).every(Number.isFinite)
+              || typeof dsky.nativePhoneQuaternion !== 'function') return;
+          if (!relativeSensorStarted) {
+            relativeSensorStarted = true;
+            status.orientation = 'active';
+            status.genericRelative = 'active';
+            if (typeof dsky.nativePhoneSensorStatus === 'function') {
+              dsky.nativePhoneSensorStatus('web-relative-orientation-sensor', true);
+            }
+            publish();
+          }
+          dsky.nativePhoneQuaternion(q[3], q[0], q[1], q[2], screenAngle());
+        });
+        relativeSensor.addEventListener('error', e => {
+          sensorError('genericRelative', e);
+          relativeSensor = null;
+        });
+        status.genericRelative = 'starting';
+        relativeSensor.start();
+      } catch (e) {
+        sensorError('genericRelative', e);
+        relativeSensor = null;
+      }
+    }
+
+    if (!linearSensor && typeof window.LinearAccelerationSensor === 'function') {
+      try {
+        linearSensor = new window.LinearAccelerationSensor({frequency:30});
+        linearSensor.addEventListener('reading', () => {
+          const x=Number(linearSensor?.x),y=Number(linearSensor?.y),z=Number(linearSensor?.z);
+          if (![x,y,z].every(Number.isFinite) || typeof dsky.nativePhoneLinearAcceleration !== 'function') return;
+          if (!linearSensorStarted) {
+            linearSensorStarted = true;
+            status.motion = 'active';
+            status.genericLinearAcceleration = 'active';
+            if (typeof dsky.nativePipaSensorStatus === 'function') {
+              dsky.nativePipaSensorStatus('web-linear-acceleration-sensor', true);
+            }
+            publish();
+          }
+          const ts = Number(linearSensor.timestamp);
+          dsky.nativePhoneLinearAcceleration(x,y,z,Number.isFinite(ts)?ts/1000:performance.now()/1000,screenAngle());
+        });
+        linearSensor.addEventListener('error', e => {
+          sensorError('genericLinearAcceleration', e);
+          linearSensor = null;
+        });
+        status.genericLinearAcceleration = 'starting';
+        linearSensor.start();
+      } catch (e) {
+        sensorError('genericLinearAcceleration', e);
+        linearSensor = null;
+      }
+    }
+  }
+
   function addSensorListeners() {
     window.addEventListener('devicemotion', onMotion, {capture:true, passive:true});
     window.addEventListener('deviceorientationabsolute', onAbsoluteOrientation, {capture:true, passive:true});
@@ -188,6 +317,10 @@
         status.absoluteOrientation = status.orientation;
       }
 
+      if (status.browser === 'brave-android' && (orientationState === 'denied' || motionState === 'denied')) {
+        status.sensorBlock = 'brave-android-motion-sensors-blocked';
+      }
+      startGenericSensorFallback();
       publish();
       return {...status};
     })();
