@@ -47,6 +47,7 @@
     const core=coreSession.core;
     const phone=phoneStatus();
     const sxt=opticsStatus();
+    const pwa=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function'?window.AGCDSKYPWA.parityStatus():null;
     const parallaxService=lateService('AGCDSKY_PARALLAX');
     const parallax=parallaxService&&typeof parallaxService.state==='function'?parallaxService.state():null;
     const parallaxGeometry=parallaxService&&typeof parallaxService.geometry==='function'?parallaxService.geometry():null;
@@ -88,6 +89,7 @@
     if(phone&&phone.pipa){const p=phone.pipa,a=p.acceleration||{};h+=row('Phone accel stable frame',`${f(a.x)} / ${f(a.y)} / ${f(a.z)} m/s²`);h+=row('PIPA sensor / calibration',`${p.sensorName||'none'} · ${p.calibrated?'CALIBRATED':(p.calRemaining>0?'CALIBRATING '+p.calRemaining:'WAIT')}`);h+=row('PIPA update health',`${hzText(phone.health?.pipa?.hz)} · age ${ageText(phone.health?.pipa?.ageMs)} · rejected writes ${phone.health?.pipaWriteRejected??0}`);h+=row('PIPA pending',`${p.pending?.x??0}, ${p.pending?.y??0}, ${p.pending?.z??0}`)}
     if(pipaTest)h+=row('5-second PIPA device test',`${pipaTest.running?'RUNNING':(pipaTest.ok?'PASS':'FAIL/WAIT')} · ${pipaTest.message||''}${pipaTest.delta?' · Δ '+pipaTest.delta.join('/') : ''}`);
     h+=section('MAG / STAR AID');
+    if(pwa)h+=row('Web sensor bridge',`${pwa.browser||'unknown'} · orient ${pwa.orientation||'---'} · absolute ${pwa.absoluteOrientation||'---'} · generic ${pwa.genericAbsolute||'---'} · motion ${pwa.motion||'---'}${pwa.sensorBlock?' · '+pwa.sensorBlock:''}`);
     if(phone&&phone.magnetic)h+=row('Mag yaw correction',`${phone.magnetic.enabled?'ON':'OFF'} · accuracy ${phone.magnetic.accuracy} · correction ${f(phone.magnetic.yawCorrection,2)}° · ${hzText(phone.health?.mag?.hz)} · age ${ageText(phone.health?.mag?.ageMs)}`);else h+=row('Mag yaw correction','---');
     const sky=phone&&phone.sky;h+=row('Camera true pointing',sky&&sky.seen?`AZ ${f(sky.az,1)}° · ALT ${f(sky.alt,1)}° · decl ${f(sky.declination,1)}° · ${sky.source||'---'} · age ${ageText(Date.now()-(sky.timestamp||0))}`:'WAITING');
     const sc=phone?.skyCalibration||sxt?.pointingCalibration;h+=row('Camera boresight calibration',sc?.calibrated?`CALIBRATED · ${sc.calibration?.label||'star'} · ${sc.calibration?.timestamp?new Date(sc.calibration.timestamp).toLocaleString():''}`:'NONE');
