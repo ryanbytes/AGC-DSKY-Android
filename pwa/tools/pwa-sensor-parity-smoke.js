@@ -11,6 +11,7 @@ const windowHandlers = new Map();
 const documentHandlers = new Map();
 const calls = [];
 let orientationPermissionCalls = 0;
+const orientationPermissionArgs = [];
 let motionPermissionCalls = 0;
 let wakeLockCalls = 0;
 
@@ -43,8 +44,9 @@ const documentObject = {
 };
 
 function DeviceOrientationEvent() {}
-DeviceOrientationEvent.requestPermission = () => {
+DeviceOrientationEvent.requestPermission = absolute => {
   orientationPermissionCalls++;
+  orientationPermissionArgs.push(absolute);
   return Promise.resolve('granted');
 };
 function DeviceMotionEvent() {}
@@ -94,6 +96,7 @@ catch (error) { fail('script execution failed: ' + error.stack); }
   await Promise.resolve();
   await Promise.resolve();
   if (orientationPermissionCalls !== 1) fail('orientation permission was not requested from gesture');
+  if (orientationPermissionArgs[0] !== true) fail('absolute/magnetometer orientation permission was not requested');
   if (motionPermissionCalls !== 1) fail('motion permission was not requested from same gesture');
 
   fire(windowHandlers, 'devicemotion', {
@@ -123,11 +126,35 @@ catch (error) { fail('script execution failed: ' + error.stack); }
   if (magQ[5] !== 90) fail('display rotation was not forwarded with magnetic quaternion');
   if (magQ[6] !== 3) fail('browser compass accuracy was not mapped');
 
+  // iOS/WebKit exposes real-world heading on ordinary deviceorientation via
+  // webkitCompassHeading rather than deviceorientationabsolute.
+  const beforeIosCompass = calls.filter(c => c[0] === 'mag-q').length;
+  fire(windowHandlers, 'deviceorientation', {
+    alpha: 12,
+    beta: 82,
+    gamma: 3,
+    absolute: false,
+    webkitCompassHeading: 90,
+    webkitCompassAccuracy: 12
+  });
+  const afterIosCompass = calls.filter(c => c[0] === 'mag-q').length;
+  if (afterIosCompass !== beforeIosCompass + 1) fail('iOS webkitCompassHeading path did not publish absolute orientation');
+
+  fire(windowHandlers, 'deviceorientation', {
+    alpha: 12,
+    beta: 82,
+    gamma: 3,
+    absolute: false,
+    webkitCompassHeading: -1,
+    webkitCompassAccuracy: -1
+  });
+  if (calls.filter(c => c[0] === 'mag-q').length !== afterIosCompass) fail('invalid iOS compass heading was not rejected');
+
   const status = windowObject.AGCDSKYPWA.parityStatus();
   if (status.motion !== 'active') fail('motion capability did not become active');
   if (status.absoluteOrientation !== 'active') fail('absolute orientation capability did not become active');
   if (status.wakeLock !== 'active') fail('wake-lock capability did not become active');
 
   console.log('PWA sensor parity behavior: PASS');
-  console.log('  wake lock, iOS permission gesture, PIPA motion, display rotation and absolute orientation verified');
+  console.log('  wake lock, absolute compass permission, iOS compass heading, PIPA motion and display rotation verified');
 })().catch(error => fail(error.stack || String(error)));
