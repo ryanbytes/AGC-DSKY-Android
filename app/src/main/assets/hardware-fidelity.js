@@ -66,12 +66,12 @@
   function nextT4Delay(){return phaseDelay(T4_MS,t4Epoch)}
 
   const ARMATURE_SETTLE_MS=Object.freeze([6.2,11.7,8.4,13.6,7.1,15.0,9.5,12.5,5.6,14.3,10.5]);
-  function relayArmatureClack(relay,bit,turningOn,delayMs){
+  function relayArmatureClack(_relay,_bit,_turningOn,delayMs){
     if(!fidelityState.tickSound)return;
-    const ctx=audio.ensure();if(!ctx)return;
-    const event=Object.freeze({kind:'latching-relay',row:Number(relay),bit:Number(bit),engaging:!!turningOn});
-    const schedule=()=>audio.emitTick(ctx,ctx.currentTime+Math.max(0.001,delayMs/1000),turningOn?0.66:0.58,event);
-    if(ctx.state==='running')schedule();else ctx.resume().then(schedule).catch(()=>{});
+    later(()=>{
+      if(!fidelityState.tickSound)return;
+      audio.playBurst(1);
+    },Math.max(1,delayMs));
   }
   function changedArmatures(prior,target){
     const out=[],diff=(prior^target)&0o3777;
