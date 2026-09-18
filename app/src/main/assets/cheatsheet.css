@@ -393,6 +393,12 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     border:1.15pt solid #111!important;
     background:#fff!important;
   }
+  .cheat-step input:checked{
+    background:
+      linear-gradient(45deg,transparent 43%,#111 44% 56%,transparent 57%),
+      linear-gradient(-45deg,transparent 43%,#111 44% 56%,transparent 57%),
+      #fff!important;
+  }
   .cheat-row{padding:.055in .015in!important}
   .cheat-step code,.cheat-code{font-size:7.8pt!important;color:#000!important}
   .cheat-key{
