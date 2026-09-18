@@ -281,9 +281,10 @@ body.screen-only #agc-cheat-sheet{display:none!important}
 }
 
 
-/* Model-checklist print layout: Letter landscape fits two near-original-size
-   portrait checklist pages side-by-side. Each cutout stays close to the Apollo
-   5.5 x 8 in page proportion, so type can remain readable after cutting. */
+/* Compact model-checklist print layout. The previous tall cards reproduced the
+   original page aspect ratio but left most of every cutout blank. Use equal
+   5.10 x 3.80 in landscape cards instead: four fit cleanly on Letter landscape,
+   while every checklist section remains large enough to read and stack. */
 @page{
   size:Letter landscape;
   margin:.25in;
@@ -329,7 +330,7 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     transform:none!important;
     background:#fff!important;
     color:#111!important;
-    font:700 7.15pt/1.20 "Courier New","Liberation Mono",monospace!important;
+    font:700 6.15pt/1.12 "Courier New","Liberation Mono",monospace!important;
     touch-action:auto!important;
   }
   #agc-cheat-sheet::before,
@@ -338,16 +339,14 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   .cheat-tabs,
   .cheat-actions{display:none!important}
 
-  /* Letter landscape leaves a 10.5 x 8.0 in printable area at .25 in margins.
-     Two 5.15 x 7.50 in portrait cutouts plus a .20 in cutting gutter fit
-     exactly across the sheet. Their 0.687 aspect ratio nearly matches the
-     original Apollo 5.5 x 8 in checklist page while leaving safe top/bottom room. */
+  /* Letter landscape gives 10.5 x 8.0 in inside .25 in margins.
+     2 x 5.10 in cards + .15 in gutter = 10.35 in.
+     2 x 3.80 in cards + .15 in gutter = 7.75 in. */
   .cheat-body{
     display:grid!important;
-    grid-template-columns:repeat(2,5.15in)!important;
-    grid-auto-rows:7.50in!important;
-    column-gap:.20in!important;
-    row-gap:0!important;
+    grid-template-columns:repeat(2,5.10in)!important;
+    grid-auto-rows:3.80in!important;
+    gap:.15in!important;
     justify-content:center!important;
     align-content:center!important;
     overflow:visible!important;
@@ -360,41 +359,45 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     display:block!important;
     position:relative!important;
     box-sizing:border-box!important;
-    width:5.15in!important;
-    height:7.50in!important;
+    width:5.10in!important;
+    height:3.80in!important;
     min-height:0!important;
     margin:0!important;
-    padding:.15in .14in .27in .22in!important;
+    padding:.10in .11in .19in .16in!important;
     overflow:hidden!important;
-    border:.85pt solid #222!important;
-    outline:.45pt dashed #888!important;
-    outline-offset:.045in!important;
+    border:.8pt solid #222!important;
+    outline:.4pt dashed #888!important;
+    outline-offset:.035in!important;
     background:#fff!important;
     break-before:auto!important;
     page-break-before:auto!important;
     break-inside:avoid!important;
     page-break-inside:avoid!important;
   }
-  .cheat-pane:nth-child(2n+1):not(:first-child){
+  .cheat-pane:nth-child(4n+1):not(:first-child){
     break-before:page!important;
     page-break-before:always!important;
   }
+  .cheat-pane:nth-child(4n+1):last-child{
+    grid-column:1 / -1!important;
+    justify-self:center!important;
+  }
   .cheat-pane::before{
     display:block!important;
-    margin:0 0 .075in!important;
-    padding:0 0 .045in!important;
-    border-bottom:1pt solid #111!important;
-    font:900 8.7pt/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif!important;
-    letter-spacing:.065em!important;
+    margin:0 0 .045in!important;
+    padding:0 0 .025in!important;
+    border-bottom:.8pt solid #111!important;
+    font:900 7.2pt/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif!important;
+    letter-spacing:.05em!important;
     color:#000!important;
   }
   .cheat-pane::after{
     position:absolute!important;
-    right:.13in!important;
-    bottom:.09in!important;
+    right:.10in!important;
+    bottom:.055in!important;
     color:#444!important;
-    font:700 5.8pt/1 "Courier New","Liberation Mono",monospace!important;
-    letter-spacing:.04em!important;
+    font:700 5.2pt/1 "Courier New","Liberation Mono",monospace!important;
+    letter-spacing:.03em!important;
   }
   .cheat-pane[data-cheat-pane="p51"]::before{content:"CMC / DSKY QUICK REFERENCE · P51 TEST"}
   .cheat-pane[data-cheat-pane="p51real"]::before{content:"CMC / DSKY QUICK REFERENCE · P51 REAL SKY"}
@@ -409,22 +412,22 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   .cheat-step,.cheat-row{
     break-inside:avoid!important;
     page-break-inside:avoid!important;
-    border-bottom:.5pt solid #777!important;
+    border-bottom:.4pt solid #888!important;
   }
   .cheat-step{
     display:grid!important;
-    grid-template-columns:.16in minmax(0,1fr)!important;
-    gap:.045in!important;
+    grid-template-columns:.13in minmax(0,1fr)!important;
+    gap:.03in!important;
     align-items:start!important;
-    padding:.043in .012in!important;
+    padding:.025in .006in!important;
   }
   .cheat-step input{
     appearance:none!important;
     -webkit-appearance:none!important;
-    width:.12in!important;
-    height:.12in!important;
-    margin:.006in 0 0!important;
-    border:.95pt solid #111!important;
+    width:.095in!important;
+    height:.095in!important;
+    margin:.004in 0 0!important;
+    border:.8pt solid #111!important;
     background:#fff!important;
   }
   .cheat-step input:checked{
@@ -433,15 +436,15 @@ body.screen-only #agc-cheat-sheet{display:none!important}
       linear-gradient(-45deg,transparent 43%,#111 44% 56%,transparent 57%),
       #fff!important;
   }
-  .cheat-row{padding:.052in .012in!important}
-  .cheat-step code,.cheat-code{font-size:7.05pt!important;color:#000!important}
+  .cheat-row{padding:.029in .006in!important}
+  .cheat-step code,.cheat-code{font-size:6.0pt!important;color:#000!important}
   .cheat-key{
-    padding:.45pt 2.7pt!important;
-    border:.75pt solid #111!important;
+    padding:.25pt 2.1pt!important;
+    border:.65pt solid #111!important;
     background:#222!important;
     color:#fff!important;
-    font-size:6.1pt!important;
+    font-size:5.35pt!important;
     box-shadow:none!important;
   }
-  .cheat-muted{font-size:6.25pt!important;color:#333!important}
+  .cheat-muted{font-size:5.45pt!important;color:#333!important}
 }
