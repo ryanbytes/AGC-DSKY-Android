@@ -47,7 +47,7 @@
     }else adoptAudioContext(ctx);
     if(ctx.state==='running'){markAudioStable(ctx);return ctx}
     if(ctx.state==='closed'){retireAudioContext(ctx,'context closed during acquisition',null,false);return null}
-    if(ctx.state==='suspended'&&typeof ctx.resume==='function'){
+    if(ctx.state!=='running'&&typeof ctx.resume==='function'){
       try{const resumed=ctx.resume();if(resumed&&typeof resumed.then==='function')resumed.then(()=>markAudioStable(ctx)).catch(error=>{if(error&&error.name==='NotAllowedError')return;retireAudioContext(ctx,'resume rejected',error)})}
       catch(error){if(!error||error.name!=='NotAllowedError'){retireAudioContext(ctx,'resume threw',error);return null}}
     }
