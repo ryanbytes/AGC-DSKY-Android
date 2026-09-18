@@ -4,7 +4,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm');
 const {installServiceRegistry}=require('./test-service-registry');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
-const guardSource=read('background-audio-guard.js'),audioSource=read('relay-audio-runtime.js'),pageResourceLifecycleSource=read('page-resource-lifecycle.js'),debugReporterSource=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/DebugReporter.java'),'utf8');
+const guardSource=read('background-audio-guard.js'),audioSource=read('relay-audio-runtime.js'),shellSource=read('app-shell-runtime.js'),pageResourceLifecycleSource=read('page-resource-lifecycle.js'),debugReporterSource=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/DebugReporter.java'),'utf8');
 function makeHarness({dream=false,hidden=false}={}){
   const reports=[],instances=[],scheduled=new Map();let timerId=0;
   class FakeAudioContext{
@@ -44,6 +44,9 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   assert(!guardSource.includes('AGCDSKY_COMPAT')&&!guardSource.includes('compat.'),'audio recovery must not depend directly on compatibility registry');
   assert(guardSource.includes("ctx.addEventListener('error'"),'audio guard must listen for renderer errors');
   assert(guardSource.includes('AUDIO_FAILURE_LIMIT=2'),'audio guard failure limit changed');
+  assert(guardSource.includes("ctx.state!=='running'&&typeof ctx.resume==='function'"),'audio guard must resume any recoverable non-running WebAudio state');
+  assert(shellSource.includes("shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)requestRelayAudioStart(true)"),'sound toggle must enable state before acquiring/resuming relay audio');
+  assert(shellSource.includes("document.addEventListener('pointerdown',()=>{if(shellState.tickSound)requestRelayAudioStart(false)"),'user gesture must explicitly unlock relay audio');
   assert(!guardSource.includes('applySnapshotUi =')&&!guardSource.includes('renderAgcReg ='),'audio recovery guard must not own display/snapshot projection');
   assert(pageResourceLifecycleSource.includes("if (context.state === 'closed') audioContexts.delete(context);"),'lifecycle tracker must release closed AudioContexts');
   const chromiumMessage='The AudioContext encountered an error from the audio device or the WebAudio renderer.';assert(debugReporterSource.includes(chromiumMessage)&&debugReporterSource.includes('isRecoverableWebAudioRenderError(detail)'),'native reporter must recognize/filter recoverable Chromium WebAudio renderer errors');
@@ -57,6 +60,7 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
 
   const r=makeHarness();r.FakeAudioContext.nextState='suspended';r.FakeAudioContext.nextResumeError=new Error('device unavailable');assert(r.audio.ensure(),'suspended context should exist while resume settles');await flush();assert(r.recovery.status().state==='none'&&r.recovery.status().failures===1,'resume rejection must retire/count failed context');
   const p=makeHarness();p.FakeAudioContext.nextState='suspended';const policy=new Error('gesture required');policy.name='NotAllowedError';p.FakeAudioContext.nextResumeError=policy;const policyCtx=p.audio.ensure();await flush();assert(p.recovery.status().state==='suspended'&&p.recovery.status().failures===0&&policyCtx.closeCount===0,'NotAllowedError must retain suspended context without failure count');
+  const interrupted=makeHarness();interrupted.FakeAudioContext.nextState='interrupted';const interruptedCtx=interrupted.audio.ensure();await flush();assert(interruptedCtx&&interrupted.recovery.status().state==='running','interrupted WebAudio context must be resumed');
   const dream=makeHarness({dream:true});assert(dream.audio.ensure()===null&&dream.instances.length===0,'Dream mode must remain silent');
   const hidden=makeHarness({hidden:true});assert(hidden.audio.ensure()===null&&hidden.instances.length===0,'hidden app must not create/resume relay audio');
   console.log('audio recovery smoke: PASS');console.log('  audio-owned context/implementation slots, forwarded compatibility aliases, explicit recovery publication, circuit breaker, closed-context replacement, policy rejection, and Dream/hidden silence verified');
