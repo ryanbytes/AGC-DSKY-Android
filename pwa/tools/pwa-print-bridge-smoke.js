@@ -72,7 +72,12 @@ assert(focused,'print window was not focused');
 assert(written.includes('Apollo CMC / DSKY Checklist'),'print document title missing');
 assert(written.includes('cheatsheet.css'),'print document does not load checklist print stylesheet');
 assert(written.includes('PRINT / SAVE PDF'),'print/PDF action missing');
-assert(written.includes('2 LARGE CHECKLIST PAGES PER LANDSCAPE LETTER SHEET'),'Letter landscape two-up guidance missing');
+assert(written.includes('ANDROID PRINT FIX · 2 LARGE CHECKLIST PAGES FILL EACH LETTER SHEET'),'Android fill-sheet guidance missing');
+assert(written.includes('<body class="pwa-android-imposed">'),'Android print document must activate portrait-imposition fallback');
+assert(written.includes('@page{size:Letter portrait;margin:.20in}'),'Android print document must force portrait Letter media for reliable system-print sizing');
+assert(written.includes('grid-auto-rows:5.20in!important'),'Android fallback must reserve two full-height model slots');
+assert(written.includes('width:5.20in!important') && written.includes('height:7.70in!important'),'Android fallback model card dimensions missing');
+assert(written.includes('transform:rotate(90deg)!important'),'Android fallback must rotate cards to fill portrait printer pages');
 assert(written.includes('data-cheat-check="1" checked'),'checked checklist state was not preserved');
 assert(!written.includes('data-cheat-check="2" checked'),'unchecked checklist state was incorrectly printed as checked');
 assert(written.includes('<main id="app"><section id="agc-cheat-sheet"'),'print document does not preserve checklist print-layout wrapper');
@@ -82,4 +87,4 @@ assert(windowObject.PrintBridge.printChecklist()===false,'blocked print window s
 assert(windowObject.AGCDSKYPWA.lastChecklistPrint?.error==='print window blocked','blocked print window diagnostic missing');
 
 console.log('PWA checklist print bridge behavior: PASS');
-console.log('  Android Letter landscape 2-up print view, checked-state preservation, popup failure telemetry verified');
+console.log('  Android portrait-driver landscape imposition, checked-state preservation, popup failure telemetry verified');
