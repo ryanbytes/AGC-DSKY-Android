@@ -27,8 +27,8 @@
     const cssUrl = new URL('cheatsheet.css', location.href).href;
     const android = isAndroid();
     const guidance = android
-      ? '2 LARGE MODEL PAGES PER LANDSCAPE LETTER SHEET · use browser menu → Share → Print, then cut on the center gutter.'
-      : '2 LARGE MODEL PAGES PER LANDSCAPE LETTER SHEET · print or save PDF, then cut on the center gutter.';
+      ? '2 LARGE CHECKLIST PAGES PER LANDSCAPE LETTER SHEET · use browser menu → Share → Print, then cut on the dashed guides and stack.'
+      : '2 LARGE CHECKLIST PAGES PER LANDSCAPE LETTER SHEET · print or save PDF, then cut on the dashed guides and stack.';
     const autoPrint = android ? '' : "setTimeout(()=>{try{window.print()}catch(_){}},350);";
 
     return `<!doctype html>
