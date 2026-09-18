@@ -171,7 +171,7 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
         controller.present(animated: true, completionHandler: nil)
 #elseif os(macOS)
         let printInfo = NSPrintInfo.shared.copy() as! NSPrintInfo
-        printInfo.paperSize = NSSize(width: 11.0 * 72.0, height: 8.5 * 72.0)
+        printInfo.paperSize = NSSize(width: 8.5 * 72.0, height: 11.0 * 72.0)
         printInfo.orientation = .landscape
         printInfo.topMargin = 0
         printInfo.bottomMargin = 0
