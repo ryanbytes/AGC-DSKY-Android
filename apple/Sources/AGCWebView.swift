@@ -158,10 +158,10 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
         let printInfo = UIPrintInfo(dictionary: nil)
         printInfo.outputType = .general
         printInfo.jobName = "Apollo DSKY Checklist"
-        printInfo.orientation = .portrait
+        printInfo.orientation = .landscape
 
         let renderer = UIPrintPageRenderer()
-        let paper = CGRect(x: 0, y: 0, width: 8.5 * 72.0, height: 11.0 * 72.0)
+        let paper = CGRect(x: 0, y: 0, width: 11.0 * 72.0, height: 8.5 * 72.0)
         renderer.setValue(NSValue(cgRect: paper), forKey: "paperRect")
         renderer.setValue(NSValue(cgRect: paper), forKey: "printableRect")
         renderer.addPrintFormatter(webView.viewPrintFormatter(), startingAtPageAt: 0)
@@ -172,7 +172,7 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
 #elseif os(macOS)
         let printInfo = NSPrintInfo.shared.copy() as! NSPrintInfo
         printInfo.paperSize = NSSize(width: 8.5 * 72.0, height: 11.0 * 72.0)
-        printInfo.orientation = .portrait
+        printInfo.orientation = .landscape
         printInfo.topMargin = 0
         printInfo.bottomMargin = 0
         printInfo.leftMargin = 0
