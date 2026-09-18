@@ -32,7 +32,12 @@ for(const marker of [
   'c.navKeyPulse(bit,90)',
   'api.scheduleAgcAutosave',
   'cameraPending:!!cameraAcquire',
-  'pointingCalibration:typeof api.skyCalibrationStatus'
+  'pointingCalibration:typeof api.skyCalibrationStatus',
+  'function requestWebStarFinderSensors()',
+  "typeof pwa.requestSensorPermissions!=='function'",
+  'pwa.requestSensorPermissions()',
+  'COMPASS / MOTION PERMISSION DENIED',
+  'ABSOLUTE COMPASS UNAVAILABLE IN THIS BROWSER'
 ])assert(source.includes(marker),`optics behavior marker missing: ${marker}`);
 const apiIndex=html.indexOf('<script src="agc-api-runtime.js"></script>');
 const opticsIndex=html.indexOf('<script src="optics.js"></script>');
