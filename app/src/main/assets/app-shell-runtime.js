@@ -41,6 +41,17 @@ function rememberRunMode(next){if(!shellState.dream)store.set('runMode',next)}
 function cycleMission(){shellState.selectedMission='comanche055';store.set('agcMission','comanche055');applyMissionButton()}
 function showControls(){if(shellState.dream||shellState.displayOnly)return;document.body.classList.add('controls-visible')}
 function hideControls(){document.body.classList.remove('controls-visible')}
+function requestRelayAudioStart(playConfirmation=false){
+  const ctx=audio.ensure();if(!ctx)return;
+  const confirm=()=>{if(playConfirmation&&shellState.tickSound&&ctx.state==='running')audio.playBurst(1)};
+  if(ctx.state==='running'){confirm();return}
+  if(typeof ctx.resume!=='function')return;
+  try{
+    const resumed=ctx.resume();
+    if(resumed&&typeof resumed.then==='function')resumed.then(confirm).catch(()=>{});
+    else confirm();
+  }catch(_){}
+}
 
 let appShellInitialized=false;
 function initializeAppShell(api,services){
@@ -82,11 +93,11 @@ function initializeAppShell(api,services){
   addEventListener('pagehide',()=>{const core=shellCore();if(shellState.mode==='agc'&&core){core.stop();api.saveAgcState('page hide')}});
   $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;environment.applyDim();showControls()});
   $('dreambright').addEventListener('click',()=>{environment.cycleDreamMode();showControls()});
-  $('sound').addEventListener('click',()=>{audio.ensure();shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)audio.playBurst(1);showControls()});
+  $('sound').addEventListener('click',()=>{shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)requestRelayAudioStart(true);showControls()});
   $('display').addEventListener('click',()=>{shellState.displayOnly=true;environment.applyDisplayOnly()});
   $('agc').addEventListener('click',()=>{void api.enterAgc();showControls()});
   $('clock').addEventListener('click',()=>{void api.enterClock();showControls()});
-  document.addEventListener('pointerdown',()=>{if(shellState.tickSound)audio.ensure()},{passive:true});
+  document.addEventListener('pointerdown',()=>{if(shellState.tickSound)requestRelayAudioStart(false)},{passive:true});
 
   document.body.classList.toggle('dream',shellState.dream);
   if(!shellState.dream&&!shellState.displayOnly&&store.get('hinted')!=='1'){
