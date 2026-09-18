@@ -69,10 +69,8 @@ public final class MainActivity extends Activity {
         PrintManager manager=(PrintManager)getSystemService(Context.PRINT_SERVICE);
         if(manager==null)return;
         PrintDocumentAdapter adapter=view.createPrintDocumentAdapter("Apollo DSKY Checklist");
-        PrintAttributes.MediaSize media=new PrintAttributes.MediaSize(
-                "APOLLO_CHECKLIST_5_5X8","Apollo Checklist 5.5 x 8 in",5500,8000);
         PrintAttributes attributes=new PrintAttributes.Builder()
-                .setMediaSize(media)
+                .setMediaSize(PrintAttributes.MediaSize.NA_LETTER.asPortrait())
                 .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
                 .setColorMode(PrintAttributes.COLOR_MODE_MONOCHROME)
                 .build();
