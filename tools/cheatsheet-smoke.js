@@ -36,5 +36,6 @@ assert(apple.includes('window.webkit.messageHandlers.PrintBridge.postMessage'), 
 assert(apple.includes('width: 5.5 * 72.0, height: 8.0 * 72.0'), 'Apple checklist print media must be 5.5 x 8 inches');
 assert(apple.includes('removeScriptMessageHandler(forName: "PrintBridge")'), 'Apple PrintBridge must be removed during teardown');
 assert(!style.includes('.el-seg.off'), 'unlit numeric EL segments must not have a visible style');
-assert(style.includes('.comp-el:not(.on){display:none}'), 'de-energized COMP ACTY EL must render nothing');
+assert(!style.includes('.comp-el:not(.on){display:none}'), 'COMP ACTY printed legend must remain visible while de-energized');
+assert(style.includes('.el-comp-bg{fill:var(--el);opacity:0}'), 'de-energized COMP ACTY EL background must be fully dark');
 console.log('cheat sheet smoke: PASS');
