@@ -6,11 +6,6 @@
   --frame:#6b6c67;
   --ann:#9c9c95;
   --key:#1d1e1c;
-  /* Production Block II EL-panel drawing revisions specify a 5300-A
-     (530 nm) dominant wavelength. This sRGB value is a display-safe
-     approximation of that yellow-green phosphor rather than the prior
-     pale mint/white rendering. */
-  --el:#79ef4f;
 }
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}
