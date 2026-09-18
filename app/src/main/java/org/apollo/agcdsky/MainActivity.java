@@ -2,11 +2,15 @@ package org.apollo.agcdsky;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -14,6 +18,7 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -25,6 +30,11 @@ public final class MainActivity extends Activity {
     private static final String JS_APP_VISIBLE = "if(window.AGCDSKY&&AGCDSKY.setAppVisible){AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)}";
     private static final Uri LOCAL_ASSET_ORIGIN = Uri.parse(NetClient.ASSET_ORIGIN);
     private WebView webView;
+    private final class ChecklistPrintBridge {
+        @JavascriptInterface public void printChecklist() {
+            runOnUiThread(MainActivity.this::printChecklistNow);
+        }
+    }
     private Bundle pendingWebViewState;
     private String pendingGeoOrigin;
     private GeolocationPermissions.Callback pendingGeoCallback;
@@ -47,9 +57,26 @@ public final class MainActivity extends Activity {
         if(webView!=null)return;
         if((getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0)WebView.setWebContentsDebuggingEnabled(true);
         webView=new WebView(this);webView.setBackgroundColor(CM_PANEL_COLOR);WebSettings s=webView.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setGeolocationEnabled(true);s.setMediaPlaybackRequiresUserGesture(false);s.setBlockNetworkLoads(true);s.setAllowFileAccess(false);s.setAllowContentAccess(false);
-        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.setWebViewClient(new NetClient(this));
+        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");
+        webView.addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge");
+        webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient(){@Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){if(!isLocalAssetOrigin(origin)){callback.invoke(origin,false,false);return;}if(hasLocationPermission()){callback.invoke(origin,true,false);return;}pendingGeoOrigin=origin;pendingGeoCallback=callback;requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},GEO_PERMISSION_REQUEST);}@Override public boolean onConsoleMessage(ConsoleMessage message){if(message!=null&&message.messageLevel()==ConsoleMessage.MessageLevel.ERROR){String text=message.message();if(text==null||!text.startsWith("[yaAGC]"))DebugReporter.appendWebError(MainActivity.this,message.sourceId()+":"+message.lineNumber()+"\n"+String.valueOf(text));}return super.onConsoleMessage(message);}});
         setContentView(webView);boolean restored=false;if(pendingWebViewState!=null){try{restored=webView.restoreState(pendingWebViewState)!=null;}catch(RuntimeException ignored){}pendingWebViewState=null;}if(!restored)webView.loadUrl(NetClient.ASSET_ORIGIN+NetClient.ASSET_PREFIX+"index.html");
+    }
+    private void printChecklistNow() {
+        WebView view=webView;
+        if(view==null)return;
+        PrintManager manager=(PrintManager)getSystemService(Context.PRINT_SERVICE);
+        if(manager==null)return;
+        PrintDocumentAdapter adapter=view.createPrintDocumentAdapter("Apollo DSKY Checklist");
+        PrintAttributes.MediaSize media=new PrintAttributes.MediaSize(
+                "APOLLO_CHECKLIST_5_5X8","Apollo Checklist 5.5 x 8 in",5500,8000);
+        PrintAttributes attributes=new PrintAttributes.Builder()
+                .setMediaSize(media)
+                .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                .setColorMode(PrintAttributes.COLOR_MODE_MONOCHROME)
+                .build();
+        manager.print("Apollo DSKY Checklist",adapter,attributes);
     }
     private boolean isLocalAssetOrigin(String origin){if(origin==null)return false;try{Uri c=Uri.parse(origin);int port=c.getPort();return "https".equalsIgnoreCase(c.getScheme())&&LOCAL_ASSET_ORIGIN.getHost()!=null&&LOCAL_ASSET_ORIGIN.getHost().equalsIgnoreCase(c.getHost())&&(port==-1||port==443);}catch(RuntimeException ignored){return false;}}
     private boolean hasLocationPermission(){return checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED||checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;}
@@ -57,6 +84,6 @@ public final class MainActivity extends Activity {
     @Override protected void onResume(){super.onResume();configureWindow();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);}}
     @Override protected void onPause(){if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge");}
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","PrintBridge");}
     @Override protected void onDestroy(){DebugReporter.dismissPendingReport(this);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;destroyWebView();super.onDestroy();}
 }
