@@ -7,12 +7,13 @@
   --rule:#2a2923;
   --muted:#5d594d;
   --tab:#c8bea4;
-  position:fixed;
-  left:50%;
-  top:max(6px,env(safe-area-inset-top));
-  width:min(94vw,720px);
-  max-height:min(var(--sheet-max-h,35vh),360px);
-  transform:translate(calc(-50% + var(--sheet-x)),var(--sheet-y));
+  position:relative;
+  left:auto;
+  top:auto;
+  width:min(calc(100vw - 8px),720px);
+  max-height:var(--sheet-max-h,42vh);
+  transform:none;
+  flex:0 1 auto;
   z-index:48;
   display:none;
   overflow:hidden;
@@ -51,9 +52,33 @@
 }
 #agc-cheat-sheet>*{position:relative;z-index:1}
 #agc-cheat-sheet.open{display:flex;flex-direction:column}
-#agc-cheat-sheet.minimized{width:auto;max-width:94vw}
+#agc-cheat-sheet.minimized{width:min(calc(100vw - 8px),720px);max-height:60px;flex:0 0 auto}
 #agc-cheat-sheet.minimized .cheat-tabs,
 #agc-cheat-sheet.minimized .cheat-body{display:none}
+
+/* Docked checklist mode: the DSKY moves to the top of the viewport and the
+   checklist becomes the lower working area instead of covering flight hardware. */
+body.cheat-sheet-open:not(.cheat-sheet-minimized) #app{
+  justify-content:flex-start;
+  gap:4px;
+  padding-top:max(2px,env(safe-area-inset-top));
+  padding-bottom:max(2px,env(safe-area-inset-bottom));
+}
+body.cheat-sheet-open .app-controls,
+body.cheat-sheet-open .hint{display:none!important}
+body.cheat-sheet-open:not(.cheat-sheet-minimized) #agc-cheat-sheet{
+  flex:1 1 0;
+  min-height:0;
+  max-height:none;
+}
+body.cheat-sheet-open.cheat-sheet-minimized #app{
+  justify-content:center;
+  gap:6px;
+}
+body.cheat-sheet-open .dsky{
+  flex:0 0 auto;
+  will-change:transform;
+}
 
 .cheat-head{
   display:flex;
@@ -65,7 +90,7 @@
     linear-gradient(rgba(255,255,255,.12),rgba(0,0,0,.025)),
     var(--paper);
   border-bottom:2px solid var(--rule);
-  cursor:move;
+  cursor:default;
   touch-action:none;
 }
 .cheat-head-copy{
@@ -243,12 +268,12 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   .cheat-tabs button{padding-inline:9px}
 }
 @media (orientation:landscape){
+  body.cheat-sheet-open:not(.cheat-sheet-minimized) .dsky{
+    width:min(calc(100vw - 4px),calc(62vh * 320 / 372))!important;
+    height:auto!important;
+    max-width:92vw;
+  }
   #agc-cheat-sheet{
-    left:auto;
-    right:6px;
-    top:max(6px,env(safe-area-inset-top));
-    width:min(38vw,520px);
-    max-height:min(var(--sheet-max-h,92vh),92vh);
-    transform:translate(var(--sheet-x),var(--sheet-y));
+    width:min(calc(100vw - 8px),920px);
   }
 }
