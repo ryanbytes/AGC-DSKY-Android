@@ -97,18 +97,14 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
   font-size:5.1px;font-weight:700;letter-spacing:.22px;
 }
 .el-rule{stroke:var(--el);stroke-width:2.05;stroke-linecap:round;opacity:.88}
-.el-comp-bg{fill:var(--el);opacity:.08}
-.comp-el.on .el-comp-bg{opacity:.92}
+.comp-el:not(.on){display:none}
+.el-comp-bg{fill:var(--el);opacity:.92}
 .comp-el text{
   fill:#050605;opacity:.92;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
   font-size:5.2px;font-weight:700;letter-spacing:.05px;
 }
 .comp-el.on text{fill:#050605;opacity:.98}
 .el-seg{fill:var(--el);stroke:none}
-/* Unenergized EL phosphor is visible as a neutral gray physical trace.
-   Keep it slightly lighter than the EL glass and fully opaque so it does not
-   inherit a green cast by alpha-blending the energized phosphor color. */
-.el-seg.off{fill:#737373;opacity:1}
 .el-seg.on{fill:var(--el);opacity:.92}
 /* Lower EL voltage reduces light output while preserving the phosphor hue. */
 .dim .el-seg.on,.dim .el-legend-bg,.dim .el-rule,.dim .comp-el.on .el-comp-bg{opacity:.62}

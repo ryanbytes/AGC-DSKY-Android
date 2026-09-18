@@ -35,5 +35,6 @@ assert(apple.includes('configuration.userContentController.add(self, name: "Prin
 assert(apple.includes('window.webkit.messageHandlers.PrintBridge.postMessage'), 'Apple PrintBridge JavaScript shim missing');
 assert(apple.includes('width: 5.5 * 72.0, height: 8.0 * 72.0'), 'Apple checklist print media must be 5.5 x 8 inches');
 assert(apple.includes('removeScriptMessageHandler(forName: "PrintBridge")'), 'Apple PrintBridge must be removed during teardown');
-assert(style.includes('.el-seg.off{fill:#737373;opacity:1}'), 'unlit EL elements must be neutral gray');
+assert(!style.includes('.el-seg.off'), 'unlit numeric EL segments must not have a visible style');
+assert(style.includes('.comp-el:not(.on){display:none}'), 'de-energized COMP ACTY EL must render nothing');
 console.log('cheat sheet smoke: PASS');

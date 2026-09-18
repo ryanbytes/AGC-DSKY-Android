@@ -137,7 +137,8 @@ for (const marker of [
 if (!checklistCss.includes('size:5.5in 8in')) fail('checklist print page must be Apollo 5.5 x 8 inch size');
 if (!checklistCss.includes('@media print')) fail('checklist print stylesheet missing');
 if (!checklistCss.includes('.cheat-pane{\n    display:block!important;')) fail('print stylesheet must include every checklist section');
-if (!sharedStyle.includes('.el-seg.off{fill:#737373;opacity:1}')) fail('unlit EL elements must be neutral gray');
+if (sharedStyle.includes('.el-seg.off')) fail('unlit numeric EL segments must not have a visible style');
+if (!sharedStyle.includes('.comp-el:not(.on){display:none}')) fail('de-energized COMP ACTY EL must render nothing');
 
 const privacy = text('PRIVACY_POLICY.txt');
 for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=off', 'Ambient light sensor']) {
@@ -170,4 +171,4 @@ console.log('Android browser fullscreen touch fallback: PASS');
 console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
 console.log('Ambient-light / solar-location auto dimming: PASS');
 console.log('Analytics client: PASS');
-console.log('Apollo checklist print / neutral EL parity: PASS');
+console.log('Apollo checklist print / fully dark unlit EL parity: PASS');

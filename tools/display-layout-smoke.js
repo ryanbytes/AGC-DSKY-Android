@@ -106,6 +106,10 @@ assert(STYLE.includes('.comp-el{filter:url(#elGlow)}'),
   'COMP ACTY glow must remain enabled');
 assert(STYLE.includes('.el-field .el-seg.on{filter:url(#elGlow)}'),
   'numeric EL glow must be scoped to energized segments');
+assert(!STYLE.includes('.el-seg.off'),
+  'unlit numeric EL segments must not have a visible style');
+assert(STYLE.includes('.comp-el:not(.on){display:none}'),
+  'de-energized COMP ACTY EL must render nothing');
 
 assert(CM.includes('Alarm/status indicator, SCD 1006387C'),
   'annunciator SCD fidelity block missing');
