@@ -84,7 +84,7 @@ assert(written.includes('width:8.10in!important')&&written.includes('height:10.6
 assert(written.includes('transform:translate(-50%,-50%) rotate(90deg)!important'),'Android model cards must be centered and rotated inside fixed slots');
 
 for(const sheet of [1,2,3])assert(written.includes('data-model-sheet="'+sheet+'"'),'missing explicit print sheet '+sheet);
-assert((written.match(/class="pwa-model-sheet/g)||[]).length===3,'five checklist pages must create exactly three physical sheets');
+assert((written.match(/class="pwa-model-sheet(?: single)?"/g)||[]).length===3,'five checklist pages must create exactly three physical sheets');
 assert((written.match(/class="pwa-model-slot"/g)||[]).length===5,'all five checklist pages must get a fixed physical slot');
 assert(written.includes('class="pwa-model-sheet single" data-model-sheet="3"'),'last one-page sheet must center its lone model card');
 
