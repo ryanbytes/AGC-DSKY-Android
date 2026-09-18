@@ -5,6 +5,8 @@ const path = require('path');
 const js = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/cheatsheet.js'), 'utf8');
 const css = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/cheatsheet.css'), 'utf8');
 const activity = fs.readFileSync(path.resolve(__dirname, '../app/src/main/java/org/apollo/agcdsky/MainActivity.java'), 'utf8');
+const apple = fs.readFileSync(path.resolve(__dirname, '../apple/Sources/AGCWebView.swift'), 'utf8');
+const style = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/style.css'), 'utf8');
 function assert(ok, msg) { if (!ok) throw new Error(msg); }
 const headStart = js.indexOf('<div class="cheat-head" id="cheat-drag">');
 const tabsStart = js.indexOf('<div class="cheat-tabs">');
@@ -25,4 +27,9 @@ assert(activity.includes('new PrintAttributes.MediaSize('), 'native custom check
 assert(activity.includes('"APOLLO_CHECKLIST_5_5X8","Apollo Checklist 5.5 x 8 in",5500,8000'), 'native checklist media size must be 5.5 x 8 inches');
 assert(activity.includes('addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge")'), 'PrintBridge must be installed on the WebView');
 assert(activity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","PrintBridge")'), 'PrintBridge must be removed during WebView teardown');
+assert(apple.includes('configuration.userContentController.add(self, name: "PrintBridge")'), 'Apple PrintBridge must be installed');
+assert(apple.includes('window.webkit.messageHandlers.PrintBridge.postMessage'), 'Apple PrintBridge JavaScript shim missing');
+assert(apple.includes('width: 5.5 * 72.0, height: 8.0 * 72.0'), 'Apple checklist print media must be 5.5 x 8 inches');
+assert(apple.includes('removeScriptMessageHandler(forName: "PrintBridge")'), 'Apple PrintBridge must be removed during teardown');
+assert(style.includes('.el-seg.off{fill:#737373;opacity:1}'), 'unlit EL elements must be neutral gray');
 console.log('cheat sheet smoke: PASS');
