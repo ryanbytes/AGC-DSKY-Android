@@ -339,12 +339,13 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   .cheat-actions{display:none!important}
 
   /* Letter landscape leaves a 10.5 x 8.0 in printable area at .25 in margins.
-     Two 5.15 x 7.75 in portrait cutouts plus a .20 in cutting gutter fit
-     exactly across the sheet and preserve the original checklist proportions. */
+     Two 5.15 x 7.50 in portrait cutouts plus a .20 in cutting gutter fit
+     exactly across the sheet. Their 0.687 aspect ratio nearly matches the
+     original Apollo 5.5 x 8 in checklist page while leaving safe top/bottom room. */
   .cheat-body{
     display:grid!important;
     grid-template-columns:repeat(2,5.15in)!important;
-    grid-auto-rows:7.75in!important;
+    grid-auto-rows:7.50in!important;
     column-gap:.20in!important;
     row-gap:0!important;
     justify-content:center!important;
@@ -360,7 +361,7 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     position:relative!important;
     box-sizing:border-box!important;
     width:5.15in!important;
-    height:7.75in!important;
+    height:7.50in!important;
     min-height:0!important;
     margin:0!important;
     padding:.15in .14in .27in .22in!important;
