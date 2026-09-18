@@ -24,7 +24,7 @@ assert(js.includes('id="cheat-print"'), 'print button missing from checklist hea
 assert(js.includes("PrintBridge.printChecklist()"), 'checklist print button must invoke native print bridge');
 assert(css.includes('size:Letter landscape'), 'model checklist must print on US Letter landscape');
 assert(css.includes('grid-template-columns:repeat(2,5.15in)!important'), 'model checklist must impose two large portrait pages across landscape Letter');
-assert(css.includes('grid-auto-rows:7.75in!important'), 'model checklist mini pages must preserve a tall near-original proportion');
+assert(css.includes('grid-auto-rows:7.50in!important'), 'model checklist mini pages must preserve a tall near-original proportion');
 assert(css.includes('.cheat-pane:nth-child(2n+1):not(:first-child)'), 'model checklist must start a new sheet after two cut-out pages');
 assert(css.includes('column-gap:.20in!important'), 'model checklist must reserve a center cutting gutter');
 assert(css.includes('PAGE 1 / 5 · CUT ON DASHED GUIDE') && css.includes('PAGE 5 / 5 · CUT ON DASHED GUIDE'), 'model checklist must print page-numbered cut footers');
