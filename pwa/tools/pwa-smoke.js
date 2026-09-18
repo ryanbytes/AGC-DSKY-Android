@@ -135,7 +135,12 @@ for (const marker of [
   "clone.querySelectorAll('[data-cheat-check]')",
   "box.setAttribute('checked', '')",
   'PRINT / SAVE PDF',
-  '2 LARGE CHECKLIST PAGES PER LANDSCAPE LETTER SHEET',
+  'ANDROID PRINT FIX · 2 LARGE CHECKLIST PAGES FILL EACH LETTER SHEET',
+  'pwa-android-imposed',
+  '@page{size:Letter portrait;margin:.20in}',
+  'grid-auto-rows:5.20in!important',
+  'height:7.70in!important',
+  'transform:rotate(90deg)!important',
   "new URL('cheatsheet.css', location.href)"
 ]) {
   if (!pwaPrint.includes(marker)) fail('PWA checklist print bridge missing ' + marker);
@@ -194,4 +199,4 @@ console.log('Android browser fullscreen touch fallback: PASS');
 console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
 console.log('Ambient-light / solar-location auto dimming: PASS');
 console.log('Analytics client: PASS');
-console.log('Apollo Letter landscape 2-up model checklist / dark EL + persistent COMP legend parity: PASS');
+console.log('Apollo Letter landscape model checklist + Android portrait-driver imposition / dark EL + persistent COMP legend parity: PASS');
