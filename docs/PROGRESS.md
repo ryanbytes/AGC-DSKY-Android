@@ -362,3 +362,30 @@ Do not upgrade any unchecked item to verified without actual output from that ex
 ## Build policy
 
 Builds remain local/manual. Do not add or use GitHub Actions, Codespaces, or another hosted build service for this project unless the owner explicitly changes that policy. Never substitute APK surgery/repacking for a real Gradle build.
+
+## 2026-09-18 checklist / EL cross-platform parity
+
+Current branch now carries the same checklist and EL presentation intent across Android, Apple, and PWA/web:
+
+- unenergized EL digit/sign segments render as opaque neutral gray `#737373`, slightly lighter than the EL glass, instead of low-opacity green phosphor;
+- energized EL remains the source-backed `#79EF4F` phosphor approximation;
+- the in-app checklist header has a PRINT action;
+- the shared print stylesheet expands every checklist section and requests 5.5 × 8 inch pages;
+- Android installs a `PrintBridge` JavaScript interface and uses `PrintManager` with a 5500 × 8000 mil custom media size;
+- Apple installs a WKScriptMessageHandler named `PrintBridge`; iOS/iPadOS prints through `UIPrintInteractionController` and macOS through `NSPrintOperation`, both using the same 5.5 × 8 inch geometry;
+- PWA/web keeps the shared PRINT button and falls back to `window.print()`; the PWA build copies the shared assets byte-for-byte and its smoke test now checks the print markers, Apollo page size, and neutral-gray unlit EL rule;
+- `tools/cheatsheet-smoke.js` now guards Android + Apple bridge installation/teardown, 5.5 × 8 inch media geometry, print-all-sections CSS, and neutral unlit EL color.
+
+Verification performed in this environment:
+
+- [x] changed shared JavaScript parses successfully;
+- [x] changed shared CSS has balanced structure;
+- [x] updated PWA smoke JavaScript parses successfully;
+- [x] Apple source contains the expected native print bridge and 5.5 × 8 inch media geometry;
+- [ ] Apple source has been compiled with Xcode at this exact revision;
+- [ ] PWA `build-site.sh` has been executed at this exact revision;
+- [ ] Android canonical Gradle build has completed at this exact revision;
+- [ ] Android native print flow has been exercised on-device;
+- [ ] iPhone/iPad/macOS native print flow has been exercised on-device.
+
+The File Store contains Android SDK/build-tools/signing material used for test-package work, but there is still no complete current recursive checkout plus offline Android Gradle Plugin 9.3.0 cache in the execution container. Do not call this a canonical source build until `bash tools/build-local.sh` succeeds from the exact branch HEAD.
