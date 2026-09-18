@@ -48,12 +48,9 @@ self.addEventListener('activate', event => {
         keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
           .map(key => caches.delete(key))
       ))
+      // Claim open pages without forcibly navigating them. A service-worker
+      // update must never create a reload loop while the DSKY is running.
       .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({type:'window', includeUncontrolled:true}))
-      .then(clients => Promise.all(clients.map(client => {
-        try { return client.navigate(client.url); }
-        catch (_) { return null; }
-      })))
   );
 });
 

@@ -97,8 +97,10 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
   font-size:5.1px;font-weight:700;letter-spacing:.22px;
 }
 .el-rule{stroke:var(--el);stroke-width:2.05;stroke-linecap:round;opacity:.88}
-.comp-el:not(.on){display:none}
-.el-comp-bg{fill:var(--el);opacity:.92}
+/* COMP ACTY lettering is screen-printed and remains visible when the EL
+   section is dark. Only the energized background phosphor disappears. */
+.el-comp-bg{fill:var(--el);opacity:0}
+.comp-el.on .el-comp-bg{opacity:.92}
 .comp-el text{
   fill:#050605;opacity:.92;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
   font-size:5.2px;font-weight:700;letter-spacing:.05px;

@@ -43,14 +43,14 @@
   const BAR_CENTER_Y=BAR_FROM_BOTTOM_IN.map(v=>(FACE_H_IN-v)*U);
   const REGISTER_Y=BAR_CENTER_Y.map(c=>c+(BAR_H_IN*.5+REGISTER_GAP_IN)*U);
 
-  function segment(name,on){
+  function segment(name){
     const sourceName=SOURCE_FOR_LOGICAL[name];
-    return `<path class="el-seg ${on?'on':'off'}" data-seg="${name}" d="${SOURCE[sourceName]}"/>`;
+    return `<path class="el-seg on" data-seg="${name}" d="${SOURCE[sourceName]}"/>`;
   }
 
   function apolloGlyph(ch,x){
     const lit=renderer.segmentPattern(ch);
-    const paths=['a','b','c','d','e','f','g'].map(name=>segment(name,lit.includes(name))).join('');
+    const paths=Array.from(lit).map(segment).join('');
     return `<g class="el-glyph" transform="translate(${Number(x).toFixed(3)} 0) scale(${MM_TO_U.toFixed(6)}) translate(${-DATUM_X.toFixed(6)} ${-SRC_Y})"><g transform="matrix(-1 0 0 1 ${MIRROR_X.toFixed(6)} 0)">${paths}</g></g>`;
   }
 
@@ -60,10 +60,14 @@
   const SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)*.5;
   const SIGN_HY=SIGN_TOP+SIGN_A_H+SIGN_GAP;
   const SIGN_LOWER_Y=SIGN_HY+SIGN_T+SIGN_GAP;
-  function signB(on){return `<path class="el-seg ${on?'on':'off'}" data-sign-seg="B" d="M ${SIGN_X.toFixed(3)},${SIGN_HY.toFixed(3)} h ${SIGN_W.toFixed(3)} v ${SIGN_T.toFixed(3)} h ${(-SIGN_W).toFixed(3)} z"/>`;}
+  function signB(on){
+    if(!on)return '';
+    return `<path class="el-seg on" data-sign-seg="B" d="M ${SIGN_X.toFixed(3)},${SIGN_HY.toFixed(3)} h ${SIGN_W.toFixed(3)} v ${SIGN_T.toFixed(3)} h ${(-SIGN_W).toFixed(3)} z"/>`;
+  }
   function signA(on){
-    const top=`<path class="el-seg ${on?'on':'off'}" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_TOP.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
-    const bottom=`<path class="el-seg ${on?'on':'off'}" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_LOWER_Y.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
+    if(!on)return '';
+    const top=`<path class="el-seg on" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_TOP.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
+    const bottom=`<path class="el-seg on" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_LOWER_Y.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
     return top+bottom;
   }
   function apolloSignGlyph(sign){const a=sign==='+',b=a||sign==='-';return `<g class="el-sign">${signA(a)}${signB(b)}</g>`;}
