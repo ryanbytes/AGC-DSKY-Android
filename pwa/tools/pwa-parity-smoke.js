@@ -60,7 +60,7 @@ for (const rel of sourceFiles) {
   if (!sw.includes(`'./${rel}'`)) fail(`shared asset is not available offline: ${rel}`);
 }
 
-for (const rel of ['pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'clock-behavior-v2.js', 'analytics.js', 'manifest.webmanifest', 'yaAGC.wasm', 'Comanche055.bin']) {
+for (const rel of ['pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'pwa-print-bridge.js', 'clock-behavior-v2.js', 'analytics.js', 'manifest.webmanifest', 'yaAGC.wasm', 'Comanche055.bin']) {
   if (!sw.includes(`'./${rel}'`)) fail(`PWA-only runtime asset is not available offline: ${rel}`);
 }
 

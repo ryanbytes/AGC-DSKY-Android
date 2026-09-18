@@ -11,7 +11,7 @@ const text = rel => read(rel).toString('utf8');
 const exists = rel => fs.existsSync(path.join(site, rel));
 
 for (const rel of [
-  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'analytics.js', 'sw.js',
+  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-print-bridge.js', 'analytics.js', 'sw.js',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'PRIVACY_POLICY.txt', 'yaAGC.wasm', 'Comanche055.bin'
 ]) {
@@ -25,6 +25,7 @@ for (const marker of [
   'apple-touch-icon',
   '<script src="pwa-sensor-parity.js"></script>',
   '<script src="pwa-auto-dim.js"></script>',
+  '<script src="pwa-print-bridge.js"></script>',
   '<script src="pwa-bootstrap.js"></script>',
   '<script src="analytics.js"></script>'
 ]) {
@@ -126,7 +127,21 @@ if (!analytics.includes("credentials: 'omit'")) fail('analytics client must omit
 
 const checklistJs = text('cheatsheet.js');
 const checklistCss = text('cheatsheet.css');
+const pwaPrint = text('pwa-print-bridge.js');
 const sharedStyle = text('style.css');
+for (const marker of [
+  'window.PrintBridge = bridge',
+  "window.open('', '_blank')",
+  "clone.querySelectorAll('[data-cheat-check]')",
+  "box.setAttribute('checked', '')",
+  'PRINT / SAVE PDF',
+  'ANDROID: use the browser menu',
+  "new URL('cheatsheet.css', location.href)"
+]) {
+  if (!pwaPrint.includes(marker)) fail('PWA checklist print bridge missing ' + marker);
+}
+try { new Function(pwaPrint); }
+catch (error) { fail('pwa-print-bridge.js syntax error: ' + error.message); }
 for (const marker of [
   'id="cheat-print"',
   "PrintBridge.printChecklist()",
@@ -150,7 +165,7 @@ const sw = text('sw.js');
 if (sw.includes('__CACHE_VERSION__')) fail('service-worker cache version was not stamped');
 if (sw.includes('client.navigate(')) fail('service-worker activation must not forcibly navigate open DSKY pages');
 if (!sw.includes('.then(() => self.clients.claim())')) fail('service worker must still claim clients after activation');
-for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'analytics.js']) {
+for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-print-bridge.js', 'analytics.js']) {
   if (!sw.includes(`'./${required}'`)) fail('service worker does not pre-cache ' + required);
 }
 
@@ -174,4 +189,4 @@ console.log('Android browser fullscreen touch fallback: PASS');
 console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
 console.log('Ambient-light / solar-location auto dimming: PASS');
 console.log('Analytics client: PASS');
-console.log('Apollo checklist print / dark EL + persistent COMP legend parity: PASS');
+console.log('Apollo checklist print bridge / dark EL + persistent COMP legend parity: PASS');
