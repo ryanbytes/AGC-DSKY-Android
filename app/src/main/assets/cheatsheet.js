@@ -118,24 +118,36 @@
     if(r.top<2)dy=2-r.top;if(r.bottom>innerHeight-2)dy=(innerHeight-2)-r.bottom;
     pos.x+=dx;pos.y+=dy;applyPos();savePos();
   }
-  function open(){sheet.classList.add('open');sheet.classList.remove('minimized');const min=document.getElementById('cheat-min');if(min)min.textContent='MIN';requestAnimationFrame(()=>{fitAboveDsky();clampPos()})}
-  function close(){dragging=false;sheet.classList.remove('open','minimized');const min=document.getElementById('cheat-min');if(min)min.textContent='MIN'}
+  function animateDskyReflow(change){
+    const d=document.getElementById('dsky'),before=d?d.getBoundingClientRect():null;
+    change();
+    if(!d||!before)return;
+    requestAnimationFrame(()=>{
+      const after=d.getBoundingClientRect(),dy=before.top-after.top;
+      if(Math.abs(dy)<1)return;
+      d.style.transition='none';d.style.transform=`translateY(${dy}px)`;void d.offsetHeight;
+      d.style.transition='transform 220ms ease';
+      requestAnimationFrame(()=>{d.style.transform='';setTimeout(()=>d.style.removeProperty('transition'),240)});
+    });
+  }
+  function open(){animateDskyReflow(()=>{document.body.classList.add('cheatsheet-open');sheet.classList.add('open');sheet.classList.remove('minimized')});const min=document.getElementById('cheat-min');if(min)min.textContent='MIN'}
+  function close(){dragging=false;animateDskyReflow(()=>{document.body.classList.remove('cheatsheet-open');sheet.classList.remove('open','minimized')});const min=document.getElementById('cheat-min');if(min)min.textContent='MIN'}
   function init(){
-    document.body.insertAdjacentHTML('beforeend',markup());sheet=document.getElementById('agc-cheat-sheet');loadChecks();loadPos();
+    const dsky=document.getElementById('dsky');if(!dsky)return;dsky.insertAdjacentHTML('afterend',markup());sheet=document.getElementById('agc-cheat-sheet');loadChecks();loadPos();
     const launch=document.getElementById('cheat');if(launch)launch.addEventListener('click',()=>sheet.classList.contains('open')?close():open());
     document.getElementById('cheat-close').addEventListener('click',e=>{e.stopPropagation();close()});
-    document.getElementById('cheat-min').addEventListener('click',e=>{e.stopPropagation();sheet.classList.toggle('minimized');e.currentTarget.textContent=sheet.classList.contains('minimized')?'OPEN':'MIN';requestAnimationFrame(clampPos)});
+    document.getElementById('cheat-min').addEventListener('click',e=>{e.stopPropagation();const minimizing=!sheet.classList.contains('minimized');animateDskyReflow(()=>{sheet.classList.toggle('minimized',minimizing);document.body.classList.toggle('cheatsheet-open',!minimizing)});e.currentTarget.textContent=minimizing?'OPEN':'MIN'});
     document.getElementById('cheat-reset').addEventListener('click',()=>{sheet.querySelectorAll('[data-cheat-check]').forEach(c=>c.checked=false);saveChecks()});
     sheet.addEventListener('change',e=>{if(e.target.matches('[data-cheat-check]'))saveChecks()});
     sheet.querySelectorAll('[data-cheat-tab]').forEach(b=>b.addEventListener('click',()=>{
       const t=b.dataset.cheatTab;sheet.querySelectorAll('[data-cheat-tab]').forEach(x=>x.classList.toggle('active',x===b));sheet.querySelectorAll('[data-cheat-pane]').forEach(p=>p.classList.toggle('active',p.dataset.cheatPane===t));
     }));
     const head=document.getElementById('cheat-drag');
-    head.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;dragging=true;dragStart={x:e.clientX,y:e.clientY,px:pos.x,py:pos.y};head.setPointerCapture(e.pointerId);e.preventDefault()});
+    head.addEventListener('pointerdown',e=>{if(document.body.classList.contains('cheatsheet-open')||e.target.closest('button'))return;dragging=true;dragStart={x:e.clientX,y:e.clientY,px:pos.x,py:pos.y};head.setPointerCapture(e.pointerId);e.preventDefault()});
     head.addEventListener('pointermove',e=>{if(!dragging)return;pos.x=dragStart.px+e.clientX-dragStart.x;pos.y=dragStart.py+e.clientY-dragStart.y;applyPos();e.preventDefault()});
     head.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;try{head.releasePointerCapture(e.pointerId)}catch(_){};clampPos()});
     head.addEventListener('pointercancel',()=>{dragging=false;clampPos()});
-    addEventListener('resize',()=>requestAnimationFrame(()=>{fitAboveDsky();clampPos()}));
+    addEventListener('resize',()=>{if(!document.body.classList.contains('cheatsheet-open'))requestAnimationFrame(()=>{fitAboveDsky();clampPos()})});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
