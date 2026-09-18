@@ -281,9 +281,9 @@ body.screen-only #agc-cheat-sheet{display:none!important}
 }
 
 
-/* Model-checklist print layout: two near-original-proportion cut-out
-   checklist pages side by side on standard US Letter landscape. This shared
-   stylesheet is used by web/PWA, Android, iOS and macOS. */
+/* Model-checklist print layout: Letter landscape fits two near-original-size
+   portrait checklist pages side-by-side. Each cutout stays close to the Apollo
+   5.5 x 8 in page proportion, so type can remain readable after cutting. */
 @page{
   size:Letter landscape;
   margin:.25in;
@@ -329,7 +329,7 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     transform:none!important;
     background:#fff!important;
     color:#111!important;
-    font:700 7.25pt/1.20 "Courier New","Liberation Mono",monospace!important;
+    font:700 7.15pt/1.20 "Courier New","Liberation Mono",monospace!important;
     touch-action:auto!important;
   }
   #agc-cheat-sheet::before,
@@ -338,34 +338,34 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   .cheat-tabs,
   .cheat-actions{display:none!important}
 
-  /* Letter landscape has a 10.5 x 8.0 in usable area at .25 in margins.
-     Two 5.15 x 7.50 in mini pages preserve the tall checklist proportion,
-     leave a center cutting gutter and stay substantially more readable than
-     the previous 4-up portrait layout. */
+  /* Letter landscape leaves a 10.5 x 8.0 in printable area at .25 in margins.
+     Two 5.15 x 7.75 in portrait cutouts plus a .20 in cutting gutter fit
+     exactly across the sheet and preserve the original checklist proportions. */
   .cheat-body{
     display:grid!important;
     grid-template-columns:repeat(2,5.15in)!important;
-    grid-auto-rows:7.50in!important;
-    column-gap:.14in!important;
+    grid-auto-rows:7.75in!important;
+    column-gap:.20in!important;
     row-gap:0!important;
     justify-content:center!important;
-    align-content:start!important;
+    align-content:center!important;
     overflow:visible!important;
     min-height:0!important;
     margin:0!important;
-    padding:.18in 0 0!important;
+    padding:0!important;
     background:#fff!important;
   }
   .cheat-pane{
     display:block!important;
+    position:relative!important;
     box-sizing:border-box!important;
     width:5.15in!important;
-    height:7.50in!important;
+    height:7.75in!important;
     min-height:0!important;
     margin:0!important;
-    padding:.13in .13in .15in .20in!important;
+    padding:.15in .14in .27in .22in!important;
     overflow:hidden!important;
-    border:.8pt solid #222!important;
+    border:.85pt solid #222!important;
     outline:.45pt dashed #888!important;
     outline-offset:.045in!important;
     background:#fff!important;
@@ -380,18 +380,31 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   }
   .cheat-pane::before{
     display:block!important;
-    margin:0 0 .065in!important;
-    padding:0 0 .04in!important;
+    margin:0 0 .075in!important;
+    padding:0 0 .045in!important;
     border-bottom:1pt solid #111!important;
-    font:900 8.8pt/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif!important;
-    letter-spacing:.06em!important;
+    font:900 8.7pt/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif!important;
+    letter-spacing:.065em!important;
     color:#000!important;
   }
-  .cheat-pane[data-cheat-pane="p51"]::before{content:"P51 TEST"}
-  .cheat-pane[data-cheat-pane="p51real"]::before{content:"P51 REAL SKY"}
-  .cheat-pane[data-cheat-pane="quick"]::before{content:"QUICK REFERENCE"}
-  .cheat-pane[data-cheat-pane="sxt"]::before{content:"SEXTANT"}
-  .cheat-pane[data-cheat-pane="verify"]::before{content:"VERIFY / TEST"}
+  .cheat-pane::after{
+    position:absolute!important;
+    right:.13in!important;
+    bottom:.09in!important;
+    color:#444!important;
+    font:700 5.8pt/1 "Courier New","Liberation Mono",monospace!important;
+    letter-spacing:.04em!important;
+  }
+  .cheat-pane[data-cheat-pane="p51"]::before{content:"CMC / DSKY QUICK REFERENCE · P51 TEST"}
+  .cheat-pane[data-cheat-pane="p51real"]::before{content:"CMC / DSKY QUICK REFERENCE · P51 REAL SKY"}
+  .cheat-pane[data-cheat-pane="quick"]::before{content:"CMC / DSKY QUICK REFERENCE · QUICK"}
+  .cheat-pane[data-cheat-pane="sxt"]::before{content:"CMC / DSKY QUICK REFERENCE · SEXTANT"}
+  .cheat-pane[data-cheat-pane="verify"]::before{content:"CMC / DSKY QUICK REFERENCE · VERIFY / TEST"}
+  .cheat-pane[data-cheat-pane="p51"]::after{content:"PAGE 1 / 5 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="p51real"]::after{content:"PAGE 2 / 5 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="quick"]::after{content:"PAGE 3 / 5 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="sxt"]::after{content:"PAGE 4 / 5 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="verify"]::after{content:"PAGE 5 / 5 · CUT ON DASHED GUIDE"}
   .cheat-step,.cheat-row{
     break-inside:avoid!important;
     page-break-inside:avoid!important;
@@ -399,16 +412,16 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   }
   .cheat-step{
     display:grid!important;
-    grid-template-columns:.17in minmax(0,1fr)!important;
+    grid-template-columns:.16in minmax(0,1fr)!important;
     gap:.045in!important;
     align-items:start!important;
-    padding:.043in .01in!important;
+    padding:.043in .012in!important;
   }
   .cheat-step input{
     appearance:none!important;
     -webkit-appearance:none!important;
-    width:.125in!important;
-    height:.125in!important;
+    width:.12in!important;
+    height:.12in!important;
     margin:.006in 0 0!important;
     border:.95pt solid #111!important;
     background:#fff!important;
@@ -419,15 +432,15 @@ body.screen-only #agc-cheat-sheet{display:none!important}
       linear-gradient(-45deg,transparent 43%,#111 44% 56%,transparent 57%),
       #fff!important;
   }
-  .cheat-row{padding:.052in .01in!important}
-  .cheat-step code,.cheat-code{font-size:7.15pt!important;color:#000!important}
+  .cheat-row{padding:.052in .012in!important}
+  .cheat-step code,.cheat-code{font-size:7.05pt!important;color:#000!important}
   .cheat-key{
     padding:.45pt 2.7pt!important;
     border:.75pt solid #111!important;
     background:#222!important;
     color:#fff!important;
-    font-size:6.25pt!important;
+    font-size:6.1pt!important;
     box-shadow:none!important;
   }
-  .cheat-muted{font-size:6.35pt!important;color:#333!important}
+  .cheat-muted{font-size:6.25pt!important;color:#333!important}
 }
