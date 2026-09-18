@@ -29,6 +29,16 @@
     return /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && touch > 1);
   }
 
+  function isBraveBrowser() {
+    const ua = String(navigator.userAgent || '');
+    return !!navigator.brave || /(?:^|\s)Brave(?:\/|\s|$)/.test(ua);
+  }
+
+  status.browser = isAppleMobileWebKit()
+    ? (isBraveBrowser() ? 'brave-ios' : 'webkit-ios')
+    : (isBraveBrowser() ? 'brave' : 'other');
+  status.sensorBlock = null;
+
   function publish() {
     try {
       window.dispatchEvent(new CustomEvent('agcdsky-pwa-status', {detail: {...api}}));
@@ -90,6 +100,7 @@
     if (!motionStarted) {
       motionStarted = true;
       status.motion = 'active';
+      if (status.sensorBlock === 'brave-ios-motion-denied') status.sensorBlock = null;
       if (typeof dsky.nativePipaSensorStatus === 'function') dsky.nativePipaSensorStatus('web-device-motion', true);
       publish();
     }
@@ -122,6 +133,7 @@
     if (!absoluteStarted) {
       absoluteStarted = true;
       status.absoluteOrientation = 'active';
+      if (status.sensorBlock === 'brave-ios-motion-denied') status.sensorBlock = null;
       if (typeof dsky.nativeMagneticSensorStatus === 'function') dsky.nativeMagneticSensorStatus('web-absolute-orientation', true, true);
       publish();
     }
@@ -187,6 +199,11 @@
       } else if (!orientationAllowed && status.absoluteOrientation !== 'active') {
         status.absoluteOrientation = status.orientation;
       }
+
+      status.sensorBlock =
+        appleWebKitCompass && isBraveBrowser() && orientationState === 'denied'
+          ? 'brave-ios-motion-denied'
+          : null;
 
       publish();
       return {...status};
