@@ -23,12 +23,13 @@ assert(css.includes('overflow-x:auto'), 'tabs must scroll instead of pushing clo
 assert(js.includes('id="cheat-print"'), 'print button missing from checklist header');
 assert(js.includes("PrintBridge.printChecklist()"), 'checklist print button must invoke native print bridge');
 assert(css.includes('size:Letter landscape'), 'model checklist must print on US Letter landscape');
-assert(css.includes('grid-template-columns:repeat(2,5.15in)!important'), 'model checklist must impose two large portrait pages across landscape Letter');
-assert(css.includes('grid-auto-rows:7.50in!important'), 'model checklist mini pages must preserve a tall near-original proportion');
-assert(css.includes('.cheat-pane:nth-child(2n+1):not(:first-child)'), 'model checklist must start a new sheet after two cut-out pages');
-assert(css.includes('column-gap:.20in!important'), 'model checklist must reserve a center cutting gutter');
+assert(css.includes('grid-template-columns:repeat(2,5.10in)!important'), 'model checklist must impose two compact landscape cards across Letter');
+assert(css.includes('grid-auto-rows:3.80in!important'), 'model checklist cards must use compact equal heights');
+assert(css.includes('.cheat-pane:nth-child(4n+1):not(:first-child)'), 'model checklist must start a new sheet after four cut-out cards');
+assert(css.includes('gap:.15in!important'), 'model checklist must reserve compact cutting gutters');
+assert(css.includes('width:5.10in!important') && css.includes('height:3.80in!important'), 'model checklist compact card dimensions missing');
 assert(css.includes('PAGE 1 / 5 · CUT ON DASHED GUIDE') && css.includes('PAGE 5 / 5 · CUT ON DASHED GUIDE'), 'model checklist must print page-numbered cut footers');
-assert(css.includes('outline:.45pt dashed #888!important'), 'model checklist must include visible cut guides');
+assert(css.includes('outline:.4pt dashed #888!important'), 'model checklist must include visible cut guides');
 assert(activity.includes('PrintAttributes.MediaSize.NA_LETTER.asLandscape()'), 'legacy Android checklist must request Letter landscape media');
 assert(activity.includes('addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge")'), 'PrintBridge must be installed on the WebView');
 assert(activity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","PrintBridge")'), 'legacy activity PrintBridge must be removed during WebView teardown');
