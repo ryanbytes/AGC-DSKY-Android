@@ -37,7 +37,8 @@ assert(sensorActivity.includes('PrintAttributes.MediaSize.NA_LETTER.asLandscape(
 assert(sensorActivity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","PrintBridge")'), 'real Android launcher must remove PrintBridge during teardown');
 assert(apple.includes('configuration.userContentController.add(self, name: "PrintBridge")'), 'Apple PrintBridge must be installed');
 assert(apple.includes('window.webkit.messageHandlers.PrintBridge.postMessage'), 'Apple PrintBridge JavaScript shim missing');
-assert(apple.includes('width: 11.0 * 72.0, height: 8.5 * 72.0'), 'Apple checklist print media must be US Letter landscape');
+assert(apple.includes('width: 11.0 * 72.0, height: 8.5 * 72.0'), 'iOS checklist print renderer must be US Letter landscape');
+assert(apple.includes('printInfo.paperSize = NSSize(width: 8.5 * 72.0, height: 11.0 * 72.0)'), 'macOS must use standard US Letter stock');
 assert((apple.match(/orientation = \.landscape/g)||[]).length >= 2, 'iOS and macOS checklist printing must both request landscape orientation');
 assert(apple.includes('printInfo.topMargin = 0') && apple.includes('printInfo.rightMargin = 0'), 'Apple native print margins must defer to shared Letter CSS');
 assert(apple.includes('removeScriptMessageHandler(forName: "PrintBridge")'), 'Apple PrintBridge must be removed during teardown');
