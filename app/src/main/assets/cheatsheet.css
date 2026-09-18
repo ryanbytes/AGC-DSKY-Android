@@ -126,8 +126,8 @@ body.cheat-sheet-open .dsky{
 }
 .cheat-head-actions{display:flex;gap:5px;flex:0 0 auto}
 #cheat-print,#cheat-min,#cheat-close{
-  min-width:42px;
-  min-height:34px;
+  min-width:44px;
+  min-height:36px;
   flex:0 0 auto;
   position:relative;
   z-index:1;
