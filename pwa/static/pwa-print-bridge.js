@@ -20,14 +20,36 @@
     });
     clone.classList.add('open');
     clone.classList.remove('minimized');
-    return clone.outerHTML;
+
+    return {
+      html: clone.outerHTML,
+      panes: Array.from(clone.querySelectorAll('.cheat-pane')).map(pane => pane.outerHTML)
+    };
   }
 
-  function printableDocument(checklistHtml) {
+  function androidSheetMarkup(panes) {
+    if (!panes || !panes.length) return '';
+    const sheets = [];
+    for (let index = 0; index < panes.length; index += 2) {
+      const pair = panes.slice(index, index + 2);
+      const slots = pair.map((pane, slot) =>
+        `<div class="pwa-model-slot" data-model-slot="${slot + 1}">${pane}</div>`
+      ).join('');
+      sheets.push(
+        `<section class="pwa-model-sheet${pair.length === 1 ? ' single' : ''}" data-model-sheet="${Math.floor(index / 2) + 1}">${slots}</section>`
+      );
+    }
+    return `<section id="agc-cheat-sheet" class="open pwa-model-checklist"><div class="pwa-model-sheets">${sheets.join('')}</div></section>`;
+  }
+
+  function printableDocument(snapshot) {
     const cssUrl = new URL('cheatsheet.css', location.href).href;
     const android = isAndroid();
+    const checklistHtml = android && snapshot.panes.length
+      ? androidSheetMarkup(snapshot.panes)
+      : snapshot.html;
     const guidance = android
-      ? 'ANDROID PRINT FIX · 2 LARGE CHECKLIST PAGES FILL EACH LETTER SHEET · the preview may show them sideways; cut on the dashed guides and turn the cards upright.'
+      ? 'ANDROID · 2 LARGE MODEL PAGES PER LETTER SHEET · cut on the dashed guide, rotate each card upright, and stack in page order.'
       : '2 LARGE CHECKLIST PAGES PER LANDSCAPE LETTER SHEET · print or save PDF, then cut on the dashed guides and stack.';
     const autoPrint = android ? '' : "setTimeout(()=>{try{window.print()}catch(_){}},350);";
 
@@ -46,43 +68,77 @@
   #app{display:block!important;width:min(100%,1056px)!important;height:auto!important;margin:12px auto!important;padding:0!important;overflow:visible!important}
   #agc-cheat-sheet{display:block!important;max-height:none!important;overflow:visible!important}
 
-  /* Brave/Chromium on Android may ignore @page landscape and hand the system
-     print service a portrait Letter page. Pack the same portrait checklist
-     cards into that physical page sideways: two 5.20 x 7.70 in cards become
-     7.70 x 5.20 in after rotation and fill almost the entire sheet. */
-  body.pwa-android-imposed #app{width:8.10in!important;margin:10px auto!important}
-  body.pwa-android-imposed #agc-cheat-sheet{width:8.10in!important}
-  body.pwa-android-imposed .cheat-body{
+  /*
+   * Android Chromium/Brave can ignore CSS landscape when handing HTML to the
+   * system print service. Do not depend on a transform to participate in page
+   * layout. Build explicit portrait-Letter sheet boxes instead: each sheet has
+   * two fixed 8.10 x 5.20 in slots. A portrait model page is centered and
+   * rotated inside each slot, so the paginator sees the entire physical sheet.
+   */
+  body.pwa-android-imposed #app{width:8.10in!important;margin:8px auto!important}
+  body.pwa-android-imposed #agc-cheat-sheet{
+    width:8.10in!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    background:#fff!important;
+  }
+  body.pwa-android-imposed .pwa-model-sheets{
+    display:block!important;
+    width:8.10in!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  body.pwa-android-imposed .pwa-model-sheet{
     display:grid!important;
     grid-template-columns:8.10in!important;
-    grid-auto-rows:5.20in!important;
-    gap:.20in 0!important;
-    justify-content:center!important;
-    align-content:start!important;
+    grid-template-rows:5.20in 5.20in!important;
+    row-gap:.20in!important;
     width:8.10in!important;
+    height:10.60in!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    background:#fff!important;
+    break-after:page!important;
+    page-break-after:always!important;
+  }
+  body.pwa-android-imposed .pwa-model-sheet:last-child{
+    break-after:auto!important;
+    page-break-after:auto!important;
+  }
+  body.pwa-android-imposed .pwa-model-sheet.single{
+    grid-template-rows:5.20in!important;
+    align-content:center!important;
+  }
+  body.pwa-android-imposed .pwa-model-slot{
+    position:relative!important;
+    box-sizing:border-box!important;
+    width:8.10in!important;
+    height:5.20in!important;
     margin:0!important;
     padding:0!important;
     overflow:visible!important;
   }
-  body.pwa-android-imposed .cheat-pane{
+  body.pwa-android-imposed .pwa-model-slot>.cheat-pane{
     display:block!important;
+    position:absolute!important;
+    left:50%!important;
+    top:50%!important;
     box-sizing:border-box!important;
     width:5.20in!important;
     height:7.70in!important;
     min-height:0!important;
     margin:0!important;
-    justify-self:center!important;
-    align-self:center!important;
-    transform:rotate(90deg)!important;
+    transform:translate(-50%,-50%) rotate(90deg)!important;
     transform-origin:center center!important;
+    outline-offset:-.04in!important;
     break-before:auto!important;
     page-break-before:auto!important;
+    break-after:auto!important;
+    page-break-after:auto!important;
     break-inside:avoid!important;
     page-break-inside:avoid!important;
-  }
-  body.pwa-android-imposed .cheat-pane:nth-child(2n+1):not(:first-child){
-    break-before:page!important;
-    page-break-before:always!important;
   }
 
   @media print{
@@ -91,9 +147,10 @@
     body.pwa-android-imposed{background:#fff!important}
     body.pwa-android-imposed #app,
     body.pwa-android-imposed #agc-cheat-sheet,
-    body.pwa-android-imposed .cheat-body{width:8.10in!important}
+    body.pwa-android-imposed .pwa-model-sheets,
+    body.pwa-android-imposed .pwa-model-sheet{width:8.10in!important}
   }
-  ${android ? '@page{size:Letter portrait;margin:.20in}' : ''}
+  ${android ? '@page{size:8.5in 11in;margin:.20in}' : ''}
 </style>
 </head>
 <body${android ? ' class="pwa-android-imposed"' : ''}>
@@ -131,7 +188,11 @@ ${autoPrint}
       popup.document.write(printableDocument(snapshot));
       popup.document.close();
       try { popup.focus(); } catch (_) {}
-      pwa.lastChecklistPrint = {ok:true,mode:isAndroid()?'android-print-view':'browser-print-dialog'};
+      pwa.lastChecklistPrint = {
+        ok:true,
+        mode:isAndroid()?'android-explicit-sheet-imposition':'browser-print-dialog',
+        sheets:isAndroid()?Math.ceil(snapshot.panes.length/2):null
+      };
       return true;
     } catch (error) {
       try { popup.close(); } catch (_) {}

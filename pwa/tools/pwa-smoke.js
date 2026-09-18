@@ -135,12 +135,14 @@ for (const marker of [
   "clone.querySelectorAll('[data-cheat-check]')",
   "box.setAttribute('checked', '')",
   'PRINT / SAVE PDF',
-  'ANDROID PRINT FIX · 2 LARGE CHECKLIST PAGES FILL EACH LETTER SHEET',
-  'pwa-android-imposed',
-  '@page{size:Letter portrait;margin:.20in}',
-  'grid-auto-rows:5.20in!important',
-  'height:7.70in!important',
-  'transform:rotate(90deg)!important',
+  'ANDROID · 2 LARGE MODEL PAGES PER LETTER SHEET',
+  'androidSheetMarkup',
+  'pwa-model-sheet',
+  'pwa-model-slot',
+  '@page{size:8.5in 11in;margin:.20in}',
+  'grid-template-rows:5.20in 5.20in!important',
+  'height:10.60in!important',
+  'transform:translate(-50%,-50%) rotate(90deg)!important',
   "new URL('cheatsheet.css', location.href)"
 ]) {
   if (!pwaPrint.includes(marker)) fail('PWA checklist print bridge missing ' + marker);
@@ -199,4 +201,4 @@ console.log('Android browser fullscreen touch fallback: PASS');
 console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
 console.log('Ambient-light / solar-location auto dimming: PASS');
 console.log('Analytics client: PASS');
-console.log('Apollo Letter landscape model checklist + Android portrait-driver imposition / dark EL + persistent COMP legend parity: PASS');
+console.log('Apollo Letter landscape model checklist + Android explicit-sheet imposition / dark EL + persistent COMP legend parity: PASS');
