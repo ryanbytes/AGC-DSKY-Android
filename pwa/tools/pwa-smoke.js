@@ -135,13 +135,15 @@ for (const marker of [
   "clone.querySelectorAll('[data-cheat-check]')",
   "box.setAttribute('checked', '')",
   'PRINT / SAVE PDF',
-  'ANDROID · 2 LARGE MODEL PAGES PER LETTER SHEET',
+  'ANDROID · 4 COMPACT MODEL PAGES PER LETTER SHEET',
   'androidSheetMarkup',
   'pwa-model-sheet',
   'pwa-model-slot',
   '@page{size:8.5in 11in;margin:.20in}',
-  'grid-template-rows:5.20in 5.20in!important',
-  'height:10.60in!important',
+  'grid-template-columns:repeat(2,3.90in)!important',
+  'grid-template-rows:repeat(2,5.20in)!important',
+  'width:5.10in!important',
+  'height:3.80in!important',
   'transform:translate(-50%,-50%) rotate(90deg)!important',
   "new URL('cheatsheet.css', location.href)"
 ]) {
@@ -158,12 +160,12 @@ for (const marker of [
 }
 if (!checklistCss.includes('size:Letter landscape')) fail('checklist print page must use US Letter landscape');
 if (!checklistCss.includes('@media print')) fail('checklist print stylesheet missing');
-if (!checklistCss.includes('grid-template-columns:repeat(2,5.15in)!important')) fail('checklist print must impose two large model pages across');
-if (!checklistCss.includes('grid-auto-rows:7.50in!important')) fail('checklist model pages must preserve tall proportions');
-if (!checklistCss.includes('.cheat-pane:nth-child(2n+1):not(:first-child)')) fail('checklist print must page-break after two model pages');
-if (!checklistCss.includes('column-gap:.20in!important')) fail('checklist print center cutting gutter missing');
+if (!checklistCss.includes('grid-template-columns:repeat(2,5.10in)!important')) fail('checklist print must impose two compact cards across');
+if (!checklistCss.includes('grid-auto-rows:3.80in!important')) fail('checklist compact card height missing');
+if (!checklistCss.includes('.cheat-pane:nth-child(4n+1):not(:first-child)')) fail('checklist print must page-break after four cards');
+if (!checklistCss.includes('gap:.15in!important')) fail('checklist compact cutting gutter missing');
 if (!checklistCss.includes('PAGE 1 / 5 · CUT ON DASHED GUIDE') || !checklistCss.includes('PAGE 5 / 5 · CUT ON DASHED GUIDE')) fail('checklist print page-numbered cut footers missing');
-if (!checklistCss.includes('outline:.45pt dashed #888!important')) fail('checklist print cut guides missing');
+if (!checklistCss.includes('outline:.4pt dashed #888!important')) fail('checklist print cut guides missing');
 if (sharedStyle.includes('.el-seg.off')) fail('unlit numeric EL segments must not have a visible style');
 if (sharedStyle.includes('.comp-el:not(.on){display:none}')) fail('COMP ACTY printed legend must remain visible while de-energized');
 if (!sharedStyle.includes('.el-comp-bg{fill:var(--el);opacity:0}')) fail('de-energized COMP ACTY EL background must be fully dark');
@@ -201,4 +203,4 @@ console.log('Android browser fullscreen touch fallback: PASS');
 console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
 console.log('Ambient-light / solar-location auto dimming: PASS');
 console.log('Analytics client: PASS');
-console.log('Apollo Letter landscape model checklist + Android explicit-sheet imposition / dark EL + persistent COMP legend parity: PASS');
+console.log('Apollo compact four-up model checklist + Android explicit-sheet imposition / dark EL + persistent COMP legend parity: PASS');
