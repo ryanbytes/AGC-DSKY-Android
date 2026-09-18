@@ -70,7 +70,7 @@ public final class MainActivity extends Activity {
         if(manager==null)return;
         PrintDocumentAdapter adapter=view.createPrintDocumentAdapter("Apollo DSKY Checklist");
         PrintAttributes attributes=new PrintAttributes.Builder()
-                .setMediaSize(PrintAttributes.MediaSize.NA_LETTER.asPortrait())
+                .setMediaSize(PrintAttributes.MediaSize.NA_LETTER.asLandscape())
                 .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
                 .setColorMode(PrintAttributes.COLOR_MODE_MONOCHROME)
                 .build();
