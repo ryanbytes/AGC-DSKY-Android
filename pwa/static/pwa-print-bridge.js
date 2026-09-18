@@ -27,8 +27,8 @@
     const cssUrl = new URL('cheatsheet.css', location.href).href;
     const android = isAndroid();
     const guidance = android
-      ? '4 MINI CHECKLIST PAGES PER LETTER SHEET · use browser menu → Share → Print, then cut out and stack.'
-      : '4 MINI CHECKLIST PAGES PER LETTER SHEET · print or save PDF, then cut out and stack.';
+      ? '2 LARGE MODEL PAGES PER LANDSCAPE LETTER SHEET · use browser menu → Share → Print, then cut on the center gutter.'
+      : '2 LARGE MODEL PAGES PER LANDSCAPE LETTER SHEET · print or save PDF, then cut on the center gutter.';
     const autoPrint = android ? '' : "setTimeout(()=>{try{window.print()}catch(_){}},350);";
 
     return `<!doctype html>
@@ -43,7 +43,7 @@
   #pwa-print-toolbar{position:sticky;top:0;z-index:99999;display:flex;align-items:center;gap:10px;padding:10px 12px;background:#171714;color:#f5f0e3;font:700 13px/1.3 Arial,sans-serif}
   #pwa-print-toolbar .copy{flex:1}
   #pwa-print-toolbar button{min-height:42px;padding:8px 12px;border:1px solid #777;background:#f4eedf;color:#111;font-weight:800}
-  #app{display:block!important;width:min(100%,816px)!important;height:auto!important;margin:12px auto!important;padding:0!important;overflow:visible!important}
+  #app{display:block!important;width:min(100%,1056px)!important;height:auto!important;margin:12px auto!important;padding:0!important;overflow:visible!important}
   #agc-cheat-sheet{display:block!important;max-height:none!important;overflow:visible!important}
   @media print{#pwa-print-toolbar{display:none!important}#app{width:auto!important;margin:0!important}}
 </style>
