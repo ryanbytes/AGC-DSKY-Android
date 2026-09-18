@@ -283,7 +283,7 @@
     try{
       // Called synchronously from the STAR FINDER button click so WebKit's
       // transient-activation requirement is still satisfied.
-      const pending=pwa.requestSensorPermissions();
+      const pending=pwa.requestSensorPermissions({absolute:true});
       if(pending&&typeof pending.finally==='function')pending.finally(()=>{if(finderEnabled)updateStarFinder()});
       return pending;
     }catch(_){return null}
@@ -368,7 +368,7 @@
       const webStatus=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function'
         ?window.AGCDSKYPWA.parityStatus():null;
       err.textContent=webStatus?.absoluteOrientation==='denied'
-        ?'COMPASS / MOTION PERMISSION DENIED'
+        ?'COMPASS / ORIENTATION PERMISSION DENIED · ALLOW SENSOR ACCESS, THEN RELOAD'
         :webStatus?.absoluteOrientation==='error'
           ?'COMPASS PERMISSION ERROR · TAP STAR FINDER OFF / ON'
           :webStatus?.absoluteOrientation==='unsupported'

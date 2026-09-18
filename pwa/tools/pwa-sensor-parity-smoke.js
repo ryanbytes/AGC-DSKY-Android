@@ -6,6 +6,8 @@ const path = require('path');
 const vm = require('vm');
 
 const source = fs.readFileSync(path.resolve(__dirname, '../static/pwa-sensor-parity.js'), 'utf8');
+if (!source.includes('Orientation.requestPermission(true)')) fail('standards-based absolute orientation request path missing');
+if (!source.includes("platform === 'MacIntel' && touch > 1")) fail('Apple mobile WebKit detection path missing');
 const fail = message => { console.error('PWA SENSOR PARITY FAIL: ' + message); process.exit(1); };
 const windowHandlers = new Map();
 const documentHandlers = new Map();
@@ -44,9 +46,9 @@ const documentObject = {
 };
 
 function DeviceOrientationEvent() {}
-DeviceOrientationEvent.requestPermission = absolute => {
+DeviceOrientationEvent.requestPermission = (...args) => {
   orientationPermissionCalls++;
-  orientationPermissionArgs.push(absolute);
+  orientationPermissionArgs.push(args);
   return Promise.resolve('granted');
 };
 function DeviceMotionEvent() {}
@@ -59,6 +61,9 @@ const context = {
   window: windowObject,
   document: documentObject,
   navigator: {
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1',
+    platform: 'iPhone',
+    maxTouchPoints: 5,
     mediaDevices: {getUserMedia() {}},
     geolocation: {},
     wakeLock: {request: async kind => {
@@ -95,9 +100,12 @@ catch (error) { fail('script execution failed: ' + error.stack); }
   fire(documentHandlers, 'pointerup', {});
   await Promise.resolve();
   await Promise.resolve();
-  if (orientationPermissionCalls !== 1) fail('orientation permission was not requested from gesture');
-  if (orientationPermissionArgs[0] !== true) fail('absolute/magnetometer orientation permission was not requested');
-  if (motionPermissionCalls !== 1) fail('motion permission was not requested from same gesture');
+  if (orientationPermissionCalls !== 0 || motionPermissionCalls !== 0) fail('an arbitrary first page gesture must not trigger sensor permission prompts');
+
+  await windowObject.AGCDSKYPWA.requestSensorPermissions({absolute:true});
+  if (orientationPermissionCalls !== 1) fail('star-finder orientation permission was not requested');
+  if (orientationPermissionArgs[0].length !== 0) fail('Apple WebKit star finder must use ordinary orientation permission for webkitCompassHeading');
+  if (motionPermissionCalls !== 1) fail('motion permission was not requested from the same star-finder gesture');
 
   fire(windowHandlers, 'devicemotion', {
     acceleration: {x:1.25, y:-2.5, z:0.75},
@@ -156,5 +164,5 @@ catch (error) { fail('script execution failed: ' + error.stack); }
   if (status.wakeLock !== 'active') fail('wake-lock capability did not become active');
 
   console.log('PWA sensor parity behavior: PASS');
-  console.log('  wake lock, absolute compass permission, iOS compass heading, PIPA motion and display rotation verified');
+  console.log('  wake lock, explicit star-finder permission, iOS compass heading, PIPA motion and display rotation verified');
 })().catch(error => fail(error.stack || String(error)));
