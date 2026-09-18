@@ -252,3 +252,66 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     transform:translate(var(--sheet-x),var(--sheet-y));
   }
 }
+
+
+/* Docked checklist mode: move the DSKY to the top and let the checklist
+   consume the space below it instead of floating over flight hardware. */
+body.cheatsheet-open #app{
+  justify-content:flex-start;
+  gap:4px;
+  padding-top:max(2px,env(safe-area-inset-top));
+  padding-bottom:max(2px,env(safe-area-inset-bottom));
+}
+body.cheatsheet-open .app-controls,
+body.cheatsheet-open .hint{display:none!important}
+body.cheatsheet-open .dsky{
+  flex:0 0 auto;
+}
+#agc-cheat-sheet.open{
+  position:relative;
+  left:auto;
+  right:auto;
+  top:auto;
+  bottom:auto;
+  flex:1 1 0;
+  min-height:0;
+  width:min(calc(100vw - 8px),720px);
+  max-width:calc(100vw - 8px);
+  height:auto;
+  max-height:none;
+  margin:0 auto;
+  transform:none;
+  box-sizing:border-box;
+}
+#agc-cheat-sheet.open .cheat-head{
+  flex:0 0 auto;
+  cursor:default;
+}
+#agc-cheat-sheet.open .cheat-tabs{flex:0 0 auto}
+#agc-cheat-sheet.open .cheat-body{
+  flex:1 1 auto;
+  min-height:0;
+}
+#agc-cheat-sheet.open.minimized{
+  flex:0 0 auto;
+  width:min(calc(100vw - 8px),720px);
+  max-width:calc(100vw - 8px);
+}
+
+@media (orientation:landscape){
+  body.cheatsheet-open .dsky,
+  body.cheatsheet-open .dream .dsky{
+    width:auto!important;
+    height:min(58vh,calc(100vh - 190px));
+    max-width:92vw;
+  }
+  #agc-cheat-sheet.open{
+    left:auto;
+    right:auto;
+    top:auto;
+    width:min(calc(100vw - 8px),920px);
+    max-width:calc(100vw - 8px);
+    max-height:none;
+    transform:none;
+  }
+}
