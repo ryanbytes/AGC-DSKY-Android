@@ -277,12 +277,24 @@
     navigator.geolocation.getCurrentPosition(p=>setSkyLocation(p.coords.latitude,p.coords.longitude,p.coords.altitude||0,p.coords.accuracy),()=>updateStarFinder(),{enableHighAccuracy:true,maximumAge:300000,timeout:12000});
   }
 
+  function requestWebStarFinderSensors(){
+    const pwa=window.AGCDSKYPWA;
+    if(!pwa||typeof pwa.requestSensorPermissions!=='function')return null;
+    try{
+      // Called synchronously from the STAR FINDER button click so WebKit's
+      // transient-activation requirement is still satisfied.
+      const pending=pwa.requestSensorPermissions();
+      if(pending&&typeof pending.finally==='function')pending.finally(()=>{if(finderEnabled)updateStarFinder()});
+      return pending;
+    }catch(_){return null}
+  }
+
   function toggleStarFinder(){
     finderEnabled=!finderEnabled;
     const box=document.getElementById('sxt-starbox'),b=document.getElementById('sxt-star-toggle');
     if(box)box.classList.toggle('visible',finderEnabled);
     if(b)b.textContent=finderEnabled?'STAR FINDER ON':'STAR FINDER OFF';
-    if(finderEnabled){requestSkyLocation();updateStarFinder()}
+    if(finderEnabled){requestWebStarFinderSensors();requestSkyLocation();updateStarFinder()}
   }
 
   function chooseStar(star){selectedStar=star;updateStarFinder()}
@@ -353,7 +365,16 @@
     const cue=document.getElementById('sxt-star-cue');
     const pointing=typeof api.phoneSkyPointing==='function'?api.phoneSkyPointing():null;
     if(!pointing||!pointing.seen||Date.now()-(pointing.timestamp||0)>1500){
-      err.textContent='PHONE TRUE POINTING WAITING';arrow.style.transform='rotate(0deg)';
+      const webStatus=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function'
+        ?window.AGCDSKYPWA.parityStatus():null;
+      err.textContent=webStatus?.absoluteOrientation==='denied'
+        ?'COMPASS / MOTION PERMISSION DENIED'
+        :webStatus?.absoluteOrientation==='error'
+          ?'COMPASS PERMISSION ERROR · TAP STAR FINDER OFF / ON'
+          :webStatus?.absoluteOrientation==='unsupported'
+            ?'ABSOLUTE COMPASS UNAVAILABLE IN THIS BROWSER'
+            :'PHONE TRUE POINTING WAITING';
+      arrow.style.transform='rotate(0deg)';
       if(cue){cue.classList.remove('active','outside','centered');cue.style.removeProperty('--cue-x');cue.style.removeProperty('--cue-y')}
       return
     }
