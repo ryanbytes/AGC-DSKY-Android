@@ -138,7 +138,8 @@ if (!checklistCss.includes('size:5.5in 8in')) fail('checklist print page must be
 if (!checklistCss.includes('@media print')) fail('checklist print stylesheet missing');
 if (!checklistCss.includes('.cheat-pane{\n    display:block!important;')) fail('print stylesheet must include every checklist section');
 if (sharedStyle.includes('.el-seg.off')) fail('unlit numeric EL segments must not have a visible style');
-if (!sharedStyle.includes('.comp-el:not(.on){display:none}')) fail('de-energized COMP ACTY EL must render nothing');
+if (sharedStyle.includes('.comp-el:not(.on){display:none}')) fail('COMP ACTY printed legend must remain visible while de-energized');
+if (!sharedStyle.includes('.el-comp-bg{fill:var(--el);opacity:0}')) fail('de-energized COMP ACTY EL background must be fully dark');
 
 const privacy = text('PRIVACY_POLICY.txt');
 for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=off', 'Ambient light sensor']) {
@@ -147,6 +148,8 @@ for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=of
 
 const sw = text('sw.js');
 if (sw.includes('__CACHE_VERSION__')) fail('service-worker cache version was not stamped');
+if (sw.includes('client.navigate(')) fail('service-worker activation must not forcibly navigate open DSKY pages');
+if (!sw.includes('.then(() => self.clients.claim())')) fail('service worker must still claim clients after activation');
 for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'analytics.js']) {
   if (!sw.includes(`'./${required}'`)) fail('service worker does not pre-cache ' + required);
 }
@@ -171,4 +174,4 @@ console.log('Android browser fullscreen touch fallback: PASS');
 console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
 console.log('Ambient-light / solar-location auto dimming: PASS');
 console.log('Analytics client: PASS');
-console.log('Apollo checklist print / fully dark unlit EL parity: PASS');
+console.log('Apollo checklist print / dark EL + persistent COMP legend parity: PASS');
