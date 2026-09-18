@@ -36,6 +36,7 @@ for(const marker of [
   'function requestWebStarFinderSensors()',
   "typeof pwa.requestSensorPermissions!=='function'",
   'pwa.requestSensorPermissions({absolute:true})',
+  'BRAVE IOS BLOCKED MOTION SENSORS · USE SAFARI OR NATIVE APP',
   'COMPASS / ORIENTATION PERMISSION DENIED',
   'ABSOLUTE COMPASS UNAVAILABLE IN THIS BROWSER'
 ])assert(source.includes(marker),`optics behavior marker missing: ${marker}`);
