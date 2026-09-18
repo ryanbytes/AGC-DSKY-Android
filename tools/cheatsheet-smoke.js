@@ -5,6 +5,7 @@ const path = require('path');
 const js = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/cheatsheet.js'), 'utf8');
 const css = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/cheatsheet.css'), 'utf8');
 const activity = fs.readFileSync(path.resolve(__dirname, '../app/src/main/java/org/apollo/agcdsky/MainActivity.java'), 'utf8');
+const sensorActivity = fs.readFileSync(path.resolve(__dirname, '../app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java'), 'utf8');
 const apple = fs.readFileSync(path.resolve(__dirname, '../apple/Sources/AGCWebView.swift'), 'utf8');
 const style = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/style.css'), 'utf8');
 function assert(ok, msg) { if (!ok) throw new Error(msg); }
@@ -26,7 +27,10 @@ assert(css.includes('.cheat-pane{\n    display:block!important;'), 'print layout
 assert(activity.includes('new PrintAttributes.MediaSize('), 'native custom checklist media size missing');
 assert(activity.includes('"APOLLO_CHECKLIST_5_5X8","Apollo Checklist 5.5 x 8 in",5500,8000'), 'native checklist media size must be 5.5 x 8 inches');
 assert(activity.includes('addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge")'), 'PrintBridge must be installed on the WebView');
-assert(activity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","PrintBridge")'), 'PrintBridge must be removed during WebView teardown');
+assert(activity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","PrintBridge")'), 'legacy activity PrintBridge must be removed during WebView teardown');
+assert(sensorActivity.includes('addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge")'), 'real Android launcher must install PrintBridge');
+assert(sensorActivity.includes('"APOLLO_CHECKLIST_5_5X8","Apollo Checklist 5.5 x 8 in",5500,8000'), 'real Android launcher checklist media must be 5.5 x 8 inches');
+assert(sensorActivity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","PrintBridge")'), 'real Android launcher must remove PrintBridge during teardown');
 assert(apple.includes('configuration.userContentController.add(self, name: "PrintBridge")'), 'Apple PrintBridge must be installed');
 assert(apple.includes('window.webkit.messageHandlers.PrintBridge.postMessage'), 'Apple PrintBridge JavaScript shim missing');
 assert(apple.includes('width: 5.5 * 72.0, height: 8.0 * 72.0'), 'Apple checklist print media must be 5.5 x 8 inches');
