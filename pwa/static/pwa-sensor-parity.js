@@ -5,16 +5,16 @@
   const dsky = window.AGCDSKY = window.AGCDSKY || {};
   const status = api.capabilities = api.capabilities || {};
 
-  status.orientation = 'waiting';
-  status.motion = 'waiting';
-  status.absoluteOrientation = 'waiting';
+  status.orientation = ('DeviceOrientationEvent' in window) ? 'waiting' : 'unsupported';
+  status.motion = ('DeviceMotionEvent' in window) ? 'waiting' : 'unsupported';
+  status.absoluteOrientation = ('DeviceOrientationEvent' in window) ? 'waiting' : 'unsupported';
   status.wakeLock = ('wakeLock' in navigator) ? 'waiting' : 'unsupported';
   status.camera = Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   status.geolocation = 'geolocation' in navigator;
 
   let motionStarted = false;
   let absoluteStarted = false;
-  let permissionAttempted = false;
+  let permissionState = 'unrequested';
   let wakeLock = null;
   const gravity = [0, 0, 0];
   let gravityValid = false;
@@ -92,6 +92,7 @@
   function orientationAccuracy(event) {
     const compassAccuracy = Number(event.webkitCompassAccuracy);
     if (!Number.isFinite(compassAccuracy)) return 1;
+    if (compassAccuracy < 0) return 0;
     if (compassAccuracy <= 20) return 3;
     if (compassAccuracy <= 45) return 2;
     return 1;
@@ -99,11 +100,16 @@
 
   function onAbsoluteOrientation(event) {
     if (![event.alpha, event.beta, event.gamma].every(Number.isFinite)) return;
-    if (event.absolute !== true && !Number.isFinite(Number(event.webkitCompassHeading))) return;
+    const compassHeading = Number(event.webkitCompassHeading);
+    const hasWebkitCompass = Number.isFinite(compassHeading) && compassHeading >= 0;
+    if (event.absolute !== true && !hasWebkitCompass) return;
     if (typeof dsky.nativeMagneticQuaternion !== 'function') return;
 
     let alpha = Number(event.alpha);
-    if (event.absolute !== true && Number.isFinite(Number(event.webkitCompassHeading))) alpha = 360 - Number(event.webkitCompassHeading);
+    // WebKit documents alpha/beta/gamma as relative to an arbitrary starting
+    // direction. Its webkitCompassHeading is the real-world magnetic heading,
+    // so use that for the star-finder world frame.
+    if (event.absolute !== true && hasWebkitCompass) alpha = 360 - compassHeading;
 
     const q = rawQuaternionFromOrientation(alpha, Number(event.beta), Number(event.gamma));
     if (!absoluteStarted) {
@@ -122,32 +128,54 @@
   }
 
   async function requestSensorPermissions() {
-    if (permissionAttempted) return;
-    permissionAttempted = true;
+    if (permissionState === 'granted' || permissionState === 'denied' || permissionState === 'unsupported') {
+      return {...status};
+    }
+    if (permissionState === 'requesting') return {...status};
+    permissionState = 'requesting';
 
-    // On iOS both permission calls must be initiated while the same user
-    // activation is still live. Start both requests before awaiting either one.
-    let orientationRequest = Promise.resolve('granted');
-    let motionRequest = Promise.resolve('granted');
+    // Star finding needs an Earth-referenced heading, not merely relative
+    // orientation. requestPermission(true) explicitly includes the
+    // magnetometer/absolute-orientation permission where the browser supports
+    // the modern API. Older WebKit accepts the extra argument harmlessly.
+    //
+    // On iOS both orientation and motion permission calls must begin while the
+    // same transient user activation is live, so create both promises before
+    // awaiting either one.
+    let orientationRequest = Promise.resolve(window.DeviceOrientationEvent ? 'granted' : 'unsupported');
+    let motionRequest = Promise.resolve(window.DeviceMotionEvent ? 'granted' : 'unsupported');
     try {
       const Orientation = window.DeviceOrientationEvent;
-      if (Orientation && typeof Orientation.requestPermission === 'function') orientationRequest = Orientation.requestPermission();
-    } catch (_) { orientationRequest = Promise.resolve('denied'); }
+      if (Orientation && typeof Orientation.requestPermission === 'function') {
+        orientationRequest = Orientation.requestPermission(true);
+      }
+    } catch (_) { orientationRequest = Promise.resolve('error'); }
     try {
       const Motion = window.DeviceMotionEvent;
       if (Motion && typeof Motion.requestPermission === 'function') motionRequest = Motion.requestPermission();
-    } catch (_) { motionRequest = Promise.resolve('denied'); }
+    } catch (_) { motionRequest = Promise.resolve('error'); }
 
     const [orientationState, motionState] = await Promise.all([
-      Promise.resolve(orientationRequest).catch(() => 'denied'),
-      Promise.resolve(motionRequest).catch(() => 'denied')
+      Promise.resolve(orientationRequest).catch(() => 'error'),
+      Promise.resolve(motionRequest).catch(() => 'error')
     ]);
     const orientationAllowed = orientationState === 'granted';
     const motionAllowed = motionState === 'granted';
-    status.orientation = orientationAllowed ? 'enabled' : 'denied';
-    status.motion = motionAllowed ? 'enabled' : 'denied';
-    status.absoluteOrientation = orientationAllowed ? 'enabled' : 'denied';
+    const retryable = orientationState === 'error' || motionState === 'error';
+    const unsupported = orientationState === 'unsupported' && motionState === 'unsupported';
+
+    status.orientation = orientationAllowed ? 'enabled'
+      : orientationState === 'unsupported' ? 'unsupported'
+      : orientationState === 'error' ? 'error' : 'denied';
+    status.motion = motionAllowed ? 'enabled'
+      : motionState === 'unsupported' ? 'unsupported'
+      : motionState === 'error' ? 'error' : 'denied';
+    status.absoluteOrientation = status.orientation;
+    permissionState = retryable ? 'retryable'
+      : unsupported ? 'unsupported'
+      : (orientationAllowed || motionAllowed) ? 'granted' : 'denied';
     publish();
+    return {...status};
   }
 
   async function acquireWakeLock() {
