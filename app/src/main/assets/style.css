@@ -92,17 +92,42 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
   font-size:5.1px;font-weight:700;letter-spacing:.22px;
 }
 .el-rule{stroke:var(--el);stroke-width:2.05;stroke-linecap:round;opacity:.88}
-/* COMP ACTY lettering is screen-printed and remains visible when the EL
-   section is dark. Only the energized background phosphor disappears. */
-.el-comp-bg{fill:var(--el);opacity:0}
-.comp-el.on .el-comp-bg{opacity:.92}
+/* EL phosphor is optically absent when de-energized. Printed black legends
+   are separate artwork and remain visible. Do not give an unpowered electrode
+   a gray/green trace, shadow, fill, or antialias fringe. */
+.el-comp-bg{
+  display:none;
+  fill:none;
+  stroke:none;
+  opacity:0;
+}
+.comp-el.on .el-comp-bg{
+  display:block;
+  fill:var(--el);
+  opacity:.92;
+}
 .comp-el text{
   fill:#050605;opacity:.92;font-family:"Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;
   font-size:5.2px;font-weight:700;letter-spacing:.05px;
 }
 .comp-el.on text{fill:#050605;opacity:.98}
-.el-seg{fill:var(--el);stroke:none}
-.el-seg.on{fill:var(--el);opacity:.92}
+
+/* Default every numeric/sign EL path to physically dark. The renderer normally
+   omits unlit paths entirely, but this guard also covers relay-transition,
+   cached-WebView, and older-markup cases where a path can exist without .on. */
+.el-seg{
+  display:none;
+  fill:none;
+  stroke:none;
+  opacity:0;
+  filter:none;
+}
+.el-seg.on{
+  display:inline;
+  fill:var(--el);
+  stroke:none;
+  opacity:.92;
+}
 /* Lower EL voltage reduces light output while preserving the phosphor hue. */
 .dim .el-seg.on,.dim .el-legend-bg,.dim .el-rule,.dim .comp-el.on .el-comp-bg{opacity:.62}
 
