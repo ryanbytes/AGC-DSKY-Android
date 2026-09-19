@@ -31,7 +31,16 @@ function show(v,n){
 
 function accurateTime(){return Date.now()+(Number(shellState.ntpStatus.offsetMs)||0)}
 function accurateDate(){return new Date(accurateTime())}
-function clockTimeLabel(){return shellState.ntpStatus.state==='synced'?'PHONE CLOCK · NTP TIME':shellState.ntpStatus.state==='stale'?'PHONE CLOCK · NTP OFFSET STALE':'PHONE CLOCK · ANDROID WALL TIME'}
+function clockTimeLabel(){
+  const status=shellState.ntpStatus||{},transport=String(status.transport||'device');
+  if(status.state==='synced'){
+    if(transport==='sntp')return 'PHONE CLOCK · SNTP TIME';
+    if(transport==='http-date')return 'PHONE CLOCK · WEB NETWORK TIME';
+    return 'PHONE CLOCK · NETWORK TIME';
+  }
+  if(status.state==='stale')return transport==='http-date'?'PHONE CLOCK · WEB TIME STALE':'PHONE CLOCK · NETWORK TIME STALE';
+  return 'PHONE CLOCK · DEVICE WALL TIME';
+}
 function updateNtpStatus(value){try{const parsed=typeof value==='string'?JSON.parse(value):value;if(parsed&&typeof parsed==='object'){shellState.ntpStatus={...shellState.ntpStatus,...parsed};if(shellState.mode==='clock')$('mode').textContent=clockTimeLabel()}}catch(_){/* malformed bridge data must not affect the DSKY */}}
 function loadNativeNtpStatus(){try{if(window.TimeBridge&&typeof TimeBridge.getStatus==='function')updateNtpStatus(TimeBridge.getStatus())}catch(_){/* bridge is unavailable outside Android */}}
 
