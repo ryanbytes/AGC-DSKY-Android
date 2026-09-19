@@ -83,35 +83,37 @@ for (const token of [
     'const core=coreSession.core;',
     "phone.implementation('phoneIcduStatus')",
     "lateService('AGCDSKY_OPTICS')",
-    "lateService('AGCDSKY_PARALLAX')",
     "snapshot.save('diagnostics')",
     'snapshot.verifyRoundTrip()',
     'snapshot.clear()',
     'ARM 5-SECOND PIPA MOTION TEST',
-    'PARALLAX / DISPLAY DEPTH',
-    'Parallax state',
-    'Parallax current → target',
-    'Parallax intensity',
-    'Glass view depth'
 ]) {
     assert(diagnostics.includes(token), `diagnostics surface missing: ${token}`);
 }
-assert(diagnostics.includes("typeof parallaxService.state==='function'"),
-    'diagnostics must read live parallax controller state from the owning service');
-assert(diagnostics.includes("typeof parallaxService.geometry==='function'"),
-    'diagnostics must read physical parallax geometry from the owning service');
-assert(!diagnostics.includes('window.AGCDSKY_PARALLAX'),
-    'diagnostics must not consume the parallax compatibility-global view internally');
-assert(!diagnostics.includes('api.parallax3d'),
-    'diagnostics must not depend on a duplicate parallax public-facade alias');
+
+
+
+
 assert(!diagnostics.includes('const api=window.AGCDSKY')&&!diagnostics.includes('api.appStatus')&&!diagnostics.includes('api.getCore')&&!diagnostics.includes('api.phoneIcduStatus')&&!diagnostics.includes('api.sextantStatus'),
     'diagnostics must not consume the root public facade for internal runtime state');
 assert(!diagnostics.includes('api.saveAgcState')&&!diagnostics.includes('api.verifySnapshotRoundTrip')&&!diagnostics.includes('api.clearSavedAgcState'),
     'diagnostics snapshot actions must stay on the owning snapshot service');
+for (const token of [
+    "lateService('AGCDSKY_PARALLAX')",
+    'PARALLAX / DISPLAY DEPTH',
+    'Parallax state',
+    'Parallax current → target',
+    'Parallax intensity',
+    'Glass view depth',
+    'window.AGCDSKY_PARALLAX',
+    'api.parallax3d'
+]) {
+    assert(!diagnostics.includes(token), 'diagnostics must not expose parallax telemetry: '+token);
+}
 assert(diagnostics.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_DIAGNOSTICS',Object.freeze({open,close})"),
     'diagnostics module must publish open/close explicitly through the dedicated diagnostics service registry slot');
 assert(!diagnostics.includes('api.openDiagnostics=')&&!diagnostics.includes('api.closeDiagnostics='),
     'diagnostics module must not append open/close methods onto the public facade');
 
 console.log('native diagnostic source smoke: PASS');
-console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, direct diagnostics core-service ownership, registry-backed telemetry, and explicit diagnostics service publication verified');
+console.log('  local native crash/error reporting, sensor activity resume, centralized held-PRO release/input ownership, direct diagnostics core-service ownership, parallax-free diagnostics telemetry, and explicit diagnostics service publication verified');
