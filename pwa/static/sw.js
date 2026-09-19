@@ -24,6 +24,7 @@ const CORE_ASSETS = [
   './pwa-sensor-parity.js',
   './pwa-auto-dim.js',
   './pwa-clock-guard.js',
+  './pwa-network-time.js',
   './pwa-print-bridge.js',
   './analytics.js',
   './clock-behavior-v2.js',
