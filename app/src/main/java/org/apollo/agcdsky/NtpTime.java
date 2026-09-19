@@ -51,7 +51,7 @@ public final class NtpTime {
         public String toJson() {
             try {
                 JSONObject value = new JSONObject();
-                value.put("server", SERVER); value.put("offsetMs", offsetMs);
+                value.put("server", SERVER); value.put("transport", "sntp"); value.put("offsetMs", offsetMs);
                 value.put("lastSyncUtcMs", lastSyncUtcMs); value.put("roundTripMs", roundTripMs);
                 value.put("ageMs", ageMs); value.put("state", state);
                 return value.toString();
