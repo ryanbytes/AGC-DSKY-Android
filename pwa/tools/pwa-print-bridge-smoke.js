@@ -14,7 +14,7 @@ const cloneChecks=[
   {checkedAttr:false,setAttribute(name){if(name==='checked')this.checkedAttr=true},removeAttribute(name){if(name==='checked')this.checkedAttr=false}},
   {checkedAttr:false,setAttribute(name){if(name==='checked')this.checkedAttr=true},removeAttribute(name){if(name==='checked')this.checkedAttr=false}}
 ];
-const paneIds=['p51','p51real','quick','sxt','verify'];
+const paneIds=['p51','p51real','p51real-cont','quick','sxt','verify'];
 const panes=paneIds.map((id,index)=>({
   get outerHTML(){
     const checks=index===0
@@ -76,19 +76,18 @@ assert(focused,'print window was not focused');
 assert(written.includes('Apollo CMC / DSKY Checklist'),'print document title missing');
 assert(written.includes('cheatsheet.css'),'print document does not load checklist print stylesheet');
 assert(written.includes('PRINT / SAVE PDF'),'print/PDF action missing');
-assert(written.includes('ANDROID · 4 COMPACT MODEL PAGES PER LETTER SHEET'),'Android compact four-up guidance missing');
+assert(written.includes('ANDROID · 3 MODEL CHECKLIST PAGES PER LETTER SHEET'),'Android three-up guidance missing');
 assert(written.includes('<body class="pwa-android-imposed">'),'Android print document must activate explicit-sheet mode');
 assert(written.includes('@page{size:8.5in 11in;margin:.20in}'),'Android print document must use explicit portrait Letter dimensions');
-assert(written.includes('grid-template-columns:repeat(2,3.90in)!important'),'Android sheet must reserve two compact columns');
-assert(written.includes('grid-template-rows:repeat(2,5.20in)!important'),'Android sheet must reserve two compact rows');
+assert(written.includes('grid-template-columns:7.85in!important'),'Android sheet must reserve one rotated-card column');
+assert(written.includes('grid-template-rows:repeat(3,3.40in)!important'),'Android sheet must reserve three rotated-card rows');
 assert(written.includes('width:8.10in!important')&&written.includes('height:10.60in!important'),'Android physical sheet dimensions missing');
-assert(written.includes('width:5.10in!important')&&written.includes('height:3.80in!important'),'Android compact card dimensions missing');
+assert(written.includes('width:3.40in!important')&&written.includes('height:7.65in!important'),'Android model page dimensions missing');
 assert(written.includes('transform:translate(-50%,-50%) rotate(90deg)!important'),'Android model cards must be centered and rotated inside fixed slots');
 
 for(const sheet of [1,2])assert(written.includes('data-model-sheet="'+sheet+'"'),'missing explicit print sheet '+sheet);
-assert((written.match(/class="pwa-model-sheet(?: single)?"/g)||[]).length===2,'five checklist pages must create exactly two physical sheets');
-assert((written.match(/class="pwa-model-slot"/g)||[]).length===5,'all five checklist pages must get a fixed physical slot');
-assert(written.includes('class="pwa-model-sheet single" data-model-sheet="2"'),'last one-page sheet must center its lone model card');
+assert((written.match(/class="pwa-model-sheet(?: single)?"/g)||[]).length===2,'six checklist pages must create exactly two full physical sheets');
+assert((written.match(/class="pwa-model-slot"/g)||[]).length===6,'all six checklist pages must get a fixed physical slot');
 
 assert(written.includes('data-cheat-check="1" checked'),'checked checklist state was not preserved');
 assert(!written.includes('data-cheat-check="2" checked'),'unchecked checklist state was incorrectly printed as checked');
@@ -100,4 +99,4 @@ assert(windowObject.PrintBridge.printChecklist()===false,'blocked print window s
 assert(windowObject.AGCDSKYPWA.lastChecklistPrint?.error==='print window blocked','blocked print window diagnostic missing');
 
 console.log('PWA checklist print bridge behavior: PASS');
-console.log('  Android compact four-up physical-sheet pagination, five-card imposition, checked-state preservation verified');
+console.log('  Android three-up physical-sheet pagination, six-page imposition, checked-state preservation verified');
