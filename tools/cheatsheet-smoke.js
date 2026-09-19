@@ -47,7 +47,10 @@ assert(apple.includes('printInfo.paperSize = NSSize(width: 8.5 * 72.0, height: 1
 assert((apple.match(/orientation = \.landscape/g)||[]).length >= 2, 'iOS and macOS checklist printing must both request landscape orientation');
 assert(apple.includes('printInfo.topMargin = 0') && apple.includes('printInfo.rightMargin = 0'), 'Apple native print margins must defer to shared Letter CSS');
 assert(apple.includes('removeScriptMessageHandler(forName: "PrintBridge")'), 'Apple PrintBridge must be removed during teardown');
-assert(!style.includes('.el-seg.off'), 'unlit numeric EL segments must not have a visible style');
+assert(!style.includes('.el-seg.off'), 'legacy unlit numeric EL styling must not return');
+assert(style.includes('.el-seg{\n  display:none;\n  fill:none;\n  stroke:none;\n  opacity:0;'), 'de-energized numeric/sign EL paths must be optically absent');
+assert(style.includes('.el-seg.on{\n  display:inline;\n  fill:var(--el);'), 'energized numeric/sign EL paths must explicitly opt into visibility');
 assert(!style.includes('.comp-el:not(.on){display:none}'), 'COMP ACTY printed legend must remain visible while de-energized');
-assert(style.includes('.el-comp-bg{fill:var(--el);opacity:0}'), 'de-energized COMP ACTY EL background must be fully dark');
+assert(style.includes('.el-comp-bg{\n  display:none;\n  fill:none;\n  stroke:none;\n  opacity:0;'), 'de-energized COMP ACTY phosphor must be optically absent');
+assert(style.includes('.comp-el.on .el-comp-bg{\n  display:block;\n  fill:var(--el);'), 'COMP ACTY phosphor must appear only when energized');
 console.log('cheat sheet smoke: PASS');
