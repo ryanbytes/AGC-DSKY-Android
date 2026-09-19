@@ -48,6 +48,14 @@
           ${row('At <code>V50 N25 / 00015</code> press <span class="cheat-key">PRO</span>.')}
           ${row('Open <span class="cheat-key">SEXTANT</span>, turn <span class="cheat-key">STAR FINDER ON</span>, and allow location.')}
           ${row('Select the first recommended Apollo star. If pointing has not been calibrated on this phone, visually center that real star in the camera reticle and press <span class="cheat-key">CALIBRATE POINTING ON STAR</span>.') }
+          ${row('Move the phone until the cue says <b>CENTERED</b>, then press <span class="cheat-key">MARK</span>.','cheat-print-continuation')}
+          ${row('At <code>V50 N25 / 00016</code> press <span class="cheat-key">PRO</span>. At <code>V01 N71</code>, enter the exact <b>AFTER MARK</b> command shown in SXT.','cheat-print-continuation')}
+          ${row('Press <span class="cheat-key">PRO</span>. At the second <code>V51</code>, select the other recommended star, aim, and <span class="cheat-key">MARK</span>.','cheat-print-continuation')}
+          ${row('Again <code>V50 N25 / 00016</code> → <span class="cheat-key">PRO</span> → <code>V01 N71</code> → enter the second star command → <span class="cheat-key">PRO</span>.','cheat-print-continuation')}
+          ${row('At <code>V06 N05</code>, inspect the angular difference. A real alignment should be small; <span class="cheat-key">PRO</span> accepts it.','cheat-print-continuation')}
+          ${row('At flashing <code>V37</code> enter <code>52 E</code>. P52 should proceed to <code>V04 N06</code> instead of alarm 00220.','cheat-print-continuation')}
+        </div>
+        <div class="cheat-pane cheat-print-only" data-cheat-pane="p51real-cont" aria-hidden="true">
           ${row('Move the phone until the cue says <b>CENTERED</b>, then press <span class="cheat-key">MARK</span>.')}
           ${row('At <code>V50 N25 / 00016</code> press <span class="cheat-key">PRO</span>. At <code>V01 N71</code>, enter the exact <b>AFTER MARK</b> command shown in SXT.')}
           ${row('Press <span class="cheat-key">PRO</span>. At the second <code>V51</code>, select the other recommended star, aim, and <span class="cheat-key">MARK</span>.')}
@@ -90,7 +98,7 @@
     </section>`;
   }
   function step(n,txt){return `<label class="cheat-step"><input type="checkbox" data-cheat-check="${n}"><span>${txt}</span></label>`}
-  function row(txt){return `<div class="cheat-row">${txt}</div>`}
+  function row(txt,extraClass=''){return `<div class="cheat-row${extraClass?' '+extraClass:''}">${txt}</div>`}
 
   function loadChecks(){
     let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}')}catch(_){}
