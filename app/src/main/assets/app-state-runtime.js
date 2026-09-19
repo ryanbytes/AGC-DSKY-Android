@@ -20,6 +20,7 @@
       appVisible:!document.hidden,
       ntpStatus:{
         server:'time.cloudflare.com',
+        transport:'device',
         offsetMs:0,
         lastSyncUtcMs:0,
         roundTripMs:-1,
