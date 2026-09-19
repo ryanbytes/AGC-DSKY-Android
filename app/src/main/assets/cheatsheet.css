@@ -196,6 +196,7 @@ body.cheat-sheet-open .dsky{
 }
 .cheat-pane{display:none}
 .cheat-pane.active{display:block}
+.cheat-print-only{display:none}
 
 .cheat-step{
   display:grid;
@@ -281,10 +282,10 @@ body.screen-only #agc-cheat-sheet{display:none!important}
 }
 
 
-/* Compact model-checklist print layout. The previous tall cards reproduced the
-   original page aspect ratio but left most of every cutout blank. Use equal
-   5.10 x 3.80 in landscape cards instead: four fit cleanly on Letter landscape,
-   while every checklist section remains large enough to read and stack. */
+/* Model-checklist print layout.
+   Use six equal portrait cutouts across two US-Letter landscape sheets:
+   three cards per sheet. P51 REAL SKY is split only for printing so no
+   checklist text is silently clipped and both physical sheets are full. */
 @page{
   size:Letter landscape;
   margin:.25in;
@@ -330,7 +331,7 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     transform:none!important;
     background:#fff!important;
     color:#111!important;
-    font:700 6.15pt/1.12 "Courier New","Liberation Mono",monospace!important;
+    font:700 6.25pt/1.14 "Courier New","Liberation Mono",monospace!important;
     touch-action:auto!important;
   }
   #agc-cheat-sheet::before,
@@ -339,14 +340,15 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   .cheat-tabs,
   .cheat-actions{display:none!important}
 
-  /* Letter landscape gives 10.5 x 8.0 in inside .25 in margins.
-     2 x 5.10 in cards + .15 in gutter = 10.35 in.
-     2 x 3.80 in cards + .15 in gutter = 7.75 in. */
+  /* Letter landscape leaves 10.5 x 8.0 in inside .25 in margins.
+     Three 3.40 x 7.65 in cards plus two .12 in gutters use 10.44 in,
+     leaving only .06 in horizontal slack and .35 in vertical slack. */
   .cheat-body{
     display:grid!important;
-    grid-template-columns:repeat(2,5.10in)!important;
-    grid-auto-rows:3.80in!important;
-    gap:.15in!important;
+    grid-template-columns:repeat(3,3.40in)!important;
+    grid-auto-rows:7.65in!important;
+    column-gap:.12in!important;
+    row-gap:0!important;
     justify-content:center!important;
     align-content:center!important;
     overflow:visible!important;
@@ -359,12 +361,12 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     display:block!important;
     position:relative!important;
     box-sizing:border-box!important;
-    width:5.10in!important;
-    height:3.80in!important;
+    width:3.40in!important;
+    height:7.65in!important;
     min-height:0!important;
     margin:0!important;
-    padding:.10in .11in .19in .16in!important;
-    overflow:hidden!important;
+    padding:.12in .10in .24in .14in!important;
+    overflow:visible!important;
     border:.8pt solid #222!important;
     outline:.4pt dashed #888!important;
     outline-offset:.035in!important;
@@ -374,41 +376,42 @@ body.screen-only #agc-cheat-sheet{display:none!important}
     break-inside:avoid!important;
     page-break-inside:avoid!important;
   }
-  .cheat-pane:nth-child(4n+1):not(:first-child){
+  .cheat-pane[data-cheat-pane="p51real"] .cheat-print-continuation{
+    display:none!important;
+  }
+  .cheat-pane[data-cheat-pane="quick"]{
     break-before:page!important;
     page-break-before:always!important;
   }
-  .cheat-pane:nth-child(4n+1):last-child{
-    grid-column:1 / -1!important;
-    justify-self:center!important;
-  }
   .cheat-pane::before{
     display:block!important;
-    margin:0 0 .045in!important;
-    padding:0 0 .025in!important;
+    margin:0 0 .055in!important;
+    padding:0 0 .03in!important;
     border-bottom:.8pt solid #111!important;
     font:900 7.2pt/1 "Arial Narrow","Roboto Condensed",Arial,sans-serif!important;
-    letter-spacing:.05em!important;
+    letter-spacing:.045em!important;
     color:#000!important;
   }
   .cheat-pane::after{
     position:absolute!important;
-    right:.10in!important;
-    bottom:.055in!important;
+    right:.09in!important;
+    bottom:.06in!important;
     color:#444!important;
-    font:700 5.2pt/1 "Courier New","Liberation Mono",monospace!important;
-    letter-spacing:.03em!important;
+    font:700 5.15pt/1 "Courier New","Liberation Mono",monospace!important;
+    letter-spacing:.025em!important;
   }
-  .cheat-pane[data-cheat-pane="p51"]::before{content:"CMC / DSKY QUICK REFERENCE · P51 TEST"}
-  .cheat-pane[data-cheat-pane="p51real"]::before{content:"CMC / DSKY QUICK REFERENCE · P51 REAL SKY"}
-  .cheat-pane[data-cheat-pane="quick"]::before{content:"CMC / DSKY QUICK REFERENCE · QUICK"}
-  .cheat-pane[data-cheat-pane="sxt"]::before{content:"CMC / DSKY QUICK REFERENCE · SEXTANT"}
-  .cheat-pane[data-cheat-pane="verify"]::before{content:"CMC / DSKY QUICK REFERENCE · VERIFY / TEST"}
-  .cheat-pane[data-cheat-pane="p51"]::after{content:"PAGE 1 / 5 · CUT ON DASHED GUIDE"}
-  .cheat-pane[data-cheat-pane="p51real"]::after{content:"PAGE 2 / 5 · CUT ON DASHED GUIDE"}
-  .cheat-pane[data-cheat-pane="quick"]::after{content:"PAGE 3 / 5 · CUT ON DASHED GUIDE"}
-  .cheat-pane[data-cheat-pane="sxt"]::after{content:"PAGE 4 / 5 · CUT ON DASHED GUIDE"}
-  .cheat-pane[data-cheat-pane="verify"]::after{content:"PAGE 5 / 5 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="p51"]::before{content:"CMC / DSKY · P51 TEST"}
+  .cheat-pane[data-cheat-pane="p51real"]::before{content:"CMC / DSKY · P51 REAL SKY · 1 / 2"}
+  .cheat-pane[data-cheat-pane="p51real-cont"]::before{content:"CMC / DSKY · P51 REAL SKY · 2 / 2"}
+  .cheat-pane[data-cheat-pane="quick"]::before{content:"CMC / DSKY · QUICK REFERENCE"}
+  .cheat-pane[data-cheat-pane="sxt"]::before{content:"CMC / DSKY · SEXTANT"}
+  .cheat-pane[data-cheat-pane="verify"]::before{content:"CMC / DSKY · VERIFY / TEST"}
+  .cheat-pane[data-cheat-pane="p51"]::after{content:"PAGE 1 / 6 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="p51real"]::after{content:"PAGE 2 / 6 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="p51real-cont"]::after{content:"PAGE 3 / 6 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="quick"]::after{content:"PAGE 4 / 6 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="sxt"]::after{content:"PAGE 5 / 6 · CUT ON DASHED GUIDE"}
+  .cheat-pane[data-cheat-pane="verify"]::after{content:"PAGE 6 / 6 · CUT ON DASHED GUIDE"}
   .cheat-step,.cheat-row{
     break-inside:avoid!important;
     page-break-inside:avoid!important;
@@ -416,16 +419,16 @@ body.screen-only #agc-cheat-sheet{display:none!important}
   }
   .cheat-step{
     display:grid!important;
-    grid-template-columns:.13in minmax(0,1fr)!important;
-    gap:.03in!important;
+    grid-template-columns:.14in minmax(0,1fr)!important;
+    gap:.035in!important;
     align-items:start!important;
-    padding:.025in .006in!important;
+    padding:.034in .005in!important;
   }
   .cheat-step input{
     appearance:none!important;
     -webkit-appearance:none!important;
-    width:.095in!important;
-    height:.095in!important;
+    width:.10in!important;
+    height:.10in!important;
     margin:.004in 0 0!important;
     border:.8pt solid #111!important;
     background:#fff!important;
@@ -436,14 +439,14 @@ body.screen-only #agc-cheat-sheet{display:none!important}
       linear-gradient(-45deg,transparent 43%,#111 44% 56%,transparent 57%),
       #fff!important;
   }
-  .cheat-row{padding:.029in .006in!important}
-  .cheat-step code,.cheat-code{font-size:6.0pt!important;color:#000!important}
+  .cheat-row{padding:.038in .005in!important}
+  .cheat-step code,.cheat-code{font-size:6.05pt!important;color:#000!important}
   .cheat-key{
-    padding:.25pt 2.1pt!important;
+    padding:.25pt 2.0pt!important;
     border:.65pt solid #111!important;
     background:#222!important;
     color:#fff!important;
-    font-size:5.35pt!important;
+    font-size:5.3pt!important;
     box-shadow:none!important;
   }
   .cheat-muted{font-size:5.45pt!important;color:#333!important}
