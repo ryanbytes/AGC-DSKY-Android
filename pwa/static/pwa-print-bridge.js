@@ -30,13 +30,13 @@
   function androidSheetMarkup(panes) {
     if (!panes || !panes.length) return '';
     const sheets = [];
-    for (let index = 0; index < panes.length; index += 4) {
-      const group = panes.slice(index, index + 4);
+    for (let index = 0; index < panes.length; index += 3) {
+      const group = panes.slice(index, index + 3);
       const slots = group.map((pane, slot) =>
         `<div class="pwa-model-slot" data-model-slot="${slot + 1}">${pane}</div>`
       ).join('');
       sheets.push(
-        `<section class="pwa-model-sheet${group.length === 1 ? ' single' : ''}" data-model-sheet="${Math.floor(index / 4) + 1}">${slots}</section>`
+        `<section class="pwa-model-sheet${group.length === 1 ? ' single' : ''}" data-model-sheet="${Math.floor(index / 3) + 1}">${slots}</section>`
       );
     }
     return `<section id="agc-cheat-sheet" class="open pwa-model-checklist"><div class="pwa-model-sheets">${sheets.join('')}</div></section>`;
@@ -49,8 +49,8 @@
       ? androidSheetMarkup(snapshot.panes)
       : snapshot.html;
     const guidance = android
-      ? 'ANDROID · 4 COMPACT MODEL PAGES PER LETTER SHEET · cut on the dashed guides, rotate each card upright, and stack in page order.'
-      : '4 COMPACT CHECKLIST PAGES PER LANDSCAPE LETTER SHEET · print or save PDF, then cut on the dashed guides and stack.';
+      ? 'ANDROID · 3 MODEL CHECKLIST PAGES PER LETTER SHEET · cut on the dashed guides, rotate each card upright, and stack in page order.'
+      : '3 MODEL CHECKLIST PAGES PER LANDSCAPE LETTER SHEET · print or save PDF, then cut on the dashed guides and stack.';
     const autoPrint = android ? '' : "setTimeout(()=>{try{window.print()}catch(_){}},350);";
 
     return `<!doctype html>
@@ -70,9 +70,9 @@
 
   /*
    * Android Chromium/Brave may force portrait Letter. Use explicit physical
-   * sheet wrappers so pagination is deterministic. Each compact 5.10 x 3.80 in
-   * landscape checklist card is rotated into a 3.90 x 5.20 in portrait slot.
-   * A 2 x 2 slot grid fits four cards on one Letter sheet with small gutters.
+   * sheet wrappers so pagination is deterministic. Each 3.40 x 7.65 in portrait
+   * model page is rotated into a 7.85 x 3.40 in landscape slot. Three stacked
+   * slots fill one Letter sheet; six checklist pages therefore make two sheets.
    */
   body.pwa-android-imposed #app{width:8.10in!important;margin:8px auto!important}
   body.pwa-android-imposed #agc-cheat-sheet{
@@ -90,9 +90,10 @@
   }
   body.pwa-android-imposed .pwa-model-sheet{
     display:grid!important;
-    grid-template-columns:repeat(2,3.90in)!important;
-    grid-template-rows:repeat(2,5.20in)!important;
-    gap:.20in!important;
+    grid-template-columns:7.85in!important;
+    grid-template-rows:repeat(3,3.40in)!important;
+    row-gap:.20in!important;
+    column-gap:0!important;
     justify-content:center!important;
     align-content:center!important;
     width:8.10in!important;
@@ -109,14 +110,14 @@
     page-break-after:auto!important;
   }
   body.pwa-android-imposed .pwa-model-sheet.single{
-    grid-template-columns:3.90in!important;
-    grid-template-rows:5.20in!important;
+    grid-template-columns:7.85in!important;
+    grid-template-rows:3.40in!important;
   }
   body.pwa-android-imposed .pwa-model-slot{
     position:relative!important;
     box-sizing:border-box!important;
-    width:3.90in!important;
-    height:5.20in!important;
+    width:7.85in!important;
+    height:3.40in!important;
     margin:0!important;
     padding:0!important;
     overflow:visible!important;
@@ -127,8 +128,8 @@
     left:50%!important;
     top:50%!important;
     box-sizing:border-box!important;
-    width:5.10in!important;
-    height:3.80in!important;
+    width:3.40in!important;
+    height:7.65in!important;
     min-height:0!important;
     margin:0!important;
     transform:translate(-50%,-50%) rotate(90deg)!important;
@@ -192,7 +193,7 @@ ${autoPrint}
       pwa.lastChecklistPrint = {
         ok:true,
         mode:isAndroid()?'android-explicit-sheet-imposition':'browser-print-dialog',
-        sheets:isAndroid()?Math.ceil(snapshot.panes.length/4):null
+        sheets:isAndroid()?Math.ceil(snapshot.panes.length/3):null
       };
       return true;
     } catch (error) {
