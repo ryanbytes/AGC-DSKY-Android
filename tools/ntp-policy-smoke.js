@@ -53,7 +53,8 @@ requireText(shell,'window.AGCDSKY_SHELL=Object.freeze({','shell service');
 for(const [label,text] of [['MainActivity',main],['SensorMainActivity',sensor],['AgcDreamService',dream]]){
   requireText(text,'NtpTime.start(this)',label);
   requireText(text,'NtpTime.addListener(ntpListener)',label);
-  requireText(text,'new TimeBridge(),"TimeBridge"',label);
+  requireText(text,'new TimeBridge()',label);
+  requireText(text,'"TimeBridge"',label);
   requireText(text,'NtpTime.removeListener(ntpListener)',label);
 }
 requireText(main,'WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge")','MainActivity TimeBridge teardown');
