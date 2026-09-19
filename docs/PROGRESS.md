@@ -1,6 +1,36 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-14
+Last updated: 2026-09-18
+
+## 2026-09-18 SNTP / network-time repair
+
+The reported clock-sync failure traced to a real platform split rather than the SNTP client itself:
+
+- `SensorMainActivity` and `AgcDreamService` already started `NtpTime` and exposed `TimeBridge`;
+- the regular/Fire `MainActivity` did neither, so its frontend could only retain the default zero offset and Android wall clock;
+- PWA/web cannot use UDP SNTP from browser JavaScript, so it also had no external network-time correction path.
+
+This repair:
+
+- starts `NtpTime` and registers/removes the listener in `MainActivity`;
+- exposes `TimeBridge.getStatus()` in `MainActivity` and pushes native SNTP status updates into the shared frontend;
+- tears the bridge down with the WebView;
+- preserves Cloudflare UDP SNTP as the authoritative Android correction source;
+- adds a browser-only same-origin HTTP `Date` fallback using three no-cache HEAD samples, midpoint/RTT correction, a median offset, ten-minute resync throttling, and the same two-hour stale policy;
+- labels browser fallback as NETWORK TIME rather than claiming browser UDP SNTP;
+- expands `tools/ntp-policy-smoke.js` so MainActivity, SensorMainActivity, DreamService, and the browser fallback are all source-gated.
+
+No system clock is set and `android.permission.SET_TIME` remains forbidden. WebView network loading remains blocked; Android SNTP stays native.
+
+Verification status for this repair:
+
+- [x] source changes committed on `fix/sntp-mainactivity-web-fallback`;
+- [x] policy test source updated to catch the exact missing-MainActivity regression;
+- [ ] canonical `bash tools/build-local.sh` has been run for this branch;
+- [ ] regular/Fire APKs from this branch have been installed and clock-sync behavior verified on-device;
+- [ ] deployed PWA HTTP-Date fallback has been checked in Brave/Chromium.
+
+Do not upgrade the unchecked items without observed build/device/browser evidence.
 
 ## 2026-09-14 DSKY runtime refactor phase 30
 

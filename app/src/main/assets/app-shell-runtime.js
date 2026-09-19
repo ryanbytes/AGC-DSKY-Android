@@ -29,11 +29,62 @@ function show(v,n){
   if(typeof set2==='function'){set2('verb',v.padStart(2,' '));set2('noun',n.padStart(2,' '))}
 }
 
+const BROWSER_TIME_RESYNC_MS=10*60*1000;
+const BROWSER_TIME_STALE_MS=2*60*60*1000;
+let browserTimeLastAttemptMs=0,browserTimeInFlight=null;
+function hasNativeTimeBridge(){return !!(window.TimeBridge&&typeof TimeBridge.getStatus==='function')}
 function accurateTime(){return Date.now()+(Number(shellState.ntpStatus.offsetMs)||0)}
 function accurateDate(){return new Date(accurateTime())}
-function clockTimeLabel(){return shellState.ntpStatus.state==='synced'?'PHONE CLOCK · NTP TIME':shellState.ntpStatus.state==='stale'?'PHONE CLOCK · NTP OFFSET STALE':'PHONE CLOCK · ANDROID WALL TIME'}
+function clockTimeLabel(){
+  if(shellState.ntpStatus.state==='synced')return shellState.ntpStatus.source==='http-date'?'PHONE CLOCK · NETWORK TIME':'PHONE CLOCK · NTP TIME';
+  if(shellState.ntpStatus.state==='stale')return 'PHONE CLOCK · NETWORK OFFSET STALE';
+  return hasNativeTimeBridge()?'PHONE CLOCK · ANDROID WALL TIME':'PHONE CLOCK · BROWSER WALL TIME';
+}
 function updateNtpStatus(value){try{const parsed=typeof value==='string'?JSON.parse(value):value;if(parsed&&typeof parsed==='object'){shellState.ntpStatus={...shellState.ntpStatus,...parsed};if(shellState.mode==='clock')$('mode').textContent=clockTimeLabel()}}catch(_){/* malformed bridge data must not affect the DSKY */}}
-function loadNativeNtpStatus(){try{if(window.TimeBridge&&typeof TimeBridge.getStatus==='function')updateNtpStatus(TimeBridge.getStatus())}catch(_){/* bridge is unavailable outside Android */}}
+function loadNativeNtpStatus(){try{if(hasNativeTimeBridge()){updateNtpStatus(TimeBridge.getStatus());return true}}catch(_){/* native bridge failure falls back to existing/wall time */}return false}
+function browserTimeUrl(){const url=new URL('manifest.webmanifest',location.href);url.searchParams.set('_agcdsky_time',String(Date.now()));return url.toString()}
+async function sampleBrowserNetworkTime(){
+  const sent=Date.now();
+  const response=await fetch(browserTimeUrl(),{method:'HEAD',cache:'no-store',credentials:'same-origin'});
+  const received=Date.now();
+  if(!response||!response.ok)throw new Error('network time HTTP failure');
+  const serverMs=Date.parse(response.headers.get('date')||'');
+  if(!Number.isFinite(serverMs))throw new Error('network time Date header unavailable');
+  const midpoint=sent+((received-sent)/2);
+  return{offsetMs:Math.round((serverMs+500)-midpoint),roundTripMs:Math.max(0,received-sent)};
+}
+function refreshBrowserTimeAge(){
+  if(shellState.ntpStatus.source!=='http-date'||!shellState.ntpStatus.lastSyncUtcMs)return;
+  const age=Math.max(0,accurateTime()-Number(shellState.ntpStatus.lastSyncUtcMs));
+  updateNtpStatus({ageMs:age,state:age>BROWSER_TIME_STALE_MS?'stale':'synced'});
+}
+function syncBrowserNetworkTime(force=false){
+  if(hasNativeTimeBridge())return Promise.resolve(false);
+  const now=Date.now();
+  if(browserTimeInFlight)return browserTimeInFlight;
+  if(!force&&browserTimeLastAttemptMs&&now-browserTimeLastAttemptMs<BROWSER_TIME_RESYNC_MS){refreshBrowserTimeAge();return Promise.resolve(false)}
+  browserTimeLastAttemptMs=now;
+  browserTimeInFlight=(async()=>{
+    const samples=[];
+    for(let i=0;i<3;i++){try{samples.push(await sampleBrowserNetworkTime())}catch(_){}}
+    if(!samples.length){refreshBrowserTimeAge();return false}
+    const offsets=samples.map(sample=>sample.offsetMs).sort((a,b)=>a-b);
+    const offsetMs=offsets[Math.floor(offsets.length/2)];
+    const roundTripMs=Math.min(...samples.map(sample=>sample.roundTripMs));
+    updateNtpStatus({
+      server:location.host||'same-origin',
+      source:'http-date',
+      offsetMs,
+      lastSyncUtcMs:Date.now()+offsetMs,
+      roundTripMs,
+      ageMs:0,
+      state:'synced'
+    });
+    return true;
+  })().finally(()=>{browserTimeInFlight=null});
+  return browserTimeInFlight;
+}
+function refreshTimeStatus(){if(loadNativeNtpStatus())return true;refreshBrowserTimeAge();void syncBrowserNetworkTime(false);return false}
 
 function missionSpec(){return MISSIONS[shellState.selectedMission]}
 function applyMissionButton(){const b=$('mission');if(b)b.textContent=missionSpec().short}
@@ -103,9 +154,10 @@ function initializeAppShell(api,services){
     document.body.classList.add('first-run');
     setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200);
   }
-  loadNativeNtpStatus();environment.applyDim();environment.applyDreamMode();environment.applyDisplayOnly();audio.applySetting();applyMissionButton();renderer.clearLamps();renderer.set2('prog','00');show(shellState.verb,shellState.noun);clock.syncFace();
+  refreshTimeStatus();environment.applyDim();environment.applyDreamMode();environment.applyDisplayOnly();audio.applySetting();applyMissionButton();renderer.clearLamps();renderer.set2('prog','00');show(shellState.verb,shellState.noun);clock.syncFace();
   setInterval(clock.tick,20);
-  setInterval(loadNativeNtpStatus,60000);
+  setInterval(refreshTimeStatus,60000);
+  addEventListener('online',()=>{browserTimeLastAttemptMs=0;void syncBrowserNetworkTime(true)},{passive:true});
   setInterval(()=>{const core=shellCore();if(shellState.mode==='agc'&&core&&core.running&&shellState.appVisible&&Date.now()-snapshot.lastAutosaveAt()>15000)api.saveAgcState('periodic autosave')},5000);
   if(!shellState.dream&&!restoreAgcOnLoad)rememberRunMode('clock');
   if(restoreAgcOnLoad)setTimeout(()=>{void api.enterAgc()},0);
@@ -126,6 +178,8 @@ window.AGCDSKY_SHELL=Object.freeze({
   clockTimeLabel,
   updateNtpStatus,
   loadNativeNtpStatus,
+  refreshTimeStatus,
+  syncBrowserNetworkTime,
   missionSpec,
   rememberRunMode,
   cycleMission,
