@@ -168,7 +168,10 @@ if (!checklistCss.includes('PAGE 1 / 5 · CUT ON DASHED GUIDE') || !checklistCss
 if (!checklistCss.includes('outline:.4pt dashed #888!important')) fail('checklist print cut guides missing');
 if (sharedStyle.includes('.el-seg.off')) fail('unlit numeric EL segments must not have a visible style');
 if (sharedStyle.includes('.comp-el:not(.on){display:none}')) fail('COMP ACTY printed legend must remain visible while de-energized');
-if (!sharedStyle.includes('.el-comp-bg{fill:var(--el);opacity:0}')) fail('de-energized COMP ACTY EL background must be fully dark');
+if (!sharedStyle.includes('.el-comp-bg{\n  display:none;\n  fill:none;\n  stroke:none;\n  opacity:0;')) fail('de-energized COMP ACTY phosphor must be optically absent');
+if (!sharedStyle.includes('.comp-el.on .el-comp-bg{\n  display:block;\n  fill:var(--el);')) fail('energized COMP ACTY phosphor rule missing');
+if (!sharedStyle.includes('.el-seg{\n  display:none;\n  fill:none;\n  stroke:none;\n  opacity:0;')) fail('de-energized numeric/sign EL must be optically absent');
+if (!sharedStyle.includes('.el-seg.on{\n  display:inline;\n  fill:var(--el);')) fail('energized numeric/sign EL rule missing');
 
 const privacy = text('PRIVACY_POLICY.txt');
 for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=off', 'Ambient light sensor']) {
