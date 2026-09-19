@@ -45,5 +45,7 @@ assert(apple.includes('printInfo.topMargin = 0') && apple.includes('printInfo.ri
 assert(apple.includes('removeScriptMessageHandler(forName: "PrintBridge")'), 'Apple PrintBridge must be removed during teardown');
 assert(!style.includes('.el-seg.off'), 'unlit numeric EL segments must not have a visible style');
 assert(!style.includes('.comp-el:not(.on){display:none}'), 'COMP ACTY printed legend must remain visible while de-energized');
-assert(style.includes('.el-comp-bg{fill:var(--el);opacity:0}'), 'de-energized COMP ACTY EL background must be fully dark');
+assert(style.includes('.el-comp-bg{\n  display:none;\n  fill:none;\n  stroke:none;\n  opacity:0;'), 'de-energized COMP ACTY phosphor must be optically absent');
+assert(style.includes('.comp-el.on .el-comp-bg{\n  display:block;\n  fill:var(--el);'), 'energized COMP ACTY phosphor must explicitly become visible');
+assert(style.includes('.el-seg{\n  display:none;\n  fill:none;\n  stroke:none;\n  opacity:0;'), 'de-energized numeric/sign EL must be optically absent');
 console.log('cheat sheet smoke: PASS');
