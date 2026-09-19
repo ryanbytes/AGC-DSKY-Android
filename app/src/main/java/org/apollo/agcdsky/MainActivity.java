@@ -23,6 +23,8 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
+import org.json.JSONObject;
+
 public final class MainActivity extends Activity {
     private static final int GEO_PERMISSION_REQUEST = 41;
     private static final int CM_PANEL_COLOR = 0xFF7F8484;
@@ -30,10 +32,14 @@ public final class MainActivity extends Activity {
     private static final String JS_APP_VISIBLE = "if(window.AGCDSKY&&AGCDSKY.setAppVisible){AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)}";
     private static final Uri LOCAL_ASSET_ORIGIN = Uri.parse(NetClient.ASSET_ORIGIN);
     private WebView webView;
+    private final NtpTime.Listener ntpListener = status -> pushNtpStatus(status);
     private final class ChecklistPrintBridge {
         @JavascriptInterface public void printChecklist() {
             runOnUiThread(MainActivity.this::printChecklistNow);
         }
+    }
+    private final class TimeBridge {
+        @JavascriptInterface public String getStatus() { return NtpTime.status(MainActivity.this).toJson(); }
     }
     private Bundle pendingWebViewState;
     private String pendingGeoOrigin;
@@ -42,6 +48,7 @@ public final class MainActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         DebugReporter.install(this); requestWindowFeature(Window.FEATURE_NO_TITLE); super.onCreate(state);
         pendingWebViewState = state; configureWindow();
+        NtpTime.start(this); NtpTime.addListener(ntpListener);
         if (!DebugReporter.showPendingReport(this, this::startDsky)) startDsky();
     }
     private void configureWindow() {
@@ -58,10 +65,16 @@ public final class MainActivity extends Activity {
         if((getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0)WebView.setWebContentsDebuggingEnabled(true);
         webView=new WebView(this);webView.setBackgroundColor(CM_PANEL_COLOR);WebSettings s=webView.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setGeolocationEnabled(true);s.setMediaPlaybackRequiresUserGesture(false);s.setBlockNetworkLoads(true);s.setAllowFileAccess(false);s.setAllowContentAccess(false);
         webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");
+        webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");
         webView.addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge");
         webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient(){@Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){if(!isLocalAssetOrigin(origin)){callback.invoke(origin,false,false);return;}if(hasLocationPermission()){callback.invoke(origin,true,false);return;}pendingGeoOrigin=origin;pendingGeoCallback=callback;requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},GEO_PERMISSION_REQUEST);}@Override public boolean onConsoleMessage(ConsoleMessage message){if(message!=null&&message.messageLevel()==ConsoleMessage.MessageLevel.ERROR){String text=message.message();if(text==null||!text.startsWith("[yaAGC]"))DebugReporter.appendWebError(MainActivity.this,message.sourceId()+":"+message.lineNumber()+"\n"+String.valueOf(text));}return super.onConsoleMessage(message);}});
         setContentView(webView);boolean restored=false;if(pendingWebViewState!=null){try{restored=webView.restoreState(pendingWebViewState)!=null;}catch(RuntimeException ignored){}pendingWebViewState=null;}if(!restored)webView.loadUrl(NetClient.ASSET_ORIGIN+NetClient.ASSET_PREFIX+"index.html");
+    }
+    private void pushNtpStatus(NtpTime.Status status) {
+        String json=JSONObject.quote(status.toJson());
+        runOnUiThread(() -> { if(webView!=null) webView.evaluateJavascript(
+                "if(window.AGCDSKY&&AGCDSKY.nativeNtpStatus){AGCDSKY.nativeNtpStatus(" + json + ")}", null); });
     }
     private void printChecklistNow() {
         WebView view=webView;
@@ -82,6 +95,6 @@ public final class MainActivity extends Activity {
     @Override protected void onResume(){super.onResume();configureWindow();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);}}
     @Override protected void onPause(){if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","PrintBridge");}
-    @Override protected void onDestroy(){DebugReporter.dismissPendingReport(this);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;destroyWebView();super.onDestroy();}
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge");}
+    @Override protected void onDestroy(){NtpTime.removeListener(ntpListener);DebugReporter.dismissPendingReport(this);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;destroyWebView();super.onDestroy();}
 }
