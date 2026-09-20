@@ -24,7 +24,7 @@ for(const needle of [
   'scheduleAtFixedRate',
   'onAvailable(Network network)',
   'SystemClock.elapsedRealtime()',
-  'Math.abs(sample.offsetMs - median) <= 2_000L',
+  'Math.abs(sample.offsetMs-median)<=2_000L',
   'status.usingNetworkTime?status.offsetMs:0L',
   'requestSyncNow(Context context)',
   'lastAttemptUtcMs',
