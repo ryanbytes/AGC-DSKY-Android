@@ -44,6 +44,7 @@ public final class MainActivity extends Activity {
     private final class WidgetBridge {
         @JavascriptInterface public String getMode() { return ElWidgetProvider.widgetMode(MainActivity.this); }
         @JavascriptInterface public String setMode(String mode) { return ElWidgetProvider.setWidgetMode(MainActivity.this,mode); }
+        @JavascriptInterface public boolean needsLiveRuntime() { return ElWidgetProvider.needsLiveRuntime(MainActivity.this); }
         @JavascriptInterface public void publishSnapshot(String json) { ElWidgetProvider.publishLiveSnapshot(MainActivity.this,json); }
     }
     private Bundle pendingWebViewState;
@@ -99,7 +100,7 @@ public final class MainActivity extends Activity {
     private boolean hasLocationPermission(){return checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED||checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;}
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==GEO_PERMISSION_REQUEST&&pendingGeoCallback!=null){boolean grant=isLocalAssetOrigin(pendingGeoOrigin)&&hasLocationPermission();pendingGeoCallback.invoke(pendingGeoOrigin,grant,false);pendingGeoOrigin=null;pendingGeoCallback=null;}}
     @Override protected void onResume(){super.onResume();configureWindow();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);}}
-    @Override protected void onPause(){if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
+    @Override protected void onPause(){if(webView!=null){boolean keepWidgetRuntime=ElWidgetProvider.needsLiveRuntime(this);webView.evaluateJavascript(keepWidgetRuntime?JS_APP_VISIBLE:JS_APP_HIDDEN,null);if(!keepWidgetRuntime)webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
     private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge","WidgetBridge");}
     @Override protected void onDestroy(){NtpTime.removeListener(ntpListener);DebugReporter.dismissPendingReport(this);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;destroyWebView();super.onDestroy();}
