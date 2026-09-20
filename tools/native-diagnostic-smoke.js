@@ -110,7 +110,7 @@ for (const token of [
 ]) {
     assert(!diagnostics.includes(token), 'diagnostics must not expose parallax telemetry: '+token);
 }
-assert(diagnostics.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_DIAGNOSTICS',Object.freeze({open,close})"),
+assert(diagnostics.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_DIAGNOSTICS',Object.freeze({open,close,runFullSelfTest})"),
     'diagnostics module must publish open/close explicitly through the dedicated diagnostics service registry slot');
 assert(!diagnostics.includes('api.openDiagnostics=')&&!diagnostics.includes('api.closeDiagnostics='),
     'diagnostics module must not append open/close methods onto the public facade');
