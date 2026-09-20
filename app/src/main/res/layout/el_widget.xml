@@ -20,7 +20,7 @@
             android:scaleType="fitXY"
             android:contentDescription="Apollo DSKY electroluminescent display" />
 
-        <AdapterViewFlipper
+        <ViewFlipper
             android:id="@+id/el_hour_flipper"
             android:layout_width="106dp"
             android:layout_height="23dp"
@@ -32,7 +32,7 @@
             android:loopViews="true"
             android:flipInterval="3600000" />
 
-        <AdapterViewFlipper
+        <ViewFlipper
             android:id="@+id/el_minute_flipper"
             android:layout_width="106dp"
             android:layout_height="23dp"
@@ -44,7 +44,7 @@
             android:loopViews="true"
             android:flipInterval="60000" />
 
-        <AdapterViewFlipper
+        <ViewFlipper
             android:id="@+id/el_seconds_flipper"
             android:layout_width="106dp"
             android:layout_height="23dp"
