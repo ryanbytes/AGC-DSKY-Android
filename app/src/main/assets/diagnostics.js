@@ -10,7 +10,7 @@
   if(!lifecycle)throw new Error('AGC lifecycle service unavailable');
   if(!snapshot)throw new Error('AGC snapshot service unavailable');
   if(!registry)throw new Error('AGC late-service registry unavailable');
-  let timer=0,pipaTest=null,pipaTestTimer=0,dskyTest=null;
+  let timer=0,pipaTest=null,pipaTestTimer=0,dskyTest=null,fullSelfTest=null,fullSelfTestRunning=false;
   const oct=(v,n=5)=>v==null?'-----':((Number(v)>>>0)&0x7fff).toString(8).padStart(n,'0');
   const cduDeg=v=>v==null?NaN:((v&0x7fff)*360/32768+360)%360;
   const s15=v=>{if(v==null)return null;v&=0x7fff;return (v&0x4000)?-((~v)&0x7fff):v};
@@ -21,9 +21,10 @@
   function build(){
     if(document.getElementById('diag-view'))return;
     const el=document.createElement('section');el.id='diag-view';el.setAttribute('aria-label','AGC diagnostics');
-    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
+    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
+    document.getElementById('diag-full-test').onclick=startFullSelfTest;
     document.getElementById('diag-save').onclick=()=>{snapshot.save('diagnostics');update()};
     document.getElementById('diag-verify').onclick=()=>{snapshot.verifyRoundTrip();update()};
     document.getElementById('diag-ntp-sync').onclick=syncNetworkTimeNow;
@@ -39,6 +40,146 @@
     if(typeof request!=='function')return;
     try{Promise.resolve(request()).catch(()=>false).finally(()=>setTimeout(update,100))}catch(_){}
     update();
+  }
+  const SELF_TEST_ASSETS=Object.freeze([
+    Object.freeze({name:'yaAGC.wasm',size:132617,gitBlobSha1:'713685680492098d05437b99c26403f683d56009'}),
+    Object.freeze({name:'Comanche055.bin',size:73728,gitBlobSha1:'9e4ec167dc99ac12b233df07b6b91fef585e5015'})
+  ]);
+  const SELF_TEST_KEYS=Object.freeze({'1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37});
+  const SELF_TEST_RELAY_CODES=Object.freeze({'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31});
+  function selfTestResult(name,ok,detail){return Object.freeze({name:String(name),ok:!!ok,detail:String(detail||'')})}
+  function hex(bytes){return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('')}
+  async function gitBlobSha1(bytes){
+    if(!(window.crypto&&crypto.subtle&&typeof crypto.subtle.digest==='function'))throw new Error('WebCrypto unavailable');
+    const payload=new Uint8Array(bytes),prefix=new TextEncoder().encode('blob '+payload.byteLength+'\0'),joined=new Uint8Array(prefix.length+payload.length);
+    joined.set(prefix,0);joined.set(payload,prefix.length);
+    return hex(await crypto.subtle.digest('SHA-1',joined));
+  }
+  async function fetchCheckedAsset(spec){
+    const response=await fetch(spec.name,{cache:'no-store'});
+    if(!response.ok)throw new Error(spec.name+' HTTP '+response.status);
+    const bytes=await response.arrayBuffer();
+    if(bytes.byteLength!==spec.size)throw new Error(spec.name+' size '+bytes.byteLength+' != '+spec.size);
+    const digest=await gitBlobSha1(bytes);
+    if(digest.toLowerCase()!==spec.gitBlobSha1)throw new Error(spec.name+' checksum '+digest);
+    return bytes;
+  }
+  async function runFullSelfTest(){
+    if(fullSelfTestRunning)return;
+    fullSelfTestRunning=true;fullSelfTest={startedAt:Date.now(),finishedAt:0,results:[]};update();
+    const run=async(name,test)=>{
+      try{
+        const detail=await test();
+        fullSelfTest.results.push(selfTestResult(name,true,detail||'OK'));
+      }catch(error){
+        fullSelfTest.results.push(selfTestResult(name,false,error?.message||error||'failed'));
+      }
+      update();
+    };
+    let wasmBytes=null,ropeBytes=null;
+    await run('Core services',async()=>{
+      const required=[['renderer',window.AGCDSKY_RENDERER],['display',window.AGCDSKY_DISPLAY],['clock',window.AGCDSKY_CLOCK],['snapshot',window.AGCDSKY_SNAPSHOT],['shell',window.AGCDSKY_SHELL]];
+      const missing=required.filter(([,value])=>!value).map(([name])=>name);
+      if(missing.length)throw new Error('missing '+missing.join(', '));
+      if(typeof window.AgcCore!=='function')throw new Error('AgcCore constructor unavailable');
+      return 'service graph and AgcCore constructor present';
+    });
+    await run('AGC WASM asset',async()=>{
+      wasmBytes=await fetchCheckedAsset(SELF_TEST_ASSETS[0]);
+      await WebAssembly.compile(wasmBytes.slice(0));
+      return SELF_TEST_ASSETS[0].size+' bytes · pinned Git blob SHA-1 verified · compiles';
+    });
+    await run('Comanche 055 rope',async()=>{
+      ropeBytes=await fetchCheckedAsset(SELF_TEST_ASSETS[1]);
+      return SELF_TEST_ASSETS[1].size+' bytes · pinned Git blob SHA-1 verified';
+    });
+    await run('Relay-to-digit matrix',async()=>{
+      const matrix=window.DSKY_RELAY_MATRIX,display=window.AGCDSKY_DISPLAY,renderer=window.AGCDSKY_RENDERER;
+      if(!matrix||typeof matrix.segmentsForCode!=='function'||!display||!renderer)throw new Error('relay matrix unavailable');
+      for(const [digit,code] of Object.entries(SELF_TEST_RELAY_CODES)){
+        if(display.relayDigit(code)!==digit)throw new Error('relay code '+code+' decoded as '+display.relayDigit(code)+' not '+digit);
+        if(matrix.segmentsForCode(code)!==renderer.segmentPattern(digit))throw new Error('segment mismatch for '+digit);
+      }
+      return '10 numeric relay codes match renderer segment patterns';
+    });
+    await run('EL segment renderer',async()=>{
+      const renderer=window.AGCDSKY_RENDERER;if(!renderer||typeof renderer.renderDigits!=='function')throw new Error('renderer unavailable');
+      const probe=document.createElement('div');renderer.renderDigits(probe,'8');
+      const segments=[...probe.querySelectorAll('[data-seg]')].map(x=>x.getAttribute('data-seg')).sort().join('');
+      if(segments!=='abcdefg')throw new Error('digit 8 rendered segments '+segments);
+      return 'all seven EL segments a–g render through the active renderer';
+    });
+    await run('Annunciator lamps',async()=>{
+      const renderer=window.AGCDSKY_RENDERER,expected=['uplink','temp','noatt','gimbal','stby','prog','keyrel','restart','oprerr','tracker','comp'];
+      if(!renderer||typeof renderer.setLamp!=='function')throw new Error('lamp renderer unavailable');
+      const nodes=expected.map(name=>[name,document.querySelector('[data-lamp="'+name+'"]')]);
+      const missing=nodes.filter(([,node])=>!node).map(([name])=>name);if(missing.length)throw new Error('missing '+missing.join(', '));
+      const prior=nodes.map(([name,node])=>[name,node.classList.contains('on')]);
+      try{
+        for(const [name,node] of nodes){renderer.setLamp(name,true);if(!node.classList.contains('on'))throw new Error(name+' failed ON');renderer.setLamp(name,false);if(node.classList.contains('on'))throw new Error(name+' failed OFF')}
+      }finally{for(const [name,on] of prior)renderer.setLamp(name,on)}
+      return expected.length+' annunciator/COMP outputs toggle and restore';
+    });
+    await run('Keypad wiring',async()=>{
+      const map=window.AGCDSKY_KEY_CODES,input=lateService('AGCDSKY_INPUT');if(!map)throw new Error('keycode table unavailable');
+      for(const [key,code] of Object.entries(SELF_TEST_KEYS))if(map[key]!==code)throw new Error(key+' code mismatch');
+      const keys=[...document.querySelectorAll('button[data-key]')].map(x=>x.dataset.key);
+      for(const key of [...Object.keys(SELF_TEST_KEYS),'P'])if(keys.filter(x=>x===key).length!==1)throw new Error('key '+key+' DOM wiring count != 1');
+      if(!input||typeof input.keyMake!=='function'||typeof input.keyReset!=='function'||typeof input.proceed!=='function')throw new Error('input runtime unavailable');
+      return '18 Pinball keycodes + separate PRO contact wired';
+    });
+    await run('Native/browser bridges',async()=>{
+      const native=!!window.TimeBridge;
+      if(native){
+        if(typeof TimeBridge.getStatus!=='function'||typeof TimeBridge.syncNow!=='function')throw new Error('TimeBridge incomplete');
+        if(!window.PrintBridge||typeof PrintBridge.printChecklist!=='function')throw new Error('PrintBridge unavailable');
+        return 'Android TimeBridge and PrintBridge present'+(window.SkyBridge?' · SkyBridge present':'');
+      }
+      const parity=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function';
+      if(!parity)throw new Error('no native bridge or PWA parity bridge');
+      return 'browser/PWA bridge active';
+    });
+    await run('Sensor plumbing',async()=>{
+      const phone=phoneStatus(),pwa=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function'?window.AGCDSKYPWA.parityStatus():null;
+      if(phone)return 'phone sensor service active · '+(phone.sensorSource||phone.nativeSensorName||'sensor status available');
+      if(pwa){
+        const values=[pwa.orientation,pwa.absoluteOrientation,pwa.genericAbsolute,pwa.motion].filter(Boolean);
+        if(!values.length)throw new Error('PWA sensor status empty');
+        return 'PWA sensor bridge reports '+values.join(' / ');
+      }
+      throw new Error('sensor bridge unavailable');
+    });
+    await run('Network time',async()=>{
+      const ntp={...appState.ntpStatus};
+      if(ntp.state!=='synced'||!ntp.lastSyncUtcMs)throw new Error('network time '+String(ntp.state||'unavailable'));
+      return (ntp.source==='http-date'?'HTTP Date':'SNTP')+' synced · offset '+Math.round(ntp.offsetMs||0)+' ms · RTT '+Math.round(ntp.roundTripMs||0)+' ms';
+    });
+    await run('Saved-state read/write',async()=>{
+      const key='__agcdsky_diag_probe__',value='probe-'+Date.now();
+      if(!window.AGCDSKY_SHELL?.store?.set(key,value))throw new Error('storage write rejected');
+      const read=window.AGCDSKY_SHELL.store.get(key);window.AGCDSKY_SHELL.store.remove(key);
+      if(read!==value)throw new Error('storage readback mismatch');
+      if(coreSession.core){
+        const verify=snapshot.verifyRoundTrip();
+        if(!verify?.ok)throw new Error('AGC snapshot round-trip '+(verify?.error||'failed'));
+        return 'storage probe PASS · AGC snapshot '+(verify.before||'---')+' → '+(verify.after||'---');
+      }
+      return 'storage probe PASS · AGC core not loaded, snapshot memory test not required';
+    });
+    await run('Audio subsystem',async()=>{
+      const audio=window.AGCDSKY_AUDIO;if(!audio||typeof audio.ensure!=='function')throw new Error('audio service unavailable');
+      const ctx=audio.ensure();if(!ctx)throw new Error('Web Audio unavailable');
+      if(ctx.state==='suspended'&&typeof ctx.resume==='function')try{await ctx.resume()}catch(_){}
+      if(ctx.state==='closed')throw new Error('audio context closed');
+      return 'AudioContext '+ctx.state+' · '+Math.round(ctx.sampleRate||0)+' Hz';
+    });
+    await run('Packaged assets',async()=>{
+      if(!wasmBytes||!ropeBytes)throw new Error('pinned AGC assets did not verify');
+      const required=['index.html','diagnostics.js','dsky-geometry.js','Comanche055.bin','yaAGC.wasm'];
+      for(const name of required){const response=await fetch(name,{cache:'no-store'});if(!response.ok)throw new Error(name+' HTTP '+response.status)}
+      return required.length+' critical packaged assets readable';
+    });
+    fullSelfTest.finishedAt=Date.now();fullSelfTestRunning=false;update();
   }
   function startPipaTest(){
     const core=coreSession.core,start=pipaWords(core),b=document.getElementById('diag-pipa-test');
@@ -79,6 +220,12 @@
     const d=app.display||{};
     let h='';
     h+=section('CORE / DSKY');
+    if(fullSelfTest){
+      const passed=fullSelfTest.results.filter(x=>x.ok).length,failed=fullSelfTest.results.filter(x=>!x.ok).length,total=fullSelfTest.results.length;
+      const overall=fullSelfTestRunning?'RUNNING':(failed?'FAIL':'PASS');
+      h+=row('Full DSKY self-test',overall+' · '+passed+' PASS'+(failed?' · '+failed+' FAIL':'')+' · '+total+'/12 complete');
+      for(const result of fullSelfTest.results)h+=row('↳ '+result.name,(result.ok?'PASS':'FAIL')+' · '+result.detail);
+    }
     h+=row('Mode',String(app.mode||'---').toUpperCase());
     h+=row('Core',app.coreLoaded?`${app.coreVersion||'---'} · ${app.coreRunning?'RUNNING':'SUSPENDED'}`:'not loaded');
     if(dskyTest)h+=row('Clock DSKY self-test',`${dskyTest.ok?'STARTED':'BLOCKED'} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
@@ -142,15 +289,16 @@
     h+=row('Autosave this session',snap.lastAutosaveAt?`${ageText(Date.now()-snap.lastAutosaveAt)} ago`:'NOT YET');
     h+=row('Snapshot action',`${snap.lastAction||'none'}${snap.error?' · '+snap.error:''}`);
     t.innerHTML=h;
-    const saveBtn=document.getElementById('diag-save'),verifyBtn=document.getElementById('diag-verify'),dskyBtn=document.getElementById('diag-dsky-test'),ntpBtn=document.getElementById('diag-ntp-sync');
+    const saveBtn=document.getElementById('diag-save'),verifyBtn=document.getElementById('diag-verify'),dskyBtn=document.getElementById('diag-dsky-test'),ntpBtn=document.getElementById('diag-ntp-sync'),fullBtn=document.getElementById('diag-full-test');
     const canSave=app.mode==='agc'&&app.coreLoaded;
     if(saveBtn){saveBtn.disabled=!canSave;saveBtn.textContent=canSave?'SAVE AGC STATE NOW':'SAVE AGC STATE · AGC MODE ONLY'}
     if(verifyBtn)verifyBtn.disabled=!app.coreLoaded;
     if(dskyBtn){dskyBtn.disabled=app.mode!=='clock';dskyBtn.textContent=app.mode==='clock'?'RUN CLOCK DSKY SELF-TEST':'DSKY SELF-TEST · CLOCK MODE ONLY'}
     if(ntpBtn){ntpBtn.disabled=!!ntp.syncInFlight;ntpBtn.textContent=ntp.syncInFlight?'NETWORK TIME SYNCING…':'SYNC NETWORK TIME NOW'}
+    if(fullBtn){fullBtn.disabled=fullSelfTestRunning;fullBtn.textContent=fullSelfTestRunning?'FULL SELF-TEST RUNNING…':'RUN FULL DSKY SELF-TEST'}
   }
   function open(){build();document.getElementById('diag-view').classList.add('open');update();if(!timer)timer=setInterval(update,250)}
   function close(){document.getElementById('diag-view')?.classList.remove('open');if(timer){clearInterval(timer);timer=0}}
   addEventListener('DOMContentLoaded',()=>{build();const b=document.getElementById('diagnostics');if(b)b.addEventListener('click',open)});
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_DIAGNOSTICS',Object.freeze({open,close}),'diagnostics publication');
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_DIAGNOSTICS',Object.freeze({open,close,runFullSelfTest}),'diagnostics publication');
 })();
