@@ -23,17 +23,21 @@ const generator=read('tools/generate-el-second-frames.js');
 req(manifest,'android:name=".ElWidgetProvider"','manifest');
 req(manifest,'android:resource="@xml/el_widget_info"','manifest');
 req(manifest,'android.permission.INTERNET','manifest');
-req(layout,'<AdapterViewFlipper','widget layout');
+req(layout,'<ViewFlipper','widget layout');
+no(layout,'<AdapterViewFlipper','widget layout');
 req(layout,'android:id="@+id/el_seconds_flipper"','seconds flipper');
 req(layout,'android:flipInterval="1000"','seconds flipper');
 req(item,'android:id="@+id/el_second_image"','seconds frame');
 no(layout,'<TextClock','widget layout');
 req(info,'android:updatePeriodMillis="1800000"','widget metadata');
 req(info,'android:widgetCategory="home_screen"','widget metadata');
-req(provider,'RemoteViews.RemoteCollectionItems.Builder','live register adapter');
+req(provider,'views.removeAllViews(viewId)','static flipper reset');
+req(provider,'views.addView(viewId,frame)','static flipper children');
 req(provider,'R.drawable.el_sec_59','generated frame table');
-req(provider,'pairFrames=buildFrames(context,60)','60-frame adapter');
-req(provider,'hourFrames=buildFrames(context,24)','24-frame adapter');
+req(provider,'populateFlipper(context,views,R.id.el_hour_flipper,24)','24-frame flipper');
+req(provider,'populateFlipper(context,views,R.id.el_minute_flipper,60)','60-frame minute flipper');
+req(provider,'populateFlipper(context,views,R.id.el_seconds_flipper,60)','60-frame seconds flipper');
+no(provider,'setRemoteAdapter(','launcher remote-adapter dependency');
 req(provider,'alarm.setExactAndAllowWhileIdle','minute refresh');
 
 req(finish,'--el:#6decb4','WebView EL color');
@@ -177,7 +181,7 @@ no(html,'transform="translate(6.737 57.267)"','obsolete overlapping VERB datum')
 no(html,'transform="translate(72.763 57.267)"','obsolete overlapping NOUN datum');
 req(html,'transform="translate(0 84.441)"','register origin');
 req(provider,"if(liveMode){register(c,live.r1.charAt(0),live.r1.substring(1),0,R1_Y)",'native live register datum');
-req(provider,'views.setDisplayedChild(R.id.el_hour_flipper,now.get(Calendar.HOUR_OF_DAY))','native clock hour datum');
+req(provider,'views.setInt(R.id.el_hour_flipper,"setDisplayedChild",now.get(Calendar.HOUR_OF_DAY))','native clock hour datum');
 
 req(generator,'android:viewportWidth="106"','generated viewport width');
 req(generator,'android:viewportHeight="23"','generated viewport height');
