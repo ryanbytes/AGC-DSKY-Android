@@ -21,11 +21,12 @@
   function build(){
     if(document.getElementById('diag-view'))return;
     const el=document.createElement('section');el.id='diag-view';el.setAttribute('aria-label','AGC diagnostics');
-    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
+    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
     document.getElementById('diag-save').onclick=()=>{snapshot.save('diagnostics');update()};
     document.getElementById('diag-verify').onclick=()=>{snapshot.verifyRoundTrip();update()};
+    document.getElementById('diag-ntp-sync').onclick=syncNetworkTimeNow;
     document.getElementById('diag-pipa-test').onclick=startPipaTest;
     document.getElementById('diag-dsky-test').onclick=startDskyTest;
     document.getElementById('diag-clear').onclick=()=>{snapshot.clear();update()};
@@ -33,6 +34,12 @@
   function row(k,v){return `<tr><td>${k}</td><td>${v}</td></tr>`}
   function section(name){return `<tr><th colspan="2">${name}</th></tr>`}
   function pipaWords(core){if(!core||typeof core.readErasable!=='function')return null;return [0o37,0o40,0o41].map(a=>core.readErasable(0,a)&0x7fff)}
+  function syncNetworkTimeNow(){
+    const request=window.AGCDSKY_SHELL&&window.AGCDSKY_SHELL.requestNetworkTimeSync;
+    if(typeof request!=='function')return;
+    try{Promise.resolve(request()).catch(()=>false).finally(()=>setTimeout(update,100))}catch(_){}
+    update();
+  }
   function startPipaTest(){
     const core=coreSession.core,start=pipaWords(core),b=document.getElementById('diag-pipa-test');
     if(!core||!core.running||!start){pipaTest={ok:false,message:'AGC MUST BE RUNNING'};update();return}
@@ -100,6 +107,29 @@
     const sc=phone?.skyCalibration||sxt?.pointingCalibration;h+=row('Camera boresight calibration',sc?.calibrated?`CALIBRATED · ${sc.calibration?.label||'star'} · ${sc.calibration?.timestamp?new Date(sc.calibration.timestamp).toLocaleString():''}`:'NONE');
     if(sc?.rawNative?.seen)h+=row('Raw native pointing',`AZ ${f(sc.rawNative.az,1)}° · ALT ${f(sc.rawNative.alt,1)}° · age ${ageText(Date.now()-(sc.rawNative.timestamp||0))}`);
     if(sxt?.location)h+=row('Star-finder location',`${f(sxt.location.lat,4)}, ${f(sxt.location.lon,4)} · ±${Number.isFinite(sxt.location.accuracy)?Math.round(sxt.location.accuracy):'---'} m · age ${ageText(Date.now()-(sxt.location.timestamp||0))}`);
+    h+=section('TIME');
+    if(ntp){
+      const state=String(ntp.state||'unavailable').toUpperCase();
+      const native=!!(window.TimeBridge&&typeof window.TimeBridge.getStatus==='function');
+      const using=ntp.state==='synced';
+      const source=using?(ntp.source==='http-date'?'HTTP DATE NETWORK TIME':'SNTP NETWORK TIME'):(native?'ANDROID WALL CLOCK':'BROWSER WALL CLOCK');
+      const dynamicAge=ntp.lastSyncUtcMs?Math.max(0,Date.now()+(Number(ntp.offsetMs)||0)-Number(ntp.lastSyncUtcMs)):-1;
+      const lastSuccess=ntp.lastSyncUtcMs?new Date(ntp.lastSyncUtcMs).toLocaleString():'NEVER';
+      const attempt=ntp.lastAttemptUtcMs?new Date(ntp.lastAttemptUtcMs).toLocaleString():'NEVER';
+      const offset=Number(ntp.offsetMs)||0;
+      const offsetText=(offset>0?'+':'')+Math.round(offset)+' ms';
+      const rtt=Number(ntp.roundTripMs)>=0?Math.round(ntp.roundTripMs)+' ms':'---';
+      const attemptResult=String(ntp.lastAttemptResult||'never').toUpperCase();
+      const reason=ntp.lastAttemptReason?' · '+ntp.lastAttemptReason:'';
+      const error=ntp.lastError?' · '+ntp.lastError:'';
+      h+=row('Clock source',source);
+      h+=row('Network time server',ntp.server||'time.cloudflare.com');
+      h+=row('Network time state',state+(ntp.syncInFlight?' · SYNC IN PROGRESS':''));
+      h+=row('Measured clock offset',offsetText+(using?' · APPLIED':' · NOT APPLIED'));
+      h+=row('Round-trip time',rtt);
+      h+=row('Last successful sync',lastSuccess+(dynamicAge>=0?' · '+ageText(dynamicAge)+' ago':''));
+      h+=row('Last sync attempt',attempt+' · '+attemptResult+reason+error);
+    }
     h+=section('ALARMS / STATE SAVE');
     h+=row('FAILREG 1 / 2 / 3',`${oct(alarm[0])} / ${oct(alarm[1])} / ${oct(alarm[2])}`);
     const snap=app.snapshot||{},meta=snap.meta;
@@ -109,14 +139,14 @@
     h+=row('Snapshot fingerprint',`saved ${meta?.fingerprint||'---'} · current ${snap.currentFingerprint||'---'}`);
     const sv=snap.lastVerify;h+=row('Snapshot round-trip self-test',sv?`${sv.ok?'PASS':'FAIL'} · ${sv.before||'---'} → ${sv.after||'---'}${sv.error?' · '+sv.error:''}`:'NOT RUN');
     h+=row('Autosave this session',snap.lastAutosaveAt?`${ageText(Date.now()-snap.lastAutosaveAt)} ago`:'NOT YET');
-    if(ntp){const synced=ntp.lastSyncUtcMs?new Date(ntp.lastSyncUtcMs).toLocaleString():'NEVER';const rtt=Number(ntp.roundTripMs)>=0?`${Math.round(ntp.roundTripMs)} ms`:'---';h+=row('Network time',`${ntp.state||'unavailable'} · ${ntp.server||'time.cloudflare.com'} · offset ${Math.round(ntp.offsetMs||0)} ms · RTT ${rtt} · last ${synced}${Number(ntp.ageMs)>=0?' · '+ageText(ntp.ageMs)+' ago':''}`)}
     h+=row('Snapshot action',`${snap.lastAction||'none'}${snap.error?' · '+snap.error:''}`);
     t.innerHTML=h;
-    const saveBtn=document.getElementById('diag-save'),verifyBtn=document.getElementById('diag-verify'),dskyBtn=document.getElementById('diag-dsky-test');
+    const saveBtn=document.getElementById('diag-save'),verifyBtn=document.getElementById('diag-verify'),dskyBtn=document.getElementById('diag-dsky-test'),ntpBtn=document.getElementById('diag-ntp-sync');
     const canSave=app.mode==='agc'&&app.coreLoaded;
     if(saveBtn){saveBtn.disabled=!canSave;saveBtn.textContent=canSave?'SAVE AGC STATE NOW':'SAVE AGC STATE · AGC MODE ONLY'}
     if(verifyBtn)verifyBtn.disabled=!app.coreLoaded;
     if(dskyBtn){dskyBtn.disabled=app.mode!=='clock';dskyBtn.textContent=app.mode==='clock'?'RUN CLOCK DSKY SELF-TEST':'DSKY SELF-TEST · CLOCK MODE ONLY'}
+    if(ntpBtn){ntpBtn.disabled=!!ntp.syncInFlight;ntpBtn.textContent=ntp.syncInFlight?'NETWORK TIME SYNCING…':'SYNC NETWORK TIME NOW'}
   }
   function open(){build();document.getElementById('diag-view').classList.add('open');update();if(!timer)timer=setInterval(update,250)}
   function close(){document.getElementById('diag-view')?.classList.remove('open');if(timer){clearInterval(timer);timer=0}}

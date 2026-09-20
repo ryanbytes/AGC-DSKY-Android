@@ -11,10 +11,23 @@ for(const marker of [
   "clock.lampTest()",
   "appState.mode!=='clock'",
   "'Clock DSKY self-test'",
-  "'Network time'",
+  'id="diag-ntp-sync"',
+  "document.getElementById('diag-ntp-sync').onclick=syncNetworkTimeNow",
+  "window.AGCDSKY_SHELL.requestNetworkTimeSync",
+  "section('TIME')",
+  "'Clock source'",
+  "'Network time server'",
+  "'Network time state'",
+  "'Measured clock offset'",
+  "'Round-trip time'",
+  "'Last successful sync'",
+  "'Last sync attempt'",
   'ntp.roundTripMs',
   'ntp.offsetMs',
-  'ntp.lastSyncUtcMs'
+  'ntp.lastSyncUtcMs',
+  'ntp.lastAttemptUtcMs',
+  'ntp.lastAttemptResult',
+  'ntp.syncInFlight'
 ]) assert(SRC.includes(marker),'diagnostics contract missing: '+marker);
 assert(!/startDskyTest[\s\S]{0,900}(?:keyMake|writeIo|proceed)/.test(SRC),
   'diagnostics self-test must not inject AGC inputs; AGC-mode V35 stays user-driven');

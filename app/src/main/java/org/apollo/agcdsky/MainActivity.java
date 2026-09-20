@@ -39,7 +39,7 @@ public final class MainActivity extends Activity {
         }
     }
     private final class TimeBridge {
-        @JavascriptInterface public String getStatus() { return NtpTime.status(MainActivity.this).toJson(); }
+        @JavascriptInterface public String getStatus() { return NtpTime.status(MainActivity.this).toJson(); }\n        @JavascriptInterface public boolean syncNow() { return NtpTime.requestSyncNow(MainActivity.this); }
     }
     private Bundle pendingWebViewState;
     private String pendingGeoOrigin;

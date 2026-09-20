@@ -25,7 +25,13 @@ for(const needle of [
   'onAvailable(Network network)',
   'SystemClock.elapsedRealtime()',
   'Math.abs(sample.offsetMs - median) <= 2_000L',
-  'System.currentTimeMillis() + readStatus'
+  'status.usingNetworkTime?status.offsetMs:0L',
+  'requestSyncNow(Context context)',
+  'lastAttemptUtcMs',
+  'lastAttemptResult',
+  'lastError',
+  'usingNetworkTime',
+  'syncInFlight'
 ]) requireText(ntp,needle,'NtpTime');
 
 for(const needle of [
@@ -40,10 +46,15 @@ forbid(ntp+client,'setTime(','native NTP implementation');
 requireText(manifest,'android.permission.INTERNET','manifest');
 requireText(manifest,'android.permission.ACCESS_NETWORK_STATE','manifest');
 requireText(state,"server:'time.cloudflare.com'",'shared app state');
+requireText(state,"source:'system'",'shared app state');
+requireText(state,"usingNetworkTime:false",'shared app state');
+requireText(state,"syncInFlight:false",'shared app state');
 
-requireText(shell,'function accurateTime(){return Date.now()+(Number(shellState.ntpStatus.offsetMs)||0)}','app shell clock');
+requireText(shell,"function accurateTime(){return Date.now()+(shellState.ntpStatus.state==='synced'?(Number(shellState.ntpStatus.offsetMs)||0):0)}",'app shell clock');
 requireText(shell,'function loadNativeNtpStatus()','app shell native NTP bridge');
 requireText(shell,'function syncBrowserNetworkTime(force=false)','app shell browser network-time fallback');
+requireText(shell,'function requestNetworkTimeSync()','app shell manual network-time sync');
+requireText(shell,"typeof TimeBridge.syncNow==='function'",'app shell native manual sync bridge');
 requireText(shell,"method:'HEAD',cache:'no-store'","browser network-time request");
 requireText(shell,"response.headers.get('date')","browser network-time Date header");
 requireText(shell,"source:'http-date'","browser network-time status");
@@ -55,6 +66,7 @@ for(const [label,text] of [['MainActivity',main],['SensorMainActivity',sensor],[
   requireText(text,'NtpTime.addListener(ntpListener)',label);
   requireText(text,'new TimeBridge()',label);
   requireText(text,'"TimeBridge"',label);
+  requireText(text,'NtpTime.requestSyncNow(',label+' manual sync');
   requireText(text,'NtpTime.removeListener(ntpListener)',label);
 }
 requireText(main,'WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge")','MainActivity TimeBridge teardown');

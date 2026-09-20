@@ -20,10 +20,17 @@
       appVisible:!document.hidden,
       ntpStatus:{
         server:'time.cloudflare.com',
+        source:'system',
+        usingNetworkTime:false,
+        syncInFlight:false,
         offsetMs:0,
         lastSyncUtcMs:0,
         roundTripMs:-1,
         ageMs:-1,
+        lastAttemptUtcMs:0,
+        lastAttemptResult:'never',
+        lastAttemptReason:'',
+        lastError:'',
         state:'unavailable'
       }
     });

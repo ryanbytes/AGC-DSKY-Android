@@ -168,7 +168,7 @@ public final class AgcDreamService extends DreamService {
     }
 
     private final class TimeBridge {
-        @JavascriptInterface public String getStatus() { return NtpTime.status(AgcDreamService.this).toJson(); }
+        @JavascriptInterface public String getStatus() { return NtpTime.status(AgcDreamService.this).toJson(); }\n        @JavascriptInterface public boolean syncNow() { return NtpTime.requestSyncNow(AgcDreamService.this); }
     }
 
     private void pushNtpStatus(NtpTime.Status status) {

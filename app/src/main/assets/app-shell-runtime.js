@@ -33,11 +33,11 @@ const BROWSER_TIME_RESYNC_MS=10*60*1000;
 const BROWSER_TIME_STALE_MS=2*60*60*1000;
 let browserTimeLastAttemptMs=0,browserTimeInFlight=null;
 function hasNativeTimeBridge(){return !!(window.TimeBridge&&typeof TimeBridge.getStatus==='function')}
-function accurateTime(){return Date.now()+(Number(shellState.ntpStatus.offsetMs)||0)}
+function accurateTime(){return Date.now()+(shellState.ntpStatus.state==='synced'?(Number(shellState.ntpStatus.offsetMs)||0):0)}
 function accurateDate(){return new Date(accurateTime())}
 function clockTimeLabel(){
   if(shellState.ntpStatus.state==='synced')return shellState.ntpStatus.source==='http-date'?'PHONE CLOCK · NETWORK TIME':'PHONE CLOCK · NTP TIME';
-  if(shellState.ntpStatus.state==='stale')return 'PHONE CLOCK · NETWORK OFFSET STALE';
+  if(shellState.ntpStatus.state==='stale')return hasNativeTimeBridge()?'PHONE CLOCK · ANDROID WALL TIME · NTP STALE':'PHONE CLOCK · BROWSER WALL TIME · NETWORK STALE';
   return hasNativeTimeBridge()?'PHONE CLOCK · ANDROID WALL TIME':'PHONE CLOCK · BROWSER WALL TIME';
 }
 function updateNtpStatus(value){try{const parsed=typeof value==='string'?JSON.parse(value):value;if(parsed&&typeof parsed==='object'){shellState.ntpStatus={...shellState.ntpStatus,...parsed};if(shellState.mode==='clock')$('mode').textContent=clockTimeLabel()}}catch(_){/* malformed bridge data must not affect the DSKY */}}
@@ -55,8 +55,10 @@ async function sampleBrowserNetworkTime(){
 }
 function refreshBrowserTimeAge(){
   if(shellState.ntpStatus.source!=='http-date'||!shellState.ntpStatus.lastSyncUtcMs)return;
-  const age=Math.max(0,accurateTime()-Number(shellState.ntpStatus.lastSyncUtcMs));
-  updateNtpStatus({ageMs:age,state:age>BROWSER_TIME_STALE_MS?'stale':'synced'});
+  const correctedNow=Date.now()+(Number(shellState.ntpStatus.offsetMs)||0);
+  const age=Math.max(0,correctedNow-Number(shellState.ntpStatus.lastSyncUtcMs));
+  const state=age>BROWSER_TIME_STALE_MS?'stale':'synced';
+  updateNtpStatus({ageMs:age,state,usingNetworkTime:state==='synced'});
 }
 function syncBrowserNetworkTime(force=false){
   if(hasNativeTimeBridge())return Promise.resolve(false);
@@ -64,25 +66,43 @@ function syncBrowserNetworkTime(force=false){
   if(browserTimeInFlight)return browserTimeInFlight;
   if(!force&&browserTimeLastAttemptMs&&now-browserTimeLastAttemptMs<BROWSER_TIME_RESYNC_MS){refreshBrowserTimeAge();return Promise.resolve(false)}
   browserTimeLastAttemptMs=now;
+  updateNtpStatus({syncInFlight:true,lastAttemptUtcMs:now,lastAttemptResult:'syncing',lastAttemptReason:force?'manual':'automatic',lastError:''});
   browserTimeInFlight=(async()=>{
     const samples=[];
     for(let i=0;i<3;i++){try{samples.push(await sampleBrowserNetworkTime())}catch(_){}}
-    if(!samples.length){refreshBrowserTimeAge();return false}
+    if(!samples.length){
+      refreshBrowserTimeAge();
+      updateNtpStatus({syncInFlight:false,lastAttemptResult:'failed',lastError:'HTTP Date network-time samples failed'});
+      return false;
+    }
     const offsets=samples.map(sample=>sample.offsetMs).sort((a,b)=>a-b);
     const offsetMs=offsets[Math.floor(offsets.length/2)];
     const roundTripMs=Math.min(...samples.map(sample=>sample.roundTripMs));
     updateNtpStatus({
       server:location.host||'same-origin',
       source:'http-date',
+      usingNetworkTime:true,
+      syncInFlight:false,
       offsetMs,
       lastSyncUtcMs:Date.now()+offsetMs,
       roundTripMs,
       ageMs:0,
+      lastAttemptUtcMs:now,
+      lastAttemptResult:'success',
+      lastAttemptReason:force?'manual':'automatic',
+      lastError:'',
       state:'synced'
     });
     return true;
   })().finally(()=>{browserTimeInFlight=null});
   return browserTimeInFlight;
+}
+function requestNetworkTimeSync(){
+  if(hasNativeTimeBridge()&&typeof TimeBridge.syncNow==='function'){
+    try{const accepted=!!TimeBridge.syncNow();loadNativeNtpStatus();return Promise.resolve(accepted)}
+    catch(_){loadNativeNtpStatus();return Promise.resolve(false)}
+  }
+  return syncBrowserNetworkTime(true);
 }
 function refreshTimeStatus(){if(loadNativeNtpStatus())return true;refreshBrowserTimeAge();void syncBrowserNetworkTime(false);return false}
 
@@ -180,6 +200,7 @@ window.AGCDSKY_SHELL=Object.freeze({
   loadNativeNtpStatus,
   refreshTimeStatus,
   syncBrowserNetworkTime,
+  requestNetworkTimeSync,
   missionSpec,
   rememberRunMode,
   cycleMission,
