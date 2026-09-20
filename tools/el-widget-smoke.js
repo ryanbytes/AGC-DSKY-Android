@@ -164,9 +164,9 @@ req(html,'x="0" y="41.203" width="39.525" height="11.678"','WebView VERB zone ma
 req(html,'x="66.441" y="41.203" width="39.525" height="11.678"','WebView NOUN zone matched to PROG gap');
 req(html,'x="19.763" y="49.252" text-anchor="middle">VERB</text>','WebView VERB legend baseline');
 req(html,'x="86.237" y="49.252" text-anchor="middle">NOUN</text>','WebView NOUN legend baseline');
-req(provider,'digits(c,"00",RIGHT_FIELD_X,PROG_Y)','native PROG datum');
-req(provider,'digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y)','native VERB datum');
-req(provider,'digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y)','native NOUN datum');
+req(provider,'digits(c,liveMode?live.prog:"00",RIGHT_FIELD_X,PROG_Y)','native PROG datum');
+req(provider,'digits(c,liveMode?live.verb:"16",LEFT_FIELD_X,VERB_NOUN_Y)','native VERB datum');
+req(provider,'digits(c,liveMode?live.noun:"65",RIGHT_FIELD_X,VERB_NOUN_Y)','native NOUN datum');
 no(provider,'LEFT_FIELD_X=.140f*U','obsolete native left datum');
 no(provider,'digits(c,"16",LEFT_FIELD_X,55.5f)','obsolete native VERB Y');
 req(generator,'REG_ADV=.410*U, FIRST_DIGIT_X=.400*U','generated register datums');
@@ -176,7 +176,7 @@ req(html,'transform="translate(72.763 54.797)"','NOUN datum');
 no(html,'transform="translate(6.737 57.267)"','obsolete overlapping VERB datum');
 no(html,'transform="translate(72.763 57.267)"','obsolete overlapping NOUN datum');
 req(html,'transform="translate(0 84.441)"','register origin');
-req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y)",'native register datum');
+req(provider,"if(liveMode){register(c,live.r1.charAt(0),live.r1.substring(1),0,R1_Y)",'native live register datum');\nreq(provider,'views.setDisplayedChild(R.id.el_hour_flipper,now.get(Calendar.HOUR_OF_DAY))','native clock hour datum');
 
 req(generator,'android:viewportWidth="106"','generated viewport width');
 req(generator,'android:viewportHeight="23"','generated viewport height');
