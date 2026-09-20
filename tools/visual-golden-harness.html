@@ -45,7 +45,9 @@
     r.setReg('r1','+','88888');r.setReg('r2','+','88888');r.setReg('r3','+','88888');
   }
   function diagnosticsFixture(w,d){
-    w.AGCDSKY.openDiagnostics();
+    const nativeSetInterval=w.setInterval;
+    w.setInterval=()=>0;
+    try{w.AGCDSKY.openDiagnostics()}finally{w.setInterval=nativeSetInterval}
     const table=d.getElementById('diag-table');
     if(!table)throw new Error('diagnostics table unavailable');
     table.innerHTML=[
