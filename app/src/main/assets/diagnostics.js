@@ -24,7 +24,7 @@
     el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
-    document.getElementById('diag-full-test').onclick=startFullSelfTest;
+    document.getElementById('diag-full-test').onclick=runFullSelfTest;
     document.getElementById('diag-save').onclick=()=>{snapshot.save('diagnostics');update()};
     document.getElementById('diag-verify').onclick=()=>{snapshot.verifyRoundTrip();update()};
     document.getElementById('diag-ntp-sync').onclick=syncNetworkTimeNow;

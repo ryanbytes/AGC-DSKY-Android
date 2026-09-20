@@ -30,7 +30,7 @@ for(const marker of [
   'ntp.lastAttemptResult',
   'ntp.syncInFlight',
   'id="diag-full-test"',
-  "document.getElementById('diag-full-test').onclick=startFullSelfTest",
+  "document.getElementById('diag-full-test').onclick=runFullSelfTest",
   'SELF_TEST_ASSETS',
   "gitBlobSha1:'713685680492098d05437b99c26403f683d56009'",
   "gitBlobSha1:'9e4ec167dc99ac12b233df07b6b91fef585e5015'",
@@ -51,3 +51,5 @@ for(const marker of [
 assert(!/startDskyTest[\s\S]{0,900}(?:keyMake|writeIo|proceed)/.test(SRC),
   'diagnostics self-test must not inject AGC inputs; AGC-mode V35 stays user-driven');
 console.log('diagnostics self-test / network-time smoke: PASS');
+
+assert(!SRC.includes('onclick=startFullSelfTest'),'diagnostics full self-test handler must reference the implemented runFullSelfTest function');
