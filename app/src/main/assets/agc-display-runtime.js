@@ -19,7 +19,7 @@
   const agcDisplayValue={prog:[' ',' '],verb:[' ',' '],noun:[' ',' '],r1:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false},r2:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false},r3:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false}};
   let relayDigitSlot,renderRegSlot,resetSlot,decode10Slot,decode11Slot,decode13Slot,decode163Slot,applySnapshotSlot;
   let ch11StateSlot,ch13StateSlot,ch163StateSlot;
-  const widgetModeButton=document.getElementById('widget-mode');
+  const widgetModeButton=(typeof document!=='undefined'&&typeof document.getElementById==='function')?document.getElementById('widget-mode'):null;
   let nativeWidgetMode='clock',widgetPublishTimer=0;
 
   function widgetBridgeAvailable(){
