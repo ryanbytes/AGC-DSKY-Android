@@ -176,7 +176,8 @@ req(html,'transform="translate(72.763 54.797)"','NOUN datum');
 no(html,'transform="translate(6.737 57.267)"','obsolete overlapping VERB datum');
 no(html,'transform="translate(72.763 57.267)"','obsolete overlapping NOUN datum');
 req(html,'transform="translate(0 84.441)"','register origin');
-req(provider,"if(liveMode){register(c,live.r1.charAt(0),live.r1.substring(1),0,R1_Y)",'native live register datum');\nreq(provider,'views.setDisplayedChild(R.id.el_hour_flipper,now.get(Calendar.HOUR_OF_DAY))','native clock hour datum');
+req(provider,"if(liveMode){register(c,live.r1.charAt(0),live.r1.substring(1),0,R1_Y)",'native live register datum');
+req(provider,'views.setDisplayedChild(R.id.el_hour_flipper,now.get(Calendar.HOUR_OF_DAY))','native clock hour datum');
 
 req(generator,'android:viewportWidth="106"','generated viewport width');
 req(generator,'android:viewportHeight="23"','generated viewport height');
