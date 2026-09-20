@@ -17,6 +17,8 @@ on:
       - 'tools/frontend-smoke.js'
       - 'tools/agc-core-smoke.js'
       - 'tools/wasm-runtime-smoke.js'
+      - 'tools/capture-visual-goldens.sh'
+      - 'tools/visual-golden-harness.html'
       - 'vendor/webAGC'
       - 'apple/tools/verify-pinned-assets.sh'
       - '.github/workflows/pwa.yml'
@@ -56,6 +58,16 @@ jobs:
 
       - name: PWA smoke test
         run: node pwa/tools/pwa-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
+
+      - name: Capture visual golden candidates
+        run: bash tools/capture-visual-goldens.sh "$RUNNER_TEMP/agc-dsky-pwa" "$RUNNER_TEMP/visual-goldens"
+
+      - name: Upload visual golden candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: AGC-DSKY-visual-golden-candidates
+          path: ${{ runner.temp }}/visual-goldens/*.png
+          if-no-files-found: error
 
       - name: PWA sensor parity behavior test
         run: node pwa/tools/pwa-sensor-parity-smoke.js

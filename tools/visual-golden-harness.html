@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AGC DSKY visual golden harness</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}iframe{display:block;width:100%;height:100%;border:0;background:#000}</style>
+</head>
+<body>
+<iframe id="app" src="index.html"></iframe>
+<script>
+'use strict';
+(() => {
+  const testCase=new URLSearchParams(location.search).get('case')||'normal';
+  const frame=document.getElementById('app');
+  function waitFor(fn,timeout=5000){
+    const started=performance.now();
+    return new Promise((resolve,reject)=>{
+      const poll=()=>{
+        try{const value=fn();if(value)return resolve(value)}catch(_){}
+        if(performance.now()-started>timeout)return reject(new Error('visual harness timeout: '+testCase));
+        setTimeout(poll,25);
+      };
+      poll();
+    });
+  }
+  function freeze(w,d){
+    try{w.AGCDSKY_APP_STATE.mode='visual-golden'}catch(_){}
+    d.body.classList.remove('controls-visible','cheat-sheet-open','cheat-sheet-minimized','display-only','screen-only','dream','parallax-3d');
+    const style=d.createElement('style');
+    style.textContent='*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}.hint{display:none!important}';
+    d.head.appendChild(style);
+    try{w.AGCDSKY_CLOCK?.stopQueue?.();w.AGCDSKY_CLOCK?.cancelLampTest?.()}catch(_){}
+  }
+  function fixedDisplay(w){
+    const r=w.AGCDSKY_RENDERER;
+    r.clearLamps();
+    r.set2('prog','00');r.set2('verb','16');r.set2('noun','65');
+    r.setReg('r1','+','12345');r.setReg('r2','-','67890');r.setReg('r3','+','31415');
+  }
+  function lampTest(w){
+    const r=w.AGCDSKY_RENDERER;
+    for(const name of ['uplink','temp','noatt','gimbal','stby','prog','keyrel','restart','oprerr','tracker','comp'])r.setLamp(name,true);
+    r.set2('prog','88');r.set2('verb','88');r.set2('noun','88');
+    r.setReg('r1','+','88888');r.setReg('r2','+','88888');r.setReg('r3','+','88888');
+  }
+  function diagnosticsFixture(w,d){
+    w.AGCDSKY.openDiagnostics();
+    const table=d.getElementById('diag-table');
+    if(!table)throw new Error('diagnostics table unavailable');
+    table.innerHTML=[
+      '<tr><th colspan="2">CORE / DSKY</th></tr>',
+      '<tr><td>Mode</td><td>AGC</td></tr>',
+      '<tr><td>Core</td><td>yaAGC · RUNNING</td></tr>',
+      '<tr><td>PROG / VERB / NOUN</td><td>00 / 16 / 65</td></tr>',
+      '<tr><th colspan="2">TIME</th></tr>',
+      '<tr><td>Clock source</td><td>SNTP NETWORK TIME</td></tr>',
+      '<tr><td>NTP server</td><td>time.cloudflare.com</td></tr>',
+      '<tr><td>Network time state</td><td>SYNCED</td></tr>',
+      '<tr><td>Measured clock offset</td><td>+12 ms · APPLIED</td></tr>',
+      '<tr><td>Round-trip time</td><td>24 ms</td></tr>',
+      '<tr><th colspan="2">FULL SELF-TEST</th></tr>',
+      '<tr><td>AGC WASM asset</td><td>PASS · pinned checksum verified</td></tr>',
+      '<tr><td>Relay-to-digit matrix</td><td>PASS · 10 numeric relay codes</td></tr>',
+      '<tr><td>EL segment renderer</td><td>PASS · all seven segments</td></tr>',
+      '<tr><td>Packaged assets</td><td>PASS · critical assets readable</td></tr>'
+    ].join('');
+  }
+  async function apply(){
+    const w=frame.contentWindow,d=frame.contentDocument;
+    await waitFor(()=>w.AGCDSKY_RENDERER&&w.AGCDSKY_CLOCK&&d.getElementById('dsky'));
+    freeze(w,d);fixedDisplay(w);
+    if(testCase==='lamp-test')lampTest(w);
+    else if(testCase==='display-only')d.body.classList.add('display-only');
+    else if(testCase==='screen-only')d.body.classList.add('screen-only');
+    else if(testCase==='diagnostics')diagnosticsFixture(w,d);
+    else if(testCase==='cheatsheet'){d.getElementById('cheat')?.click();await waitFor(()=>d.getElementById('agc-cheat-sheet')?.classList.contains('open'))}
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    document.documentElement.dataset.ready='1';
+  }
+  frame.addEventListener('load',()=>{apply().catch(error=>{document.title='ERROR '+error.message;document.body.dataset.error=error.message})},{once:true});
+})();
+</script>
+</body>
+</html>
