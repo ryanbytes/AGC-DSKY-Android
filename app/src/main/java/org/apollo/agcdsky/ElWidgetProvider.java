@@ -14,7 +14,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -154,19 +153,12 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       }else{
         views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.renderClock(panelWidthPx,panelHeightPx));
         for(int id:flippers)views.setViewVisibility(id,View.VISIBLE);
-        if(Build.VERSION.SDK_INT>=31){
-          RemoteViews.RemoteCollectionItems pairFrames=buildFrames(context,60),hourFrames=buildFrames(context,24);
-          views.setRemoteAdapter(R.id.el_hour_flipper,hourFrames);
-          views.setRemoteAdapter(R.id.el_minute_flipper,pairFrames);
-          views.setRemoteAdapter(R.id.el_seconds_flipper,pairFrames);
-        }else{
-          views.setRemoteAdapter(R.id.el_hour_flipper,legacyAdapterIntent(context,appWidgetId,"hour",24));
-          views.setRemoteAdapter(R.id.el_minute_flipper,legacyAdapterIntent(context,appWidgetId,"minute",60));
-          views.setRemoteAdapter(R.id.el_seconds_flipper,legacyAdapterIntent(context,appWidgetId,"second",60));
-        }
-        views.setDisplayedChild(R.id.el_hour_flipper,now.get(Calendar.HOUR_OF_DAY));
-        views.setDisplayedChild(R.id.el_minute_flipper,now.get(Calendar.MINUTE));
-        views.setDisplayedChild(R.id.el_seconds_flipper,now.get(Calendar.SECOND));
+        populateFlipper(context,views,R.id.el_hour_flipper,24);
+        populateFlipper(context,views,R.id.el_minute_flipper,60);
+        populateFlipper(context,views,R.id.el_seconds_flipper,60);
+        views.setInt(R.id.el_hour_flipper,"setDisplayedChild",now.get(Calendar.HOUR_OF_DAY));
+        views.setInt(R.id.el_minute_flipper,"setDisplayedChild",now.get(Calendar.MINUTE));
+        views.setInt(R.id.el_seconds_flipper,"setDisplayedChild",now.get(Calendar.SECOND));
       }
       Intent launch=new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
       PendingIntent openApp=PendingIntent.getActivity(context,appWidgetId,launch,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -174,14 +166,14 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       manager.updateAppWidget(appWidgetId,views);
     }
 
-    private static Intent legacyAdapterIntent(Context context,int appWidgetId,String lane,int count){
-      Intent intent=new Intent(context,ElWidgetFrameService.class);
-      intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,appWidgetId);
-      intent.putExtra(ElWidgetFrameService.EXTRA_COUNT,count);
-      intent.setData(Uri.parse("agcdsky://el-widget/"+appWidgetId+"/"+lane+"/"+count));
-      return intent;
+    private static void populateFlipper(Context context,RemoteViews views,int viewId,int count){
+      views.removeAllViews(viewId);
+      for(int i=0;i<count;i++){
+        RemoteViews frame=new RemoteViews(context.getPackageName(),R.layout.el_second_frame);
+        frame.setImageViewResource(R.id.el_second_image,frameDrawable(i));
+        views.addView(viewId,frame);
+      }
     }
-    private static RemoteViews.RemoteCollectionItems buildFrames(Context context,int count){RemoteViews.RemoteCollectionItems.Builder builder=new RemoteViews.RemoteCollectionItems.Builder();for(int i=0;i<count;i++){RemoteViews frame=new RemoteViews(context.getPackageName(),R.layout.el_second_frame);frame.setImageViewResource(R.id.el_second_image,frameDrawable(i));builder.addItem(i,frame);}return builder.build();}
     static int frameDrawable(int position){return SECOND_DRAWABLES[Math.floorMod(position,SECOND_DRAWABLES.length)];}
     private static PendingIntent tickIntent(Context context){Intent tick=new Intent(context,ElWidgetProvider.class).setAction(ACTION_TICK);return PendingIntent.getBroadcast(context,TICK_REQUEST_CODE,tick,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
     private static void scheduleNextMinute(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm==null)return;long now=System.currentTimeMillis(),next=now-(now%MINUTE_MS)+MINUTE_MS;PendingIntent pi=tickIntent(context);if(Build.VERSION.SDK_INT<31||alarm.canScheduleExactAlarms())alarm.setExactAndAllowWhileIdle(AlarmManager.RTC,next,pi);else alarm.setAndAllowWhileIdle(AlarmManager.RTC,next,pi);}
