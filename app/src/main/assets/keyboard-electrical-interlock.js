@@ -39,6 +39,13 @@
   const FALLBACK_CONTACT_MS = 36;
   const FALLBACK_RETURN_MS = 18;
   const MIN_KEYCODE_HOLD_MS = 12;
+  // Desktop/PWA hardware-keyboard aliases. These feed the same channel-015
+  // electrical interlock as pointer input; they are not a second input model.
+  const KEYBOARD_MAP = Object.freeze({
+    '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9',
+    'v':'V','n':'N','e':'E','c':'C','r':'R','k':'K','+':'+','-':'-',
+    'Enter':'E','Escape':'C'
+  });
 
   const pointers = new Map();
   let cycleLatched = false;
@@ -48,6 +55,7 @@
   let electricalMadeAt = 0;
   let keyResetTimer = 0;
   let clockHandoffPending = false;
+  let keyboardState = null;
 
   function normalButton(event) {
     const button = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
@@ -166,6 +174,7 @@
 
   function allNormalKeysReleased() {
     for (const state of pointers.values()) if (state.down) return false;
+    if (keyboardState && keyboardState.down) return false;
     return true;
   }
 
@@ -217,8 +226,18 @@
     }
   }
 
+  function clearKeyboard() {
+    if (!keyboardState) return;
+    clearTimeout(keyboardState.timer);
+    keyboardState.cancelled = true;
+    keyboardState.down = false;
+    if (keyboardState.button) keyboardState.button.classList.remove('pressed');
+    keyboardState = null;
+  }
+
   function releaseEverything() {
     clearPointers();
+    clearKeyboard();
     if (clockHandoffPending && !electricalMade) {
       clearElectricalCycle();
       return;
@@ -228,6 +247,7 @@
 
   function releaseForClock() {
     clearPointers();
+    clearKeyboard();
     if (keyResetTimer) clearTimeout(keyResetTimer);
     keyResetTimer = 0;
     if (electricalMade) {
@@ -283,7 +303,50 @@
     return true;
   }
 
+  function keyboardKey(event) {
+    const target = event.target;
+    if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || ''))) return null;
+    const raw = event.key && event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    return KEYBOARD_MAP[raw] || null;
+  }
+
+  function onKeyDown(event) {
+    const key = keyboardKey(event);
+    if (!key) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.repeat || keyboardState || runtime.clockRequested()) return;
+    const button = document.querySelector('[data-key="' + key + '"]');
+    if (!button || key === 'P') return;
+    const accepted = !cycleLatched;
+    if (accepted) cycleLatched = true;
+    const p = personality(button);
+    keyboardState = {button, down:true, accepted, made:false, cancelled:false, timer:0, key};
+    button.classList.add('pressed');
+    keyboardState.timer = setTimeout(() => makeContact(keyboardState), Math.max(0, Number(p.contactMs) || FALLBACK_CONTACT_MS));
+  }
+
+  function onKeyUp(event) {
+    const key = keyboardKey(event);
+    if (!key || !keyboardState || keyboardState.key !== key) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const state = keyboardState;
+    clearTimeout(state.timer);
+    if (!state.made) makeContact(state);
+    state.down = false;
+    state.button.classList.remove('pressed');
+    if (state.made) {
+      const p = personality(state.button);
+      setTimeout(() => keySound(state.button, true), Math.max(0, Number(p.returnSoundMs) || FALLBACK_RETURN_MS));
+    }
+    keyboardState = null;
+    assertKeyResetIfReady();
+  }
+
   window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false});
+  window.addEventListener('keydown', onKeyDown, {capture:true});
+  window.addEventListener('keyup', onKeyUp, {capture:true});
   window.addEventListener('pointerup', event => finishPointer(event, false), {capture:true, passive:false});
   window.addEventListener('pointercancel', event => finishPointer(event, true), {capture:true, passive:false});
   window.addEventListener('click', event => {
@@ -300,14 +363,14 @@
   window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEYBOARD_ELECTRICAL',Object.freeze({
     state: () => ({
       cycleLatched,
-      down:pointers.size,
+      down:pointers.size + (keyboardState && keyboardState.down ? 1 : 0),
       electricalMade,
       electricalKeyCode,
       electricalMadeAt,
       keyResetPending:!!keyResetTimer,
       clockHandoffPending,
       minKeycodeHoldMs:MIN_KEYCODE_HOLD_MS,
-      keys:Array.from(pointers.values()).map(s => ({key:s.button.dataset.key, accepted:s.accepted, made:s.made}))
+      keys:Array.from(pointers.values()).map(s => ({key:s.button.dataset.key, accepted:s.accepted, made:s.made})).concat(keyboardState ? [{key:keyboardState.key, accepted:keyboardState.accepted, made:keyboardState.made, source:'keyboard'}] : [])
     }),
     releaseAll: releaseEverything
   }),'keyboard-electrical-interlock publication');
