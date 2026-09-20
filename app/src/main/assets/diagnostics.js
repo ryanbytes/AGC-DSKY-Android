@@ -122,8 +122,9 @@
       const attemptResult=String(ntp.lastAttemptResult||'never').toUpperCase();
       const reason=ntp.lastAttemptReason?' · '+ntp.lastAttemptReason:'';
       const error=ntp.lastError?' · '+ntp.lastError:'';
+      const timeSourceLabel=ntp.source==='http-date'?'HTTP time source / origin host':'NTP server';
       h+=row('Clock source',source);
-      h+=row('Network time server',ntp.server||'time.cloudflare.com');
+      h+=row(timeSourceLabel,ntp.server||'time.cloudflare.com');
       h+=row('Network time state',state+(ntp.syncInFlight?' · SYNC IN PROGRESS':''));
       h+=row('Measured clock offset',offsetText+(using?' · APPLIED':' · NOT APPLIED'));
       h+=row('Round-trip time',rtt);
