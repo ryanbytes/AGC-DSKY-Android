@@ -31,8 +31,17 @@
     widgetModeButton.hidden=!widgetBridgeAvailable();
     if(!widgetModeButton.hidden)widgetModeButton.textContent=nativeWidgetMode==='live'?'WIDGET: LIVE':'WIDGET: CLOCK';
   }
+  function nativeWidgetNeedsLiveRuntime(){
+    const bridge=window.WidgetBridge;
+    if(!bridge||typeof bridge.needsLiveRuntime!=='function')return true;
+    try{return !!bridge.needsLiveRuntime()}catch(_){return true}
+  }
   function publishWidgetSnapshotNow(){
     if(nativeWidgetMode!=='live'||!widgetBridgeAvailable())return;
+    if(!nativeWidgetNeedsLiveRuntime()){
+      if(typeof document!=='undefined'&&document.hidden&&window.AGCDSKY&&typeof window.AGCDSKY.setAppVisible==='function')window.AGCDSKY.setAppVisible(false);
+      return;
+    }
     try{window.WidgetBridge.publishSnapshot(JSON.stringify(snapshotUiStateImpl()))}catch(error){console.warn('Widget snapshot publish failed',error)}
   }
   function scheduleWidgetSnapshot(){
