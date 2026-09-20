@@ -19,6 +19,9 @@ const screenOnly=read('app/src/main/assets/screen-only.css');
 const html=read('app/src/main/assets/index.html');
 const gradle=read('app/build.gradle');
 const generator=read('tools/generate-el-second-frames.js');
+const main=read('app/src/main/java/org/apollo/agcdsky/MainActivity.java');
+const sensor=read('app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java');
+const lifecycle=read('app/src/main/assets/agc-lifecycle-runtime.js');
 
 req(manifest,'android:name=".ElWidgetProvider"','manifest');
 req(manifest,'android:resource="@xml/el_widget_info"','manifest');
@@ -30,11 +33,23 @@ req(item,'android:id="@+id/el_second_image"','seconds frame');
 no(layout,'<TextClock','widget layout');
 req(info,'android:updatePeriodMillis="1800000"','widget metadata');
 req(info,'android:widgetCategory="home_screen"','widget metadata');
-req(provider,'RemoteViews.RemoteCollectionItems.Builder','live register adapter');
 req(provider,'R.drawable.el_sec_59','generated frame table');
-req(provider,'pairFrames=buildFrames(context,60)','60-frame adapter');
-req(provider,'hourFrames=buildFrames(context,24)','24-frame adapter');
+req(provider,'live?R.layout.el_widget:R.layout.el_widget_clock','mode-specific widget layout');
+req(provider,'static boolean needsLiveRuntime(Context context)','live widget runtime demand');
+no(provider,'setRemoteAdapter','clock widget remote adapter dependency');
+no(provider,'RemoteViews.RemoteCollectionItems.Builder','clock widget collection dependency');
+req(generator,'<ViewFlipper','generated clock flipper layout');
+req(generator,"clockFlipper('el_hour_flipper',24,3600000,'92.526')",'generated hour flipper');
+req(generator,"clockFlipper('el_minute_flipper',60,60000,'126.661')",'generated minute flipper');
+req(generator,"clockFlipper('el_seconds_flipper',60,1000,'160.797')",'generated seconds flipper');
 req(provider,'alarm.setExactAndAllowWhileIdle','minute refresh');
+for(const [label,text] of [['MainActivity',main],['SensorMainActivity',sensor]]){
+  req(text,'@JavascriptInterface public boolean needsLiveRuntime()','native live-widget bridge '+label);
+  req(text,'boolean keepWidgetRuntime=ElWidgetProvider.needsLiveRuntime(this)','background live-widget detection '+label);
+  req(text,'if(!keepWidgetRuntime)webView.onPause()','conditional WebView pause '+label);
+}
+req(lifecycle,'function liveWidgetRuntimeRequired()','AGC live-widget lifecycle');
+req(lifecycle,'const keepRunning=lifecycleState.appVisible||liveWidgetRuntimeRequired()','AGC background live-widget execution');
 
 req(finish,'--el:#6decb4','WebView EL color');
 req(provider,'CORE=Color.rgb(109,236,180),RULE=CORE','native EL color');
