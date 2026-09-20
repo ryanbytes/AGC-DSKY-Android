@@ -63,15 +63,21 @@
   function fail(error){
     lifecycleCore.suspendedForClock=false;console.error('AGC core stopped',error);enterClock('AGC ERROR · PHONE CLOCK',false);
   }
+  function liveWidgetRuntimeRequired(){
+    const bridge=window.WidgetBridge;
+    if(!bridge||typeof bridge.needsLiveRuntime!=='function')return false;
+    try{return !!bridge.needsLiveRuntime()}catch(_){return false}
+  }
   function setAppVisible(visible){
     lifecycleState.appVisible=!!visible;
     if(lifecycleState.mode!=='agc'||!lifecycleCore.core)return;
-    if(!lifecycleState.appVisible){
+    const keepRunning=lifecycleState.appVisible||liveWidgetRuntimeRequired();
+    if(!keepRunning){
       if(lifecycleCore.core.running){lifecycleCore.core.stop();lifecycleCore.pausedForVisibility=true}
       lifecycleSnapshot.save('app background');
       return;
     }
-    if(lifecycleCore.pausedForVisibility){lifecycleCore.pausedForVisibility=false;lifecycleCore.core.start(1)}
+    if(lifecycleCore.pausedForVisibility||!lifecycleCore.core.running){lifecycleCore.pausedForVisibility=false;lifecycleCore.core.start(1)}
   }
 
   window.AGCDSKY_LIFECYCLE=Object.freeze({enterAgc,enterClock,setAppVisible,status,fail});
