@@ -83,7 +83,8 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     }
 
     private final class TimeBridge {
-        @JavascriptInterface public String getStatus() { return NtpTime.status(SensorMainActivity.this).toJson(); }\n        @JavascriptInterface public boolean syncNow() { return NtpTime.requestSyncNow(SensorMainActivity.this); }
+        @JavascriptInterface public String getStatus() { return NtpTime.status(SensorMainActivity.this).toJson(); }
+        @JavascriptInterface public boolean syncNow() { return NtpTime.requestSyncNow(SensorMainActivity.this); }
     }
 
     private final class SkyBridge {
