@@ -1,12 +1,12 @@
 package org.apollo.agcdsky;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -15,28 +15,16 @@ import android.graphics.Path;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.SystemClock;
 import android.util.TypedValue;
 import android.util.LruCache;
-import android.view.View;
 import android.widget.RemoteViews;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
+import java.util.Calendar;
 import java.util.Locale;
 
 public final class ElWidgetProvider extends AppWidgetProvider {
-    private static final String PREFS="el_widget_state_v2",PREF_MODE="mode",PREF_LIVE="live_snapshot";
-    private static final String MODE_CLOCK="clock",MODE_LIVE="live";
-    private static final long LIVE_REFRESH_MIN_MS=120L;
-    private static final Handler MAIN_HANDLER=new Handler(Looper.getMainLooper());
-    private static final Object LIVE_REFRESH_LOCK=new Object();
-    private static boolean liveRefreshPending;
-    private static long lastLiveRefreshElapsed;
-    private static Context liveRefreshContext;
+    private static final String ACTION_TICK="org.apollo.agcdsky.EL_WIDGET_TICK";
+    private static final long MINUTE_MS=60_000L;
+    private static final int TICK_REQUEST_CODE=21;
 
     // MIT/IL SCD 1006315G sheet 2: the active EL face is 2.360 x 4.060 in
     // inside a 2.620 x 4.420-in hardware frame.  Nominal frame insets are
@@ -62,61 +50,11 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       R.drawable.el_sec_50,R.drawable.el_sec_51,R.drawable.el_sec_52,R.drawable.el_sec_53,R.drawable.el_sec_54,
       R.drawable.el_sec_55,R.drawable.el_sec_56,R.drawable.el_sec_57,R.drawable.el_sec_58,R.drawable.el_sec_59};
 
-    @Override public void onEnabled(Context context){super.onEnabled(context);}
-    @Override public void onDisabled(Context context){super.onDisabled(context);}
-    @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){for(int id:ids)updateOne(context,manager,id);}
+    @Override public void onEnabled(Context context){super.onEnabled(context);scheduleNextMinute(context);}
+    @Override public void onDisabled(Context context){cancelTick(context);super.onDisabled(context);}
+    @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){NtpTime.start(context);for(int id:ids)updateOne(context,manager,id);if(ids.length>0)scheduleNextMinute(context);}
     @Override public void onAppWidgetOptionsChanged(Context context,AppWidgetManager manager,int appWidgetId,Bundle newOptions){super.onAppWidgetOptionsChanged(context,manager,appWidgetId,newOptions);updateOne(context,manager,appWidgetId);}
-    @Override public void onReceive(Context context,Intent intent){super.onReceive(context,intent);String action=intent.getAction();if(!Intent.ACTION_TIME_CHANGED.equals(action)&&!Intent.ACTION_TIMEZONE_CHANGED.equals(action)&&!Intent.ACTION_DATE_CHANGED.equals(action)&&!Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))return;updateAll(context);}
-
-    static String widgetMode(Context context){
-      String value=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getString(PREF_MODE,MODE_CLOCK);
-      return MODE_LIVE.equals(value)?MODE_LIVE:MODE_CLOCK;
-    }
-    static String setWidgetMode(Context context,String requested){
-      String mode=MODE_LIVE.equalsIgnoreCase(String.valueOf(requested))?MODE_LIVE:MODE_CLOCK;
-      context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString(PREF_MODE,mode).apply();
-      updateAll(context);
-      return mode;
-    }
-    static void publishLiveSnapshot(Context context,String json){
-      if(json==null||json.length()>32768)return;
-      LiveState state=LiveState.parse(json);
-      if(state==null)return;
-      context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString(PREF_LIVE,json).apply();
-      if(MODE_LIVE.equals(widgetMode(context)))requestLiveRefresh(context);
-    }
-    private static LiveState liveState(Context context){
-      SharedPreferences prefs=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
-      LiveState state=LiveState.parse(prefs.getString(PREF_LIVE,null));
-      return state==null?LiveState.EMPTY:state;
-    }
-    private static boolean hasWidgets(Context context){
-      AppWidgetManager manager=AppWidgetManager.getInstance(context);
-      return manager.getAppWidgetIds(new ComponentName(context,ElWidgetProvider.class)).length>0;
-    }
-    private static void updateAll(Context context){
-      AppWidgetManager manager=AppWidgetManager.getInstance(context);
-      int[] ids=manager.getAppWidgetIds(new ComponentName(context,ElWidgetProvider.class));
-      for(int id:ids)updateOne(context,manager,id);
-    }
-    private static void requestLiveRefresh(Context context){
-      synchronized(LIVE_REFRESH_LOCK){
-        liveRefreshContext=context.getApplicationContext();
-        if(liveRefreshPending)return;
-        long now=SystemClock.elapsedRealtime();
-        long delay=Math.max(0L,LIVE_REFRESH_MIN_MS-(now-lastLiveRefreshElapsed));
-        liveRefreshPending=true;
-        MAIN_HANDLER.postDelayed(()->{
-          Context app;
-          synchronized(LIVE_REFRESH_LOCK){
-            liveRefreshPending=false;
-            lastLiveRefreshElapsed=SystemClock.elapsedRealtime();
-            app=liveRefreshContext;
-          }
-          if(app!=null&&MODE_LIVE.equals(widgetMode(app)))updateAll(app);
-        },delay);
-      }
-    }
+    @Override public void onReceive(Context context,Intent intent){super.onReceive(context,intent);String action=intent.getAction();if(!ACTION_TICK.equals(action)&&!Intent.ACTION_TIME_CHANGED.equals(action)&&!Intent.ACTION_TIMEZONE_CHANGED.equals(action)&&!Intent.ACTION_DATE_CHANGED.equals(action)&&!Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))return;AppWidgetManager manager=AppWidgetManager.getInstance(context);int[] ids=manager.getAppWidgetIds(new ComponentName(context,ElWidgetProvider.class));for(int id:ids)updateOne(context,manager,id);if(ids.length>0)scheduleNextMinute(context);else cancelTick(context);}
 
     private static void updateOne(Context context,AppWidgetManager manager,int appWidgetId){
       Bundle options=manager.getAppWidgetOptions(appWidgetId);
@@ -126,28 +64,27 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       float panelWidthDp=PANEL_W*scaleDp,panelHeightDp=PANEL_H*scaleDp;
       float density=context.getResources().getDisplayMetrics().density;
       int panelWidthPx=clamp(Math.round(panelWidthDp*density),1,1200),panelHeightPx=clamp(Math.round(panelHeightDp*density),1,1800);
+      Calendar now=Calendar.getInstance();now.setTimeInMillis(NtpTime.accurateNow(context));
       RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.el_widget);
-      int[] clocks={R.id.el_hour_clock,R.id.el_minute_clock,R.id.el_seconds_clock};
-      boolean live=MODE_LIVE.equals(widgetMode(context));
+      boolean staticFallbackRegisters=Build.VERSION.SDK_INT<31;
+      views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.render(panelWidthPx,panelHeightPx,now,staticFallbackRegisters));
       if(Build.VERSION.SDK_INT>=31){
+        RemoteViews.RemoteCollectionItems pairFrames=buildFrames(context,60),hourFrames=buildFrames(context,24);
+        views.setRemoteAdapter(R.id.el_hour_flipper,hourFrames);
+        views.setRemoteAdapter(R.id.el_minute_flipper,pairFrames);
+        views.setRemoteAdapter(R.id.el_seconds_flipper,pairFrames);
+        views.setDisplayedChild(R.id.el_hour_flipper,now.get(Calendar.HOUR_OF_DAY));
+        views.setDisplayedChild(R.id.el_minute_flipper,now.get(Calendar.MINUTE));
+        views.setDisplayedChild(R.id.el_seconds_flipper,now.get(Calendar.SECOND));
         views.setViewLayoutWidth(R.id.el_widget_panel,panelWidthDp,TypedValue.COMPLEX_UNIT_DIP);
         views.setViewLayoutHeight(R.id.el_widget_panel,panelHeightDp,TypedValue.COMPLEX_UNIT_DIP);
+        int[] flippers={R.id.el_hour_flipper,R.id.el_minute_flipper,R.id.el_seconds_flipper};
         float[] y={R1_Y,R2_Y,R3_Y};
-        for(int i=0;i<clocks.length;i++){
-          views.setViewLayoutMargin(clocks[i],RemoteViews.MARGIN_START,ACTIVE_X*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
-          views.setViewLayoutMargin(clocks[i],RemoteViews.MARGIN_TOP,(ACTIVE_Y+y[i])*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
-          views.setViewLayoutWidth(clocks[i],ACTIVE_W*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
-          views.setViewLayoutHeight(clocks[i],FRAME_H*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
-        }
-      }
-      if(live){
-        views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.renderLive(panelWidthPx,panelHeightPx,liveState(context)));
-        for(int id:clocks)views.setViewVisibility(id,View.GONE);
-      }else{
-        views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.renderClock(panelWidthPx,panelHeightPx));
-        for(int id:clocks){
-          views.setViewVisibility(id,View.VISIBLE);
-          views.setTextViewTextSize(id,TypedValue.COMPLEX_UNIT_SP,18f*scaleDp);
+        for(int i=0;i<flippers.length;i++){
+          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_START,ACTIVE_X*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_TOP,(ACTIVE_Y+y[i])*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutWidth(flippers[i],ACTIVE_W*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutHeight(flippers[i],FRAME_H*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
         }
       }
       Intent launch=new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -156,41 +93,11 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       manager.updateAppWidget(appWidgetId,views);
     }
 
-    static int frameDrawable(int position){return SECOND_DRAWABLES[Math.floorMod(position,SECOND_DRAWABLES.length)];}
+    private static RemoteViews.RemoteCollectionItems buildFrames(Context context,int count){RemoteViews.RemoteCollectionItems.Builder builder=new RemoteViews.RemoteCollectionItems.Builder();for(int i=0;i<count;i++){RemoteViews frame=new RemoteViews(context.getPackageName(),R.layout.el_second_frame);frame.setImageViewResource(R.id.el_second_image,SECOND_DRAWABLES[i]);builder.addItem(i,frame);}return builder.build();}
+    private static PendingIntent tickIntent(Context context){Intent tick=new Intent(context,ElWidgetProvider.class).setAction(ACTION_TICK);return PendingIntent.getBroadcast(context,TICK_REQUEST_CODE,tick,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
+    private static void scheduleNextMinute(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm==null)return;long now=System.currentTimeMillis(),next=now-(now%MINUTE_MS)+MINUTE_MS;PendingIntent pi=tickIntent(context);if(Build.VERSION.SDK_INT<31||alarm.canScheduleExactAlarms())alarm.setExactAndAllowWhileIdle(AlarmManager.RTC,next,pi);else alarm.setAndAllowWhileIdle(AlarmManager.RTC,next,pi);}
+    private static void cancelTick(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm!=null)alarm.cancel(tickIntent(context));}
     private static int clamp(int v,int lo,int hi){return Math.max(lo,Math.min(hi,v));}
-
-    static final class LiveState{
-      static final LiveState EMPTY=new LiveState("  ","  ","  ","      ","      ","      ",false,false,false);
-      final String prog,verb,noun,r1,r2,r3;
-      final boolean comp,vnFlashOff,elOff;
-      LiveState(String prog,String verb,String noun,String r1,String r2,String r3,boolean comp,boolean vnFlashOff,boolean elOff){
-        this.prog=prog;this.verb=verb;this.noun=noun;this.r1=r1;this.r2=r2;this.r3=r3;this.comp=comp;this.vnFlashOff=vnFlashOff;this.elOff=elOff;
-      }
-      static LiveState parse(String raw){
-        if(raw==null||raw.isEmpty())return null;
-        try{
-          JSONObject root=new JSONObject(raw),display=root.optJSONObject("display");
-          if(display==null)return null;
-          int ch11=root.optInt("ch11",0),ch163=root.optInt("ch163",0);
-          return new LiveState(digits(display.optJSONArray("prog"),2),digits(display.optJSONArray("verb"),2),digits(display.optJSONArray("noun"),2),reg(display.optJSONObject("r1")),reg(display.optJSONObject("r2")),reg(display.optJSONObject("r3")),(ch11&00002)!=0,(ch163&00040)!=0,(ch163&01000)!=0);
-        }catch(Exception ignored){return null;}
-      }
-      private static String reg(JSONObject value){
-        if(value==null)return "      ";
-        char sign=value.optBoolean("plus",false)?'+':value.optBoolean("minus",false)?'-':' ';
-        return sign+digits(value.optJSONArray("digits"),5);
-      }
-      private static String digits(JSONArray value,int count){
-        StringBuilder out=new StringBuilder(count);
-        for(int i=0;i<count;i++){
-          String s=value==null?" ":value.optString(i," ");
-          char ch=s.isEmpty()?' ':s.charAt(0);
-          out.append(ch>='0'&&ch<='9'?ch:' ');
-        }
-        return out.toString();
-      }
-      String signature(){return prog+"|"+verb+"|"+noun+"|"+r1+"|"+r2+"|"+r3+"|"+(comp?'1':'0')+(vnFlashOff?'1':'0')+(elOff?'1':'0');}
-    }
 
     static final class ElRenderer{
       private static final int CACHE_KIB=4096;
@@ -236,21 +143,18 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         RULE_P.setStyle(Paint.Style.FILL);RULE_P.setColor(RULE);RULE_P.setAlpha(224);
         COMP_P.setTypeface(tf);COMP_P.setTextAlign(Paint.Align.CENTER);COMP_P.setTextSize(7.42f);COMP_P.setColor(INK);COMP_P.setAlpha(235);
         LEGEND_BG_P.setStyle(Paint.Style.FILL);LEGEND_BG_P.setColor(CORE);LEGEND_BG_P.setAlpha(235);
-        COMP_BG_P.setStyle(Paint.Style.FILL);COMP_BG_P.setColor(CORE);COMP_BG_P.setAlpha(235);
+        COMP_BG_P.setStyle(Paint.Style.FILL);COMP_BG_P.setColor(CORE);COMP_BG_P.setAlpha(24);
         HARDWARE_STROKE_P.setStyle(Paint.Style.STROKE);HARDWARE_STROKE_P.setStrokeWidth(.48f);HARDWARE_STROKE_P.setColor(HARDWARE);HARDWARE_STROKE_P.setAlpha(184);
         HARDWARE_FILL_P.setStyle(Paint.Style.FILL);HARDWARE_FILL_P.setColor(HARDWARE);HARDWARE_FILL_P.setAlpha(224);
       }
-      static Bitmap renderClock(int width,int height){return render(width,height,null);}
-      static Bitmap renderLive(int width,int height,LiveState state){return render(width,height,state==null?LiveState.EMPTY:state);}
-      private static Bitmap render(int width,int height,LiveState live){
+      static Bitmap render(int width,int height,Calendar now,boolean drawRegisters){
         width=Math.max(1,width);height=Math.max(1,height);
-        String key=width+"x"+height+(live==null?":clock":":live:"+live.signature());
+        String key=width+"x"+height+(drawRegisters?((":dyn:"+now.get(Calendar.HOUR_OF_DAY)+":"+now.get(Calendar.MINUTE)+":"+now.get(Calendar.SECOND))):":static");
         synchronized(BITMAP_CACHE){Bitmap cached=BITMAP_CACHE.get(key);if(cached!=null&&!cached.isRecycled())return cached;}
-        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(FRAME);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,live);
+        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(FRAME);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,now,drawRegisters);
         synchronized(BITMAP_CACHE){BITMAP_CACHE.put(key,b);}return b;
       }
-      private static void drawPanel(Canvas c,LiveState live){
-        boolean liveMode=live!=null,elOff=liveMode&&live.elOff;
+      private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){
         c.drawPath(box(.24f,.24f,PANEL_W-.48f,PANEL_H-.48f),HARDWARE_STROKE_P);
         c.drawPath(box(ACTIVE_X,ACTIVE_Y,ACTIVE_W,ACTIVE_H),PANEL_P);
         c.save();
@@ -258,18 +162,16 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.949f,1.294f,1.369f);
         dot(c,100.863f,79.949f,1.294f,1.369f);dot(c,100.863f,114.085f,1.294f,1.369f);dot(c,100.863f,148.220f,1.294f,1.369f);
         dot(c,8.286f,148.220f,1.294f,1.369f);dot(c,8.286f,114.085f,1.294f,1.369f);dot(c,8.286f,79.949f,1.294f,1.369f);
-        if(!elOff)section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P);c.drawText("PROG",86.237f,8.600f,LABEL_P);
-        if(!elOff)section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawText("VERB",19.763f,49.252f,LABEL_P);
-        if(!elOff)section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawText("NOUN",86.237f,49.252f,LABEL_P);
-        if(!elOff&&liveMode&&live.comp)section(c,0f,.633f,39.525f,35.838f,COMP_BG_P);c.drawText("COMP",19.763f,17.900f,COMP_P);c.drawText("ACTY",19.763f,25.000f,COMP_P);
-        if(!elOff){
-          rule(c,12.770f,78.602f,84.900f,2.695f);rule(c,12.770f,112.737f,84.900f,2.695f);rule(c,12.770f,146.873f,84.900f,2.695f);
-          digits(c,liveMode?live.prog:"00",RIGHT_FIELD_X,PROG_Y);
-          if(!liveMode||!live.vnFlashOff){digits(c,liveMode?live.verb:"16",LEFT_FIELD_X,VERB_NOUN_Y);digits(c,liveMode?live.noun:"65",RIGHT_FIELD_X,VERB_NOUN_Y);}
-          if(liveMode){register(c,live.r1.charAt(0),live.r1.substring(1),0,R1_Y);register(c,live.r2.charAt(0),live.r2.substring(1),0,R2_Y);register(c,live.r3.charAt(0),live.r3.substring(1),0,R3_Y);}
-        }
+        section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P);c.drawText("PROG",86.237f,8.600f,LABEL_P);
+        section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawText("VERB",19.763f,49.252f,LABEL_P);
+        section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawText("NOUN",86.237f,49.252f,LABEL_P);
+        section(c,0f,.633f,39.525f,35.838f,COMP_BG_P);c.drawText("COMP",19.763f,17.900f,COMP_P);c.drawText("ACTY",19.763f,25.000f,COMP_P);
+        rule(c,12.770f,78.602f,84.900f,2.695f);rule(c,12.770f,112.737f,84.900f,2.695f);rule(c,12.770f,146.873f,84.900f,2.695f);
+        digits(c,"00",RIGHT_FIELD_X,PROG_Y);digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y);digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y);
+        if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),0,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),0,R3_Y);}
         c.restore();
       }
+      private static String five(int v){return String.format(Locale.US,"%05d",v);}
       private static void section(Canvas c,float x,float y,float w,float h,Paint p){c.drawPath(box(x,y,w,h),p);}
       private static void rule(Canvas c,float x,float y,float w,float h){c.drawPath(box(x,y,w,h),RULE_P);}
       private static void dot(Canvas c,float cx,float cy,float rx,float ry){Path p=new Path();for(int i=0;i<12;i++){double a=Math.PI*2d*i/12d;float x=cx+(float)Math.cos(a)*rx,y=cy+(float)Math.sin(a)*ry;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,HARDWARE_FILL_P);}

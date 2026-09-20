@@ -41,11 +41,6 @@ public final class MainActivity extends Activity {
     private final class TimeBridge {
         @JavascriptInterface public String getStatus() { return NtpTime.status(MainActivity.this).toJson(); }
     }
-    private final class WidgetBridge {
-        @JavascriptInterface public String getMode() { return ElWidgetProvider.widgetMode(MainActivity.this); }
-        @JavascriptInterface public String setMode(String mode) { return ElWidgetProvider.setWidgetMode(MainActivity.this,mode); }
-        @JavascriptInterface public void publishSnapshot(String json) { ElWidgetProvider.publishLiveSnapshot(MainActivity.this,json); }
-    }
     private Bundle pendingWebViewState;
     private String pendingGeoOrigin;
     private GeolocationPermissions.Callback pendingGeoCallback;
@@ -72,7 +67,6 @@ public final class MainActivity extends Activity {
         webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");
         webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");
         webView.addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge");
-        webView.addJavascriptInterface(new WidgetBridge(),"WidgetBridge");
         webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient(){@Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){if(!isLocalAssetOrigin(origin)){callback.invoke(origin,false,false);return;}if(hasLocationPermission()){callback.invoke(origin,true,false);return;}pendingGeoOrigin=origin;pendingGeoCallback=callback;requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},GEO_PERMISSION_REQUEST);}@Override public boolean onConsoleMessage(ConsoleMessage message){if(message!=null&&message.messageLevel()==ConsoleMessage.MessageLevel.ERROR){String text=message.message();if(text==null||!text.startsWith("[yaAGC]"))DebugReporter.appendWebError(MainActivity.this,message.sourceId()+":"+message.lineNumber()+"\n"+String.valueOf(text));}return super.onConsoleMessage(message);}});
         setContentView(webView);boolean restored=false;if(pendingWebViewState!=null){try{restored=webView.restoreState(pendingWebViewState)!=null;}catch(RuntimeException ignored){}pendingWebViewState=null;}if(!restored)webView.loadUrl(NetClient.ASSET_ORIGIN+NetClient.ASSET_PREFIX+"index.html");
@@ -98,10 +92,9 @@ public final class MainActivity extends Activity {
     private boolean isLocalAssetOrigin(String origin){if(origin==null)return false;try{Uri c=Uri.parse(origin);int port=c.getPort();return "https".equalsIgnoreCase(c.getScheme())&&LOCAL_ASSET_ORIGIN.getHost()!=null&&LOCAL_ASSET_ORIGIN.getHost().equalsIgnoreCase(c.getHost())&&(port==-1||port==443);}catch(RuntimeException ignored){return false;}}
     private boolean hasLocationPermission(){return checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED||checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;}
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==GEO_PERMISSION_REQUEST&&pendingGeoCallback!=null){boolean grant=isLocalAssetOrigin(pendingGeoOrigin)&&hasLocationPermission();pendingGeoCallback.invoke(pendingGeoOrigin,grant,false);pendingGeoOrigin=null;pendingGeoCallback=null;}}
-    private boolean liveWidgetActive(){return "live".equals(ElWidgetProvider.widgetMode(this));}
     @Override protected void onResume(){super.onResume();configureWindow();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);}}
-    @Override protected void onPause(){if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);if(!liveWidgetActive())webView.onPause();}super.onPause();}
+    @Override protected void onPause(){if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge","WidgetBridge");}
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge");}
     @Override protected void onDestroy(){NtpTime.removeListener(ntpListener);DebugReporter.dismissPendingReport(this);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;destroyWebView();super.onDestroy();}
 }

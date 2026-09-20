@@ -32,10 +32,10 @@ assert(css.includes('PAGE 1 / 5 · CUT ON DASHED GUIDE') && css.includes('PAGE 5
 assert(css.includes('outline:.4pt dashed #888!important'), 'model checklist must include visible cut guides');
 assert(activity.includes('PrintAttributes.MediaSize.NA_LETTER.asLandscape()'), 'legacy Android checklist must request Letter landscape media');
 assert(activity.includes('addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge")'), 'PrintBridge must be installed on the WebView');
-assert(activity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge","WidgetBridge")'), 'legacy activity TimeBridge/PrintBridge/WidgetBridge must be removed during WebView teardown');
+assert(activity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge")'), 'legacy activity TimeBridge/PrintBridge must be removed during WebView teardown');
 assert(sensorActivity.includes('addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge")'), 'real Android launcher must install PrintBridge');
 assert(sensorActivity.includes('PrintAttributes.MediaSize.NA_LETTER.asLandscape()'), 'real Android launcher checklist must request Letter landscape media');
-assert(sensorActivity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","PrintBridge","WidgetBridge")'), 'real Android launcher must remove PrintBridge/WidgetBridge during teardown');
+assert(sensorActivity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","PrintBridge")'), 'real Android launcher must remove PrintBridge during teardown');
 assert(apple.includes('configuration.userContentController.add(self, name: "PrintBridge")'), 'Apple PrintBridge must be installed');
 assert(apple.includes('window.webkit.messageHandlers.PrintBridge.postMessage'), 'Apple PrintBridge JavaScript shim missing');
 assert(apple.includes('width: 11.0 * 72.0, height: 8.5 * 72.0'), 'iOS checklist print renderer must be US Letter landscape');

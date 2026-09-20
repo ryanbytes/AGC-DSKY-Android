@@ -20,58 +20,40 @@
             android:scaleType="fitXY"
             android:contentDescription="Apollo DSKY electroluminescent display" />
 
-        <!-- TextClock is driven by the platform clock inside the launcher process.
-             It does not depend on RemoteViews collection adapters, alarms, or
-             background execution to advance once per second. -->
-        <TextClock
-            android:id="@+id/el_hour_clock"
+        <AdapterViewFlipper
+            android:id="@+id/el_hour_flipper"
             android:layout_width="106dp"
             android:layout_height="23dp"
             android:layout_gravity="start|top"
             android:layout_marginStart="5.839dp"
             android:layout_marginTop="92.526dp"
-            android:format12Hour="'+000'HH"
-            android:format24Hour="'+000'HH"
-            android:fontFamily="monospace"
-            android:gravity="start|center_vertical"
-            android:includeFontPadding="false"
-            android:textColor="#6DECB4"
-            android:textScaleX="1.62"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="3600000" />
 
-        <TextClock
-            android:id="@+id/el_minute_clock"
+        <AdapterViewFlipper
+            android:id="@+id/el_minute_flipper"
             android:layout_width="106dp"
             android:layout_height="23dp"
             android:layout_gravity="start|top"
             android:layout_marginStart="5.839dp"
             android:layout_marginTop="126.661dp"
-            android:format12Hour="'+000'mm"
-            android:format24Hour="'+000'mm"
-            android:fontFamily="monospace"
-            android:gravity="start|center_vertical"
-            android:includeFontPadding="false"
-            android:textColor="#6DECB4"
-            android:textScaleX="1.62"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="60000" />
 
-        <TextClock
-            android:id="@+id/el_seconds_clock"
+        <AdapterViewFlipper
+            android:id="@+id/el_seconds_flipper"
             android:layout_width="106dp"
             android:layout_height="23dp"
             android:layout_gravity="start|top"
             android:layout_marginStart="5.839dp"
             android:layout_marginTop="160.797dp"
-            android:format12Hour="'+000'ss"
-            android:format24Hour="'+000'ss"
-            android:fontFamily="monospace"
-            android:gravity="start|center_vertical"
-            android:includeFontPadding="false"
-            android:textColor="#6DECB4"
-            android:textScaleX="1.62"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:loopViews="true"
+            android:flipInterval="1000" />
     </FrameLayout>
 </FrameLayout>

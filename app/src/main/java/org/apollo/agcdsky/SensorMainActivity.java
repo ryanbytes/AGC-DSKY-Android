@@ -86,12 +86,6 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
         @JavascriptInterface public String getStatus() { return NtpTime.status(SensorMainActivity.this).toJson(); }
     }
 
-    private final class WidgetBridge {
-        @JavascriptInterface public String getMode() { return ElWidgetProvider.widgetMode(SensorMainActivity.this); }
-        @JavascriptInterface public String setMode(String mode) { return ElWidgetProvider.setWidgetMode(SensorMainActivity.this,mode); }
-        @JavascriptInterface public void publishSnapshot(String json) { ElWidgetProvider.publishLiveSnapshot(SensorMainActivity.this,json); }
-    }
-
     private final class SkyBridge {
         @JavascriptInterface public void setLocation(double latitudeDeg,double longitudeDeg,double altitudeM) {
             if(!Double.isFinite(latitudeDeg)||!Double.isFinite(longitudeDeg))return;
@@ -139,7 +133,7 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     void startDsky(){
         if(webView!=null)return;if((getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0)WebView.setWebContentsDebuggingEnabled(true);
         webView=new WebView(this);webView.setBackgroundColor(CM_PANEL_COLOR);WebSettings settings=webView.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setGeolocationEnabled(true);settings.setMediaPlaybackRequiresUserGesture(false);settings.setBlockNetworkLoads(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);
-        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.addJavascriptInterface(new SkyBridge(),"SkyBridge");webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");webView.addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge");webView.addJavascriptInterface(new WidgetBridge(),"WidgetBridge");webView.setWebViewClient(new NetClient(this));
+        webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");webView.addJavascriptInterface(new SkyBridge(),"SkyBridge");webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");webView.addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge");webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient(){
             @Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){if(!isLocalAssetOrigin(origin)){callback.invoke(origin,false,false);return;}if(hasLocationPermission()){callback.invoke(origin,true,false);return;}pendingGeoOrigin=origin;pendingGeoCallback=callback;requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},GEO_PERMISSION_REQUEST);}
             @Override public void onPermissionRequest(PermissionRequest request){if(request==null||request.getOrigin()==null||!isLocalAssetOrigin(request.getOrigin().toString())){if(request!=null)request.deny();return;}boolean asksForVideo=false;for(String resource:request.getResources()){if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)){asksForVideo=true;break;}}if(!asksForVideo){request.deny();return;}if(hasCameraPermission()){request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});return;}if(pendingCameraRequest!=null)pendingCameraRequest.deny();pendingCameraRequest=request;requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION_REQUEST);}
@@ -167,9 +161,8 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     private void pushSkyPointing(float[] rotationVector){if(webView==null||rotationVector==null||rotationVector.length<3)return;float[] matrix=new float[9];try{SensorManager.getRotationMatrixFromVector(matrix,rotationVector);}catch(RuntimeException ignored){return;}double east=-matrix[2],north=-matrix[5],up=-matrix[8],horizontal=Math.hypot(east,north);if(horizontal<=1.0e-6&&Math.abs(up)<1.0e-6)return;double azimuth=Math.toDegrees(Math.atan2(east,north));if(azimuth<0.0)azimuth+=360.0;double declination=skyLocationKnown?magneticDeclinationDeg:0.0;azimuth=(azimuth+declination)%360.0;if(azimuth<0.0)azimuth+=360.0;double altitude=Math.toDegrees(Math.atan2(up,horizontal));String js=String.format(Locale.US,"if(window.AGCDSKY&&AGCDSKY.nativeSkyPointing){AGCDSKY.nativeSkyPointing(%.5f,%.5f,%d,%.4f)}",azimuth,altitude,magneticAccuracy,declination);webViewHandler.post(()->{if(webView!=null)webView.evaluateJavascript(js,null);});}
     @Override public void onAccuracyChanged(Sensor sensor,int accuracy){if(sensor==magneticAttitudeSensor)magneticAccuracy=accuracy;}
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==GEO_PERMISSION_REQUEST&&pendingGeoCallback!=null){boolean grant=isLocalAssetOrigin(pendingGeoOrigin)&&hasLocationPermission();pendingGeoCallback.invoke(pendingGeoOrigin,grant,false);pendingGeoOrigin=null;pendingGeoCallback=null;return;}if(requestCode==CAMERA_PERMISSION_REQUEST&&pendingCameraRequest!=null){PermissionRequest request=pendingCameraRequest;pendingCameraRequest=null;if(hasCameraPermission()&&request.getOrigin()!=null&&isLocalAssetOrigin(request.getOrigin().toString()))request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});else request.deny();}}
-    private boolean liveWidgetActive(){return "live".equals(ElWidgetProvider.widgetMode(this));}
     @Override protected void onResume(){super.onResume();configureWindow();registerSensors();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);pushSensorAvailability();}}
-    @Override protected void onPause(){unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);if(!liveWidgetActive())webView.onPause();}super.onPause();}
+    @Override protected void onPause(){unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
     private void printChecklistNow(){
         WebView view=webView;if(view==null)return;
@@ -182,6 +175,6 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
                 .build();
         manager.print("Apollo DSKY Checklist",adapter,attributes);
     }
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","PrintBridge","WidgetBridge");}
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","PrintBridge");}
     @Override protected void onDestroy(){DebugReporter.dismissPendingReport(this);NtpTime.removeListener(ntpListener);unregisterSensors();webViewHandler.removeCallbacksAndMessages(null);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;if(pendingCameraRequest!=null){pendingCameraRequest.deny();pendingCameraRequest=null;}destroyWebView();sensorManager=null;attitudeSensor=null;magneticAttitudeSensor=null;linearAccelerationSensor=null;accelerometerSensor=null;gravitySensor=null;super.onDestroy();}
 }
