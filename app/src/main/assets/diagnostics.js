@@ -10,7 +10,7 @@
   if(!lifecycle)throw new Error('AGC lifecycle service unavailable');
   if(!snapshot)throw new Error('AGC snapshot service unavailable');
   if(!registry)throw new Error('AGC late-service registry unavailable');
-  let timer=0,pipaTest=null,pipaTestTimer=0;
+  let timer=0,pipaTest=null,pipaTestTimer=0,dskyTest=null;
   const oct=(v,n=5)=>v==null?'-----':((Number(v)>>>0)&0x7fff).toString(8).padStart(n,'0');
   const cduDeg=v=>v==null?NaN:((v&0x7fff)*360/32768+360)%360;
   const s15=v=>{if(v==null)return null;v&=0x7fff;return (v&0x4000)?-((~v)&0x7fff):v};
@@ -21,12 +21,13 @@
   function build(){
     if(document.getElementById('diag-view'))return;
     const el=document.createElement('section');el.id='diag-view';el.setAttribute('aria-label','AGC diagnostics');
-    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
+    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
     document.getElementById('diag-save').onclick=()=>{snapshot.save('diagnostics');update()};
     document.getElementById('diag-verify').onclick=()=>{snapshot.verifyRoundTrip();update()};
     document.getElementById('diag-pipa-test').onclick=startPipaTest;
+    document.getElementById('diag-dsky-test').onclick=startDskyTest;
     document.getElementById('diag-clear').onclick=()=>{snapshot.clear();update()};
   }
   function row(k,v){return `<tr><td>${k}</td><td>${v}</td></tr>`}
@@ -37,6 +38,19 @@
     if(!core||!core.running||!start){pipaTest={ok:false,message:'AGC MUST BE RUNNING'};update();return}
     pipaTest={running:true,start,timestamp:Date.now(),message:'MOVE PHONE NOW'};if(b)b.textContent='MOVE PHONE · TEST RUNNING';
     clearTimeout(pipaTestTimer);pipaTestTimer=setTimeout(()=>{const end=pipaWords(core),delta=end?end.map((v,i)=>((v-start[i]+16384)&0x7fff)-16384):null;const moved=delta&&delta.some(v=>v!==0);pipaTest={running:false,ok:!!moved,start,end,delta,timestamp:Date.now(),message:moved?'PIPA COUNTERS RESPONDED':'NO PIPA COUNTER CHANGE'};if(b)b.textContent='ARM 5-SECOND PIPA MOTION TEST';update()},5000);update();
+  }
+  function startDskyTest(){
+    const clock=window.AGCDSKY_CLOCK;
+    if(appState.mode!=='clock'||!clock||typeof clock.lampTest!=='function'){
+      dskyTest={ok:false,message:'CLOCK MODE REQUIRED'};update();return;
+    }
+    try{
+      clock.lampTest();
+      dskyTest={ok:true,message:'V35 HARDWARE SEQUENCE STARTED',timestamp:Date.now()};
+    }catch(error){
+      dskyTest={ok:false,message:String(error?.message||error||'SELF-TEST FAILED'),timestamp:Date.now()};
+    }
+    update();
   }
   function ageText(ms){return ms==null?'---':(ms<1000?Math.round(ms)+' ms':(ms/1000).toFixed(1)+' s')}
   function hzText(h){return Number.isFinite(Number(h))?Number(h).toFixed(1)+' Hz':'---'}
@@ -60,6 +74,7 @@
     h+=section('CORE / DSKY');
     h+=row('Mode',String(app.mode||'---').toUpperCase());
     h+=row('Core',app.coreLoaded?`${app.coreVersion||'---'} · ${app.coreRunning?'RUNNING':'SUSPENDED'}`:'not loaded');
+    if(dskyTest)h+=row('Clock DSKY self-test',`${dskyTest.ok?'STARTED':'BLOCKED'} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
     h+=row('PROG / VERB / NOUN',`${(d.prog||[]).join('')||'--'} / ${(d.verb||[]).join('')||'--'} / ${(d.noun||[]).join('')||'--'}`);
     const ch=app.channels||{};h+=row('Channels 011 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
     h+=section('ISS / ALIGNMENT');
@@ -97,10 +112,11 @@
     if(ntp){const synced=ntp.lastSyncUtcMs?new Date(ntp.lastSyncUtcMs).toLocaleString():'NEVER';const rtt=Number(ntp.roundTripMs)>=0?`${Math.round(ntp.roundTripMs)} ms`:'---';h+=row('Network time',`${ntp.state||'unavailable'} · ${ntp.server||'time.cloudflare.com'} · offset ${Math.round(ntp.offsetMs||0)} ms · RTT ${rtt} · last ${synced}${Number(ntp.ageMs)>=0?' · '+ageText(ntp.ageMs)+' ago':''}`)}
     h+=row('Snapshot action',`${snap.lastAction||'none'}${snap.error?' · '+snap.error:''}`);
     t.innerHTML=h;
-    const saveBtn=document.getElementById('diag-save'),verifyBtn=document.getElementById('diag-verify');
+    const saveBtn=document.getElementById('diag-save'),verifyBtn=document.getElementById('diag-verify'),dskyBtn=document.getElementById('diag-dsky-test');
     const canSave=app.mode==='agc'&&app.coreLoaded;
     if(saveBtn){saveBtn.disabled=!canSave;saveBtn.textContent=canSave?'SAVE AGC STATE NOW':'SAVE AGC STATE · AGC MODE ONLY'}
     if(verifyBtn)verifyBtn.disabled=!app.coreLoaded;
+    if(dskyBtn){dskyBtn.disabled=app.mode!=='clock';dskyBtn.textContent=app.mode==='clock'?'RUN CLOCK DSKY SELF-TEST':'DSKY SELF-TEST · CLOCK MODE ONLY'}
   }
   function open(){build();document.getElementById('diag-view').classList.add('open');update();if(!timer)timer=setInterval(update,250)}
   function close(){document.getElementById('diag-view')?.classList.remove('open');if(timer){clearInterval(timer);timer=0}}
