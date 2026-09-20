@@ -1,6 +1,5 @@
 package org.apollo.agcdsky;
 
-import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -27,13 +26,9 @@ import android.widget.RemoteViews;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.Calendar;
 import java.util.Locale;
 
 public final class ElWidgetProvider extends AppWidgetProvider {
-    private static final String ACTION_TICK="org.apollo.agcdsky.EL_WIDGET_TICK";
-    private static final long MINUTE_MS=60_000L;
-    private static final int TICK_REQUEST_CODE=21;
     private static final String PREFS="el_widget_state_v2",PREF_MODE="mode",PREF_LIVE="live_snapshot";
     private static final String MODE_CLOCK="clock",MODE_LIVE="live";
     private static final long LIVE_REFRESH_MIN_MS=120L;
@@ -67,11 +62,11 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       R.drawable.el_sec_50,R.drawable.el_sec_51,R.drawable.el_sec_52,R.drawable.el_sec_53,R.drawable.el_sec_54,
       R.drawable.el_sec_55,R.drawable.el_sec_56,R.drawable.el_sec_57,R.drawable.el_sec_58,R.drawable.el_sec_59};
 
-    @Override public void onEnabled(Context context){super.onEnabled(context);if(MODE_CLOCK.equals(widgetMode(context)))scheduleNextMinute(context);}
-    @Override public void onDisabled(Context context){cancelTick(context);super.onDisabled(context);}
-    @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){NtpTime.start(context);for(int id:ids)updateOne(context,manager,id);if(ids.length>0&&MODE_CLOCK.equals(widgetMode(context)))scheduleNextMinute(context);}
+    @Override public void onEnabled(Context context){super.onEnabled(context);}
+    @Override public void onDisabled(Context context){super.onDisabled(context);}
+    @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){for(int id:ids)updateOne(context,manager,id);}
     @Override public void onAppWidgetOptionsChanged(Context context,AppWidgetManager manager,int appWidgetId,Bundle newOptions){super.onAppWidgetOptionsChanged(context,manager,appWidgetId,newOptions);updateOne(context,manager,appWidgetId);}
-    @Override public void onReceive(Context context,Intent intent){super.onReceive(context,intent);String action=intent.getAction();if(!ACTION_TICK.equals(action)&&!Intent.ACTION_TIME_CHANGED.equals(action)&&!Intent.ACTION_TIMEZONE_CHANGED.equals(action)&&!Intent.ACTION_DATE_CHANGED.equals(action)&&!Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))return;updateAll(context);if(hasWidgets(context)&&MODE_CLOCK.equals(widgetMode(context)))scheduleNextMinute(context);else cancelTick(context);}
+    @Override public void onReceive(Context context,Intent intent){super.onReceive(context,intent);String action=intent.getAction();if(!Intent.ACTION_TIME_CHANGED.equals(action)&&!Intent.ACTION_TIMEZONE_CHANGED.equals(action)&&!Intent.ACTION_DATE_CHANGED.equals(action)&&!Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))return;updateAll(context);}
 
     static String widgetMode(Context context){
       String value=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getString(PREF_MODE,MODE_CLOCK);
@@ -80,7 +75,6 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     static String setWidgetMode(Context context,String requested){
       String mode=MODE_LIVE.equalsIgnoreCase(String.valueOf(requested))?MODE_LIVE:MODE_CLOCK;
       context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString(PREF_MODE,mode).apply();
-      if(MODE_CLOCK.equals(mode))scheduleNextMinute(context);else cancelTick(context);
       updateAll(context);
       return mode;
     }
@@ -132,33 +126,29 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       float panelWidthDp=PANEL_W*scaleDp,panelHeightDp=PANEL_H*scaleDp;
       float density=context.getResources().getDisplayMetrics().density;
       int panelWidthPx=clamp(Math.round(panelWidthDp*density),1,1200),panelHeightPx=clamp(Math.round(panelHeightDp*density),1,1800);
-      Calendar now=Calendar.getInstance();now.setTimeInMillis(NtpTime.accurateNow(context));
       RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.el_widget);
-      int[] flippers={R.id.el_hour_flipper,R.id.el_minute_flipper,R.id.el_seconds_flipper};
+      int[] clocks={R.id.el_hour_clock,R.id.el_minute_clock,R.id.el_seconds_clock};
       boolean live=MODE_LIVE.equals(widgetMode(context));
       if(Build.VERSION.SDK_INT>=31){
         views.setViewLayoutWidth(R.id.el_widget_panel,panelWidthDp,TypedValue.COMPLEX_UNIT_DIP);
         views.setViewLayoutHeight(R.id.el_widget_panel,panelHeightDp,TypedValue.COMPLEX_UNIT_DIP);
         float[] y={R1_Y,R2_Y,R3_Y};
-        for(int i=0;i<flippers.length;i++){
-          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_START,ACTIVE_X*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
-          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_TOP,(ACTIVE_Y+y[i])*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
-          views.setViewLayoutWidth(flippers[i],ACTIVE_W*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
-          views.setViewLayoutHeight(flippers[i],FRAME_H*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+        for(int i=0;i<clocks.length;i++){
+          views.setViewLayoutMargin(clocks[i],RemoteViews.MARGIN_START,ACTIVE_X*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutMargin(clocks[i],RemoteViews.MARGIN_TOP,(ACTIVE_Y+y[i])*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutWidth(clocks[i],ACTIVE_W*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutHeight(clocks[i],FRAME_H*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
         }
       }
       if(live){
         views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.renderLive(panelWidthPx,panelHeightPx,liveState(context)));
-        for(int id:flippers)views.setViewVisibility(id,View.GONE);
+        for(int id:clocks)views.setViewVisibility(id,View.GONE);
       }else{
         views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.renderClock(panelWidthPx,panelHeightPx));
-        for(int id:flippers)views.setViewVisibility(id,View.VISIBLE);
-        populateFlipper(context,views,R.id.el_hour_flipper,24);
-        populateFlipper(context,views,R.id.el_minute_flipper,60);
-        populateFlipper(context,views,R.id.el_seconds_flipper,60);
-        views.setInt(R.id.el_hour_flipper,"setDisplayedChild",now.get(Calendar.HOUR_OF_DAY));
-        views.setInt(R.id.el_minute_flipper,"setDisplayedChild",now.get(Calendar.MINUTE));
-        views.setInt(R.id.el_seconds_flipper,"setDisplayedChild",now.get(Calendar.SECOND));
+        for(int id:clocks){
+          views.setViewVisibility(id,View.VISIBLE);
+          views.setTextViewTextSize(id,TypedValue.COMPLEX_UNIT_SP,18f*scaleDp);
+        }
       }
       Intent launch=new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
       PendingIntent openApp=PendingIntent.getActivity(context,appWidgetId,launch,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -166,18 +156,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       manager.updateAppWidget(appWidgetId,views);
     }
 
-    private static void populateFlipper(Context context,RemoteViews views,int viewId,int count){
-      views.removeAllViews(viewId);
-      for(int i=0;i<count;i++){
-        RemoteViews frame=new RemoteViews(context.getPackageName(),R.layout.el_second_frame);
-        frame.setImageViewResource(R.id.el_second_image,frameDrawable(i));
-        views.addView(viewId,frame);
-      }
-    }
     static int frameDrawable(int position){return SECOND_DRAWABLES[Math.floorMod(position,SECOND_DRAWABLES.length)];}
-    private static PendingIntent tickIntent(Context context){Intent tick=new Intent(context,ElWidgetProvider.class).setAction(ACTION_TICK);return PendingIntent.getBroadcast(context,TICK_REQUEST_CODE,tick,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
-    private static void scheduleNextMinute(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm==null)return;long now=System.currentTimeMillis(),next=now-(now%MINUTE_MS)+MINUTE_MS;PendingIntent pi=tickIntent(context);if(Build.VERSION.SDK_INT<31||alarm.canScheduleExactAlarms())alarm.setExactAndAllowWhileIdle(AlarmManager.RTC,next,pi);else alarm.setAndAllowWhileIdle(AlarmManager.RTC,next,pi);}
-    private static void cancelTick(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm!=null)alarm.cancel(tickIntent(context));}
     private static int clamp(int v,int lo,int hi){return Math.max(lo,Math.min(hi,v));}
 
     static final class LiveState{

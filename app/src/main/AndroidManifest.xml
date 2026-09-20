@@ -16,7 +16,7 @@
         android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher_original"
         android:roundIcon="@mipmap/ic_launcher_original"
-        android:label="AGC DSKY v1.1.33"
+        android:label="AGC DSKY v1.1.34"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <meta-data
