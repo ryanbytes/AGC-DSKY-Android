@@ -55,6 +55,7 @@ dream-orientation-smoke.js
 dream-agc-runtime-smoke.js
 device-v35-policy-smoke.js
 display-layout-smoke.js
+dsky-visual-snapshot-smoke.js
 parallax-3d-smoke.js
 parallax-reduced-motion-override-smoke.js
 el-only-parallax-smoke.js
