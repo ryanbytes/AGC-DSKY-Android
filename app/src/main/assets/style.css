@@ -149,6 +149,7 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
    DreamService always enters this mode; the hidden 1.8 s hold exits it in the normal app. */
 body.display-only #app{padding:0;overflow:hidden}
 body.display-only .app-controls,body.display-only .hint,body.display-only .key,body.display-only .f3,body.display-only .f4{display:none!important}
+body.display-only .dsky:before{border-top-color:transparent}
 body.display-only .dsky{
   position:absolute;left:calc(50% + var(--drift-x,0px));top:calc(50% + var(--drift-y,0px));
   width:min(100vw,calc(100vh * 320 / 220));max-width:none;
