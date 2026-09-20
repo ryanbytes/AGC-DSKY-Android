@@ -6,8 +6,10 @@ const path = require('path');
 const outRoot = process.argv[2];
 if (!outRoot) throw new Error('usage: node generate-el-second-frames.js <generated-res-dir>');
 const drawable = path.join(outRoot, 'drawable');
+const layout = path.join(outRoot, 'layout');
 fs.rmSync(outRoot, {recursive: true, force: true});
 fs.mkdirSync(drawable, {recursive: true});
+fs.mkdirSync(layout, {recursive: true});
 
 // MIT/IL SCD 1006315G plus the metric DSKY V2 segment trace.  The trace is
 // already dimensionally faithful to Detail C; use one physical mm->panel scale.
@@ -92,4 +94,55 @@ for (let sec=0; sec<60; sec++) {
   const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="106dp"\n    android:height="23dp"\n    android:viewportWidth="106"\n    android:viewportHeight="23">\n${body}\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
-console.log(`generated 60 physical-datum Apollo relay-matrix EL second frames in ${drawable}`);
+function clockFrameImage(sec){
+  const name=String(sec).padStart(2,'0');
+  return `            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitXY"
+                android:src="@drawable/el_sec_${name}" />`;
+}
+function clockFlipper(id,count,interval,topDp){
+  const frames=Array.from({length:count},(_,i)=>clockFrameImage(i)).join('\n');
+  return `        <ViewFlipper
+            android:id="@+id/${id}"
+            android:layout_width="106dp"
+            android:layout_height="23dp"
+            android:layout_gravity="start|top"
+            android:layout_marginStart="5.839dp"
+            android:layout_marginTop="${topDp}dp"
+            android:autoStart="true"
+            android:animateFirstView="false"
+            android:flipInterval="${interval}"
+            android:inAnimation="@null"
+            android:outAnimation="@null">
+${frames}
+        </ViewFlipper>`;
+}
+const clockLayout=`<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/el_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+    <FrameLayout
+        android:id="@+id/el_widget_panel"
+        android:layout_width="117.678dp"
+        android:layout_height="198.525dp"
+        android:layout_gravity="center"
+        android:background="#565A56">
+        <ImageView
+            android:id="@+id/el_widget_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="0dp"
+            android:scaleType="fitXY"
+            android:contentDescription="Apollo DSKY electroluminescent display" />
+${clockFlipper('el_hour_flipper',24,3600000,'92.526')}
+${clockFlipper('el_minute_flipper',60,60000,'126.661')}
+${clockFlipper('el_seconds_flipper',60,1000,'160.797')}
+    </FrameLayout>
+</FrameLayout>
+`;
+fs.writeFileSync(path.join(layout,'el_widget_clock.xml'),clockLayout);
+console.log(`generated 60 physical-datum Apollo relay-matrix EL second frames and adapter-free clock widget layout in ${outRoot}`);
