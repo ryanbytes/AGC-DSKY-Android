@@ -65,6 +65,7 @@ solar-model-smoke.js
 agc-core-smoke.js
 proceed-electrical-smoke.js
 native-diagnostic-smoke.js
+diagnostics-self-test-smoke.js
 dsky-mapping-smoke.js
 dsky-keycode-consistency-smoke.js
 flight-hardware-ui-smoke.js
