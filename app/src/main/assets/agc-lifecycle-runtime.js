@@ -63,10 +63,22 @@
   function fail(error){
     lifecycleCore.suspendedForClock=false;console.error('AGC core stopped',error);enterClock('AGC ERROR · PHONE CLOCK',false);
   }
+  function nativeLiveWidgetActive(){
+    try{
+      return !!(window.WidgetBridge&&typeof window.WidgetBridge.getMode==='function'
+        &&String(window.WidgetBridge.getMode()).toLowerCase()==='live');
+    }catch(_){return false}
+  }
   function setAppVisible(visible){
     lifecycleState.appVisible=!!visible;
     if(lifecycleState.mode!=='agc'||!lifecycleCore.core)return;
     if(!lifecycleState.appVisible){
+      if(nativeLiveWidgetActive()){
+        lifecycleCore.pausedForVisibility=false;
+        if(!lifecycleCore.core.running)lifecycleCore.core.start(1);
+        lifecycleSnapshot.save('app background live widget');
+        return;
+      }
       if(lifecycleCore.core.running){lifecycleCore.core.stop();lifecycleCore.pausedForVisibility=true}
       lifecycleSnapshot.save('app background');
       return;
