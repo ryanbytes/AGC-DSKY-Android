@@ -16,7 +16,7 @@
         android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher_original"
         android:roundIcon="@mipmap/ic_launcher_original"
-        android:label="AGC DSKY v1.1.31"
+        android:label="AGC DSKY v1.1.32"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <meta-data
@@ -73,6 +73,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/el_widget_info" />
         </receiver>
+
+        <service
+            android:name=".ElWidgetFrameService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
 
         <service
             android:name=".AgcDreamService"
