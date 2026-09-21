@@ -3,10 +3,12 @@
 /*
  * Apollo Block II DSKY EL geometry.
  *
- * Source of truth: MIT/IL SCD 1006315G plus the metric segment trace from
- * DSKY V2.svg. The renderer service owns the implementation slots; this late
- * drawing-geometry layer installs those slots through AGCDSKY_RENDERER and
- * does not depend on the generic compatibility registry or parser globals.
+ * Source of truth: MIT/IL SCD 1006315G. Segment and sign solids are transcribed
+ * from the drawing-backed rrainey/agc-mechanical-cad 1006315G-exact.step model
+ * (commit 2d7dccd5bc4f0263a14ac5a4fd112a15d447010d). The renderer service owns
+ * the implementation slots; this late drawing-geometry layer installs those
+ * slots through AGCDSKY_RENDERER and does not depend on replica SVG geometry,
+ * the generic compatibility registry, or parser globals.
  */
 (() => {
   const geometryState=window.AGCDSKY_APP_STATE;
@@ -17,26 +19,26 @@
   if(!geometryState)throw new Error('Shared application state unavailable');
   if(!renderer||!shell||!clock||!display)throw new Error('DSKY geometry service dependencies unavailable');
 
-  const SOURCE = Object.freeze({
-    a: 'M 95.137274,86.827056 l 1.10725,-1.523997 h -6.1558 l 0.40836,1.523997 z',
-    f: 'M 91.361734,91.526056 l -1.66745,-6.222997 h -1.57776 l 1.66745,6.222997 z',
-    e: 'M 89.886064,91.907059 h 1.57776 l 1.15699,4.317939 -1.1639,1.544551 z',
-    d: 'M 93.002124,96.352056 l -1.24411,1.651003 h 7.812 l -2.15162,-1.651003 z',
-    b: 'M 95.390774,87.126332 l 1.15266,-1.5865 1.60401,5.986224 h -1.57776 z',
-    c: 'M 96.671774,91.907059 h 1.57776 l 1.55242,5.793732 -1.98611,-1.524 z',
-    g: 'M 96.005094,90.891059 l 0.44238,1.651 h -4.41906 l -0.44239,-1.651 z'
+  /*
+   * Exact 1006315G digit electrodes in inches, in the STEP component datum.
+   * The model contains seven independent 0.010-in-thick EL solids. Two of the
+   * electrodes retain the drawing's 0.020-in corner radius rather than being
+   * flattened into a generic seven-segment font.
+   */
+  const SEGMENT_PATH_IN=Object.freeze({
+    a:'M .138381 .102240 L .070702 .034561 A .020 .020 0 0 1 .080054 .032240 L .361195 .032240 L .322764 .102240 Z',
+    b:'M .435059 .269917 L .367759 .269917 L .325740 .113331 L .371746 .033978 Z',
+    c:'M .438152 .532240 L .370443 .279917 L .437742 .279917 L .505451 .532240 Z',
+    d:'M .203493 .532240 L .199266 .531788 A .020 .020 0 0 1 .236689 .467240 L .410356 .467240 L .427798 .532240 Z',
+    e:'M .187742 .279917 L .233934 .452054 L .190763 .527666 A .020 .020 0 0 1 .184176 .517423 L .120443 .279917 Z',
+    f:'M .117759 .269917 L .060738 .057423 A .020 .020 0 0 1 .063306 .041308 L .145868 .123869 L .185059 .269917 Z',
+    g:'M .206770 .312240 L .189327 .247240 L .351320 .247240 L .368762 .312240 Z'
   });
-
-  const SRC_X=88.116524,SRC_Y=85.303059,SRC_W=11.685430;
-  const MIRROR_X=2*SRC_X+SRC_W;
-  const DATUM_X=MIRROR_X-96.244524;
-  const SOURCE_FOR_LOGICAL=Object.freeze({a:'a',b:'f',c:'e',d:'d',e:'c',f:'b',g:'g'});
-
+  const DIGIT_TOP_IN=.0322398905011428;
   const FACE_W_IN=2.360,FACE_H_IN=4.060,U=106/FACE_W_IN;
-  const MM_TO_U=U/25.4;
   const DIGIT_H=.500*U;
-  const UPPER_ADVANCE=.420*U;
-  const REGISTER_ADVANCE=.410*U;
+  const UPPER_ADVANCE_IN=.420,REGISTER_ADVANCE_IN=.410;
+  const UPPER_ADVANCE=UPPER_ADVANCE_IN*U,REGISTER_ADVANCE=REGISTER_ADVANCE_IN*U;
   const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);
   const BAR_H_IN=.060;
   const REGISTER_GAP_IN=.070;
@@ -44,45 +46,47 @@
   const REGISTER_Y=BAR_CENTER_Y.map(c=>c+(BAR_H_IN*.5+REGISTER_GAP_IN)*U);
 
   function segment(name){
-    const sourceName=SOURCE_FOR_LOGICAL[name];
-    return `<path class="el-seg on" data-seg="${name}" d="${SOURCE[sourceName]}"/>`;
+    return `<path class="el-seg on" data-seg="${name}" d="${SEGMENT_PATH_IN[name]}"/>`;
   }
 
-  function apolloGlyph(ch,x){
+  function apolloGlyph(ch,xIn){
     const lit=renderer.segmentPattern(ch);
     const paths=Array.from(lit).map(segment).join('');
-    return `<g class="el-glyph" transform="translate(${Number(x).toFixed(3)} 0) scale(${MM_TO_U.toFixed(6)}) translate(${-DATUM_X.toFixed(6)} ${-SRC_Y})"><g transform="matrix(-1 0 0 1 ${MIRROR_X.toFixed(6)} 0)">${paths}</g></g>`;
+    return `<g class="el-glyph" transform="translate(${Number(xIn*U).toFixed(3)} 0) scale(${U.toFixed(6)}) translate(0 ${(-DIGIT_TOP_IN).toFixed(6)})">${paths}</g>`;
   }
 
-  const SIGN_W=.265*U,SIGN_H=.338*U,SIGN_T=.065*U,SIGN_X=.025*U,SIGN_GAP=.010*U;
-  const SIGN_TOP=(DIGIT_H-SIGN_H)*.5;
-  const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5;
-  const SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)*.5;
-  const SIGN_HY=SIGN_TOP+SIGN_A_H+SIGN_GAP;
-  const SIGN_LOWER_Y=SIGN_HY+SIGN_T+SIGN_GAP;
-  function signB(on){
-    if(!on)return '';
-    return `<path class="el-seg on" data-sign-seg="B" d="M ${SIGN_X.toFixed(3)},${SIGN_HY.toFixed(3)} h ${SIGN_W.toFixed(3)} v ${SIGN_T.toFixed(3)} h ${(-SIGN_W).toFixed(3)} z"/>`;
+  /*
+   * 1006315G register sign electrodes, again in the STEP component datum.
+   * A is the two vertical electrodes used by '+'. B is the horizontal
+   * electrode used by both '+' and '-'. Their relative placement to the
+   * numeric digit is preserved from the source model.
+   */
+  const SIGN_PATH_IN=Object.freeze({
+    aTop:'M .073794 .387908 L .073794 .305065 L .138794 .305065 L .138794 .387908 Z',
+    b:'M -.007784 .296536 L -.007784 .231536 L .224338 .231536 L .224338 .296536 Z',
+    aBottom:'M .073794 .221536 L .073794 .139908 L .138794 .139908 L .138794 .221536 Z'
+  });
+  function signPath(name,segmentName){
+    return `<path class="el-seg on" data-sign-seg="${segmentName}" d="${SIGN_PATH_IN[name]}"/>`;
   }
-  function signA(on){
-    if(!on)return '';
-    const top=`<path class="el-seg on" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_TOP.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
-    const bottom=`<path class="el-seg on" data-sign-seg="A" d="M ${SIGN_VX.toFixed(3)},${SIGN_LOWER_Y.toFixed(3)} h ${SIGN_T.toFixed(3)} v ${SIGN_A_H.toFixed(3)} h ${(-SIGN_T).toFixed(3)} z"/>`;
-    return top+bottom;
+  function apolloSignGlyph(sign){
+    const a=sign==='+',b=a||sign==='-';
+    if(!a&&!b)return '';
+    const paths=(a?signPath('aTop','A')+signPath('aBottom','A'):'')+(b?signPath('b','B'):'');
+    return `<g class="el-sign" transform="scale(${U.toFixed(6)}) translate(0 ${(-DIGIT_TOP_IN).toFixed(6)})">${paths}</g>`;
   }
-  function apolloSignGlyph(sign){const a=sign==='+',b=a||sign==='-';return `<g class="el-sign">${signA(a)}${signB(b)}</g>`;}
 
   function apolloRenderDigits(el,text){
     let out='',glyph=renderer.implementation('glyph');
-    String(text).split('').forEach((ch,i)=>{out+=glyph(ch,i*UPPER_ADVANCE);});
+    String(text).split('').forEach((ch,i)=>{out+=glyph(ch,i*UPPER_ADVANCE_IN);});
     el.innerHTML=out;
   }
-  const FIRST_DIGIT_X=.400*U;
+  const FIRST_DIGIT_X_IN=.180;
   function apolloRenderReg(el,text){
     text=String(text);
     const signGlyph=renderer.implementation('signGlyph'),glyph=renderer.implementation('glyph');
     let out=signGlyph(text[0]);
-    text.slice(1).split('').forEach((ch,i)=>{out+=glyph(ch,FIRST_DIGIT_X+i*REGISTER_ADVANCE);});
+    text.slice(1).split('').forEach((ch,i)=>{out+=glyph(ch,FIRST_DIGIT_X_IN+i*REGISTER_ADVANCE_IN);});
     el.innerHTML=out;
   }
 
@@ -91,9 +95,10 @@
   renderer.installImplementation('renderDigits',apolloRenderDigits,'Apollo drawing geometry');
   renderer.installImplementation('renderReg',apolloRenderReg,'Apollo drawing geometry');
 
-  const RIGHT_FIELD_X_IN=1.620;
+  const RIGHT_FIELD_X_IN=1.390;
   const UPPER_GROUP_X_OFFSET_IN=1.470;
   const LEFT_FIELD_X_IN=RIGHT_FIELD_X_IN-UPPER_GROUP_X_OFFSET_IN;
+  const REGISTER_ROW_X_IN=-.010;
   const PROG_TOP_IN=.315;
   const FIRST_BAR_CENTER_FROM_TOP_IN=FACE_H_IN-BAR_FROM_BOTTOM_IN[0];
   const VERB_NOUN_TO_FIRST_BAR_CENTER_IN=.560;
@@ -106,9 +111,9 @@
     prog:`translate(${RIGHT_FIELD_X.toFixed(3)} ${PROG_Y.toFixed(3)})`,
     verb:`translate(${LEFT_FIELD_X.toFixed(3)} ${VERB_NOUN_Y.toFixed(3)})`,
     noun:`translate(${RIGHT_FIELD_X.toFixed(3)} ${VERB_NOUN_Y.toFixed(3)})`,
-    r1:`translate(0 ${REGISTER_Y[0].toFixed(3)})`,
-    r2:`translate(0 ${REGISTER_Y[1].toFixed(3)})`,
-    r3:`translate(0 ${REGISTER_Y[2].toFixed(3)})`
+    r1:`translate(${(REGISTER_ROW_X_IN*U).toFixed(3)} ${REGISTER_Y[0].toFixed(3)})`,
+    r2:`translate(${(REGISTER_ROW_X_IN*U).toFixed(3)} ${REGISTER_Y[1].toFixed(3)})`,
+    r3:`translate(${(REGISTER_ROW_X_IN*U).toFixed(3)} ${REGISTER_Y[2].toFixed(3)})`
   });
   for(const [id,transform] of Object.entries(transforms)){
     const node=document.getElementById(id);
@@ -133,7 +138,7 @@
   window.addEventListener('pageshow',restoreClockProg,{passive:true});
 
   window.DSKY_DRAWING_GEOMETRY=Object.freeze({
-    source:'MIT/IL SCD 1006315G plus metric DSKY V2 segment trace; uniform physical scale',
+    source:'MIT/IL SCD 1006315G via drawing-backed 1006315G-exact.step; no replica SVG segment geometry',
     faceWidthIn:FACE_W_IN,
     faceHeightIn:FACE_H_IN,
     detailCDatumWidthIn:.320,
@@ -141,7 +146,8 @@
     upperPitchIn:.420,
     registerPitchIn:.410,
     mmToPanel:MM_TO_U,
-    firstRegisterDigitDatumIn:.400,
+    firstRegisterDigitDatumIn:FIRST_DIGIT_X_IN,
+    registerRowDatumIn:REGISTER_ROW_X_IN,
     leftUpperDatumIn:LEFT_FIELD_X_IN,
     rightUpperDatumIn:RIGHT_FIELD_X_IN,
     upperGroupHorizontalSeparationIn:UPPER_GROUP_X_OFFSET_IN,
@@ -151,10 +157,9 @@
     verbNounTopIn:VERB_NOUN_TOP_IN,
     upperRowVerticalSeparationIn:UPPER_ROW_Y_OFFSET_IN,
     upperDigitToSeparatorClearanceIn:UPPER_CLEARANCE_IN,
-    signWidthIn:.265,
-    signHeightIn:.338,
+    signWidthIn:.232122,
+    signHeightIn:.248000,
     signThicknessIn:.065,
-    signSegmentGapIn:.010,
     upperAdvance:UPPER_ADVANCE,
     registerAdvance:REGISTER_ADVANCE,
     barFromBottomIn:BAR_FROM_BOTTOM_IN,
