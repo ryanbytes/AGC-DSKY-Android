@@ -16,6 +16,15 @@
 - Apollo 11 source mirror: https://github.com/chrislgarry/Apollo-11
 - Apollo-derived DSKY interface drawing: https://commons.wikimedia.org/wiki/File:Apollo_DSKY_interface.svg
 
+### Block II DSKY digital-indicator geometry
+
+- MIT/IL SCD `1006315G`, digital E/L indicator: dimensional authority for the 2.360 × 4.060-in active face, 0.500-in digit height, 0.420-in upper-field pitch, 0.410-in register pitch, register/upper-field datums, and the individual EL-element geometry.
+- The production segment/sign paths in `dsky-geometry.js` are transcribed from Robert Rainey's drawing-backed `1006315G-exact.step` reconstruction at commit `2d7dccd5bc4f0263a14ac5a4fd112a15d447010d`. That CAD model is a secondary transcription, not a replacement authority for the MIT drawing; it is used because it preserves the drawing dimensions as machine-readable BREP solids.
+- The seven digit electrodes are modeled as separate 0.010-in-thick solids. The traced digit envelope is exactly 0.500 in high. The production paths retain the 0.020-in rounded corners present in the model instead of flattening them into generic seven-segment polygons.
+- Register geometry uses the same model's component placements: first digit origin `0.180 in`, subsequent digits at `0.410-in` pitch, and register-row X datum `-0.010 in`. The upper two-digit field uses first-digit origins `-0.080 in` (left) and `1.390 in` (right) with `0.420-in` pitch.
+- The register plus/minus symbol now uses the three explicit sign electrodes from the same drawing-backed model rather than a synthesized screen-space sign.
+- Replica artwork such as `DSKY V2.svg` is no longer a production source for numeric EL segment outlines.
+
 ### Block II DSKY key hardware
 
 These sources are authoritative for the source-backed mechanical envelope in `key-mechanical-spec.js`:
