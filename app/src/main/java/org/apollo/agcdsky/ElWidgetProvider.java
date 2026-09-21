@@ -12,6 +12,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
@@ -107,30 +108,14 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final int CORE=Color.rgb(109,236,180),RULE=CORE;
       private static final int FRAME=Color.rgb(86,90,86),PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5);
 
-      // 1006315G Detail C is datum-dimensioned. The metric segment trace
-      // already matches those physical dimensions; do not affine-squeeze it.
-      private static final float U=106f/2.360f,MM_TO_U=U/25.4f;
-      private static final float SRC_X=88.116524f,SRC_Y=85.303059f,SRC_W=11.685430f,MIRROR_X=2f*SRC_X+SRC_W,DATUM_X=MIRROR_X-96.244524f;
-      private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.400f*U;
-      // Same sheet-2 upper electrode datums as the shared WebView renderer.
-      private static final float LEFT_FIELD_X=.150f*U,RIGHT_FIELD_X=1.620f*U;
+      // MIT/IL SCD 1006315G geometry transcribed from the drawing-backed
+      // 1006315G-exact.step model. Coordinates below are inches in the STEP
+      // component datum; U converts them uniformly into the 106-unit face.
+      private static final float U=106f/2.360f,DIGIT_TOP_IN=.0322398905f;
+      private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.180f*U,REGISTER_ROW_X=-.010f*U;
+      private static final float LEFT_FIELD_X=-.080f*U,RIGHT_FIELD_X=1.390f*U;
       private static final float PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U;
 
-      // 1006315G Detail A, position 6: three separate luminous islands.
-      // Segment A is the pair of vertical islands; segment B is horizontal.
-      private static final float SIGN_W=.265f*U,SIGN_H=.338f*U,SIGN_T=.065f*U,SIGN_X=.025f*U,SIGN_GAP=.010f*U;
-      private static final float SIGN_TOP=(DIGIT_H-SIGN_H)*.5f,SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)*.5f;
-      private static final float SIGN_A_H=(SIGN_H-SIGN_T-2f*SIGN_GAP)*.5f,SIGN_HY=SIGN_TOP+SIGN_A_H+SIGN_GAP,SIGN_LOWER_Y=SIGN_HY+SIGN_T+SIGN_GAP;
-
-      private static final float[][][] SOURCE={
-        {{95.137274f,86.827056f},{96.244524f,85.303059f},{90.088724f,85.303059f},{90.497084f,86.827056f}},
-        {{91.361734f,91.526056f},{89.694284f,85.303059f},{88.116524f,85.303059f},{89.783974f,91.526056f}},
-        {{89.886064f,91.907059f},{91.463824f,91.907059f},{92.620814f,96.224998f},{91.456914f,97.769549f}},
-        {{93.002124f,96.352056f},{91.758014f,98.003059f},{99.570014f,98.003059f},{97.418394f,96.352056f}},
-        {{95.390774f,87.126332f},{96.543434f,85.539832f},{98.147444f,91.526056f},{96.569684f,91.526056f}},
-        {{96.671774f,91.907059f},{98.249534f,91.907059f},{99.801954f,97.700791f},{97.815844f,96.176791f}},
-        {{96.005094f,90.891059f},{96.447474f,92.542059f},{92.028414f,92.542059f},{91.586024f,90.891059f}}};
-      private static final int[] MAP={0,1,2,3,5,4,6};
       private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),PANEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG);
       static{
         ON.setStyle(Paint.Style.FILL);ON.setColor(CORE);
@@ -168,7 +153,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         section(c,0f,.633f,39.525f,35.838f,COMP_BG_P);c.drawText("COMP",19.763f,17.900f,COMP_P);c.drawText("ACTY",19.763f,25.000f,COMP_P);
         rule(c,12.770f,78.602f,84.900f,2.695f);rule(c,12.770f,112.737f,84.900f,2.695f);rule(c,12.770f,146.873f,84.900f,2.695f);
         digits(c,"00",RIGHT_FIELD_X,PROG_Y);digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y);digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y);
-        if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),0,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),0,R3_Y);}
+        if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),REGISTER_ROW_X,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),REGISTER_ROW_X,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),REGISTER_ROW_X,R3_Y);}
         c.restore();
       }
       private static String five(int v){return String.format(Locale.US,"%05d",v);}
@@ -177,16 +162,41 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static void dot(Canvas c,float cx,float cy,float rx,float ry){Path p=new Path();for(int i=0;i<12;i++){double a=Math.PI*2d*i/12d;float x=cx+(float)Math.cos(a)*rx,y=cy+(float)Math.sin(a)*ry;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,HARDWARE_FILL_P);}
       private static void digits(Canvas c,String s,float x,float y){for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+i*UPPER_ADV,y);}
       private static void register(Canvas c,char sign,String s,float x,float y){sign(c,sign,x,y);for(int i=0;i<s.length();i++)digit(c,s.charAt(i),x+FIRST_DIGIT_X+i*REG_ADV,y);}
-      private static void digit(Canvas c,char ch,float ox,float oy){String lit=WidgetRelayModel.segmentsForDigit(ch);for(int l=0;l<7;l++)if(lit.indexOf((char)('a'+l))>=0)segment(c,l,ox,oy);}
-      private static void segment(Canvas c,int logical,float ox,float oy){float[][] pts=SOURCE[MAP[logical]];Path p=new Path();for(int i=0;i<pts.length;i++){float x=ox+(MIRROR_X-pts[i][0]-DATUM_X)*MM_TO_U,y=oy+(pts[i][1]-SRC_Y)*MM_TO_U;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,ON);}
+      private static void digit(Canvas c,char ch,float ox,float oy){String lit=WidgetRelayModel.segmentsForDigit(ch);for(int l=0;l<7;l++)if(lit.indexOf((char)('a'+l))>=0)c.drawPath(segmentPath(l,ox,oy),ON);}
+      private static float sx(float ox,float xIn){return ox+xIn*U;}
+      private static float sy(float oy,float yIn){return oy+(yIn-DIGIT_TOP_IN)*U;}
+      private static void ml(Path p,float ox,float oy,float xIn,float yIn,boolean move){float x=sx(ox,xIn),y=sy(oy,yIn);if(move)p.moveTo(x,y);else p.lineTo(x,y);}
+      private static void arc(Path p,float ox,float oy,float cx,float cy,float r,float start,float sweep){p.arcTo(new RectF(sx(ox,cx-r),sy(oy,cy-r),sx(ox,cx+r),sy(oy,cy+r)),start,sweep);}
+      private static Path segmentPath(int logical,float ox,float oy){
+        Path p=new Path();
+        switch(logical){
+          case 0:
+            ml(p,ox,oy,.138381f,.102240f,true);ml(p,ox,oy,.070702f,.034561f,false);arc(p,ox,oy,.080054f,.052240f,.020f,-117.86f,27.86f);ml(p,ox,oy,.361195f,.032240f,false);ml(p,ox,oy,.322764f,.102240f,false);break;
+          case 1:
+            ml(p,ox,oy,.435059f,.269917f,true);ml(p,ox,oy,.367759f,.269917f,false);ml(p,ox,oy,.325740f,.113331f,false);ml(p,ox,oy,.371746f,.033978f,false);break;
+          case 2:
+            ml(p,ox,oy,.438152f,.532240f,true);ml(p,ox,oy,.370443f,.279917f,false);ml(p,ox,oy,.437742f,.279917f,false);ml(p,ox,oy,.505451f,.532240f,false);break;
+          case 3:
+            ml(p,ox,oy,.203493f,.532240f,true);arc(p,ox,oy,.203493f,.512240f,.020f,90f,12.20f);ml(p,ox,oy,.236689f,.467240f,false);ml(p,ox,oy,.410356f,.467240f,false);ml(p,ox,oy,.427798f,.532240f,false);break;
+          case 4:
+            ml(p,ox,oy,.187742f,.279917f,true);ml(p,ox,oy,.233934f,.452054f,false);ml(p,ox,oy,.190763f,.527666f,false);arc(p,ox,oy,.203493f,.512240f,.020f,129.52f,35.46f);ml(p,ox,oy,.120443f,.279917f,false);break;
+          case 5:
+            ml(p,ox,oy,.117759f,.269917f,true);ml(p,ox,oy,.060738f,.057423f,false);arc(p,ox,oy,.080054f,.052240f,.020f,164.98f,48.16f);ml(p,ox,oy,.145868f,.123869f,false);ml(p,ox,oy,.185059f,.269917f,false);break;
+          case 6:
+            ml(p,ox,oy,.206770f,.312240f,true);ml(p,ox,oy,.189327f,.247240f,false);ml(p,ox,oy,.351320f,.247240f,false);ml(p,ox,oy,.368762f,.312240f,false);break;
+          default: return p;
+        }
+        p.close();return p;
+      }
       private static void sign(Canvas c,char s,float ox,float oy){
         if(s!='+'&&s!='-')return;
-        c.drawPath(box(ox+SIGN_X,oy+SIGN_HY,SIGN_W,SIGN_T),ON);
+        c.drawPath(rawBox(ox,oy,-.007784f,.231536f,.232122f,.065000f),ON);
         if(s=='+'){
-          c.drawPath(box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_A_H),ON);
-          c.drawPath(box(ox+SIGN_VX,oy+SIGN_LOWER_Y,SIGN_T,SIGN_A_H),ON);
+          c.drawPath(rawBox(ox,oy,.073794f,.305065f,.065000f,.082843f),ON);
+          c.drawPath(rawBox(ox,oy,.073794f,.139908f,.065000f,.081628f),ON);
         }
       }
+      private static Path rawBox(float ox,float oy,float xIn,float yIn,float wIn,float hIn){Path p=new Path();float x=sx(ox,xIn),y=sy(oy,yIn),w=wIn*U,h=hIn*U;p.moveTo(x,y);p.lineTo(x+w,y);p.lineTo(x+w,y+h);p.lineTo(x,y+h);p.close();return p;}
       private static Path box(float x,float y,float w,float h){Path p=new Path();p.moveTo(x,y);p.lineTo(x+w,y);p.lineTo(x+w,y+h);p.lineTo(x,y+h);p.close();return p;}
     }
 }
