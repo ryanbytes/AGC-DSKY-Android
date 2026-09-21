@@ -1,6 +1,28 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-18
+Last updated: 2026-09-20
+
+## Current repository status — 2026-09-20
+
+This section supersedes older phase-local statements below that say a build or hosted verification path was unavailable. Those statements remain useful as historical records of what had and had not been proved at the time of each phase; they are not the current repository-wide status.
+
+Current `main` before the fidelity/status pass is `671bd5ec0315233477712e4b612788b49622259f`.
+
+Verified on that exact main revision:
+
+- Android GitHub Actions run `35543346568` completed successfully;
+- the canonical source-smoke suite passed;
+- regular release, regular debug/EL-test, Fire debug/release, and unique install-fix APK assembly passed;
+- installable regular and Fire APK signing passed;
+- side-by-side signature/package/icon/restored-asset verification passed;
+- PWA GitHub Actions run `35543346539` completed successfully.
+
+The open-ended runtime cleanup is complete at **Phase 83**. `docs/RUNTIME_REFACTOR.md` is the authoritative cutoff record. Do not restart numbered architecture-cleanup phases without a concrete failure and a regression test.
+
+Physical-device acceptance remains a separate claim from source/build CI. A successful hosted build does not by itself prove Pixel/Fire runtime behavior.
+
+The current fidelity pass replaces the remaining replica-derived numeric EL/sign outlines with the drawing-backed `1006315G` geometry while leaving unrelated placement values alone unless the source resolves them.
+
 
 ## 2026-09-18 SNTP / network-time repair
 
@@ -334,64 +356,32 @@ app/build/outputs/apk/fire/debug/app-fire-debug.apk
 
 Debug package ID remains install-safe alongside the release app through the `.eltest` application-ID suffix.
 
-## Current host verification and build blocker
+## Historical 2026-09-11 host limitation
 
-The 2026-09-11 correction pass was exercised as far as the current container permits. Observed host results:
+On 2026-09-11 the execution container used for the drawing/relay correction pass lacked a complete recursive checkout, Gradle/Android SDK packages, and working shell DNS to GitHub. At that point only source/host and real-Comanche WASM checks could be claimed. That limitation is preserved here for chronology but is **superseded** by the successful current-main Android/PWA CI recorded at the top of this file.
 
-- changed relay JavaScript syntax checks passed;
-- schematic K1-K5 validation produced **28 distinct physical EL segment patterns** across the 32 relay codes and reproduced every normal blank/0-9 code;
-- the CM annunciator order and four blank positions were checked;
-- the widget-frame generator produced all **60** register frames using the production `#79EF4F` EL color;
-- the exact pinned `yaAGC.wasm` + `Comanche055.bin` executed under Node: `V16N65E` produced numeric output, `V37E00E` reached PROG `00` / relay-11 low-11 `01265`, and real `V35E` reached Comanche relay-12 low-11 `00650`.
+The useful 2026-09-11 evidence remains:
 
-These are host/source checks, not an Android build or device test.
+- the K1-K5 schematic validation produced 28 distinct physical EL patterns across 32 relay codes and reproduced the normal blank/0-9 codes;
+- the CM annunciator order and blank positions were checked;
+- the generated widget frames used the production EL color;
+- pinned `yaAGC.wasm` + `Comanche055.bin` executed under Node and produced the expected V16N65, P00 and V35 relay/channel behavior.
 
-The canonical Android build was then attempted/preflighted in the current execution environment. The blockers are concrete:
+Do not reuse the old environment blocker as a statement that the current repository cannot build.
 
-- Java 21 and Node 22 are available;
-- no Gradle installation is available;
-- `ANDROID_SDK_ROOT` / `ANDROID_HOME` are absent;
-- Android Build Tools 36.0.0 (`aapt2`, `apksigner`) and platform 37 are absent;
-- there is no complete current recursive checkout in the build container;
-- shell network/DNS cannot resolve GitHub, so the Gradle bootstrap, repository clone/submodule initialization, and Android SDK package download cannot be completed here.
+## Remaining high-value fidelity work — 2026-09-20
 
-Shortest next experiment: run `bash tools/build-local.sh` on a machine/container with the required Android SDK and exact recursive checkout. The repository still contains an older hosted workflow, but project policy explicitly forbids using GitHub-hosted builds unless the owner separately authorizes that exception; it is therefore not being treated as the build path for this revision.
+1. The numeric EL electrodes and register sign are now transcribed from the drawing-backed `1006315G-exact.step` model instead of replica SVG artwork. Preserve that boundary with regression tests.
+2. Continue tying any remaining face/key/housing placement values directly to MIT/NASA dimensions before changing them. If the surviving drawing does not resolve a value, leave it documented as derived/approximate rather than eyeballing it.
+3. Keep CM and LM annunciator configurations distinct; the interactive Android configuration remains CM/Comanche-oriented.
+4. Audit remaining non-latching auxiliary-relay acoustic behavior only where the indicator-driver documentation supports it; do not invent measured relay timing.
+5. Continue physical portrait/landscape and real-device visual acceptance separately from source/build CI.
 
-## Verification status
+## Build policy — current
 
-Historical v1.1.2 regular/Fire source checkpoints have previously completed the canonical local build and Fire-device HOME verification. Those results do **not** automatically apply to the 2026-09-11 drawing/relay revision.
+Local/manual `tools/build-local.sh` remains the canonical reproducible build path. The owner explicitly authorized the repository's existing GitHub Actions on 2026-09-16 for source/build verification and diagnosing stalls, so the older blanket prohibition on GitHub Actions is obsolete.
 
-For the current drawing/relay revision plus the CLOCK→AGC transition refactor and WebAudio recovery:
-
-- [x] source changes are committed on the current repair/refactor branch;
-- [x] K1-K5 contact matrix is source-gated by `tools/dsky-mapping-smoke.js`;
-- [x] individual low-11 relay-change accounting is source-gated;
-- [x] WebView/native/generated-widget production EL color agreement is source-gated;
-- [x] CLOCK→AGC first-key behavior is encoded in the keyboard-interlock regression gate;
-- [x] shared transition + electrical ownership is encoded in `tools/runtime-transition-integration-smoke.js`;
-- [x] both transition smokes are wired into the canonical local build gate;
-- [x] WebAudio renderer recovery is encoded in `tools/audio-recovery-smoke.js` and wired into the canonical local build gate;
-- [x] the staged audio-recovery source smoke passed in this execution environment;
-- [x] current host/source and real-Comanche WASM checks above passed for the earlier 2026-09-11 drawing/relay state;
-- [ ] the complete current transition smoke set has been executed from a full checkout at the exact branch HEAD;
-- [ ] canonical `tools/build-local.sh` has been run successfully for this exact revision;
-- [ ] current regular APK has been installed/device-smoked;
-- [ ] current Fire APK has been installed/device-smoked;
-- [ ] current native EL widget has been visually checked on-device;
-- [ ] current physical-screen DSKY geometry has been visually accepted by the owner.
-
-Do not upgrade any unchecked item to verified without actual output from that exact source revision.
-
-## Remaining high-value fidelity work
-
-1. Continue transcribing absolute EL/key geometry from original MIT/NASA drawings where current values still depend on replica vector artwork.
-2. Keep CM and LM annunciator configurations distinct; this branch is CM/Comanche-only.
-3. Audit the remaining non-latching auxiliary-relay acoustic model against the available indicator-driver schematics; do not invent per-relay measured timings that the surviving documentation does not provide.
-4. Run the canonical local build and current-source device gates as soon as the required Android toolchain and recursive checkout are available.
-
-## Build policy
-
-Builds remain local/manual. Do not add or use GitHub Actions, Codespaces, or another hosted build service for this project unless the owner explicitly changes that policy. Never substitute APK surgery/repacking for a real Gradle build.
+Hosted CI may verify source tests, Gradle assembly, signing and package contents. It must **not** be described as physical-device verification. Never substitute APK surgery/repacking for a real Gradle build.
 
 ## 2026-09-18 checklist / EL cross-platform parity
 
