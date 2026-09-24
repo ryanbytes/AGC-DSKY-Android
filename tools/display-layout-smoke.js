@@ -90,7 +90,8 @@ assert(!SCREEN_ONLY_JS.includes("setProperty('--dsky-el-z'"),
 for (const marker of [
   'let compExitTap=false,downOnComp=false;',
   'downOnComp=!!(enabled&&!isDream&&comp&&comp.contains(event.target));',
-  'if(downOnComp){compExitTap=true;exit(false)}',
+  'compExitTap=true;',
+  'setTimeout(()=>{compExitTap=false;exit(false)},0)',
   'if(compExitTap){compExitTap=false;event.preventDefault();event.stopPropagation();return}',
   'held=true;downOnComp=false;exit(true)',
   'pointercancel',
@@ -98,6 +99,8 @@ for (const marker of [
 ]) assert(SCREEN_ONLY_JS.includes(marker), 'stable COMP ACTY tap contract missing: ' + marker);
 assert(!SCREEN_ONLY_JS.includes('if(compExitTap&&comp&&comp.contains(event.target))'),
   'COMP ACTY synthetic-click suppression must not depend on the post-layout click target');
+assert(!SCREEN_ONLY_JS.includes('if(downOnComp){compExitTap=true;exit(false)}'),
+  'COMP ACTY exit must not mutate layout during pointerup before the synthesized click');
 for (const marker of [
   '.el-indicator-back{display:none}',
   'body.screen-only.parallax-3d:not(.dream):not(.display-only) #dsky .el-indicator-back',
