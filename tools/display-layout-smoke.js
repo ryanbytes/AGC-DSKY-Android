@@ -83,6 +83,21 @@ for (const marker of [
 ]) assert(SCREEN_ONLY_JS.includes(marker), '1006315 screen-only geometry missing: ' + marker);
 assert(!SCREEN_ONLY_JS.includes("setProperty('--dsky-el-z'"),
   'screen-only package geometry must never repurpose package depth as EL/phosphor depth');
+
+// COMP ACTY is the direct exit target in screen-only mode. Latch the gesture on
+// pointer-down so slight finger drift cannot turn it into the generic tap action,
+// and consume the synthetic click even if the layout change re-targets it.
+for (const marker of [
+  'let compExitTap=false,downOnComp=false;',
+  'downOnComp=!!(enabled&&!isDream&&comp&&comp.contains(event.target));',
+  'if(downOnComp){compExitTap=true;exit(false)}',
+  'if(compExitTap){compExitTap=false;event.preventDefault();event.stopPropagation();return}',
+  'held=true;downOnComp=false;exit(true)',
+  'pointercancel',
+  'held=true;downOnComp=false'
+]) assert(SCREEN_ONLY_JS.includes(marker), 'stable COMP ACTY tap contract missing: ' + marker);
+assert(!SCREEN_ONLY_JS.includes('if(compExitTap&&comp&&comp.contains(event.target))'),
+  'COMP ACTY synthetic-click suppression must not depend on the post-layout click target');
 for (const marker of [
   '.el-indicator-back{display:none}',
   'body.screen-only.parallax-3d:not(.dream):not(.display-only) #dsky .el-indicator-back',
