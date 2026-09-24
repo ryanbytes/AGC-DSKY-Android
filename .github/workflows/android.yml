@@ -106,7 +106,7 @@ jobs:
           unzip -l "$FIX" | grep -F 'assets/hardware-color-mode.js'
           unzip -l "$FIX" | grep -F 'assets/hardware-color-mode.css'
           unzip -p "$FIX" assets/index.html | grep -F '<script src="hardware-color-mode.js"></script>'
-          unzip -p "$FIX" assets/screen-only.js | grep -F 'compExitTap=true;exit(false)'
+          unzip -p "$FIX" assets/screen-only.js | grep -F 'setTimeout(()=>{compExitTap=false;exit(false)},0)'
           unzip -p "$FIX" assets/app-shell-runtime.js | grep -F "if(document.body.classList.contains('controls-visible'))"
           unzip -p "$FIX" assets/app-shell-runtime.js | grep -F 'if(tapHideControls)hideControls()'
           unzip -p "$FIX" assets/parallax-3d.js | grep -F 'GLASS_VIEW_THICKNESS_IN'

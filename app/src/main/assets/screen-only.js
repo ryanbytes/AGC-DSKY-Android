@@ -70,23 +70,37 @@
 
   if(displayButton)displayButton.addEventListener('click',event=>{event.preventDefault();event.stopImmediatePropagation();if(enabled)exit(true);else enter()},true);
 
-  let compExitTap=false;
+  let compExitTap=false,downOnComp=false;
   if(el)el.addEventListener('click',event=>{
-    if(compExitTap&&comp&&comp.contains(event.target)){compExitTap=false;event.preventDefault();event.stopPropagation();return}
+    // Exiting screen-only changes the layout before the synthetic click arrives.
+    // Consume that click based on the completed COMP gesture, not its re-hit-tested target.
+    if(compExitTap){compExitTap=false;event.preventDefault();event.stopPropagation();return}
     if(!enabled){event.preventDefault();event.stopPropagation();enter()}
   },{passive:false});
 
   let downAt=0,hold=0,held=false;
-  document.addEventListener('pointerdown',()=>{compExitTap=false;if(!enabled)return;downAt=performance.now();held=false;clearTimeout(hold);hold=setTimeout(()=>{held=true;exit(true)},1800)},{passive:true});
-  document.addEventListener('pointerup',event=>{
-    if(!enabled){clearTimeout(hold);return}
+  document.addEventListener('pointerdown',event=>{
+    compExitTap=false;
+    downOnComp=!!(enabled&&!isDream&&comp&&comp.contains(event.target));
+    if(!enabled)return;
+    downAt=performance.now();held=false;clearTimeout(hold);
+    hold=setTimeout(()=>{held=true;downOnComp=false;exit(true)},1800);
+  },{passive:true});
+  document.addEventListener('pointerup',()=>{
+    if(!enabled){clearTimeout(hold);downOnComp=false;return}
     const dt=performance.now()-downAt;clearTimeout(hold);
     if(!held&&dt<650){
-      if(!isDream&&comp&&comp.contains(event.target)){compExitTap=true;exit(false)}
-      else toggleTick()
+      if(downOnComp){
+        // Keep the current layout intact through the browser's synthesized click.
+        // The EL click handler consumes that click, then the timer exits screen-only.
+        // If no click is generated, the timer still clears the latch before exiting.
+        compExitTap=true;
+        setTimeout(()=>{compExitTap=false;exit(false)},0)
+      } else toggleTick()
     }
+    downOnComp=false;
   },{passive:true});
-  document.addEventListener('pointercancel',()=>{clearTimeout(hold);held=true},{passive:true});
+  document.addEventListener('pointercancel',()=>{clearTimeout(hold);held=true;downOnComp=false},{passive:true});
 
   window.addEventListener('resize',scheduleIndicatorGeometry,{passive:true});
   if(typeof ResizeObserver==='function'&&el)new ResizeObserver(scheduleIndicatorGeometry).observe(el);
