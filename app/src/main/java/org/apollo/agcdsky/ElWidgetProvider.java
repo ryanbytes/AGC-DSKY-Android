@@ -173,7 +173,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
           case 1:
             ml(p,ox,oy,.124277898f,.269917f,true);ml(p,ox,oy,.191577898f,.269917f,false);ml(p,ox,oy,.2335968980f,.113331f,false);ml(p,ox,oy,.187590898f,.033978f,false);break;
           case 2:
-            ml(p,ox,oy,.121184898f,.532240f,true);ml(p,ox,oy,.188893898f,.279917f,false);ml(p,ox,oy,.121594898f,.279917f,false);ml(p,ox,oy,.505451f,.532240f,false);break;
+            ml(p,ox,oy,.121184898f,.532240f,true);ml(p,ox,oy,.188893898f,.279917f,false);ml(p,ox,oy,.121594898f,.279917f,false);ml(p,ox,oy,.053885898f,.532240f,false);break;
           case 3:
             ml(p,ox,oy,.360332954f,.532240f,true);ml(p,ox,oy,.322647898f,.467240f,false);ml(p,ox,oy,.148980898f,.467240f,false);ml(p,ox,oy,.131538898f,.532240f,false);break;
           case 4:
