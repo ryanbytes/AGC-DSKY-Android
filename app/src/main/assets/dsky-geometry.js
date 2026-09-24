@@ -25,13 +25,17 @@
    * electrodes preserve the drawing/model straight-edge intersections rather
    * than being flattened into a generic seven-segment font.
    */
+  // Logical segment names follow the renderer/relay convention:
+  // b/c are the physical right-side electrodes and e/f are the left-side
+  // electrodes. Keep the accepted 1006315G polygon coordinates and slant
+  // unchanged; only bind those physical electrodes to the correct logic names.
   const SEGMENT_PATH_IN=Object.freeze({
     a:'M .420955898 .102240 L .490955898 .032240 L .198141898 .032240 L .236572898 .102240 Z',
-    b:'M .124277898 .269917 L .191577898 .269917 L .2335968980 .113331 L .187590898 .033978 Z',
-    c:'M .121184898 .532240 L .188893898 .279917 L .121594898 .279917 L .053885898 .532240 Z',
+    b:'M .441577898 .269917 L .505451 .031888012 L .413468898 .123869 L .374277898 .269917 Z',
+    c:'M .371594898 .279917 L .325402898 .452054 L .371185049 .532239310 L .438893898 .279917 Z',
     d:'M .360332954 .532240 L .322647898 .467240 L .148980898 .467240 L .131538898 .532240 Z',
-    e:'M .371594898 .279917 L .325402898 .452054 L .371185049 .532239310 L .438893898 .279917 Z',
-    f:'M .441577898 .269917 L .505451 .031888012 L .413468898 .123869 L .374277898 .269917 Z',
+    e:'M .121184898 .532240 L .188893898 .279917 L .121594898 .279917 L .053885898 .532240 Z',
+    f:'M .124277898 .269917 L .191577898 .269917 L .2335968980 .113331 L .187590898 .033978 Z',
     g:'M .3525668980 .312240 L .370009898 .247240 L .2080168980 .247240 L .190574898 .312240 Z'
   });
   const DIGIT_TOP_IN=.0322398905011428;
