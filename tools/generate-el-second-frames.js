@@ -9,24 +9,10 @@ const drawable = path.join(outRoot, 'drawable');
 fs.rmSync(outRoot, {recursive: true, force: true});
 fs.mkdirSync(drawable, {recursive: true});
 
-// MIT/IL SCD 1006315G plus the metric DSKY V2 segment trace.  The trace is
-// already dimensionally faithful to Detail C; use one physical mm->panel scale.
-const FACE_W_IN=2.360, U=106/FACE_W_IN, MM_TO_U=U/25.4;
-const SRC_X=88.116524, SRC_Y=85.303059, SRC_W=11.685430;
-const MIRROR_X=2*SRC_X+SRC_W;
-const DATUM_X=MIRROR_X-96.244524;
-const DIGIT_H=.500*U;
-const REG_ADV=.410*U, FIRST_DIGIT_X=.400*U;
-const SOURCE=[
- [[95.137274,86.827056],[96.244524,85.303059],[90.088724,85.303059],[90.497084,86.827056]],
- [[91.361734,91.526056],[89.694284,85.303059],[88.116524,85.303059],[89.783974,91.526056]],
- [[89.886064,91.907059],[91.463824,91.907059],[92.620814,96.224998],[91.456914,97.769549]],
- [[93.002124,96.352056],[91.758014,98.003059],[99.570014,98.003059],[97.418394,96.352056]],
- [[95.390774,87.126332],[96.543434,85.539832],[98.147444,91.526056],[96.569684,91.526056]],
- [[96.671774,91.907059],[98.249534,91.907059],[99.801954,97.700791],[97.815844,96.176791]],
- [[96.005094,90.891059],[96.447474,92.542059],[92.028414,92.542059],[91.586024,90.891059]],
-];
-const MAP=[0,1,2,3,5,4,6];
+// MIT/IL SCD 1006315G geometry transcribed from the drawing-backed
+// 1006315G-exact.step model. Coordinates are inches in the STEP component datum.
+const FACE_W_IN=2.360, U=106/FACE_W_IN, DIGIT_TOP_IN=.0322398905011428;
+const REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010;
 
 // Comanche RELTAB low-five-bit relay codes.  Generated launcher frames show
 // the settled state produced by the same physical K1..K5 contact matrix used by
@@ -54,38 +40,42 @@ function segmentsForRelayCode(value){
   return segments;
 }
 
-// 1006315G Detail A, position 6: three luminous islands.  Top and bottom are
-// both segment A; the center horizontal is segment B.  A plus lights A+B.
-const SIGN_W=.265*U, SIGN_H=.338*U, SIGN_T=.065*U, SIGN_X=.025*U, SIGN_GAP=.010*U;
-const SIGN_TOP=(DIGIT_H-SIGN_H)/2;
-const SIGN_VX=SIGN_X+(SIGN_W-SIGN_T)/2;
-const SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)/2;
-const SIGN_HY=SIGN_TOP+SIGN_A_H+SIGN_GAP;
-const SIGN_LOWER_Y=SIGN_HY+SIGN_T+SIGN_GAP;
-
+// Exact 1006315G register sign and seven digit electrodes.
 const n=v=>Number(v).toFixed(3).replace(/\.000$/,'');
-const poly=pts=>'M'+pts.map(([x,y])=>`${n(x)},${n(y)}`).join(' L')+' Z';
-const rect=(x,y,w,h)=>poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]]);
-const digitPoly=(logical,ox)=>SOURCE[MAP[logical]].map(([x,y])=>[
-  ox+(MIRROR_X-x-DATUM_X)*MM_TO_U,
-  (y-SRC_Y)*MM_TO_U,
-]);
+const px=(ox,x)=>n((ox+x)*U);
+const py=y=>n((y-DIGIT_TOP_IN)*U);
+const rawRect=(ox,x,y,w,h)=>{
+  const x0=(ox+x)*U,y0=(y-DIGIT_TOP_IN)*U,x1=x0+w*U,y1=y0+h*U;
+  return `M${n(x0)},${n(y0)} L${n(x1)},${n(y0)} L${n(x1)},${n(y1)} L${n(x0)},${n(y1)} Z`;
+};
+function digitPath(logical,ox){
+  switch(logical){
+    case 0:return `M${px(ox,.420955898)},${py(.102240)} L${px(ox,.490955898)},${py(.032240)} L${px(ox,.198141898)},${py(.032240)} L${px(ox,.236572898)},${py(.102240)} Z`;
+    case 1:return `M${px(ox,.124277898)},${py(.269917)} L${px(ox,.191577898)},${py(.269917)} L${px(ox,.2335968980)},${py(.113331)} L${px(ox,.187590898)},${py(.033978)} Z`;
+    case 2:return `M${px(ox,.121184898)},${py(.532240)} L${px(ox,.188893898)},${py(.279917)} L${px(ox,.121594898)},${py(.279917)} L${px(ox,.505451)},${py(.532240)} Z`;
+    case 3:return `M${px(ox,.360332954)},${py(.532240)} L${px(ox,.322647898)},${py(.467240)} L${px(ox,.148980898)},${py(.467240)} L${px(ox,.131538898)},${py(.532240)} Z`;
+    case 4:return `M${px(ox,.371594898)},${py(.279917)} L${px(ox,.325402898)},${py(.452054)} L${px(ox,.371185049)},${py(.532239310)} L${px(ox,.438893898)},${py(.279917)} Z`;
+    case 5:return `M${px(ox,.441577898)},${py(.269917)} L${px(ox,.505451)},${py(.031888012)} L${px(ox,.413468898)},${py(.123869)} L${px(ox,.374277898)},${py(.269917)} Z`;
+    case 6:return `M${px(ox,.3525668980)},${py(.312240)} L${px(ox,.370009898)},${py(.247240)} L${px(ox,.2080168980)},${py(.247240)} L${px(ox,.190574898)},${py(.312240)} Z`;
+    default:throw new Error('bad segment '+logical);
+  }
+}
 
 // User-tuned blue-green EL while retaining the green-dominant 530-nm look.
 const EL_COLOR='#6DECB4';
 
 for (let sec=0; sec<60; sec++) {
   const paths=[
-    rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_A_H),
-    rect(SIGN_X,SIGN_HY,SIGN_W,SIGN_T),
-    rect(SIGN_VX,SIGN_LOWER_Y,SIGN_T,SIGN_A_H),
+    rawRect(REGISTER_ROW_X_IN,.073794,.305065,.065000,.082843),
+    rawRect(REGISTER_ROW_X_IN,-.007784,.231536,.232122,.065000),
+    rawRect(REGISTER_ROW_X_IN,.073794,.139908,.065000,.081628),
   ];
   const text=`000${String(sec).padStart(2,'0')}`;
   [...text].forEach((ch,i)=>{
     const lit=segmentsForRelayCode(DIGIT_RELAY[Number(ch)]);
-    const ox=FIRST_DIGIT_X+i*REG_ADV;
+    const ox=REGISTER_ROW_X_IN+FIRST_DIGIT_X_IN+i*REG_ADV_IN;
     [...'abcdefg'].forEach((name,logical)=>{
-      if (lit.includes(name)) paths.push(poly(digitPoly(logical,ox)));
+      if (lit.includes(name)) paths.push(digitPath(logical,ox));
     });
   });
   const body=paths.map(p=>`    <path android:fillColor="${EL_COLOR}" android:pathData="${p}" />`).join('\n');
