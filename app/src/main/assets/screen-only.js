@@ -90,8 +90,13 @@
     if(!enabled){clearTimeout(hold);downOnComp=false;return}
     const dt=performance.now()-downAt;clearTimeout(hold);
     if(!held&&dt<650){
-      if(downOnComp){compExitTap=true;exit(false)}
-      else toggleTick()
+      if(downOnComp){
+        // Keep the current layout intact through the browser's synthesized click.
+        // The EL click handler consumes that click, then the timer exits screen-only.
+        // If no click is generated, the timer still clears the latch before exiting.
+        compExitTap=true;
+        setTimeout(()=>{compExitTap=false;exit(false)},0)
+      } else toggleTick()
     }
     downOnComp=false;
   },{passive:true});
