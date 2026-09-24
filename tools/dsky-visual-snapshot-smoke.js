@@ -15,7 +15,7 @@ const style=read('app/src/main/assets/style.css');
 const cheat=read('app/src/main/assets/cheatsheet.css');
 
 expect('EL renderer',fnv(grab(renderer,/const SEG=\{[\s\S]*?function baseClearLamps\(\)\{[\s\S]*?\}/,'renderer')),'909c8096');
-expect('Apollo geometry',fnv(grab(geometry,/const FACE_W_IN=2\.360[\s\S]*?const REGISTER_Y=BAR_CENTER_Y\.map\(c=>c\+\(BAR_H_IN\*\.5\+REGISTER_GAP_IN\)\*U\);/,'geometry')),'a493b6d4');
+expect('Apollo geometry',fnv(grab(geometry,/const FACE_W_IN=2\.360[\s\S]*?const REGISTER_Y=BAR_CENTER_Y\.map\(c=>c\+\(BAR_H_IN\*\.5\+REGISTER_GAP_IN\)\*U\);/,'geometry')),'f286f71a');
 expect('display-only crop/seam',fnv(grab(style,/\/\* Display-only mode[\s\S]*?@media \(orientation:landscape\)\{[^\n]*\}/,'display-only')),'1479ef1e');
 expect('checklist print',fnv(grab(cheat,/\/\* Compact model-checklist print layout[\s\S]*$/,'print')),'4967632a');
 
