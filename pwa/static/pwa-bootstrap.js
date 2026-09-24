@@ -18,12 +18,13 @@
   }
 
   // Brave Android can fall back to a browser shortcut rather than a standalone
-  // WebAPK. If that happens, request document fullscreen on a completed user
-  // gesture. Touchscreen activation is granted on pointerup/touchend/click,
-  // not necessarily on pointerdown/touchstart.
+  // WebAPK. If that happens, request document fullscreen from a completed click,
+  // but defer the request until the click dispatch finishes. Changing viewport
+  // geometry during pointerup/click targeting can retarget DSKY controls.
   const androidBrowserMode = /Android/i.test(navigator.userAgent || '') && !standalone;
   let fullscreenSucceeded = false;
   let fullscreenPending = false;
+  let fullscreenQueued = false;
 
   function tryAndroidFullscreen() {
     if (!androidBrowserMode || fullscreenSucceeded || fullscreenPending || document.fullscreenElement) return;
@@ -65,12 +66,20 @@
     }
   }
 
+  function scheduleAndroidFullscreen() {
+    if (!androidBrowserMode || fullscreenSucceeded || fullscreenPending || fullscreenQueued || document.fullscreenElement) return;
+    fullscreenQueued = true;
+    queueMicrotask(() => {
+      fullscreenQueued = false;
+      tryAndroidFullscreen();
+    });
+  }
+
   if (androidBrowserMode) {
-    // Capture the completed tap before DSKY button handlers consume it.
-    for (const eventName of ['pointerup', 'touchend', 'click']) {
-      document.addEventListener(eventName, tryAndroidFullscreen, {capture: true, passive: true});
-    }
-    document.addEventListener('keyup', tryAndroidFullscreen, {capture: true});
+    // Capture click so DSKY handlers cannot hide the activation with
+    // stopPropagation(), then defer the fullscreen mutation until dispatch ends.
+    document.addEventListener('click', scheduleAndroidFullscreen, {capture: true, passive: true});
+    document.addEventListener('keyup', scheduleAndroidFullscreen, {capture: true});
   }
 
   document.addEventListener('fullscreenchange', () => {

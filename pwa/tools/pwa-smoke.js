@@ -64,12 +64,23 @@ const rope = read('Comanche055.bin');
 if (rope.length !== 73728) fail('Comanche055.bin size mismatch: ' + rope.length);
 
 const bootstrap = text('pwa-bootstrap.js');
-for (const marker of ['requestFullscreen', '/Android/i', "'pointerup'", "'touchend'", "'click'"]) {
+for (const marker of [
+  'requestFullscreen',
+  '/Android/i',
+  "'click'",
+  'scheduleAndroidFullscreen',
+  'fullscreenQueued = true',
+  'queueMicrotask(() => {',
+  "document.addEventListener('click', scheduleAndroidFullscreen, {capture: true, passive: true})"
+]) {
   if (!bootstrap.includes(marker)) fail('PWA bootstrap missing Android fullscreen fallback marker ' + marker);
 }
 if (bootstrap.includes("navigationUI: 'hide'")) fail('PWA bootstrap should use plain requestFullscreen for Brave compatibility');
-if (bootstrap.includes("'pointerdown'") || bootstrap.includes("'touchstart'")) {
-  fail('PWA bootstrap must request fullscreen after completed touch activation, not pointerdown/touchstart');
+for (const forbidden of ["'pointerdown'", "'touchstart'", "'pointerup'", "'touchend'"]) {
+  if (bootstrap.includes(forbidden)) fail('PWA bootstrap fullscreen fallback must not mutate viewport during pointer/touch targeting: ' + forbidden);
+}
+if (bootstrap.includes("document.addEventListener('click', tryAndroidFullscreen")) {
+  fail('PWA bootstrap must defer fullscreen until click dispatch completes');
 }
 try { new Function(bootstrap); }
 catch (error) { fail('pwa-bootstrap.js syntax error: ' + error.message); }
