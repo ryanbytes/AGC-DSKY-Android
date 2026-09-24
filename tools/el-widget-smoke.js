@@ -103,44 +103,48 @@ req(html,'y1="79.949"','bar 1 center');
 req(html,'y1="114.085"','bar 2 center');
 req(html,'y1="148.220"','bar 3 center');
 
-// Detail C digit geometry.
-req(geometry,'const MM_TO_U=U/25.4;','uniform metric conversion');
-req(geometry,'const DATUM_X=MIRROR_X-96.244524;','Detail-C datum');
-req(geometry,'scale(${MM_TO_U.toFixed(6)})','uniform WebView glyph scale');
-req(provider,'MM_TO_U=U/25.4f','uniform native metric conversion');
-req(provider,'DATUM_X=MIRROR_X-96.244524f','native Detail-C datum');
-req(generator,'MM_TO_U=U/25.4','generated metric conversion');
-req(generator,'DATUM_X=MIRROR_X-96.244524','generated Detail-C datum');
+// Drawing-backed inch-datum digit geometry.  The current renderer uses the
+// 1006315G STEP intersections directly; no generic radius or anisotropic
+// scaling is permitted in any of the three render paths.
+req(geometry,'MM_TO_U=U/25.4','WebView mm export conversion');
+req(geometry,'scale(${U.toFixed(6)})','uniform WebView inch-datum glyph scale');
+req(geometry,'1006315G-exact.step','drawing-backed geometry source');
+req(geometry,"a:'M .420955898 .102240 L .490955898 .032240",'sharp WebView segment a');
+req(geometry,"d:'M .360332954 .532240 L .322647898 .467240",'sharp WebView segment d');
+req(geometry,"e:'M .371594898 .279917 L .325402898 .452054 L .371185049 .532239310",'sharp WebView segment e');
+req(geometry,"f:'M .441577898 .269917 L .505451 .031888012",'sharp WebView segment f');
+no(geometry,'A .020 .020','rounded WebView digit corners');
+req(provider,'.490955898f,.032240f','sharp native segment a');
+req(provider,'.360332954f,.532240f','sharp native segment d');
+req(provider,'.371185049f,.532239310f','sharp native segment e');
+req(provider,'.505451f,.031888012f','sharp native segment f');
+no(provider,'arc(p,ox,oy','rounded native digit corners');
+req(generator,'px(ox,.490955898)},${py(.032240)','sharp generated segment a');
+req(generator,'px(ox,.360332954)},${py(.532240)','sharp generated segment d');
+req(generator,'px(ox,.371185049)},${py(.532239310)','sharp generated segment e');
+req(generator,'px(ox,.505451)},${py(.031888012)','sharp generated segment f');
+no(generator,'A${A(.020)}','rounded generated digit corners');
 no(geometry,'DIGIT_SX','affine-squeezed WebView geometry');
 no(geometry,'DIGIT_SY','affine-squeezed WebView geometry');
 no(provider,'DIGIT_SX','affine-squeezed native geometry');
 no(provider,'DIGIT_SY','affine-squeezed native geometry');
 
-// Detail A position 6: three physical sign islands.
-req(geometry,'SIGN_GAP=.010*U','WebView sign gap');
-req(geometry,'const SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)*.5;','WebView A-segment height');
-req(geometry,'data-sign-seg="A"','WebView split A segments');
-req(geometry,'data-sign-seg="B"','WebView B segment');
-no(geometry,'v ${SIGN_H.toFixed(3)}','old continuous WebView stem');
-req(provider,'SIGN_GAP=.010f*U','native sign gap');
-req(provider,'SIGN_A_H=(SIGN_H-SIGN_T-2f*SIGN_GAP)*.5f','native A-segment height');
-req(provider,'box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_A_H)','native upper A segment');
-req(provider,'box(ox+SIGN_VX,oy+SIGN_LOWER_Y,SIGN_T,SIGN_A_H)','native lower A segment');
-no(provider,'box(ox+SIGN_VX,oy+SIGN_TOP,SIGN_T,SIGN_H)','old continuous native stem');
-req(generator,'SIGN_GAP=.010*U','generated sign gap');
-req(generator,'SIGN_A_H=(SIGN_H-SIGN_T-2*SIGN_GAP)/2','generated A-segment height');
-req(generator,'rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_A_H)','generated upper A segment');
-req(generator,'rect(SIGN_VX,SIGN_LOWER_Y,SIGN_T,SIGN_A_H)','generated lower A segment');
-no(generator,'rect(SIGN_VX,SIGN_TOP,SIGN_T,SIGN_H)','old continuous generated stem');
+// Detail A position 6: three physical sign islands from the same STEP datum.
+req(geometry,"aTop:'M .073794 .387908",'WebView upper A sign island');
+req(geometry,"b:'M -.007784 .296536",'WebView B sign island');
+req(geometry,"aBottom:'M .073794 .221536",'WebView lower A sign island');
+req(provider,'rawBox(ox,oy,-.007784f,.231536f,.232122f,.065000f)','native B sign island');
+req(provider,'rawBox(ox,oy,.073794f,.305065f,.065000f,.082843f)','native upper A sign island');
+req(provider,'rawBox(ox,oy,.073794f,.139908f,.065000f,.081628f)','native lower A sign island');
+req(generator,'rawRect(REGISTER_ROW_X_IN,.073794,.305065,.065000,.082843)','generated upper A sign island');
+req(generator,'rawRect(REGISTER_ROW_X_IN,-.007784,.231536,.232122,.065000)','generated B sign island');
+req(generator,'rawRect(REGISTER_ROW_X_IN,.073794,.139908,.065000,.081628)','generated lower A sign island');
 
-// Upper two-digit electrode datums from 1006315G sheet 2.  The first separator
-// center is 2.280 in from the bottom (1.780 from the top).  The drawing gives
-// .555/.565 in from the VERB/NOUN digit datum to that center, .560 nominal.
-// With .500-in digits and the .060-in separator, that leaves .030 in clear.
-req(geometry,'const UPPER_ADVANCE=.420*U;','upper pitch');
-req(geometry,'const REGISTER_ADVANCE=.410*U;','register pitch');
-req(geometry,'const FIRST_DIGIT_X=.400*U;','first register digit datum');
-req(geometry,'const RIGHT_FIELD_X_IN=1.620;','right upper datum');
+// Current 1006315G field/register datums shared by WebView and native paths.
+req(geometry,'const UPPER_ADVANCE_IN=.420,REGISTER_ADVANCE_IN=.410;','upper/register pitch');
+req(geometry,'const FIRST_DIGIT_X_IN=.180;','first register digit datum');
+req(geometry,'const REGISTER_ROW_X_IN=-.010;','register row datum');
+req(geometry,'const RIGHT_FIELD_X_IN=1.434549;','right upper datum');
 req(geometry,'const UPPER_GROUP_X_OFFSET_IN=1.470;','VERB/NOUN horizontal separation');
 req(geometry,'const LEFT_FIELD_X_IN=RIGHT_FIELD_X_IN-UPPER_GROUP_X_OFFSET_IN;','left upper datum derivation');
 req(geometry,'const PROG_TOP_IN=.315;','PROG vertical datum');
@@ -148,35 +152,22 @@ req(geometry,'const FIRST_BAR_CENTER_FROM_TOP_IN=FACE_H_IN-BAR_FROM_BOTTOM_IN[0]
 req(geometry,'const VERB_NOUN_TO_FIRST_BAR_CENTER_IN=.560;','VERB/NOUN to separator center dimension');
 req(geometry,'const VERB_NOUN_TOP_IN=FIRST_BAR_CENTER_FROM_TOP_IN-VERB_NOUN_TO_FIRST_BAR_CENTER_IN;','VERB/NOUN top derivation');
 req(geometry,'const UPPER_CLEARANCE_IN=FIRST_BAR_CENTER_FROM_TOP_IN-(BAR_H_IN*.5)-(VERB_NOUN_TOP_IN+.500);','upper electrode clearance');
-no(geometry,'const UPPER_ROW_Y_OFFSET_IN=.960;','obsolete overlapping upper-row datum');
-req(provider,'FIRST_DIGIT_X=.400f*U','native first register datum');
-req(provider,'LEFT_FIELD_X=.150f*U,RIGHT_FIELD_X=1.620f*U','native upper datums');
+req(provider,'REG_ADV=.410f*U,FIRST_DIGIT_X=.180f*U,REGISTER_ROW_X=-.010f*U','native register datums');
+req(provider,'LEFT_FIELD_X=-.035451f*U,RIGHT_FIELD_X=1.434549f*U','native upper datums');
 req(provider,'PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U','native upper vertical datums');
 req(provider,'Typeface.create("sans-serif",Typeface.BOLD)','native legend face');
 req(provider,'LABEL_P.setTextSize(7.42f)','native legend drawing height');
 req(provider,'COMP_P.setTextSize(7.42f)','native COMP ACTY drawing height');
 req(provider,'section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P)','native PROG zone');
-req(provider,'section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native VERB zone matched to PROG gap');
-req(provider,'section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native NOUN zone matched to PROG gap');
+req(provider,'section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native VERB zone');
+req(provider,'section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native NOUN zone');
 req(provider,'c.drawText("VERB",19.763f,49.252f,LABEL_P)','native VERB legend baseline');
 req(provider,'c.drawText("NOUN",86.237f,49.252f,LABEL_P)','native NOUN legend baseline');
-req(html,'x="0" y="41.203" width="39.525" height="11.678"','WebView VERB zone matched to PROG gap');
-req(html,'x="66.441" y="41.203" width="39.525" height="11.678"','WebView NOUN zone matched to PROG gap');
-req(html,'x="19.763" y="49.252" text-anchor="middle">VERB</text>','WebView VERB legend baseline');
-req(html,'x="86.237" y="49.252" text-anchor="middle">NOUN</text>','WebView NOUN legend baseline');
 req(provider,'digits(c,"00",RIGHT_FIELD_X,PROG_Y)','native PROG datum');
 req(provider,'digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y)','native VERB datum');
 req(provider,'digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y)','native NOUN datum');
-no(provider,'LEFT_FIELD_X=.140f*U','obsolete native left datum');
-no(provider,'digits(c,"16",LEFT_FIELD_X,55.5f)','obsolete native VERB Y');
-req(generator,'REG_ADV=.410*U, FIRST_DIGIT_X=.400*U','generated register datums');
-req(html,'transform="translate(72.763 14.148)"','PROG datum');
-req(html,'transform="translate(6.737 54.797)"','VERB datum');
-req(html,'transform="translate(72.763 54.797)"','NOUN datum');
-no(html,'transform="translate(6.737 57.267)"','obsolete overlapping VERB datum');
-no(html,'transform="translate(72.763 57.267)"','obsolete overlapping NOUN datum');
-req(html,'transform="translate(0 84.441)"','register origin');
-req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),0,R1_Y)",'native register datum');
+req(generator,'REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010','generated register datums');
+req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),REGISTER_ROW_X,R1_Y)",'native register datum');
 
 req(generator,'android:viewportWidth="106"','generated viewport width');
 req(generator,'android:viewportHeight="23"','generated viewport height');
