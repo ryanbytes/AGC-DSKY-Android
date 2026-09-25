@@ -84,6 +84,14 @@ jobs:
           grep -F "package: name='org.apollo.agcdsky'" /tmp/regular-badging.txt
           grep -F "package: name='org.apollo.agcdsky'" /tmp/fire-badging.txt
 
+      - name: Verify shared frontend parity in every Android package
+        run: |
+          python3 tools/verify-shared-frontend-parity.py --source app/src/main/assets --apk app/build/outputs/apk/regular/release/AGC-DSKY-regular.apk --label android-regular-release
+          python3 tools/verify-shared-frontend-parity.py --source app/src/main/assets --apk app/build/outputs/apk/fire/release/AGC-DSKY-fire.apk --label android-fire-release
+          python3 tools/verify-shared-frontend-parity.py --source app/src/main/assets --apk app/build/outputs/apk/regular/debug/app-regular-debug.apk --label android-regular-debug
+          python3 tools/verify-shared-frontend-parity.py --source app/src/main/assets --apk app/build/outputs/apk/fire/debug/app-fire-debug.apk --label android-fire-debug
+          python3 tools/verify-shared-frontend-parity.py --source app/src/main/assets --apk app/build/outputs/apk/regular/installfix/app-regular-installfix.apk --label android-installfix
+
       - name: Verify side-by-side APK signatures, packages, icons, and restored assets
         run: |
           BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
