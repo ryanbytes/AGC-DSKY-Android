@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-25
 
+
+## 2026-09-25 production web register glyph-stability repair
+
+The web/PWA renderer previously replaced an entire register SVG group whenever any sign/digit on that row changed. That caused unchanged digits—most visibly bottom-row zeros—to be destroyed and recreated when neighboring relay-driven elements changed.
+
+The production repair keeps one persistent SVG slot per sign/digit position and updates only the slot whose rendered value changed. Cache keys include renderer implementation versions so deliberate renderer replacement still repaints correctly. Apollo 1006315G digit/sign geometry, spacing, relay mappings, contact timing, bounce, and sound coupling are unchanged.
+
+Regression coverage includes `tools/dsky-render-stability-smoke.js`, the canonical source-smoke manifest, and the PWA deployment workflow. The regression proves unchanged register and upper-field zeros retain SVG node identity and receive no repaint when neighboring elements change.
+
+The relay-rack UI remains removed on production `main`; this repair was reapplied cleanly on top of current production rather than merging the stale relay-panel feature branch and resurrecting that removed experiment.
+
+
 ## 2026-09-25 full 140-relay live rack / unified contact-event presentation
 
 A new relay-rack view is mounted above the DSKY in the normal interactive layout. It has no decorative title/legend block and depicts every relay currently modeled by the app:
