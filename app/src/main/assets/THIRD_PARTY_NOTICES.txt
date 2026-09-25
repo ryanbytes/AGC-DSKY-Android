@@ -24,6 +24,13 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+Gorton Normal DSKY key-cap vector centerlines
+https://github.com/ehdorrii/dsky-fonts
+Source: source/Gorton-Normal-Splines.sfd
+Source blob: 8f24c6a28e5e0d979a6458a8c11859133146d4e6
+Copyright (c) 2019 Eugene Dorr (gene.dorr@gmail.com)
+Selected engraving centerlines are converted to static SVG paths; no font file is bundled.
+
 Gorton Condensed annunciator vector outlines
 https://github.com/ehdorrii/dsky-fonts
 Source: source/Gorton-Condensed.sfd
