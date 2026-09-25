@@ -6,9 +6,13 @@ Independent Apollo Guidance Computer / DSKY simulator for Android. It runs the r
 
 ## Screenshots
 
-| Main DSKY | Sextant | EL-only display |
+| Main DSKY | Display detail | Keypad detail |
 | --- | --- | --- |
-| ![Main DSKY](docs/screenshots/main-dsky.webp) | ![Sextant](docs/screenshots/sextant.webp) | ![EL-only display](docs/screenshots/el-only.webp) |
+| ![Main DSKY](docs/screenshots/main-dsky.webp) | ![Display detail](docs/screenshots/display-detail.webp) | ![Keypad detail](docs/screenshots/keypad-detail.webp) |
+
+| Sextant | EL-only display |
+| --- | --- |
+| ![Sextant](docs/screenshots/sextant.webp) | ![EL-only display](docs/screenshots/el-only.webp) |
 
 The sextant screenshot shows the real app UI with a static demonstration pointing state; it does not contain a camera photograph.
 
