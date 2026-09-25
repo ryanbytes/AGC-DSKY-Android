@@ -142,12 +142,16 @@ assert(STYLE.includes('.el-seg{\n  display:none;\n  fill:none;\n  stroke:none;\n
        STYLE.includes('.el-seg.on{\n  display:inline;\n  fill:var(--el);'),
   'numeric/sign EL must be optically absent unless explicitly energized');
 
-assert(CM.includes('Alarm/status indicator, SCD 1006387C'),
+assert(CM.includes('Alarm/status indicator, SCD 1006387D'),
   'annunciator SCD fidelity block missing');
 assert(CM.includes('background:#74756f') && CM.includes('color:#11120f'),
   'unenergized annunciator must remain neutral gray with black legend');
-assert(CM.includes('font-family:"Arial Narrow","Liberation Sans Narrow","Roboto Condensed"'),
-  'Gorton-condensed fallback treatment missing');
+assert(CM.includes('.lamp .lamp-legend .gorton-glyph') &&
+       CM.includes('stroke-width:56.9') &&
+       CM.includes('paint-order:stroke fill'),
+  'fixed Gorton vector treatment missing');
+assert(!CM.includes('font-family:"Arial Narrow","Liberation Sans Narrow","Roboto Condensed"'),
+  'annunciator runtime font fallback must remain removed');
 assert((CM.match(/radial-gradient\(ellipse at/g) || []).length >= 12,
   'fallback plus thermal three-source incandescent pools missing');
 assert(CM.includes('lamp-hardware-ready .lamp .lamp-legend'),
@@ -236,7 +240,7 @@ console.log('display/layout geometry smoke: PASS');
 console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${expectedVisibleFraction.toFixed(6)})`);
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
 console.log(`  full-screen EL stack: cover ${nominalCoverDepthAt106.toFixed(3)} + 1006315 package ${nominalIndicatorDepthAt106.toFixed(3)} = ${nominalTotalDepthAt106.toFixed(3)} units at 106-wide`);
-console.log('  annunciators: three-source per-bulb thermal fade with foreground black legends');
+console.log('  annunciators: three-source per-bulb thermal fade with foreground fixed Gorton vector legends');
 console.log('  lighting: independent NUMERICS/INTEGRAL with white EL key legends');
 console.log('  options: bounded DSKY-style illuminated key strip');
 console.log('  recovered UI: forced FS595/glass finish is parser-loaded while physical parallax retains motion ownership');
