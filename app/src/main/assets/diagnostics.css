@@ -79,6 +79,8 @@
   gap:6px;
   margin-top:10px;
 }
+#diag-actions .diag-action-title{grid-column:1/-1;margin-top:5px;padding:7px 3px 3px;border-bottom:1px solid #414141;color:#c6bda9;font-weight:700;font-size:9px;letter-spacing:.08em}
+#diag-actions .diag-action-title:first-child{margin-top:0}
 #diag-actions button{min-height:34px;white-space:normal}
 #diag-note{margin:9px 1px 2px;color:#aaa;font-size:9px;line-height:1.35}
 @media (max-width:520px){
