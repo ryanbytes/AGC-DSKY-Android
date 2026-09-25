@@ -21,7 +21,7 @@
   function build(){
     if(document.getElementById('diag-view'))return;
     const el=document.createElement('section');el.id='diag-view';el.setAttribute('aria-label','AGC diagnostics');
-    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-haptic-test">TEST KEY HAPTIC</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
+    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-haptic-test">TEST KEY HAPTIC</button><button id="diag-haptic-settings">OPEN VIBRATION SETTINGS</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
     document.getElementById('diag-full-test').onclick=runFullSelfTest;
@@ -34,6 +34,10 @@
       const tactile=lateService('AGCDSKY_KEY_TACTILE');
       if(tactile&&typeof tactile.test==='function') tactile.test();
       update();
+    };
+    document.getElementById('diag-haptic-settings').onclick=()=>{
+      const tactile=lateService('AGCDSKY_KEY_TACTILE');
+      if(tactile&&typeof tactile.openSystemSettings==='function') tactile.openSystemSettings();
     };
     document.getElementById('diag-clear').onclick=()=>{snapshot.clear();update()};
   }
@@ -259,6 +263,10 @@
       h+=row('Total finger force','UNKNOWN · installed preload / leaf-spring leverage / friction unresolved');
       h+=row('Tactile cue',tactileStatus.nativeBridge?('ANDROID '+(tactileStatus.nativeBackend||'NATIVE')+' · '+tactileStatus.makeDurationMs+' ms MAKE / '+tactileStatus.releaseDurationMs+' ms RELEASE · DEFAULT AMPLITUDE'):'NO NATIVE HAPTIC BRIDGE ON THIS SURFACE');
       h+=row('Vibrator amplitude control',tactileStatus.amplitudeControl?'YES':'NO / NOT REPORTED');
+      h+=row('VIBRATE permission',tactileStatus.vibratePermissionGranted?'GRANTED':'NOT GRANTED');
+      h+=row('System haptic feedback',tactileStatus.systemHapticFeedbackEnabled===1?'ON':(tactileStatus.systemHapticFeedbackEnabled===0?'OFF':'UNKNOWN'));
+      h+=row('System vibrate_on',tactileStatus.systemVibrateOn===1?'ON':(tactileStatus.systemVibrateOn===0?'OFF':'UNKNOWN'));
+      h+=row('Power saver',tactileStatus.powerSaveMode?'ON':'OFF');
       h+=row('Tactile events',`${tactileStatus.makeCount} make · ${tactileStatus.releaseCount} release`);
     }else{
       h+=row('Key tactile model','UNAVAILABLE');
