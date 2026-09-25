@@ -56,7 +56,7 @@
   ]);
   const SELF_TEST_KEYS=Object.freeze({'1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37});
   const SELF_TEST_RELAY_CODES=Object.freeze({'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31});
-  const SELF_TEST_TOTAL=14;
+  const SELF_TEST_TOTAL=15;
   function selfTestResult(name,ok,detail){return Object.freeze({name:String(name),ok:!!ok,detail:String(detail||'')})}
   function hex(bytes){return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('')}
   async function gitBlobSha1(bytes){
@@ -137,6 +137,14 @@
       for(const key of [...Object.keys(SELF_TEST_KEYS),'P'])if(keys.filter(x=>x===key).length!==1)throw new Error('key '+key+' DOM wiring count != 1');
       if(!input||typeof input.keyMake!=='function'||typeof input.keyReset!=='function'||typeof input.proceed!=='function')throw new Error('input runtime unavailable');
       return '18 Pinball keycodes + separate PRO contact wired';
+    });
+    await run('Keyboard electrical contacts',async()=>{
+      const spec=lateService('AGCDSKY_KEY_ELECTRICAL_SPEC'),map=window.AGCDSKY_KEY_CODES;
+      if(!spec||typeof spec.verifyKeycodes!=='function')throw new Error('keyboard electrical spec unavailable');
+      if(spec.normalSwitches?.length!==18||!spec.verifyKeycodes(map))throw new Error('S1-S18 keycode matrix mismatch');
+      if(spec.keyReset?.expression!=='AND OF S1 THRU S18NC'||spec.keyReset?.softwareMinimumHoldMs!==null)throw new Error('KEYRST NC-chain contract mismatch');
+      if(spec.proceed?.switchId!=='S19'||spec.proceed?.channel!==0o32||spec.proceed?.mask!==0o20000||!spec.proceed?.activeLow)throw new Error('S19 PRO/STBY contract mismatch');
+      return '2005903A · S1-S18 NO encoder + all-NC KEYRST · S19 PRO/STBY separate';
     });
     await run('Key tactile model',async()=>{
       const tactile=lateService('AGCDSKY_KEY_TACTILE');
@@ -237,6 +245,9 @@
     const sxt=opticsStatus();
     const tactile=lateService('AGCDSKY_KEY_TACTILE');
     const tactileStatus=tactile&&typeof tactile.status==='function'?tactile.status():null;
+    const electricalSpec=lateService('AGCDSKY_KEY_ELECTRICAL_SPEC');
+    const keyboardElectrical=lateService('AGCDSKY_KEYBOARD_ELECTRICAL');
+    const keyboardState=keyboardElectrical&&typeof keyboardElectrical.state==='function'?keyboardElectrical.state():null;
     const pwa=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function'?window.AGCDSKYPWA.parityStatus():null;
     const r=(bank,addr)=>core&&typeof core.readErasable==='function'?core.readErasable(bank,addr):null;
     const state3=r(0,0o77),imodes30=r(2,0o320);
@@ -259,6 +270,15 @@
     if(dskyTest)h+=row('Clock DSKY self-test',`${dskyTest.ok?'STARTED':'BLOCKED'} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
     h+=row('PROG / VERB / NOUN',`${(d.prog||[]).join('')||'--'} / ${(d.verb||[]).join('')||'--'} / ${(d.noun||[]).join('')||'--'}`);
     const ch=app.channels||{};h+=row('Channels 011 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
+    h+=section('KEY ELECTRICAL');
+    if(electricalSpec){
+      h+=row('Keyboard schematic',`${electricalSpec.source.drawing} · assembly ${electricalSpec.source.assembly} · module ${electricalSpec.source.module}`);
+      h+=row('Normal switch matrix',`${electricalSpec.normalSwitches.length} × SPDT S1–S18 · NO → 5-bit diode encoder`);
+      h+=row('KEYRST',electricalSpec.keyReset.expression+' · asserted at all-normal-released');
+      h+=row('PRO/STBY',`${electricalSpec.proceed.switchId} separate · channel 032 bit 020000 · ACTIVE LOW`);
+      h+=row('Synthetic keycode dwell','NONE · release follows physical all-NC condition');
+      if(keyboardState)h+=row('Keyboard contact state',`down ${keyboardState.down} · code ${keyboardState.electricalKeyCode?keyboardState.electricalKeyCode.toString(8):'--'} · made ${keyboardState.electricalMade?'YES':'NO'}`);
+    }else h+=row('Keyboard electrical model','UNAVAILABLE');
     h+=section('KEY MECHANICS / TACTILE');
     if(tactileStatus){
       h+=row('Key travel',`${f(tactileStatus.actuationTravelIn,4)} in to contact · +${f(tactileStatus.overtravelToBottomIn,4)} in overtravel · ${f(tactileStatus.totalTravelIn,4)} in total · PANEL-NORMAL`);

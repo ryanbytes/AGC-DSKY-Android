@@ -10,6 +10,7 @@ const no=(t,n,l)=>{if(t.includes(n))fail(`${l} must not contain: ${n}`)};
 const ui=read('app/src/main/assets/flight-hardware-ui.js');
 const rheostat=read('app/src/main/assets/lighting-rheostat-stop.js');
 const keySpec=read('app/src/main/assets/key-mechanical-spec.js');
+const electricalSpec=read('app/src/main/assets/key-electrical-spec.js');
 const interlock=read('app/src/main/assets/keyboard-electrical-interlock.js');
 const proceed=read('app/src/main/assets/proceed-electrical.js');
 const cm=read('app/src/main/assets/cm-mode.js');
@@ -20,11 +21,11 @@ const controls=read('app/src/main/assets/controls-layout.css');
 const hw=read('app/src/main/assets/hardware-fidelity.js');
 const sw=read('pwa/static/sw.js');
 
-for(const [text,filename] of [[ui,'flight-hardware-ui.js'],[rheostat,'lighting-rheostat-stop.js'],[keySpec,'key-mechanical-spec.js'],[interlock,'keyboard-electrical-interlock.js'],[proceed,'proceed-electrical.js'],[cm,'cm-mode.js']]){
+for(const [text,filename] of [[ui,'flight-hardware-ui.js'],[rheostat,'lighting-rheostat-stop.js'],[keySpec,'key-mechanical-spec.js'],[electricalSpec,'key-electrical-spec.js'],[interlock,'keyboard-electrical-interlock.js'],[proceed,'proceed-electrical.js'],[cm,'cm-mode.js']]){
   try{new vm.Script(text,{filename})}catch(error){fail(`${filename} syntax error: ${error.message}`)}
 }
 
-const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-perceptual-personality','relay-show'];
+const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-perceptual-personality','relay-show'];
 let previous=-1;
 for(const feature of features){
   const tag=`<script src="${feature}.js" data-feature="${feature}"></script>`,pos=html.indexOf(tag);
@@ -38,7 +39,7 @@ req(cm,"const shell=window.AGCDSKY_SHELL",'CM shell storage owner');
 req(cm,"shell.store.set('agcMission','comanche055')",'CM mission lock');
 no(cm,"localStorage.",'CM configuration storage ownership');
 req(cm,"document.body.classList.add('spacecraft-cm')",'CM body mode');
-for(const feature of ['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-tactile-feedback','keyboard-electrical-interlock'])req(sw,`'./${feature}.js'`,'offline PWA cache');
+for(const feature of ['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock'])req(sw,`'./${feature}.js'`,'offline PWA cache');
 
 for(const marker of ["const LEVELS = Object.freeze([1.00, 0.75, 0.50, 0.25, 0.00])","saveIndex('dskyNumericsLevel'","saveIndex('dskyIntegralLevel'","--numerics-level","--integral-level","NUMERICS ${levelText(numericsIndex)}","INTEGRAL ${levelText(integralIndex)}","LIGHT BUS DEMO","NUMERICS FEED OPEN","INTEGRAL FEED OPEN","BOTH LIGHTING FEEDS OPEN","RELAY STATE RETAINED"])req(ui,marker,'independent lighting model');
 for(const marker of ["const MIN_NORMAL_LEVEL = 0.25","cycleWithMechanicalStop","normalizeOne('numerics')","normalizeOne('integral')","completeOffMethod:'open lighting feed / circuit breaker, not normal rheostat rotation'","zeroReservedFor:'LIGHT BUS DEMO feed-open state'"])req(rheostat,marker,'lighting rheostat mechanical stop');
@@ -51,7 +52,9 @@ for(const forbidden of ['window.AGCDSKY.lighting =','window.AGCDSKY.hardwarePers
 for(const marker of ["source: 'R-700 §3.10.1.5'","travelAxis: 'panel-normal'","actuationTravelIn: 3 / 16","overtravelToBottomIn: 1 / 16","totalTravelIn: 1 / 4","projectionPolicy:PROJECTION_POLICY","rateLbPerInMin: 3.0","rateLbPerInMax: 3.5","actuatingForceOzMax: 7","releaseForceOzMin: 1","pretravelInMax: 0.030","differentialMovementInMax: 0.006","overtravelInMin: 0.003","minimumBrightnessFootLamberts: 2.0","testVrms: 75","testHz: 400","contactMs: 36","returnSoundMs: 18","forceIncreaseToActuationOzMin","forceIncreaseToBottomOzMax","totalFingerForceOzMin: null","totalFingerForceOz: null","Only documented bounded spring-rate range is varied per key","Total finger force remains unresolved","const baseService = window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_FLIGHT_HARDWARE_UI')", "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEY_MECHANICAL_SPEC',service"])req(keySpec,marker,'source-backed key mechanics service');
 for(const forbidden of ["vary(KEY_CONTACT_BASE_MS",'visualTravelVmin','travelVmin','--key-travel','window.AGCDSKY.hardwarePersonality =','window.AGCDSKY.keyMechanicalSpec =','window.AGCDSKY_FLIGHT_HARDWARE_UI'])no(keySpec,forbidden,'key mechanics facade/compatibility/timing/travel ownership');
 
-for(const marker of ["window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false})","if (!button || button.dataset.key === 'P') return null","const accepted = !cycleLatched","if (!state.accepted) return","if (!allNormalKeysReleased()) return","const MIN_KEYCODE_HOLD_MS = 12","const remaining = MIN_KEYCODE_HOLD_MS - elapsed","keyResetPending:!!keyResetTimer","const input = api?.inputRuntime","input.keyMake(code)","input.keyReset(electricalCore)","electricalKeyCode", "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEYBOARD_ELECTRICAL',Object.freeze({"])req(interlock,marker,'series-contact keyboard interlock');
+for(const marker of ["window.addEventListener('pointerdown', onPointerDown, {capture:true, passive:false})","if (!button || button.dataset.key === 'P') return null","const accepted = !cycleLatched","if (!state.accepted) return","if (!allNormalKeysReleased()) return","ELECTRICAL_SPEC.keyReset.expression","const input = api?.inputRuntime","input.keyMake(code)","input.keyReset(electricalCore)","electricalKeyCode", "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_KEYBOARD_ELECTRICAL',Object.freeze({"])req(interlock,marker,'series-contact keyboard interlock');
+for(const forbidden of ['MIN_KEYCODE_HOLD_MS','keyResetTimer','keyResetPending','minKeycodeHoldMs'])no(interlock,forbidden,'unsourced KEYRST dwell');
+for(const marker of ["drawing:'2005903A'","assembly:'2003909'","module:'D8'","expression:'AND OF S1 THRU S18NC'","softwareMinimumHoldMs:null","switchId:'S19'","channel:0o32","mask:0o20000","activeLow:true","registry.publish('AGCDSKY_KEY_ELECTRICAL_SPEC', service"])req(electricalSpec,marker,'source-backed keyboard electrical spec');
 for(const forbidden of ["api.keyboardElectrical =","P:0o",".keyPress(",".keyRelease(","writeIo(0o15"])no(interlock,forbidden,'series-contact keyboard direct core/facade ownership');
 
 for(const marker of ["const runtime = api?.runtimeTransitions;","const input = api?.inputRuntime;","document.querySelector('[data-key=\"P\"]')","pro.addEventListener('pointerdown', onPointerDown, true)","pro.addEventListener('pointerup', onPointerUp, true)","pro.addEventListener('pointercancel', onPointerCancel, true)",'input.proceed(true)','input.proceed(false)','runtime.onBeforeClock(releaseProceed)'])req(proceed,marker,'dedicated PRO / channel-032 path');
