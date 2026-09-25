@@ -10,15 +10,16 @@ function assert(condition,message){if(!condition)fail(message)}
 
 const source=read('relay-panel.js'),css=read('relay-panel.css'),html=read('index.html'),identity=read('relay-identity-audio.js');
 new vm.Script(source,{filename:'relay-panel.js'});
-assert(html.includes('<section id="relay-panel" class="relay-rack"'),'relay rack host missing above DSKY');
+assert(html.includes('<section id="relay-panel" class="relay-rack" aria-label="Live simulated DSKY relays" aria-hidden="true"></section>'),'relay rack host must start accessibility-hidden above DSKY');
 assert(html.indexOf('id="relay-panel"')<html.indexOf('id="dsky"'),'relay rack must precede DSKY');
 assert(html.includes('<link rel="stylesheet" href="relay-panel.css">'),'relay panel stylesheet missing');
-assert(!source.includes('textContent=')&&!source.includes('innerHTML='),'relay rack must not add a decorative heading/label block');
+assert(!source.includes('host.textContent=')&&!source.includes('innerHTML='),'relay rack must not add a decorative heading/label block');
 assert(identity.includes('const LATCHING_RELAY_COUNT = 132;'),'production identity model must retain 132 latching relays');
 assert(identity.includes("const AUX_ORDER=Object.freeze(['comp','uplink','temp','keyrel','oprerr','flash','restart','stby']);"),'production identity model must retain 8 auxiliary relays');
 assert(identity.includes('totalIndividualRelays:LATCHING_RELAY_COUNT+AUX_ORDER.length'),'production identity total must remain derived as 140');
 for(const token of ['function playRelayImpact(','function playAuxImpact(','contactTraceFor:','auxiliaryContactTraceFor:','auxiliaryNames:Object.freeze(AUX_ORDER.slice())'])assert(identity.includes(token),`production identity event API missing ${token}`);
-for(const token of ['repeat(11','repeat(13','body.dream .relay-rack','body.display-only .relay-rack'])assert(css.includes(token),`relay panel CSS missing ${token}`);
+for(const token of ['repeat(11','repeat(13','body.relay-view-visible','height:0','max-height:0','visibility:hidden','body.dream .relay-rack','body.display-only .relay-rack'])assert(css.includes(token),`relay panel CSS missing ${token}`);
+assert(html.includes('<button id="relay-view" aria-pressed="false">RELAY VIEW OFF</button>'),'explicit relay view option missing');
 
 class FakeClassList{
   constructor(owner){this.owner=owner;this.values=new Set()}
@@ -33,14 +34,16 @@ class FakeStyle{
   getPropertyValue(name){return this.values.get(name)||''}
 }
 class FakeElement{
-  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.dataset={};this.attrs={};this.style=new FakeStyle();this.classList=new FakeClassList(this);this.className='';this.title='';this.offsetWidth=10}
+  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.dataset={};this.attrs={};this.style=new FakeStyle();this.classList=new FakeClassList(this);this.className='';this.title='';this.textContent='';this.offsetWidth=10;this.listeners={}}
   setAttribute(name,value){this.attrs[name]=String(value)}
   appendChild(child){this.children.push(child);return child}
   append(...children){children.forEach(child=>this.appendChild(child))}
   replaceChildren(...children){this.children=[...children]}
+  addEventListener(type,listener){(this.listeners[type]||(this.listeners[type]=[])).push(listener)}
+  click(){for(const listener of this.listeners.click||[])listener({type:'click',target:this})}
 }
-const host=new FakeElement('section');
-const document={getElementById:id=>id==='relay-panel'?host:null,createElement:tag=>new FakeElement(tag)};
+const host=new FakeElement('section'),viewButton=new FakeElement('button'),body=new FakeElement('body');
+const document={body,getElementById:id=>id==='relay-panel'?host:(id==='relay-view'?viewButton:null),createElement:tag=>new FakeElement(tag)};
 const context={console,window:null,document,Object,Map,Set,Number,String,Math,TypeError};context.window=context;vm.createContext(context);
 const registry=installServiceRegistry(context);
 const latches={10:1},auxRelays={comp:true,uplink:false,temp:false,keyrel:false,oprerr:false,flash:false,restart:false,stby:false};
@@ -61,6 +64,16 @@ assert(api&&Object.isFrozen(api),'relay panel API missing/mutable');
 assert(api.latchingCells===132,'relay rack must depict all 132 latching relays');
 assert(api.auxiliaryCells===8,'relay rack must depict all 8 auxiliary relays');
 assert(api.totalCells===140,'relay rack must depict exactly 140 simulated relays');
+assert(typeof api.isVisible==='function'&&typeof api.setVisible==='function','relay view API missing');
+assert(api.isVisible()===false,'relay rack must be hidden by default');
+assert(!body.classList.contains('relay-view-visible'),'relay body class must start hidden');
+assert(host.attrs['aria-hidden']==='true','relay rack must start aria-hidden');
+assert(viewButton.textContent==='RELAY VIEW OFF'&&viewButton.attrs['aria-pressed']==='false','relay view option must start OFF');
+viewButton.click();
+assert(api.isVisible()===true&&body.classList.contains('relay-view-visible'),'relay view option did not reveal rack');
+assert(host.attrs['aria-hidden']==='false'&&viewButton.textContent==='RELAY VIEW ON'&&viewButton.attrs['aria-pressed']==='true','relay view ON state not reflected');
+viewButton.click();
+assert(api.isVisible()===false&&!body.classList.contains('relay-view-visible'),'relay view option did not hide rack again');
 assert(host.children.length===143,'relay rack should contain 140 relays plus 3 invisible grid fillers');
 assert(typeof listener==='function','relay rack did not subscribe to physical presentation events');
 
