@@ -4,6 +4,7 @@ import WebKit
 
 #if os(iOS)
 import UIKit
+import CoreHaptics
 #elseif os(macOS)
 import AppKit
 #endif
@@ -80,6 +81,35 @@ final class AGCWebViewModel: ObservableObject {
 final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
     let model: AGCWebViewModel
     private let assetHandler = AGCAssetSchemeHandler()
+#if os(iOS)
+    private let keyMakeFeedback = UIImpactFeedbackGenerator(style: .rigid)
+    private let keyReleaseFeedback = UIImpactFeedbackGenerator(style: .light)
+    private let keyTestFeedback = UIImpactFeedbackGenerator(style: .heavy)
+#endif
+
+    private var hapticBridgeAvailable: Bool {
+#if os(iOS)
+        return CHHapticEngine.capabilitiesForHardware().supportsHaptics
+#elseif os(macOS)
+        return true
+#endif
+    }
+
+    private var hapticPlatformName: String {
+#if os(iOS)
+        return "ios"
+#elseif os(macOS)
+        return "macos"
+#endif
+    }
+
+    private var hapticBackendName: String {
+#if os(iOS)
+        return "UIImpactFeedbackGenerator"
+#elseif os(macOS)
+        return "NSHapticFeedbackManager"
+#endif
+    }
 
     init(model: AGCWebViewModel) {
         self.model = model
@@ -94,9 +124,29 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
         configuration.mediaTypesRequiringUserActionForPlayback = []
         configuration.setURLSchemeHandler(assetHandler, forURLScheme: AGCAssetSchemeHandler.scheme)
         configuration.userContentController.add(self, name: "PrintBridge")
+        configuration.userContentController.add(self, name: "HapticBridge")
         configuration.userContentController.addUserScript(
             WKUserScript(
                 source: "window.PrintBridge=Object.freeze({printChecklist:function(){window.webkit.messageHandlers.PrintBridge.postMessage('print')}});",
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            )
+        )
+        let hapticAvailable = hapticBridgeAvailable ? "true" : "false"
+        let hapticScript = """
+        window.HapticBridge=Object.freeze({
+          available:function(){return \(hapticAvailable);},
+          platform:function(){return '\(hapticPlatformName)';},
+          backend:function(){return '\(hapticBackendName)';},
+          amplitudeControl:function(){return false;},
+          keyMake:function(){window.webkit.messageHandlers.HapticBridge.postMessage('make');return true;},
+          keyRelease:function(){window.webkit.messageHandlers.HapticBridge.postMessage('release');return true;},
+          testPulse:function(){window.webkit.messageHandlers.HapticBridge.postMessage('test');return true;}
+        });
+        """
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: hapticScript,
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: true
             )
@@ -142,14 +192,50 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
     func dismantle(_ webView: WKWebView) {
         webView.stopLoading()
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "PrintBridge")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "HapticBridge")
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         model.detach(webView: webView)
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "HapticBridge", let command = message.body as? String {
+            performKeyHaptic(command)
+            return
+        }
         guard message.name == "PrintBridge", (message.body as? String) == "print", let webView = model.webView else { return }
         printChecklist(from: webView)
+    }
+
+    private func performKeyHaptic(_ command: String) {
+        guard hapticBridgeAvailable else { return }
+#if os(iOS)
+        switch command {
+        case "make":
+            keyMakeFeedback.impactOccurred()
+            keyMakeFeedback.prepare()
+        case "release":
+            keyReleaseFeedback.impactOccurred()
+            keyReleaseFeedback.prepare()
+        case "test":
+            keyTestFeedback.impactOccurred()
+            keyTestFeedback.prepare()
+        default:
+            break
+        }
+#elseif os(macOS)
+        let performer = NSHapticFeedbackManager.defaultPerformer
+        switch command {
+        case "make":
+            performer.perform(.alignment, performanceTime: .now)
+        case "release":
+            performer.perform(.levelChange, performanceTime: .now)
+        case "test":
+            performer.perform(.generic, performanceTime: .now)
+        default:
+            break
+        }
+#endif
     }
 
     private func printChecklist(from webView: WKWebView) {
