@@ -14,7 +14,7 @@ Independent Apollo Guidance Computer / DSKY simulator for Android. It runs the r
 | --- | --- |
 | ![Sextant](docs/screenshots/sextant.webp) | ![EL-only display](docs/screenshots/el-only.webp) |
 
-The sextant screenshot shows the real app UI with a static demonstration pointing state; it does not contain a camera photograph.
+The Sextant image is a real app capture with location redacted and a static demonstration pointing state; it does not contain a camera photograph. The EL-only image uses the current renderer with no synthetic glow pass.
 
 ## What it does
 
