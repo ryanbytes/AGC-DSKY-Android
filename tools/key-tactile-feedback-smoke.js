@@ -12,6 +12,7 @@ const proceed=read('app/src/main/assets/proceed-electrical.js');
 const main=read('app/src/main/java/org/apollo/agcdsky/MainActivity.java');
 const sensor=read('app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java');
 const bridge=read('app/src/main/java/org/apollo/agcdsky/KeyHapticBridge.java');
+const apple=read('apple/Sources/AGCWebView.swift');
 const manifest=read('app/src/main/AndroidManifest.xml');
 const html=read('app/src/main/assets/index.html');
 const sw=read('pwa/static/sw.js');
@@ -23,10 +24,16 @@ for(const marker of [
   "make:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'",
   "release:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'",
   "legacyFallback:'View.performHapticFeedback'",
-  "policy:'event-cue-only; default-amplitude timed pulses; no force-to-vibration amplitude mapping'",
+  "policy:'event-cue-only; platform-native/browser-supported haptics; no force-to-vibration amplitude mapping'",
+  "browserVibration:",
+  "hapticPlatform:",
+  "backend: () => 'navigator.vibrate'",
+  "keyMake: () => navigator.vibrate(WEB_MAKE_MS)",
+  "keyRelease: () => navigator.vibrate(WEB_RELEASE_MS)",
+  "testPulse: () => navigator.vibrate(WEB_TEST_MS)",
   "totalFingerForceOz: null"
 ])assert(tactile.includes(marker),'tactile service missing: '+marker);
-for(const forbidden of ['navigator.vibrate','forceToAmplitude','amplitude:','createWaveform'])
+for(const forbidden of ['forceToAmplitude','amplitude:','createWaveform'])
   assert(!tactile.includes(forbidden),'tactile service invented force/amplitude mapping: '+forbidden);
 
 for(const marker of [
@@ -54,6 +61,24 @@ for(const forbidden of ['VibrationEffect.createPredefined','VibrationEffect.crea
   assert(!bridge.includes(forbidden),'native bridge retained failed/suppressed vibration path: '+forbidden);
 assert(manifest.includes('android.permission.VIBRATE'),'one-shot VibrationEffect path requires VIBRATE permission');
 
+for(const marker of [
+  'import CoreHaptics',
+  'UIImpactFeedbackGenerator(style: .rigid)',
+  'UIImpactFeedbackGenerator(style: .light)',
+  'UIImpactFeedbackGenerator(style: .heavy)',
+  'CHHapticEngine.capabilitiesForHardware().supportsHaptics',
+  'configuration.userContentController.add(self, name: "HapticBridge")',
+  'window.HapticBridge=Object.freeze({',
+  "postMessage('make')",
+  "postMessage('release')",
+  "postMessage('test')",
+  'removeScriptMessageHandler(forName: "HapticBridge")',
+  'performKeyHaptic(command)',
+  'NSHapticFeedbackManager.defaultPerformer',
+  'performer.perform(.alignment, performanceTime: .now)',
+  'performer.perform(.levelChange, performanceTime: .now)'
+])assert(apple.includes(marker),'Apple haptic parity missing: '+marker);
+
 for(const [source,label] of [[main,'MainActivity'],[sensor,'SensorMainActivity']]){
   assert(source.includes('new KeyHapticBridge(webView),"HapticBridge"'),label+' missing HapticBridge exposure');
   assert(source.includes('"HapticBridge"'),label+' teardown does not name HapticBridge');
@@ -78,6 +103,7 @@ assert(proceed.includes("releaseProceedWithHaptic()"),'PRO release haptic missin
 const calls=[];
 const context={console,Date,window:null,HapticBridge:{
   available(){return true},
+  platform(){return 'android'},
   backend(){return 'VibratorManager.default-one-shot'},
   amplitudeControl(){return true},
   vibratePermissionGranted(){return true},
@@ -111,6 +137,8 @@ assert(service.make('1')===true&&service.release('1')===true,'native bridge call
 assert(calls.join(',')==='make,release','native bridge event order wrong');
 const status=service.status();
 assert(status.nativeBridge===true,'native bridge status false');
+assert(status.browserVibration===false,'native surface incorrectly reports browser vibration');
+assert(status.hapticPlatform==='android','native platform status wrong');
 assert(status.nativeBackend==='VibratorManager.default-one-shot','native backend status wrong');
 assert(status.amplitudeControl===true,'amplitude-control status wrong');
 assert(status.vibratePermissionGranted===true,'VIBRATE permission status wrong');
@@ -126,12 +154,26 @@ assert(status.springForceIncreaseToActuationOzMin===9&&status.springForceIncreas
 assert(status.springForceIncreaseToBottomOzMin===12&&status.springForceIncreaseToBottomOzMax===14,'bottom spring ΔF wrong');
 assert(status.totalFingerForceOz===null,'total finger force was invented');
 
-const browser={console,Date,window:null};browser.window=browser;const browserRegistry=installServiceRegistry(browser);
+const browserCalls=[];
+const browser={console,Date,window:null,navigator:{vibrate(ms){browserCalls.push(ms);return true}}};
+browser.window=browser;const browserRegistry=installServiceRegistry(browser);
 browserRegistry.publish('AGCDSKY_KEY_MECHANICAL_SPEC',registry.get('AGCDSKY_KEY_MECHANICAL_SPEC'),'mechanical fixture');
 vm.createContext(browser);vm.runInContext(tactile,browser,{filename:'key-tactile-feedback-browser.js'});
 const browserService=browserRegistry.get('AGCDSKY_KEY_TACTILE');
-assert(browserService.make('1')===false&&browserService.release('1')===false,'non-native surface must no-op');
-assert(browserService.status().nativeBridge===false,'non-native surface incorrectly reports haptics');
+assert(browserService.make('1')===true&&browserService.release('1')===true,'supported browser vibration rejected');
+assert(browserService.test()===true,'supported browser diagnostic vibration rejected');
+assert(browserCalls.join(',')==='22,10,120','browser vibration timing wrong');
+const browserStatus=browserService.status();
+assert(browserStatus.nativeBridge===false&&browserStatus.browserVibration===true,'browser fallback status wrong');
+assert(browserStatus.hapticPlatform==='web'&&browserStatus.nativeBackend==='navigator.vibrate','browser backend status wrong');
+
+const unsupported={console,Date,window:null,navigator:{}};unsupported.window=unsupported;
+const unsupportedRegistry=installServiceRegistry(unsupported);
+unsupportedRegistry.publish('AGCDSKY_KEY_MECHANICAL_SPEC',registry.get('AGCDSKY_KEY_MECHANICAL_SPEC'),'mechanical fixture');
+vm.createContext(unsupported);vm.runInContext(tactile,unsupported,{filename:'key-tactile-feedback-unsupported.js'});
+const unsupportedService=unsupportedRegistry.get('AGCDSKY_KEY_TACTILE');
+assert(unsupportedService.make('1')===false&&unsupportedService.release('1')===false,'unsupported web surface must no-op');
+assert(unsupportedService.status().nativeBridge===false&&unsupportedService.status().browserVibration===false,'unsupported web surface incorrectly reports haptics');
 
 console.log('key tactile feedback smoke: PASS');
-console.log('  R-700/2004941/1010901 mechanics remain numeric diagnostics only; Android uses VibratorManager/default-vibrator DEFAULT_AMPLITUDE one-shot pulses with no Apollo force-amplitude mapping');
+console.log('  Android native, Apple native wrapper, and navigator.vibrate browser fallback are gated; unsupported web surfaces remain explicit no-ops; Apollo force is never mapped to vibration amplitude');
