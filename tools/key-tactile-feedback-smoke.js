@@ -32,6 +32,13 @@ for(const forbidden of ['navigator.vibrate','forceToAmplitude','amplitude:','cre
 for(const marker of [
   'VibratorManager',
   'manager.getDefaultVibrator()',
+  'Settings.System.HAPTIC_FEEDBACK_ENABLED',
+  'Settings.System.VIBRATE_ON',
+  'Manifest.permission.VIBRATE',
+  'PackageManager.PERMISSION_GRANTED',
+  'PowerManager',
+  'openSoundSettings()',
+  'Settings.ACTION_SOUND_SETTINGS',
   'private static final long MAKE_MS = 22L',
   'private static final long RELEASE_MS = 10L',
   'private static final long DIAGNOSTIC_MS = 120L',
@@ -73,8 +80,13 @@ const context={console,Date,window:null,HapticBridge:{
   available(){return true},
   backend(){return 'VibratorManager.default-one-shot'},
   amplitudeControl(){return true},
+  vibratePermissionGranted(){return true},
+  systemHapticFeedbackEnabled(){return 0},
+  systemVibrateOn(){return 0},
+  powerSaveMode(){return false},
   makeDurationMs(){return 22},
   releaseDurationMs(){return 10},
+  openSoundSettings(){calls.push('settings');return true},
   keyMake(){calls.push('make');return true},
   keyRelease(){calls.push('release');return true},
   testPulse(){calls.push('test');return true}
@@ -101,8 +113,12 @@ const status=service.status();
 assert(status.nativeBridge===true,'native bridge status false');
 assert(status.nativeBackend==='VibratorManager.default-one-shot','native backend status wrong');
 assert(status.amplitudeControl===true,'amplitude-control status wrong');
+assert(status.vibratePermissionGranted===true,'VIBRATE permission status wrong');
+assert(status.systemHapticFeedbackEnabled===0&&status.systemVibrateOn===0,'system vibration settings not propagated');
+assert(status.powerSaveMode===false,'power-saver status wrong');
 assert(status.makeDurationMs===22&&status.releaseDurationMs===10,'one-shot pulse durations wrong');
 assert(service.test()===true&&calls[calls.length-1]==='test','direct native haptic probe failed');
+assert(service.openSystemSettings()===true&&calls[calls.length-1]==='settings','system vibration settings launcher failed');
 assert(status.platformEffects.make==='VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'&&status.platformEffects.release==='VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)','one-shot effect mapping wrong');
 assert(status.makeCount===1&&status.releaseCount===1,'tactile event counters wrong');
 assert(status.actuationTravelIn===3/16&&status.overtravelToBottomIn===1/16&&status.totalTravelIn===1/4,'R-700 travel not propagated');
