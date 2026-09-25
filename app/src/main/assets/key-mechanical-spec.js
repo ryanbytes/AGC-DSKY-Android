@@ -32,6 +32,8 @@
   window.__DSKY_KEY_MECHANICAL_SPEC__ = true;
 
   const ASSEMBLY = Object.freeze({
+    source: 'R-700 §3.10.1.5',
+    travelAxis: 'panel-normal',
     actuationTravelIn: 3 / 16,
     overtravelToBottomIn: 1 / 16,
     totalTravelIn: 1 / 4
@@ -80,9 +82,9 @@
   const PRESENTATION_ESTIMATES = Object.freeze({
     contactMs: 36,
     returnSoundMs: 18,
-    visualTravelVmin: 0.42,
-    note: 'Timing and screen-depth rendering are interaction estimates, not Apollo manufacturing tolerances.'
+    note: 'Touch-to-contact and return-audio timing are interaction estimates, not Apollo manufacturing tolerances.'
   });
+  const PROJECTION_POLICY = 'R-700 travel is panel-normal (Z). In the straight-on 2-D DSKY projection, key X/Y centers remain fixed; depression is represented only by relief/shadow collapse.';
 
   function hash32(seed, text) {
     let h = 0x811c9dc5;
@@ -120,16 +122,16 @@
       const springIncrementAtActuationOz = springRate * ASSEMBLY.actuationTravelIn * 16;
       const springIncrementAtBottomOz = springRate * ASSEMBLY.totalTravelIn * 16;
 
-      button.style.setProperty('--key-travel', `${PRESENTATION_ESTIMATES.visualTravelVmin}vmin`);
       button.dataset.keyStrokeIn = ASSEMBLY.totalTravelIn.toFixed(4);
       button.dataset.keyActuationIn = ASSEMBLY.actuationTravelIn.toFixed(4);
+      button.dataset.keyOvertravelIn = ASSEMBLY.overtravelToBottomIn.toFixed(4);
+      button.dataset.keyTravelAxis = ASSEMBLY.travelAxis;
       button.dataset.keySpringRate = springRate.toFixed(3);
 
       keys[key] = Object.freeze({
         ...old,
         contactMs: PRESENTATION_ESTIMATES.contactMs,
         returnSoundMs: PRESENTATION_ESTIMATES.returnSoundMs,
-        travelVmin: PRESENTATION_ESTIMATES.visualTravelVmin,
         springRateLbPerIn: Number(springRate.toFixed(3)),
         springIncrementAtActuationOz: Number(springIncrementAtActuationOz.toFixed(2)),
         springIncrementAtBottomOz: Number(springIncrementAtBottomOz.toFixed(2)),
@@ -139,7 +141,7 @@
         sensitiveSwitch: SENSITIVE_SWITCH,
         keyEl: KEY_EL,
         springForceEnvelope: SPRING_FORCE_ENVELOPE,
-        estimateFields: Object.freeze(['contactMs','returnSoundMs','travelVmin','makePitch','returnPitch','soundGain'])
+        estimateFields: Object.freeze(['contactMs','returnSoundMs','makePitch','returnPitch','soundGain'])
       });
     }
 
@@ -153,6 +155,7 @@
         keyEl:KEY_EL,
         springForceEnvelope:SPRING_FORCE_ENVELOPE,
         presentationEstimates:PRESENTATION_ESTIMATES,
+        projectionPolicy:PROJECTION_POLICY,
         variationPolicy:'Only documented bounded spring-rate range is varied per key; acceptance maxima/minima are retained as envelopes, not sampled distributions.',
         forcePolicy:'Only source-derivable spring force increments are reported. Total finger force remains unresolved until installed preload and complete lever/friction geometry are source-backed.'
       })

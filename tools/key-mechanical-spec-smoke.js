@@ -7,7 +7,7 @@ const source=fs.readFileSync(path.resolve(__dirname,'../app/src/main/assets/key-
 function assert(c,m){if(!c)throw new Error(m)}
 function button(key){const props=Object.create(null);return{dataset:{key},style:{setProperty(name,value){props[name]=value}},props}}
 const buttons=['1','2','3','V','N','R','K','E','C','+','-','P'].map(button);
-const baseKeys=Object.fromEntries(buttons.map(b=>[b.dataset.key,{contactMs:31.7,returnSoundMs:22.3,travelVmin:.456,makePitch:500,returnPitch:320,soundGain:1.03}]));
+const baseKeys=Object.fromEntries(buttons.map(b=>[b.dataset.key,{contactMs:31.7,returnSoundMs:22.3,makePitch:500,returnPitch:320,soundGain:1.03}]));
 const baseService=Object.freeze({hardwarePersonality(){return{seed:'1234abcd',lamps:{},keys:baseKeys}}});
 const AGCDSKY={};
 const context={console,document:{querySelectorAll(selector){return selector==='[data-key]'?buttons:[]}},AGCDSKY,AGCDSKY_FLIGHT_HARDWARE_UI:baseService,window:null};context.window=context;installServiceRegistry(context);
@@ -22,8 +22,12 @@ assert(!source.includes('window.AGCDSKY.hardwarePersonality =')&&!source.include
 const first=AGCDSKY.hardwarePersonality(),second=AGCDSKY.hardwarePersonality();
 assert(first===second,'mechanical personality must be stable within simulated DSKY');
 assert(AGCDSKY.keyMechanicalSpec()===first.keyMechanicalSpec,'bootstrap keyMechanicalSpec delegate did not expose composed spec');
+assert(first.keyMechanicalSpec.assembly.source==='R-700 §3.10.1.5','R-700 mechanical source missing');
+assert(first.keyMechanicalSpec.assembly.travelAxis==='panel-normal','panel-normal travel axis missing');
 assert(first.keyMechanicalSpec.assembly.actuationTravelIn===3/16,'3/16-inch actuation travel missing');
+assert(first.keyMechanicalSpec.assembly.overtravelToBottomIn===1/16,'1/16-inch overtravel missing');
 assert(first.keyMechanicalSpec.assembly.totalTravelIn===1/4,'1/4-inch total travel missing');
+assert(first.keyMechanicalSpec.projectionPolicy.includes('X/Y centers remain fixed'),'straight-on projection policy missing');
 assert(first.keyMechanicalSpec.compressionSpring.rateLbPerInMin===3&&first.keyMechanicalSpec.compressionSpring.rateLbPerInMax===3.5,'compression spring rate range missing');
 assert(first.keyMechanicalSpec.sensitiveSwitch.actuatingForceOzMax===7,'7-ounce max actuation force missing');
 assert(first.keyMechanicalSpec.sensitiveSwitch.releaseForceOzMin===1,'1-ounce min release force missing');
@@ -43,10 +47,18 @@ for(const [key,p] of Object.entries(first.keys)){
   assert(p.totalFingerForceOz===null,`${key}: total finger force invented`);
   assert(p.springIncrementAtActuationOz>=9&&p.springIncrementAtActuationOz<=10.5,`${key}: actuation increment escaped envelope`);
   assert(p.springIncrementAtBottomOz>=12&&p.springIncrementAtBottomOz<=14,`${key}: bottom increment escaped envelope`);
-  assert(p.estimateFields.includes('contactMs')&&p.estimateFields.includes('travelVmin'),`${key}: estimate fields unlabeled`);
+  assert(p.estimateFields.includes('contactMs')&&!p.estimateFields.includes('travelVmin'),`${key}: estimate fields wrong`);
+  assert(!Object.prototype.hasOwnProperty.call(p,'travelVmin'),`${key}: obsolete screen-plane travel personality returned`);
   rates.push(p.springRateLbPerIn);
 }
 assert(new Set(rates).size>1,'deterministic spring-rate personalities did not vary');
-for(const b of buttons){assert(b.dataset.keyStrokeIn==='0.2500',`${b.dataset.key}: stroke metadata missing`);assert(b.dataset.keyActuationIn==='0.1875',`${b.dataset.key}: contact-point metadata missing`);assert(b.props['--key-travel']==='0.42vmin',`${b.dataset.key}: screen-depth estimate drifted`)}
+for(const b of buttons){
+  assert(b.dataset.keyStrokeIn==='0.2500',`${b.dataset.key}: stroke metadata missing`);
+  assert(b.dataset.keyActuationIn==='0.1875',`${b.dataset.key}: contact-point metadata missing`);
+  assert(b.dataset.keyOvertravelIn==='0.0625',`${b.dataset.key}: overtravel metadata missing`);
+  assert(b.dataset.keyTravelAxis==='panel-normal',`${b.dataset.key}: travel-axis metadata missing`);
+  assert(!Object.prototype.hasOwnProperty.call(b.props,'--key-travel'),`${b.dataset.key}: obsolete screen-plane travel CSS variable returned`);
+}
+assert(!source.includes('visualTravelVmin')&&!source.includes('--key-travel')&&!source.includes('travelVmin'),'obsolete viewport/screen-plane travel estimate remains');
 console.log('key mechanical specification smoke: PASS');
-console.log('  explicit service publication, composed service ownership, stable bootstrap delegates, stroke/switch data, and source-derived spring-force increments verified; total finger force remains unset');
+console.log('  R-700 3/16-in actuation + 1/16-in overtravel = 1/4-in panel-normal stroke; no invented screen-plane travel; switch/spring data preserved');

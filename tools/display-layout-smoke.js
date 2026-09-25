@@ -177,8 +177,12 @@ assert(CM.includes('body.spacecraft-cm .key .key-legend') &&
        CM.includes('fill:var(--key-el-color)') &&
        CM.includes('filter:var(--key-el-filter)'),
   'white EL key vector legend illumination missing');
-assert(CM.includes('.key.pressed') && CM.includes('translateY(var(--key-travel,.42vmin))'),
-  'mechanical key travel rendering missing');
+assert(CM.includes('.key.pressed') &&
+       CM.includes('R-700 §3.10.1.5') &&
+       CM.includes('transform:none;') &&
+       !CM.includes('translateY(var(--key-travel') &&
+       !CM.includes('--key-travel'),
+  'source-backed panel-normal key travel rendering missing');
 
 assert(CONTROLS.includes('max-width:calc(100vw - 8px)'),
   'control strip must remain constrained to the phone viewport');
