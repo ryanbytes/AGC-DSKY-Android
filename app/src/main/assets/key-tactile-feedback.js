@@ -9,10 +9,10 @@
  * but the surviving source set does not establish total installed finger
  * force. Haptics therefore mark the physical contact/release events only.
  *
- * Android uses device-tuned predefined VibrationEffect primitives:
- * EFFECT_CLICK for contact/make and the lighter EFFECT_TICK for release.
- * Browser/PWA/Apple surfaces remain a clean no-op instead of inventing another
- * vibration model.
+ * Android uses short DEFAULT_AMPLITUDE one-shot pulses through the native
+ * default vibrator. Pulse duration is presentation timing only and is not
+ * derived from Apollo spring/switch force. Browser/PWA/Apple surfaces remain
+ * a clean no-op instead of inventing another vibration model.
  */
 (() => {
   if (window.__DSKY_KEY_TACTILE_FEEDBACK__) return;
@@ -69,12 +69,14 @@
       nativeBridge: !!bridge(),
       nativeBackend: (() => { try { return bridge()?.backend?.() || null; } catch (_) { return null; } })(),
       amplitudeControl: (() => { try { return !!bridge()?.amplitudeControl?.(); } catch (_) { return false; } })(),
+      makeDurationMs: (() => { try { return Number(bridge()?.makeDurationMs?.()) || null; } catch (_) { return null; } })(),
+      releaseDurationMs: (() => { try { return Number(bridge()?.releaseDurationMs?.()) || null; } catch (_) { return null; } })(),
       platformEffects: Object.freeze({
-        make:'VibrationEffect.EFFECT_CLICK',
-        release:'VibrationEffect.EFFECT_TICK',
+        make:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)',
+        release:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)',
         legacyFallback:'View.performHapticFeedback'
       }),
-      policy:'event-cue-only; predefined device-tuned effects; no force-to-vibration amplitude mapping',
+      policy:'event-cue-only; default-amplitude timed pulses; no force-to-vibration amplitude mapping',
       actuationTravelIn: spec?.assembly?.actuationTravelIn ?? null,
       overtravelToBottomIn: spec?.assembly?.overtravelToBottomIn ?? null,
       totalTravelIn: spec?.assembly?.totalTravelIn ?? null,
