@@ -47,6 +47,7 @@
   ]);
   const SELF_TEST_KEYS=Object.freeze({'1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37});
   const SELF_TEST_RELAY_CODES=Object.freeze({'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31});
+  const SELF_TEST_TOTAL=13;
   function selfTestResult(name,ok,detail){return Object.freeze({name:String(name),ok:!!ok,detail:String(detail||'')})}
   function hex(bytes){return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('')}
   async function gitBlobSha1(bytes){
@@ -223,7 +224,7 @@
     if(fullSelfTest){
       const passed=fullSelfTest.results.filter(x=>x.ok).length,failed=fullSelfTest.results.filter(x=>!x.ok).length,total=fullSelfTest.results.length;
       const overall=fullSelfTestRunning?'RUNNING':(failed?'FAIL':'PASS');
-      h+=row('Full DSKY self-test',overall+' · '+passed+' PASS'+(failed?' · '+failed+' FAIL':'')+' · '+total+'/12 complete');
+      h+=row('Full DSKY self-test',overall+' · '+passed+' PASS'+(failed?' · '+failed+' FAIL':'')+' · '+total+'/'+SELF_TEST_TOTAL+' complete');
       for(const result of fullSelfTest.results)h+=row('↳ '+result.name,(result.ok?'PASS':'FAIL')+' · '+result.detail);
     }
     h+=row('Mode',String(app.mode||'---').toUpperCase());
