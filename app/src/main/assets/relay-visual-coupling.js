@@ -79,32 +79,41 @@
     }
     emit({type:'relay-contact',row:motion.row,bit:motion.bit,id:audioModel.relayIdentity(motion.row,motion.bit),state:!!traceEvent.state,targetOn:motion.on,phase:traceEvent.kind,contactWord:state.contactWord,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount});
   }
+  function scheduleContactTail(motion,token,armatureTraceMs,requiredMode){
+    for(const item of motion.trace){
+      if(item.kind==='armature')continue;
+      const relative=Math.max(0,Number(item.atMs)-armatureTraceMs);
+      setTimeout(()=>{
+        if(generation[motion.row]!==token||timingMode!==requiredMode)return;
+        const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;
+        applyRelayContact(live,motion,item);
+      },relative);
+    }
+  }
   function scheduleTraceFromArmature(state,motion,token,armatureAtMs){
     const armature=motion.trace.find(item=>item.kind==='armature')||motion.trace[0];
     const armatureTraceMs=Number(armature&&armature.atMs)||motion.physicalMs;
-    const fire=item=>{
-      if(generation[motion.row]!==token)return;
-      const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;
-      applyRelayContact(live,motion,item);
-    };
     if(timingMode===MODE_STRETCHED){
       const armatureEvent={...armature,atMs:armatureAtMs};
-      setTimeout(()=>{if(generation[motion.row]!==token||timingMode!==MODE_STRETCHED)return;const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;live.frameQueue.push({motion,item:armatureEvent});requestFrameLoop();},armatureAtMs);
-      for(const item of motion.trace){
-        if(item===armature||item.kind==='armature')continue;
-        const relative=Math.max(0,Number(item.atMs)-armatureTraceMs);
-        setTimeout(()=>{if(generation[motion.row]!==token||timingMode!==MODE_STRETCHED)return;const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;live.frameQueue.push({motion,item});requestFrameLoop();},armatureAtMs+relative);
-      }
-      return;
+      setTimeout(()=>{
+        if(generation[motion.row]!==token||timingMode!==MODE_STRETCHED)return;
+        const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;
+        live.frameQueue.push({motion,item:armatureEvent,armatureTraceMs,token});requestFrameLoop();
+      },armatureAtMs);return;
     }
-    for(const item of motion.trace)setTimeout(()=>{if(generation[motion.row]!==token||timingMode!==MODE_AUTHENTIC)return;fire(item)},Math.max(0,Number(item.atMs)||0));
+    setTimeout(()=>{
+      if(generation[motion.row]!==token||timingMode!==MODE_AUTHENTIC)return;
+      const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;
+      applyRelayContact(live,motion,armature);
+      scheduleContactTail(motion,token,armatureTraceMs,MODE_AUTHENTIC);
+    },Math.max(0,armatureAtMs));
   }
   function activePresentations(){for(let row=1;row<=12;row++){const state=presentation[row];if(state&&state.active)return true}return false}
   function frameStep(){
     frameLoopRunning=false;if(timingMode!==MODE_STRETCHED)return;
     for(let row=1;row<=12;row++){
       const state=presentation[row];if(!state||!state.active)continue;if(generation[row]!==state.token){state.active=false;continue}
-      const queued=state.frameQueue.splice(0);for(const entry of queued)applyRelayContact(state,entry.motion,entry.item);
+      const queued=state.frameQueue.splice(0);for(const entry of queued){applyRelayContact(state,entry.motion,entry.item);scheduleContactTail(entry.motion,entry.token,entry.armatureTraceMs,MODE_STRETCHED)}
     }
     if(activePresentations())requestFrameLoop();
   }
