@@ -41,7 +41,7 @@ for(const marker of [
   'target.performHapticFeedback(legacyViewEffect)',
   'setHapticFeedbackEnabled(true)'
 ])assert(bridge.includes(marker),'native haptic bridge missing: '+marker);
-for(const forbidden of ['VibrationEffect.createOneShot','VibrationEffect.createWaveform','VibrationAttributes.USAGE_TOUCH','USAGE_TOUCH'])
+for(const forbidden of ['VibrationEffect.createOneShot','VibrationEffect.createWaveform','import android.os.VibrationAttributes','VibrationAttributes.createForUsage'])
   assert(!bridge.includes(forbidden),'native bridge retained suppressed/raw vibration path: '+forbidden);
 assert(manifest.includes('android.permission.VIBRATE'),'predefined VibrationEffect path requires VIBRATE permission');
 
