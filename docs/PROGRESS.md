@@ -2,6 +2,23 @@
 
 Last updated: 2026-09-25
 
+
+## 2026-09-25 web register glyph-stability repair
+
+A web/PWA display regression was reported where zeros on the bottom register visibly changed when another element on the same register changed. The relay/display state itself was not cross-coupled: the problem was the drawing renderer replacing the complete register SVG group with `innerHTML` on every relay-contact projection, so unchanged digits were destroyed and recreated whenever a neighboring sign/digit changed.
+
+The drawing renderer now creates persistent neutral SVG slot groups for each sign/digit position and rewrites only the slot whose rendered value actually changes. Slot cache keys include the installed glyph/sign implementation version so an intentional renderer implementation replacement still forces the required repaint. The accepted 1006315G segment/sign polygons, coordinates, spacing, relay mappings, contact timing, bounce behavior, and sound coupling are unchanged.
+
+Regression coverage:
+- added `tools/dsky-render-stability-smoke.js`;
+- added it to the canonical `tools/source-smoke-tests.txt` suite;
+- the smoke proves unchanged register zeros retain the same SVG node identity and receive no `innerHTML` write when the sign, first digit, or last digit changes;
+- the same invariant is checked for an unchanged upper-field zero when its neighbor changes;
+- committed-source `node --check` passed for the renderer and regression smoke, and the new regression smoke passed in the local execution environment.
+
+This is source-level verification. Live deployed browser/PWA confirmation of the originally observed visual symptom is still required before this defect is marked VERIFIED.
+
+
 ## 2026-09-25 full 140-relay live rack / unified contact-event presentation
 
 A new relay-rack view is mounted above the DSKY in the normal interactive layout. It has no decorative title/legend block and depicts every relay currently modeled by the app:
