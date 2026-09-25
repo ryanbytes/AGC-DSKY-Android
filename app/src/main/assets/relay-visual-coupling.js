@@ -14,13 +14,12 @@
  * authentic and sound + relay rack + DSKY projection stay frame-coupled.
  */
 (() => {
-  const visualState=window.AGCDSKY_APP_STATE;
   const display=window.AGCDSKY_DISPLAY;
   const shell=window.AGCDSKY_SHELL;
   const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   const audioModel=window.DSKY_RELAY_AUDIO;
   const relayMatrix=window.DSKY_RELAY_MATRIX;
-  if(!visualState||!display||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');
+  if(!display||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');
   const baseDecodeChannel10=display.implementation('decodeChannel10');
   if(typeof baseDecodeChannel10!=='function')throw new Error('Relay visual implementation hook unavailable');
 
