@@ -79,22 +79,20 @@
     out.sort((a,b)=>a.delay-b.delay||a.bit-b.bit);return out;
   }
 
-  function auxRelayClack(engaging,releasing){
-    const count=Math.max(0,engaging|0)+Math.max(0,releasing|0);if(!fidelityState.tickSound||count<=0)return;
-    const ctx=audio.ensure();if(!ctx)return;
-    const play=()=>audio.emitTick(ctx,ctx.currentTime+0.001,Math.min(0.90,0.62+0.08*Math.sqrt(Math.min(6,count))));
-    if(ctx.state==='running')play();else ctx.resume().then(play).catch(()=>{});
-  }
   const AUX_VISUAL=Object.freeze({comp:'comp',uplink:'uplink',temp:'temp',keyrel:'keyrel',oprerr:'oprerr',restart:'restart',stby:'stby'});
-  function setAuxRelays(next,render=true){
-    let engaging=0,releasing=0;
+  function commitAuxRelays(next,render=true){
     for(const [name,requested] of Object.entries(next||{})){
       if(!Object.prototype.hasOwnProperty.call(hw.auxRelays,name))continue;
-      const on=!!requested,before=!!hw.auxRelays[name];
-      if(before!==on){if(on)engaging++;else releasing++;hw.auxRelays[name]=on}
+      const on=!!requested;hw.auxRelays[name]=on;
       if(render&&AUX_VISUAL[name])renderer.setLamp(AUX_VISUAL[name],on);
     }
-    auxRelayClack(engaging,releasing);
+  }
+  function setAuxRelays(next,render=true){
+    const visual=window.DSKY_RELAY_VISUAL;
+    if(visual&&typeof visual.presentAux==='function'){
+      return visual.presentAux(next,{render,commit:(name,on,renderNow)=>commitAuxRelays({[name]:on},!!renderNow)});
+    }
+    return commitAuxRelays(next,render);
   }
 
   function clockLow11(row,want){return clockWord(row.native,want)&0o3777}
@@ -121,12 +119,15 @@
     }
     return true;
   }
-  function beginRelayDrive(relay,low11,render=true){
+  function beginRelayDrive(relay,low11,render=true,present=true){
     low11&=0o3777;
     const prior=Object.prototype.hasOwnProperty.call(hw.latches,relay)?hw.latches[relay]:0;
     const motions=changedArmatures(prior,low11),generation=(hw.relayGeneration[relay]||0)+1;
     hw.relayGeneration[relay]=generation;hw.activeDrive=relay;hw.lastWrite={relay,low11,changed:motions.length,at:performance.now()};
-    for(const motion of motions)relayArmatureClack(relay,motion.bit,motion.on,motion.delay);
+    if(present){
+      const visual=window.DSKY_RELAY_VISUAL;
+      if(visual&&typeof visual.presentDrive==='function')visual.presentDrive(relay,prior,low11,{renderContact:true});
+    }
     later(()=>{
       if(hw.relayGeneration[relay]!==generation)return;
       hw.latches[relay]=low11;
@@ -140,24 +141,27 @@
     const word=Number(value)&0o77777,relay=(word>>11)&0o17;
     if(relay===0){hw.activeDrive=0;hw.lastWrite={relay:0,low11:0,changed:0,at:performance.now()};return true}
     if(relay<1||relay>12)return false;
-    beginRelayDrive(relay,word&0o3777,true);return true;
+    beginRelayDrive(relay,word&0o3777,true,false);return true;
   }
   display.installImplementation('decodeChannel10',hardwareDecodeChannel10,'hardware relay drive');
 
   const baseDecodeChannel11=display.implementation('decodeChannel11');
   function hardwareDecodeChannel11(value){
-    const word=Number(value)&0o77777;setAuxRelays({comp:!!(word&0o00002),uplink:!!(word&0o00004),flash:!!(word&0o00040)},false);return baseDecodeChannel11.call(this,value);
+    const word=Number(value)&0o77777,result=baseDecodeChannel11.call(this,value);
+    setAuxRelays({comp:!!(word&0o00002),uplink:!!(word&0o00004),flash:!!(word&0o00040)},true);return result;
   }
   display.installImplementation('decodeChannel11',hardwareDecodeChannel11,'hardware auxiliary relays');
 
   const baseDecodeChannel163=display.implementation('decodeChannel163');
   function hardwareDecodeChannel163(value){
-    const word=Number(value)&0o77777;setAuxRelays({temp:!!(word&0o00010),keyrel:!!(word&0o00020),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},false);return baseDecodeChannel163.call(this,value);
+    const word=Number(value)&0o77777,result=baseDecodeChannel163.call(this,value);
+    setAuxRelays({temp:!!(word&0o00010),keyrel:!!(word&0o00020),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);return result;
   }
   display.installImplementation('decodeChannel163',hardwareDecodeChannel163,'hardware pulse-modulated auxiliaries');
 
   const baseResetAgcFace=display.implementation('resetFace');
   function hardwareResetAgcFace(...args){
+    const visual=window.DSKY_RELAY_VISUAL;if(visual&&typeof visual.resetPresentation==='function')visual.resetPresentation();
     for(const key of Object.keys(hw.latches))delete hw.latches[key];for(const key of Object.keys(hw.relayGeneration))delete hw.relayGeneration[key];hw.activeDrive=0;for(const key of Object.keys(hw.auxRelays))hw.auxRelays[key]=false;return baseResetAgcFace.apply(this,args);
   }
   display.installImplementation('resetFace',hardwareResetAgcFace,'hardware reset state');
@@ -269,5 +273,5 @@
   function registerSnapshotExtension(name,extension){if(typeof name!=='string'||!name||typeof extension!=='function')throw new TypeError('Hardware snapshot extension requires name/function');snapshotExtensions.set(name,extension);return()=>snapshotExtensions.delete(name)}
   function registerSettledPaintPolicy(name,policy){if(typeof name!=='string'||!name||typeof policy!=='function')throw new TypeError('Settled-paint policy requires name/function');settledPaintPolicies.set(name,policy);return()=>settledPaintPolicies.delete(name)}
 
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE',Object.freeze({snapshot,baseSnapshot,registerSnapshotExtension,registerSettledPaintPolicy,beginRelayDrive:(relay,word,render=true)=>beginRelayDrive(relay,word,render),relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS}),'hardware-fidelity publication');
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE',Object.freeze({snapshot,baseSnapshot,registerSnapshotExtension,registerSettledPaintPolicy,beginRelayDrive:(relay,word,render=true,present=true)=>beginRelayDrive(relay,word,render,present),relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS}),'hardware-fidelity publication');
 })();
