@@ -145,17 +145,16 @@
   }
   display.installImplementation('decodeChannel10',hardwareDecodeChannel10,'hardware relay drive');
 
-  const baseDecodeChannel11=display.implementation('decodeChannel11');
   function hardwareDecodeChannel11(value){
-    const word=Number(value)&0o77777,result=baseDecodeChannel11.call(this,value);
-    setAuxRelays({comp:!!(word&0o00002),uplink:!!(word&0o00004),flash:!!(word&0o00040)},true);return result;
+    const word=Number(value)&0o77777;display.setChannelState(0o11,word,{render:false});
+    setAuxRelays({comp:!!(word&0o00002),uplink:!!(word&0o00004),flash:!!(word&0o00040)},true);return true;
   }
   display.installImplementation('decodeChannel11',hardwareDecodeChannel11,'hardware auxiliary relays');
 
-  const baseDecodeChannel163=display.implementation('decodeChannel163');
   function hardwareDecodeChannel163(value){
-    const word=Number(value)&0o77777,result=baseDecodeChannel163.call(this,value);
-    setAuxRelays({temp:!!(word&0o00010),keyrel:!!(word&0o00020),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);return result;
+    const word=Number(value)&0o77777;display.setChannelState(0o163,word,{render:false});
+    document.body.classList.toggle('vn-flash-off',!!(word&0o00040));document.body.classList.toggle('el-off',!!(word&0o01000));
+    setAuxRelays({temp:!!(word&0o00010),keyrel:!!(word&0o00020),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);return true;
   }
   display.installImplementation('decodeChannel163',hardwareDecodeChannel163,'hardware pulse-modulated auxiliaries');
 
