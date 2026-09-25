@@ -38,8 +38,18 @@ const blankCount=(html.match(/class="lamp (?:white|yellow) blank"/g)||[]).length
 if(blankCount!==4)fail('expected four blank CM cells, found '+blankCount);
 for(const ch of ['A','B','C','E','G','I','K','L','M','N','O','P','R','S','T','U','Y'])req(html,`id="gorton-${ch}"`,'required Gorton glyph');
 
+const strokeMatch=finish.match(/stroke-width:\s*([0-9.]+);/);
+if(!strokeMatch)fail('fixed-vector stroke width missing');
+const outlineUnits=Number(strokeMatch[1]);
+const CHAR_HEIGHT_IN=.156;
+const GORTON_CAP_UNITS=920;
+const GORTON_STRAIGHT_STEM_UNITS=120;
+const effectiveStraightStemIn=((GORTON_STRAIGHT_STEM_UNITS+outlineUnits)/GORTON_CAP_UNITS)*CHAR_HEIGHT_IN;
+if(!(effectiveStraightStemIn>=.025-1e-9 && effectiveStraightStemIn<=.030+1e-9)){
+  fail('derived straight-stem width '+effectiveStraightStemIn.toFixed(6)+' in is outside SCD .025-.030 in envelope');
+}
+
 for(const marker of [
-  'stroke-width:60',
   'paint-order:stroke fill',
   '.gorton-defs{position:absolute;width:0;height:0',
   '.lamp .lamp-legend .gorton-glyph',
@@ -65,4 +75,5 @@ for(const marker of [
 ])req(third+'\n'+notices,marker,'Gorton attribution');
 
 console.log('annunciator fixed-vector smoke: PASS');
-console.log('  ten CM Gorton legends, four blanks, .156-in vector construction contract, and OFL attribution are source-gated');
+console.log('  ten CM Gorton legends, four blanks, OFL attribution, and deterministic vector construction are source-gated');
+console.log('  derived nominal straight-stem width: '+effectiveStraightStemIn.toFixed(6)+' in at .156-in character height');
