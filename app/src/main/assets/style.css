@@ -133,7 +133,7 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
 
 /* SCD 1006353 rev B: .855-.865 in square acrylic cap envelope on the 2004968E .970-in switch pitch.
    Use the .860-in tolerance midpoint; origin offsets below preserve every existing switch center. */
-.key{position:absolute;width:12.467784%;height:10.724975%;z-index:6;border:.12vmin solid #090a09;border-radius:7.558140%;background:linear-gradient(145deg,#353633 0%,#262724 36%,#181917 78%,#111210 100%);color:#eef2e8;box-shadow:inset .20vmin .18vmin .22vmin rgba(255,255,255,.16),inset -.22vmin -.25vmin .26vmin rgba(0,0,0,.76),0 .15vmin .1vmin #66665f;-webkit-tap-highlight-color:transparent;padding:0}
+.key{position:absolute;width:12.467784%;height:10.724975%;z-index:6;border:.12vmin solid #090a09;border-radius:7.558140%;background:linear-gradient(145deg,#353633 0%,#262724 36%,#181917 78%,#111210 100%);color:#eef2e8;box-shadow:inset .20vmin .18vmin .22vmin rgba(255,255,255,.16),inset -.22vmin -.25vmin .26vmin rgba(0,0,0,.76),0 .15vmin .1vmin #66665f;-webkit-tap-highlight-color:transparent;touch-action:none;padding:0}
 .gorton-key-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 .key-legend{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;fill:var(--key-el-color);filter:var(--key-el-filter);pointer-events:none}
 /* R-700 §3.10.1.5 pushbutton travel is normal to the panel.  A straight-on
