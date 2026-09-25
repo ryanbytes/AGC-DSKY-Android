@@ -20,30 +20,32 @@ function assert(c,m){if(!c)throw new Error(m)}
 for(const marker of [
   "window.AGCDSKY_SERVICE_REGISTRY",
   "registry.publish('AGCDSKY_KEY_TACTILE'",
-  "make:'VibrationEffect.EFFECT_CLICK'",
-  "release:'VibrationEffect.EFFECT_TICK'",
+  "make:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'",
+  "release:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'",
   "legacyFallback:'View.performHapticFeedback'",
-  "policy:'event-cue-only; predefined device-tuned effects; no force-to-vibration amplitude mapping'",
+  "policy:'event-cue-only; default-amplitude timed pulses; no force-to-vibration amplitude mapping'",
   "totalFingerForceOz: null"
 ])assert(tactile.includes(marker),'tactile service missing: '+marker);
-for(const forbidden of ['navigator.vibrate','forceToAmplitude','amplitude:','createOneShot','createWaveform'])
-  assert(!tactile.includes(forbidden),'tactile service invented raw vibration mapping: '+forbidden);
+for(const forbidden of ['navigator.vibrate','forceToAmplitude','amplitude:','createWaveform'])
+  assert(!tactile.includes(forbidden),'tactile service invented force/amplitude mapping: '+forbidden);
 
 for(const marker of [
-  'VibrationEffect.EFFECT_CLICK',
-  'VibrationEffect.EFFECT_TICK',
-  'VibrationEffect.createPredefined(predefinedEffect)',
-  'vibrator.vibrate(VibrationEffect.createPredefined(predefinedEffect))',
-  'VibrationEffect.EFFECT_HEAVY_CLICK',
+  'VibratorManager',
+  'manager.getDefaultVibrator()',
+  'private static final long MAKE_MS = 22L',
+  'private static final long RELEASE_MS = 10L',
+  'private static final long DIAGNOSTIC_MS = 120L',
+  'VibrationEffect.createOneShot(',
+  'VibrationEffect.DEFAULT_AMPLITUDE',
   'testPulse()',
   'HapticFeedbackConstants.VIRTUAL_KEY',
   'HapticFeedbackConstants.VIRTUAL_KEY_RELEASE',
   'target.performHapticFeedback(legacyViewEffect)',
   'setHapticFeedbackEnabled(true)'
 ])assert(bridge.includes(marker),'native haptic bridge missing: '+marker);
-for(const forbidden of ['VibrationEffect.createOneShot','VibrationEffect.createWaveform','import android.os.VibrationAttributes','VibrationAttributes.createForUsage'])
-  assert(!bridge.includes(forbidden),'native bridge retained suppressed/raw vibration path: '+forbidden);
-assert(manifest.includes('android.permission.VIBRATE'),'predefined VibrationEffect path requires VIBRATE permission');
+for(const forbidden of ['VibrationEffect.createPredefined','VibrationEffect.createWaveform','import android.os.VibrationAttributes','VibrationAttributes.createForUsage'])
+  assert(!bridge.includes(forbidden),'native bridge retained failed/suppressed vibration path: '+forbidden);
+assert(manifest.includes('android.permission.VIBRATE'),'one-shot VibrationEffect path requires VIBRATE permission');
 
 for(const [source,label] of [[main,'MainActivity'],[sensor,'SensorMainActivity']]){
   assert(source.includes('new KeyHapticBridge(webView),"HapticBridge"'),label+' missing HapticBridge exposure');
@@ -69,8 +71,10 @@ assert(proceed.includes("releaseProceedWithHaptic()"),'PRO release haptic missin
 const calls=[];
 const context={console,Date,window:null,HapticBridge:{
   available(){return true},
-  backend(){return 'Vibrator.predefined-unclassified'},
+  backend(){return 'VibratorManager.default-one-shot'},
   amplitudeControl(){return true},
+  makeDurationMs(){return 22},
+  releaseDurationMs(){return 10},
   keyMake(){calls.push('make');return true},
   keyRelease(){calls.push('release');return true},
   testPulse(){calls.push('test');return true}
@@ -95,10 +99,11 @@ assert(service.make('1')===true&&service.release('1')===true,'native bridge call
 assert(calls.join(',')==='make,release','native bridge event order wrong');
 const status=service.status();
 assert(status.nativeBridge===true,'native bridge status false');
-assert(status.nativeBackend==='Vibrator.predefined-unclassified','native backend status wrong');
+assert(status.nativeBackend==='VibratorManager.default-one-shot','native backend status wrong');
 assert(status.amplitudeControl===true,'amplitude-control status wrong');
+assert(status.makeDurationMs===22&&status.releaseDurationMs===10,'one-shot pulse durations wrong');
 assert(service.test()===true&&calls[calls.length-1]==='test','direct native haptic probe failed');
-assert(status.platformEffects.make==='VibrationEffect.EFFECT_CLICK'&&status.platformEffects.release==='VibrationEffect.EFFECT_TICK','predefined effect mapping wrong');
+assert(status.platformEffects.make==='VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'&&status.platformEffects.release==='VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)','one-shot effect mapping wrong');
 assert(status.makeCount===1&&status.releaseCount===1,'tactile event counters wrong');
 assert(status.actuationTravelIn===3/16&&status.overtravelToBottomIn===1/16&&status.totalTravelIn===1/4,'R-700 travel not propagated');
 assert(status.springForceIncreaseToActuationOzMin===9&&status.springForceIncreaseToActuationOzMax===10.5,'actuation spring ΔF wrong');
@@ -113,4 +118,4 @@ assert(browserService.make('1')===false&&browserService.release('1')===false,'no
 assert(browserService.status().nativeBridge===false,'non-native surface incorrectly reports haptics');
 
 console.log('key tactile feedback smoke: PASS');
-console.log('  R-700/2004941/1010901 mechanics remain numeric diagnostics only; Android uses device-tuned EFFECT_CLICK make / EFFECT_TICK release with no raw force-amplitude fiction');
+console.log('  R-700/2004941/1010901 mechanics remain numeric diagnostics only; Android uses VibratorManager/default-vibrator DEFAULT_AMPLITUDE one-shot pulses with no Apollo force-amplitude mapping');
