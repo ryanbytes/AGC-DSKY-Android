@@ -84,6 +84,10 @@ final class KeyHapticBridge {
         return pm != null && pm.isPowerSaveMode();
     }
 
+    @JavascriptInterface public String platform() {
+        return "android";
+    }
+
     @JavascriptInterface public String backend() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             return "VibratorManager.default-one-shot";
