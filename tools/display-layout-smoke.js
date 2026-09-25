@@ -173,8 +173,10 @@ assert(CM.includes('--numerics-level:1') && CM.includes('--integral-level:1'),
   'independent lighting variables missing');
 assert(CM.includes('.el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level))}'),
   'NUMERICS feed must scale energized EL segments only');
-assert(CM.includes('color:var(--key-el-color)') && CM.includes('text-shadow:var(--key-el-shadow)'),
-  'white EL key legend illumination missing');
+assert(CM.includes('body.spacecraft-cm .key .key-legend') &&
+       CM.includes('fill:var(--key-el-color)') &&
+       CM.includes('filter:var(--key-el-filter)'),
+  'white EL key vector legend illumination missing');
 assert(CM.includes('.key.pressed') && CM.includes('translateY(var(--key-travel,.42vmin))'),
   'mechanical key travel rendering missing');
 
@@ -241,6 +243,6 @@ console.log(`  visible DSKY fraction: ${visibleFraction.toFixed(6)} (target ${ex
 console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(visibleFraction / 2).toFixed(6)})`);
 console.log(`  full-screen EL stack: cover ${nominalCoverDepthAt106.toFixed(3)} + 1006315 package ${nominalIndicatorDepthAt106.toFixed(3)} = ${nominalTotalDepthAt106.toFixed(3)} units at 106-wide`);
 console.log('  annunciators: three-source per-bulb thermal fade with foreground fixed Gorton vector legends');
-console.log('  lighting: independent NUMERICS/INTEGRAL with white EL key legends');
+console.log('  lighting: independent NUMERICS/INTEGRAL with fixed-vector white EL key legends');
 console.log('  options: bounded DSKY-style illuminated key strip');
 console.log('  recovered UI: forced FS595/glass finish is parser-loaded while physical parallax retains motion ownership');
