@@ -73,6 +73,7 @@ flight-hardware-ui-smoke.js
 annunciator-vector-smoke.js
 key-mechanical-spec-smoke.js
 key-geometry-smoke.js
+key-vector-smoke.js
 keyboard-electrical-interlock-smoke.js
 keyboard-hardware-input-smoke.js
 keyboard-clock-cancel-smoke.js
