@@ -69,6 +69,10 @@
       nativeBridge: !!bridge(),
       nativeBackend: (() => { try { return bridge()?.backend?.() || null; } catch (_) { return null; } })(),
       amplitudeControl: (() => { try { return !!bridge()?.amplitudeControl?.(); } catch (_) { return false; } })(),
+      vibratePermissionGranted: (() => { try { return !!bridge()?.vibratePermissionGranted?.(); } catch (_) { return false; } })(),
+      systemHapticFeedbackEnabled: (() => { try { return Number(bridge()?.systemHapticFeedbackEnabled?.()); } catch (_) { return -1; } })(),
+      systemVibrateOn: (() => { try { return Number(bridge()?.systemVibrateOn?.()); } catch (_) { return -1; } })(),
+      powerSaveMode: (() => { try { return !!bridge()?.powerSaveMode?.(); } catch (_) { return false; } })(),
       makeDurationMs: (() => { try { return Number(bridge()?.makeDurationMs?.()) || null; } catch (_) { return null; } })(),
       releaseDurationMs: (() => { try { return Number(bridge()?.releaseDurationMs?.()) || null; } catch (_) { return null; } })(),
       platformEffects: Object.freeze({
@@ -102,10 +106,18 @@
     catch (_) { return false; }
   }
 
+  function openSystemSettings() {
+    const native = bridge();
+    if (!native || typeof native.openSoundSettings !== 'function') return false;
+    try { return native.openSoundSettings() !== false; }
+    catch (_) { return false; }
+  }
+
   registry.publish('AGCDSKY_KEY_TACTILE', Object.freeze({
     make: key => fire('make', key),
     release: key => fire('release', key),
     test,
+    openSystemSettings,
     status
   }), 'key tactile feedback publication');
 })();
