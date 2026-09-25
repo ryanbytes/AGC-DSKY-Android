@@ -70,6 +70,7 @@ diagnostics-self-test-smoke.js
 dsky-mapping-smoke.js
 dsky-keycode-consistency-smoke.js
 flight-hardware-ui-smoke.js
+annunciator-vector-smoke.js
 key-mechanical-spec-smoke.js
 keyboard-electrical-interlock-smoke.js
 keyboard-hardware-input-smoke.js
