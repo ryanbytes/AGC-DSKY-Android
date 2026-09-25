@@ -46,6 +46,16 @@ The copyright and MIT permission notice are retained in the source and packaged 
 
 The ten CM alarm-indicator legends use selected Gorton Condensed glyph outlines converted to static SVG paths. No font file is bundled or loaded at runtime. SCD `1006387D` remains the controlling source for the .156-in character height, .025-.030-in stroke envelope, centering, black fill, and legend arrangement; the reconstructed Gorton source supplies the glyph construction.
 
+## Gorton Normal key-cap vector centerlines
+
+- Project: https://github.com/ehdorrii/dsky-fonts
+- Source: `source/Gorton-Normal-Splines.sfd`
+- Source blob: `8f24c6a28e5e0d979a6458a8c11859133146d4e6`
+- Copyright (c) 2019 Eugene Dorr
+- License: SIL Open Font License 1.1.
+
+The DSKY key legends use selected Gorton Normal engraving centerlines converted to static SVG paths. No font file is bundled or loaded at runtime. MIT/MSC SCD `1006353` remains the controlling source for the key-cap marking sizes and strokes: .250-in characters with .030-in strokes and .125-in characters with .022-in strokes. The later Block II PRO key is retained for the 2003994-series configuration even though the surviving 1006353 scan's older table shows STBY in that position.
+
 ## Reference material
 
 Historical Apollo documentation, Virtual AGC data, and CuriousMarc restoration material were used as technical/visual references. CuriousMarc restoration imagery is a useful cross-check for surviving hardware appearance but does not override the original engineering drawings. No CuriousMarc video frames are bundled.
