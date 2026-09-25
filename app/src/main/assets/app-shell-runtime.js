@@ -120,7 +120,7 @@ function updateModeButton(){
 }
 function updateDreamOptionVisibility(){
   const b=$('dreambright');if(!b)return;
-  b.hidden=!(window.DreamBridge&&typeof window.DreamBridge==='object');
+  b.hidden=!(window.TimeBridge&&!shellState.dream);
 }
 function showControls(){
   if(shellState.dream||shellState.displayOnly)return;
