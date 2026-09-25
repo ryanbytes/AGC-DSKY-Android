@@ -9,6 +9,7 @@ const {installServiceRegistry} = require('./test-service-registry');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'app/src/main/assets/index.html'), 'utf8');
 const cm = fs.readFileSync(path.join(root, 'app/src/main/assets/cm-mode.js'), 'utf8');
+const diagnostics = fs.readFileSync(path.join(root, 'app/src/main/assets/diagnostics.js'), 'utf8');
 
 function fail(message) {
   console.error('CM FEATURE LOAD FAIL: ' + message);
