@@ -215,8 +215,8 @@
     host.className = 'lighting-control';
     host.innerHTML = `
       <span class="lighting-label">${labelText}</span>
-      <button class="lighting-knob" type="button"
-              aria-label="${labelText} brightness"
+      <button class="lighting-knob" type="button" role="slider"
+              aria-label="${labelText} brightness" aria-orientation="vertical"
               aria-valuemin="25" aria-valuemax="100" aria-valuenow="100"
               title="Swipe up/down to adjust">
         <span class="lighting-knob-index" aria-hidden="true"></span>
