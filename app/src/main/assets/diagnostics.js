@@ -142,13 +142,17 @@
       const tactile=lateService('AGCDSKY_KEY_TACTILE');
       if(!tactile||typeof tactile.status!=='function'||typeof tactile.make!=='function'||typeof tactile.release!=='function')throw new Error('key tactile service unavailable');
       const status=tactile.status();
-      if(status.policy!=='event-cue-only; default-amplitude timed pulses; no force-to-vibration amplitude mapping')throw new Error('tactile force policy changed');
+      if(status.policy!=='event-cue-only; platform-native/browser-supported haptics; no force-to-vibration amplitude mapping')throw new Error('tactile force policy changed');
       if(status.actuationTravelIn!==3/16||status.overtravelToBottomIn!==1/16||status.totalTravelIn!==1/4)throw new Error('R-700 key travel metadata mismatch');
       if(status.springForceIncreaseToActuationOzMin!==9||status.springForceIncreaseToActuationOzMax!==10.5)throw new Error('spring actuation ΔF envelope mismatch');
       if(status.springForceIncreaseToBottomOzMin!==12||status.springForceIncreaseToBottomOzMax!==14)throw new Error('spring bottom ΔF envelope mismatch');
       if(status.totalFingerForceOz!==null)throw new Error('total finger force must remain unresolved');
       if(window.TimeBridge&&(!window.HapticBridge||typeof HapticBridge.keyMake!=='function'||typeof HapticBridge.keyRelease!=='function'))throw new Error('Android HapticBridge unavailable');
-      return status.nativeBridge?'Android '+(status.nativeBackend||'native haptics')+' · '+status.makeDurationMs+' ms make / '+status.releaseDurationMs+' ms release':'source-backed tactile model active · native haptics unavailable on this surface';
+      if(status.nativeBridge||status.browserVibration){
+        const timing=status.makeDurationMs&&status.releaseDurationMs?' · '+status.makeDurationMs+' ms make / '+status.releaseDurationMs+' ms release':'';
+        return String(status.hapticPlatform||'platform').toUpperCase()+' '+(status.nativeBackend||'haptics')+timing;
+      }
+      return 'source-backed tactile model active · haptics unavailable on this surface';
     });
     await run('Native/browser bridges',async()=>{
       const native=!!window.TimeBridge;
@@ -261,12 +265,16 @@
       h+=row('Compression spring',`${f(tactileStatus.springRateLbPerInMin,1)}–${f(tactileStatus.springRateLbPerInMax,1)} lb/in · ΔF contact ${f(tactileStatus.springForceIncreaseToActuationOzMin,1)}–${f(tactileStatus.springForceIncreaseToActuationOzMax,1)} oz · bottom ${f(tactileStatus.springForceIncreaseToBottomOzMin,1)}–${f(tactileStatus.springForceIncreaseToBottomOzMax,1)} oz`);
       h+=row('Sensitive switch',`actuate ≤${f(tactileStatus.switchActuatingForceOzMax,1)} oz · release ≥${f(tactileStatus.switchReleaseForceOzMin,1)} oz`);
       h+=row('Total finger force','UNKNOWN · installed preload / leaf-spring leverage / friction unresolved');
-      h+=row('Tactile cue',tactileStatus.nativeBridge?('ANDROID '+(tactileStatus.nativeBackend||'NATIVE')+' · '+tactileStatus.makeDurationMs+' ms MAKE / '+tactileStatus.releaseDurationMs+' ms RELEASE · DEFAULT AMPLITUDE'):'NO NATIVE HAPTIC BRIDGE ON THIS SURFACE');
-      h+=row('Vibrator amplitude control',tactileStatus.amplitudeControl?'YES':'NO / NOT REPORTED');
-      h+=row('VIBRATE permission',tactileStatus.vibratePermissionGranted?'GRANTED':'NOT GRANTED');
-      h+=row('System haptic feedback',tactileStatus.systemHapticFeedbackEnabled===1?'ON':(tactileStatus.systemHapticFeedbackEnabled===0?'OFF':'UNKNOWN'));
-      h+=row('System vibrate_on',tactileStatus.systemVibrateOn===1?'ON':(tactileStatus.systemVibrateOn===0?'OFF':'UNKNOWN'));
-      h+=row('Power saver',tactileStatus.powerSaveMode?'ON':'OFF');
+      const tactileAvailable=tactileStatus.nativeBridge||tactileStatus.browserVibration;
+      const timing=tactileStatus.makeDurationMs&&tactileStatus.releaseDurationMs?(' · '+tactileStatus.makeDurationMs+' ms MAKE / '+tactileStatus.releaseDurationMs+' ms RELEASE'):'';
+      h+=row('Tactile cue',tactileAvailable?(String(tactileStatus.hapticPlatform||'platform').toUpperCase()+' '+(tactileStatus.nativeBackend||'HAPTICS')+timing):'NO HAPTIC BACKEND ON THIS SURFACE');
+      if(tactileStatus.hapticPlatform==='android'){
+        h+=row('Vibrator amplitude control',tactileStatus.amplitudeControl?'YES':'NO / NOT REPORTED');
+        h+=row('VIBRATE permission',tactileStatus.vibratePermissionGranted?'GRANTED':'NOT GRANTED');
+        h+=row('System haptic feedback',tactileStatus.systemHapticFeedbackEnabled===1?'ON':(tactileStatus.systemHapticFeedbackEnabled===0?'OFF':'UNKNOWN'));
+        h+=row('System vibrate_on',tactileStatus.systemVibrateOn===1?'ON':(tactileStatus.systemVibrateOn===0?'OFF':'UNKNOWN'));
+        h+=row('Power saver',tactileStatus.powerSaveMode?'ON':'OFF');
+      }
       h+=row('Tactile events',`${tactileStatus.makeCount} make · ${tactileStatus.releaseCount} release`);
     }else{
       h+=row('Key tactile model','UNAVAILABLE');
