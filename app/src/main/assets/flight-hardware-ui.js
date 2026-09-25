@@ -102,6 +102,9 @@
     const keyAlpha = 0.22 + 0.78 * effectiveIntegral;
     const glowAlpha = 0.46 * effectiveIntegral;
     root.style.setProperty('--key-el-color', `rgba(245,247,237,${keyAlpha.toFixed(3)})`);
+    root.style.setProperty('--key-el-shadow', effectiveIntegral > 0.001
+      ? `0 0 .18vmin rgba(244,250,236,${glowAlpha.toFixed(3)}),0 .08em #000`
+      : '0 .08em #000');
     root.style.setProperty('--key-el-filter', effectiveIntegral > 0.001
       ? `drop-shadow(0 0 .18vmin rgba(244,250,236,${glowAlpha.toFixed(3)})) drop-shadow(0 .08vmin 0 #000)`
       : 'drop-shadow(0 .08vmin 0 #000)');
