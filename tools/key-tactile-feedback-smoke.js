@@ -59,7 +59,7 @@ for(const marker of [
 ])assert(keyboard.includes(marker),'normal-key tactile coupling missing: '+marker);
 assert(proceed.includes("get('AGCDSKY_KEY_TACTILE')"),'PRO tactile service lookup missing');
 assert(proceed.includes("keyHaptic(false)"),'PRO make haptic missing');
-assert(proceed.includes("releaseProceed(true)"),'PRO release haptic missing');
+assert(proceed.includes("releaseProceedWithHaptic()"),'PRO release haptic missing');
 
 const calls=[];
 const context={console,Date,window:null,HapticBridge:{
