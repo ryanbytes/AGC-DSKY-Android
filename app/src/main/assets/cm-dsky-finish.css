@@ -99,7 +99,7 @@ body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
 }
 
 /*
- * Alarm/status indicator, SCD 1006387C.
+ * Alarm/status indicator, SCD 1006387D.
  *
  * The production indicator is not EL.  Each of the ten active legend areas is
  * backlit by three parallel-wired incandescent lamps.  The drawing requires
@@ -115,10 +115,6 @@ body.spacecraft-cm .lamp{
   color:#11120f;
   border-color:#2d2e2a;
   box-shadow:inset 0 0 .18vmin rgba(255,255,255,.10),inset 0 0 .34vmin rgba(0,0,0,.28);
-  font-family:"Arial Narrow","Liberation Sans Narrow","Roboto Condensed",Arial,sans-serif;
-  font-stretch:condensed;
-  font-weight:700;
-  letter-spacing:-.035em;
   text-shadow:none;
 }
 body.spacecraft-cm .lamp:not(.on),
@@ -176,10 +172,29 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on.yellow{
   color:#10110e;
   box-shadow:inset 0 0 .18vmin rgba(255,255,255,.10),inset 0 0 .34vmin rgba(0,0,0,.28);
 }
+/* SCD 1006387D requires .156-in Gorton Condensed with .025-.030-in
+   strokes. The ten CM legends are static SVG outlines from the OFL Gorton
+   source, not runtime text, so Android/WebView font availability cannot alter
+   their geometry. A 60-unit outline compensation yields the accepted visual
+   weight; the SVG viewBox preserves the annunciator-cell aspect ratio. */
+.gorton-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-legend{
-  position:relative;
+  position:absolute;
+  inset:0;
   z-index:2;
   display:block;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  pointer-events:none;
+}
+body.spacecraft-cm .lamp .lamp-legend .gorton-glyph{
+  fill:#10110e;
+  stroke:#10110e;
+  stroke-width:60;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  paint-order:stroke fill;
 }
 body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-source{
   position:absolute;
