@@ -10,6 +10,7 @@ const no=(t,n,l)=>{if(t.includes(n))fail(`${l} must not contain: ${n}`)};
 const ui=read('app/src/main/assets/flight-hardware-ui.js');
 const rheostat=read('app/src/main/assets/lighting-rheostat-stop.js');
 const keySpec=read('app/src/main/assets/key-mechanical-spec.js');
+const electricalSpec=read('app/src/main/assets/key-electrical-spec.js');
 const interlock=read('app/src/main/assets/keyboard-electrical-interlock.js');
 const proceed=read('app/src/main/assets/proceed-electrical.js');
 const cm=read('app/src/main/assets/cm-mode.js');
@@ -20,11 +21,11 @@ const controls=read('app/src/main/assets/controls-layout.css');
 const hw=read('app/src/main/assets/hardware-fidelity.js');
 const sw=read('pwa/static/sw.js');
 
-for(const [text,filename] of [[ui,'flight-hardware-ui.js'],[rheostat,'lighting-rheostat-stop.js'],[keySpec,'key-mechanical-spec.js'],[interlock,'keyboard-electrical-interlock.js'],[proceed,'proceed-electrical.js'],[cm,'cm-mode.js']]){
+for(const [text,filename] of [[ui,'flight-hardware-ui.js'],[rheostat,'lighting-rheostat-stop.js'],[keySpec,'key-mechanical-spec.js'],[electricalSpec,'key-electrical-spec.js'],[interlock,'keyboard-electrical-interlock.js'],[proceed,'proceed-electrical.js'],[cm,'cm-mode.js']]){
   try{new vm.Script(text,{filename})}catch(error){fail(`${filename} syntax error: ${error.message}`)}
 }
 
-const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-perceptual-personality','relay-show'];
+const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-perceptual-personality','relay-show'];
 let previous=-1;
 for(const feature of features){
   const tag=`<script src="${feature}.js" data-feature="${feature}"></script>`,pos=html.indexOf(tag);
@@ -38,7 +39,7 @@ req(cm,"const shell=window.AGCDSKY_SHELL",'CM shell storage owner');
 req(cm,"shell.store.set('agcMission','comanche055')",'CM mission lock');
 no(cm,"localStorage.",'CM configuration storage ownership');
 req(cm,"document.body.classList.add('spacecraft-cm')",'CM body mode');
-for(const feature of ['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-tactile-feedback','keyboard-electrical-interlock'])req(sw,`'./${feature}.js'`,'offline PWA cache');
+for(const feature of ['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock'])req(sw,`'./${feature}.js'`,'offline PWA cache');
 
 for(const marker of ["const LEVELS = Object.freeze([1.00, 0.75, 0.50, 0.25, 0.00])","saveIndex('dskyNumericsLevel'","saveIndex('dskyIntegralLevel'","--numerics-level","--integral-level","NUMERICS ${levelText(numericsIndex)}","INTEGRAL ${levelText(integralIndex)}","LIGHT BUS DEMO","NUMERICS FEED OPEN","INTEGRAL FEED OPEN","BOTH LIGHTING FEEDS OPEN","RELAY STATE RETAINED"])req(ui,marker,'independent lighting model');
 for(const marker of ["const MIN_NORMAL_LEVEL = 0.25","cycleWithMechanicalStop","normalizeOne('numerics')","normalizeOne('integral')","completeOffMethod:'open lighting feed / circuit breaker, not normal rheostat rotation'","zeroReservedFor:'LIGHT BUS DEMO feed-open state'"])req(rheostat,marker,'lighting rheostat mechanical stop');
