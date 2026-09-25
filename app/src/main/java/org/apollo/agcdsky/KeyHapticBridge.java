@@ -1,10 +1,15 @@
 package org.apollo.agcdsky;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
+import android.provider.Settings;
 import android.view.HapticFeedbackConstants;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
@@ -12,14 +17,9 @@ import android.webkit.WebView;
 /**
  * Native haptic endpoint for the DSKY key mechanism.
  *
- * K-03 v4 deliberately avoids Android's predefined-effect path because the
- * target Pixel 9a rendered EFFECT_CLICK, EFFECT_TICK, and EFFECT_HEAVY_CLICK
- * as no perceptible vibration despite a live bridge and vibrator capability.
- *
- * API 31+ obtains the hardware through VibratorManager.getDefaultVibrator().
- * Pulses use VibrationEffect.createOneShot(..., DEFAULT_AMPLITUDE), so Android
- * selects the actuator amplitude. Pulse duration is presentation timing only;
- * it is never derived from Apollo spring or switch force.
+ * K-03 diagnostic path now exposes the Android state that can suppress every
+ * vibration request. The app does not try to bypass a user-disabled global
+ * vibration/haptics setting.
  */
 final class KeyHapticBridge {
     private static final long MAKE_MS = 22L;
@@ -27,12 +27,14 @@ final class KeyHapticBridge {
     private static final long DIAGNOSTIC_MS = 120L;
 
     private final WebView view;
+    private final Context context;
     private final Vibrator vibrator;
 
     KeyHapticBridge(WebView view) {
         this.view = view;
+        this.context = view.getContext();
         this.view.setHapticFeedbackEnabled(true);
-        this.vibrator = resolveVibrator(view.getContext());
+        this.vibrator = resolveVibrator(context);
     }
 
     private static Vibrator resolveVibrator(Context context) {
@@ -49,6 +51,37 @@ final class KeyHapticBridge {
 
     @JavascriptInterface public boolean amplitudeControl() {
         return vibrator != null && vibrator.hasAmplitudeControl();
+    }
+
+    @JavascriptInterface public boolean vibratePermissionGranted() {
+        return context.checkSelfPermission(Manifest.permission.VIBRATE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @JavascriptInterface public int systemHapticFeedbackEnabled() {
+        try {
+            return Settings.System.getInt(
+                    context.getContentResolver(),
+                    Settings.System.HAPTIC_FEEDBACK_ENABLED,
+                    -1);
+        } catch (RuntimeException ignored) {
+            return -1;
+        }
+    }
+
+    @JavascriptInterface public int systemVibrateOn() {
+        try {
+            return Settings.System.getInt(
+                    context.getContentResolver(),
+                    Settings.System.VIBRATE_ON,
+                    -1);
+        } catch (RuntimeException ignored) {
+            return -1;
+        }
+    }
+
+    @JavascriptInterface public boolean powerSaveMode() {
+        PowerManager pm = context.getSystemService(PowerManager.class);
+        return pm != null && pm.isPowerSaveMode();
     }
 
     @JavascriptInterface public String backend() {
@@ -77,9 +110,18 @@ final class KeyHapticBridge {
                         : HapticFeedbackConstants.KEYBOARD_TAP);
     }
 
-    /** Diagnostic-only unmistakable pulse to prove the native vibrator path. */
     @JavascriptInterface public boolean testPulse() {
         return performOneShot(DIAGNOSTIC_MS, HapticFeedbackConstants.LONG_PRESS);
+    }
+
+    @JavascriptInterface public boolean openSoundSettings() {
+        try {
+            Intent intent = new Intent(Settings.ACTION_SOUND_SETTINGS);
+            context.startActivity(intent);
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     private boolean performOneShot(long durationMs, int legacyViewEffect) {
