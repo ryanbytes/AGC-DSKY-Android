@@ -80,18 +80,41 @@
     return `<g class="el-sign" transform="scale(${U.toFixed(6)}) translate(0 ${(-DIGIT_TOP_IN).toFixed(6)})">${paths}</g>`;
   }
 
+  const SVG_NS='http://www.w3.org/2000/svg';
+  function stableSlots(el,kind,count){
+    const existing=Array.from(el.children||[]);
+    const valid=existing.length===count&&existing.every((node,index)=>
+      node.getAttribute&&node.getAttribute('data-el-slot')===kind&&node.getAttribute('data-el-slot-index')===String(index));
+    if(valid)return existing;
+    while(el.firstChild)el.removeChild(el.firstChild);
+    const slots=[];
+    for(let index=0;index<count;index++){
+      const slot=document.createElementNS(SVG_NS,'g');
+      slot.setAttribute('data-el-slot',kind);
+      slot.setAttribute('data-el-slot-index',String(index));
+      el.appendChild(slot);slots.push(slot);
+    }
+    return slots;
+  }
+  function paintStableSlot(slot,value,markup){
+    const key=String(value);
+    if(slot.getAttribute('data-el-value')===key)return false;
+    slot.innerHTML=markup;
+    slot.setAttribute('data-el-value',key);
+    return true;
+  }
   function apolloRenderDigits(el,text){
-    let out='',glyph=renderer.implementation('glyph');
-    String(text).split('').forEach((ch,i)=>{out+=glyph(ch,i*UPPER_ADVANCE_IN);});
-    el.innerHTML=out;
+    const chars=String(text).split(''),glyph=renderer.implementation('glyph'),glyphVersion=renderer.compatibilityVersions().glyph;
+    const slots=stableSlots(el,'upper-digit',chars.length);
+    chars.forEach((ch,i)=>paintStableSlot(slots[i],`${glyphVersion}:${ch}`,glyph(ch,i*UPPER_ADVANCE_IN)));
   }
   const FIRST_DIGIT_X_IN=.180;
   function apolloRenderReg(el,text){
     text=String(text);
-    const signGlyph=renderer.implementation('signGlyph'),glyph=renderer.implementation('glyph');
-    let out=signGlyph(text[0]);
-    text.slice(1).split('').forEach((ch,i)=>{out+=glyph(ch,FIRST_DIGIT_X_IN+i*REGISTER_ADVANCE_IN);});
-    el.innerHTML=out;
+    const chars=text.slice(1).split(''),signGlyph=renderer.implementation('signGlyph'),glyph=renderer.implementation('glyph'),versions=renderer.compatibilityVersions();
+    const slots=stableSlots(el,'register',1+chars.length);
+    paintStableSlot(slots[0],`${versions.signGlyph}:${text[0]??''}`,signGlyph(text[0]));
+    chars.forEach((ch,i)=>paintStableSlot(slots[i+1],`${versions.glyph}:${ch}`,glyph(ch,FIRST_DIGIT_X_IN+i*REGISTER_ADVANCE_IN)));
   }
 
   renderer.installImplementation('glyph',apolloGlyph,'Apollo drawing geometry');
