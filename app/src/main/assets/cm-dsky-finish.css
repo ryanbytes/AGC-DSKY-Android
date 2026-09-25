@@ -9,6 +9,7 @@
   --numerics-level:1;
   --integral-level:1;
   --key-el-color:rgba(245,247,237,1);
+  --key-el-shadow:0 0 .18vmin rgba(244,250,236,.46),0 .08em #000;
   --key-el-filter:drop-shadow(0 0 .18vmin rgba(244,250,236,.46)) drop-shadow(0 .08vmin 0 #000);
 }
 
