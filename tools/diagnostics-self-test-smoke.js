@@ -29,6 +29,7 @@ for(const marker of [
   'ntp.lastAttemptUtcMs',
   'ntp.lastAttemptResult',
   'ntp.syncInFlight',
+  'id="diag-relay-show"',
   'id="diag-full-test"',
   "document.getElementById('diag-full-test').onclick=runFullSelfTest",
   'SELF_TEST_ASSETS',

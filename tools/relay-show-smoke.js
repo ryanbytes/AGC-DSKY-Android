@@ -16,6 +16,7 @@ const ordered=(text,tokens,label)=>{
 const html=read('app/src/main/assets/index.html');
 const cm=read('app/src/main/assets/cm-mode.js');
 const show=read('app/src/main/assets/relay-show.js');
+const diagnostics=read('app/src/main/assets/diagnostics.js');
 const perceptual=read('app/src/main/assets/relay-perceptual-personality.js');
 
 new vm.Script(show,{filename:'relay-show.js'});
@@ -24,7 +25,10 @@ new vm.Script(perceptual,{filename:'relay-perceptual-personality.js'});
 /* Parser ownership. cm-mode is configuration-only now. */
 req(cm,'performs no script injection','CM parser-ownership contract');
 forbid(cm,'relay-show.js','CM configuration boundary');
-req(html,'<button id="relay-show">RELAY SHOW</button>','relay-show control');
+forbid(html,'id="relay-show"','primary options relay-show control');
+req(diagnostics,'id="diag-relay-show"','diagnostics relay-show control');
+req(diagnostics,"lateService('AGCDSKY_RELAY_SHOW')",'diagnostics relay-show service action');
+forbid(show,"document.getElementById('relay-show')",'relay-show menu-button ownership');
 ordered(html,[
   '<script src="relay-perceptual-personality.js"',
   '<script src="relay-show.js"',
@@ -103,4 +107,4 @@ forbid(perceptual,'Math.random(','non-deterministic relay identity');
 for(const token of ['brightness(','relay-flare','filter:']) forbid(show,token,'relay-show optical hack');
 
 console.log('Relay show smoke: PASS');
-console.log('  parser order, registry-backed service ownership, display/clock-owned choreography, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');
+console.log('  diagnostics-owned launch control, registry-backed service ownership, display/clock-owned choreography, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');

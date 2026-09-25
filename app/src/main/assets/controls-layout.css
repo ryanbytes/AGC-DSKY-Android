@@ -107,6 +107,156 @@
 .app-controls button[hidden]{display:none!important}
 .app-controls span{display:none!important}
 
+.app-controls .options-tools{
+  flex:0 0 auto;
+  position:relative;
+  margin:0;
+}
+.app-controls .options-tools summary{
+  list-style:none;
+  cursor:pointer;
+  user-select:none;
+  min-height:36px;
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 11px 7px;
+  border:1px solid #080908;
+  border-radius:3px;
+  outline:1px solid #555850;
+  background:linear-gradient(145deg,#343532 0%,#252623 36%,#171816 78%,#10110f 100%);
+  color:var(--key-el-color,rgba(245,247,237,1));
+  font:800 8.2px/.98 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
+  letter-spacing:.045em;
+  text-transform:uppercase;
+  text-shadow:var(--key-el-shadow,0 0 .18vmin rgba(244,250,236,.46),0 .08em #000);
+  box-shadow:inset 1px 1px 1px rgba(255,255,255,.13),inset -2px -2px 2px rgba(0,0,0,.78),0 2px 0 #080908,0 3px 4px rgba(0,0,0,.42);
+}
+.app-controls .options-tools summary::-webkit-details-marker{display:none}
+.app-controls .options-tools summary::after{content:" ▾";margin-left:6px;font-size:.9em}
+.app-controls .options-tools[open] summary::after{content:" ▴"}
+.app-controls .options-tools summary:focus-visible{outline:2px solid rgba(245,247,237,.72);outline-offset:2px}
+.app-controls .options-tools-menu{
+  display:none;
+  flex-flow:row wrap;
+  justify-content:center;
+  gap:5px;
+  padding:5px 0 0;
+}
+.app-controls .options-tools[open] .options-tools-menu{display:flex}
+
+/* Apollo-style application rheostats.
+   These are app-side controls modeled after the rotary panel hardware; vertical
+   swipe is the touch interaction. Intermediate percentages are UI interpolation. */
+.app-controls .lighting-controls{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:4px 7px;
+  border:1px solid #20231f;
+  outline:1px solid rgba(112,118,109,.42);
+  border-radius:2px;
+  background:
+    linear-gradient(145deg,rgba(103,108,103,.82),rgba(57,61,57,.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -1px 2px rgba(0,0,0,.55);
+}
+.app-controls .lighting-control{
+  width:78px;
+  display:grid;
+  grid-template-columns:1fr;
+  justify-items:center;
+  align-items:center;
+  gap:2px;
+}
+.app-controls .lighting-control .lighting-label{
+  display:block!important;
+  color:var(--key-el-color,rgba(245,247,237,1));
+  font:800 7.4px/1 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
+  letter-spacing:.055em;
+  text-shadow:var(--key-el-shadow,0 0 .18vmin rgba(244,250,236,.46),0 .08em #000);
+}
+.app-controls .lighting-control output{
+  display:block;
+  min-width:3.2em;
+  text-align:center;
+  color:#d8ddd4;
+  font:700 7.2px/1 monospace;
+  letter-spacing:.02em;
+}
+.app-controls .lighting-knob{
+  --knob-angle:132deg;
+  position:relative;
+  width:42px;
+  min-width:42px;
+  height:42px;
+  min-height:42px;
+  padding:0;
+  margin:1px 0;
+  border-radius:50%;
+  border:1px solid #070807;
+  outline:1px solid #4f544d;
+  touch-action:none;
+  cursor:ns-resize;
+  overflow:visible;
+  background:
+    radial-gradient(circle at 42% 34%,rgba(255,255,255,.11) 0 5%,transparent 6%),
+    repeating-conic-gradient(from 2deg,#272a27 0 5deg,#101210 5deg 9deg),
+    radial-gradient(circle,#222522 0 56%,#0b0c0b 58% 72%,#3f433f 74% 77%,#141614 79%);
+  box-shadow:
+    inset 1px 1px 2px rgba(255,255,255,.10),
+    inset -2px -2px 3px rgba(0,0,0,.82),
+    0 2px 0 #070807,
+    0 3px 4px rgba(0,0,0,.48);
+  transform:none;
+}
+.app-controls .lighting-knob::before{
+  content:"";
+  position:absolute;
+  inset:-4px;
+  border-radius:50%;
+  pointer-events:none;
+  border:1px solid rgba(27,29,27,.94);
+  box-shadow:inset 0 0 0 1px rgba(137,143,135,.16);
+}
+.app-controls .lighting-knob::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:2px;
+  height:14px;
+  margin-left:-1px;
+  margin-top:-17px;
+  border-radius:1px;
+  background:#ecefe8;
+  box-shadow:0 0 2px rgba(239,246,233,.45),0 1px 0 #000;
+  transform-origin:1px 17px;
+  transform:rotate(var(--knob-angle));
+  pointer-events:none;
+}
+.app-controls .lighting-knob .lighting-knob-index{display:none!important}
+.app-controls .lighting-knob:hover{filter:brightness(1.03)}
+.app-controls .lighting-knob:active,
+.app-controls .lighting-knob.dragging{
+  transform:none;
+  background:
+    radial-gradient(circle at 42% 34%,rgba(255,255,255,.08) 0 5%,transparent 6%),
+    repeating-conic-gradient(from 2deg,#222522 0 5deg,#0e100e 5deg 9deg),
+    radial-gradient(circle,#1d201d 0 56%,#090a09 58% 72%,#383c38 74% 77%,#101210 79%);
+  box-shadow:
+    inset 2px 2px 4px rgba(0,0,0,.70),
+    inset -1px -1px 1px rgba(255,255,255,.04),
+    0 1px 2px rgba(0,0,0,.40);
+}
+.app-controls .lighting-knob:focus-visible{
+  outline:2px solid rgba(245,247,237,.78);
+  outline-offset:3px;
+}
+
 /* Restored v1.1.18 parallax tuning. 100% is the calibrated physical-model default. */
 .app-controls .parallax-controls{
   flex:0 0 auto;
@@ -154,6 +304,10 @@
   .dsky{width:min(calc(100vw - 4px),calc((100vh - 164px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372))}
   .app-controls{gap:4px;padding:5px}
   .app-controls button{min-height:34px;font-size:7.3px;padding:8px 8px 7px}
+  .app-controls .options-tools summary{min-height:34px;font-size:7.3px;padding:8px 8px 7px}
+  .app-controls .lighting-controls{gap:5px;padding:4px 5px}
+  .app-controls .lighting-control{width:70px}
+  .app-controls .lighting-knob{width:38px;min-width:38px;height:38px;min-height:38px}
   .app-controls .parallax-control{width:112px;min-height:34px;padding:3px 6px 4px}
 }
 @media (orientation:landscape){

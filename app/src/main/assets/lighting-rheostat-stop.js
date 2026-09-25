@@ -3,12 +3,9 @@
 /*
  * Apollo CM NUMERICS / INTEGRAL rheostat mechanical stop.
  *
- * Spacecraft lighting documentation states that these rheostats cannot be
- * rotated to OFF; complete disable is by opening the lighting circuit breaker.
- * flight-hardware-ui.js retains a zero level because LIGHT BUS DEMO needs to
- * model an electrically opened feed. This layer prevents that zero level from
- * being selected by ordinary rheostat clicks while preserving it for the feed-
- * open demonstration.
+ * The app presents the two rheostats as continuous vertical-swipe rotary knobs.
+ * Intermediate UI percentages are interpolated presentation values, not claimed
+ * Apollo calibration marks. The normal control range cannot reach OFF.
  */
 (() => {
   if (window.__DSKY_LIGHTING_RHEOSTAT_STOP__) return;
@@ -17,50 +14,32 @@
   const lighting = window.AGCDSKY && window.AGCDSKY.lighting;
   if (!lighting || typeof lighting.levels !== 'function') return;
 
-  const MIN_NORMAL_LEVEL = 0.25; // lowest discrete UI approximation, not a claimed rheostat calibration point
+  const MIN_NORMAL_LEVEL = 0.25;
+  const MAX_NORMAL_LEVEL = 1.00;
 
-  function normalizeOne(kind) {
-    let state = lighting.levels();
-    let level = kind === 'numerics' ? state.numerics : state.integral;
-    if (level > 0.001) return level;
-
-    const cycle = kind === 'numerics' ? lighting.cycleNumerics : lighting.cycleIntegral;
-    if (typeof cycle !== 'function') return level;
-    cycle();
-    state = lighting.levels();
-    level = kind === 'numerics' ? state.numerics : state.integral;
-    return level;
+  function clamp(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(MIN_NORMAL_LEVEL, Math.min(MAX_NORMAL_LEVEL, n)) : MAX_NORMAL_LEVEL;
   }
 
-  // A prior app version could have persisted the now-invalid 0% index.
-  // Normalize it once without disturbing any other saved setting.
-  normalizeOne('numerics');
-  normalizeOne('integral');
-
-  function cycleWithMechanicalStop(kind) {
-    const cycle = kind === 'numerics' ? lighting.cycleNumerics : lighting.cycleIntegral;
-    if (typeof cycle !== 'function') return;
-    cycle();
-    normalizeOne(kind); // if the private sequence reached zero, wrap immediately to full bright
+  function normalize() {
+    const state = lighting.levels();
+    if (typeof lighting.setNumerics === 'function' && state.numerics < MIN_NORMAL_LEVEL) {
+      lighting.setNumerics(MAX_NORMAL_LEVEL);
+    }
+    if (typeof lighting.setIntegral === 'function' && state.integral < MIN_NORMAL_LEVEL) {
+      lighting.setIntegral(MAX_NORMAL_LEVEL);
+    }
   }
 
-  window.addEventListener('click', event => {
-    const button = event.target && event.target.closest ? event.target.closest('#numerics-light,#integral-light') : null;
-    if (!button) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    if (button.id === 'numerics-light') cycleWithMechanicalStop('numerics');
-    else cycleWithMechanicalStop('integral');
-    if (typeof window.showControls === 'function') window.showControls();
-  }, {capture:true, passive:false});
+  normalize();
 
   window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_LIGHTING_RHEOSTAT_STOP',Object.freeze({
     minimumNormalUiLevel:MIN_NORMAL_LEVEL,
+    maximumNormalUiLevel:MAX_NORMAL_LEVEL,
+    continuousUiInterpolation:true,
     completeOffMethod:'open lighting feed / circuit breaker, not normal rheostat rotation',
-    zeroReservedFor:'LIGHT BUS DEMO feed-open state',
+    clamp,
     state:() => ({...lighting.levels()})
   }),'lighting-rheostat-stop publication');
 })();
