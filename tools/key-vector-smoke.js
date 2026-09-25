@@ -85,8 +85,8 @@ for(const marker of [
  "root.style.setProperty('--key-el-color'",
  "root.style.setProperty('--key-el-filter'"
 ])req(ui,marker,'key integral-light runtime');
-no(finish,'--key-el-shadow','obsolete key text shadow');
-no(ui,'--key-el-shadow','obsolete runtime key text shadow');
+req(finish,'--key-el-shadow:','settings-button text shadow compatibility');
+req(ui,"root.style.setProperty('--key-el-shadow'",'settings-button lighting runtime');
 
 for(const marker of [
  'Gorton Normal key vector outlines',
