@@ -24,7 +24,7 @@ for(const [text,filename] of [[ui,'flight-hardware-ui.js'],[rheostat,'lighting-r
   try{new vm.Script(text,{filename})}catch(error){fail(`${filename} syntax error: ${error.message}`)}
 }
 
-const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','keyboard-electrical-interlock','lighting-electrical-model','relay-perceptual-personality','relay-show'];
+const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-perceptual-personality','relay-show'];
 let previous=-1;
 for(const feature of features){
   const tag=`<script src="${feature}.js" data-feature="${feature}"></script>`,pos=html.indexOf(tag);
@@ -38,7 +38,7 @@ req(cm,"const shell=window.AGCDSKY_SHELL",'CM shell storage owner');
 req(cm,"shell.store.set('agcMission','comanche055')",'CM mission lock');
 no(cm,"localStorage.",'CM configuration storage ownership');
 req(cm,"document.body.classList.add('spacecraft-cm')",'CM body mode');
-for(const feature of ['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','keyboard-electrical-interlock'])req(sw,`'./${feature}.js'`,'offline PWA cache');
+for(const feature of ['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-tactile-feedback','keyboard-electrical-interlock'])req(sw,`'./${feature}.js'`,'offline PWA cache');
 
 for(const marker of ["const LEVELS = Object.freeze([1.00, 0.75, 0.50, 0.25, 0.00])","saveIndex('dskyNumericsLevel'","saveIndex('dskyIntegralLevel'","--numerics-level","--integral-level","NUMERICS ${levelText(numericsIndex)}","INTEGRAL ${levelText(integralIndex)}","LIGHT BUS DEMO","NUMERICS FEED OPEN","INTEGRAL FEED OPEN","BOTH LIGHTING FEEDS OPEN","RELAY STATE RETAINED"])req(ui,marker,'independent lighting model');
 for(const marker of ["const MIN_NORMAL_LEVEL = 0.25","cycleWithMechanicalStop","normalizeOne('numerics')","normalizeOne('integral')","completeOffMethod:'open lighting feed / circuit breaker, not normal rheostat rotation'","zeroReservedFor:'LIGHT BUS DEMO feed-open state'"])req(rheostat,marker,'lighting rheostat mechanical stop');

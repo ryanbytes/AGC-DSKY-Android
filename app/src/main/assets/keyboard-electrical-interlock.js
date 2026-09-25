@@ -74,6 +74,23 @@
       makePitch:520, returnPitch:330, soundGain:1};
   }
 
+  function tactileService() {
+    try { return window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_KEY_TACTILE'); }
+    catch (_) { return null; }
+  }
+
+  function keyHaptic(button, returning = false) {
+    const service = tactileService();
+    if (!service) return false;
+    const key = button?.dataset?.key || '?';
+    try {
+      const fn = returning ? service.release : service.make;
+      return typeof fn === 'function' ? !!fn(key) : false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function keySound(button, returning = false) {
     let ctx = null;
     try {
@@ -149,6 +166,7 @@
     }
     state.made = true;
     keySound(state.button, false);
+    if (state.source === 'pointer') keyHaptic(state.button, false);
     if (!state.accepted) return;
 
     const key = state.button.dataset.key;
@@ -274,7 +292,7 @@
     if (accepted) cycleLatched = true;
     const p = personality(button);
     const state = {
-      button, pointerId:event.pointerId, down:true, accepted, made:false, cancelled:false, timer:0
+      button, pointerId:event.pointerId, source:'pointer', down:true, accepted, made:false, cancelled:false, timer:0
     };
     pointers.set(event.pointerId, state);
     button.classList.add('pressed');
@@ -295,7 +313,10 @@
     state.button.classList.remove('pressed');
     if (state.made) {
       const p = personality(state.button);
-      setTimeout(() => keySound(state.button, true), Math.max(0, Number(p.returnSoundMs) || FALLBACK_RETURN_MS));
+      setTimeout(() => {
+        keySound(state.button, true);
+        if (state.source === 'pointer') keyHaptic(state.button, true);
+      }, Math.max(0, Number(p.returnSoundMs) || FALLBACK_RETURN_MS));
     }
     try { state.button.releasePointerCapture(state.pointerId); } catch (_) {}
     pointers.delete(event.pointerId);
@@ -321,7 +342,7 @@
     const accepted = !cycleLatched;
     if (accepted) cycleLatched = true;
     const p = personality(button);
-    keyboardState = {button, down:true, accepted, made:false, cancelled:false, timer:0, key};
+    keyboardState = {button, source:'keyboard', down:true, accepted, made:false, cancelled:false, timer:0, key};
     button.classList.add('pressed');
     keyboardState.timer = setTimeout(() => makeContact(keyboardState), Math.max(0, Number(p.contactMs) || FALLBACK_CONTACT_MS));
   }

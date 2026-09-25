@@ -72,6 +72,7 @@ dsky-keycode-consistency-smoke.js
 flight-hardware-ui-smoke.js
 annunciator-vector-smoke.js
 key-mechanical-spec-smoke.js
+key-tactile-feedback-smoke.js
 key-geometry-smoke.js
 key-vector-smoke.js
 keyboard-electrical-interlock-smoke.js

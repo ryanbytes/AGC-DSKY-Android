@@ -9,6 +9,7 @@ const REQUIRED_SHARED_ASSETS = [
   './flight-hardware-ui.js',
   './lighting-rheostat-stop.js',
   './key-mechanical-spec.js',
+  './key-tactile-feedback.js',
   './keyboard-electrical-interlock.js'
 ];
 

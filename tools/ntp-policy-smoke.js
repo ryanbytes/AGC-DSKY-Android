@@ -69,7 +69,7 @@ for(const [label,text] of [['MainActivity',main],['SensorMainActivity',sensor],[
   requireText(text,'NtpTime.requestSyncNow(',label+' manual sync');
   requireText(text,'NtpTime.removeListener(ntpListener)',label);
 }
-requireText(main,'WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge")','MainActivity TimeBridge teardown');
+requireText(main,'WebViewTeardown.destroy(doomed,"DebugBridge","HapticBridge","TimeBridge","PrintBridge")','MainActivity TimeBridge teardown');
 
 requireText(clock,'function desiredClockDigitsImpl(){const d=clockShell.accurateDate()','phone clock shell-time service');
 requireText(api,'accurateTime:apiShell.accurateTime','public AGCDSKY time facade');

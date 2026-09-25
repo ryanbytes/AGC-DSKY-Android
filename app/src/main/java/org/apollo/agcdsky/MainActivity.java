@@ -66,6 +66,7 @@ public final class MainActivity extends Activity {
         if((getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0)WebView.setWebContentsDebuggingEnabled(true);
         webView=new WebView(this);webView.setBackgroundColor(CM_PANEL_COLOR);WebSettings s=webView.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setGeolocationEnabled(true);s.setMediaPlaybackRequiresUserGesture(false);s.setBlockNetworkLoads(true);s.setAllowFileAccess(false);s.setAllowContentAccess(false);
         webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");
+        webView.addJavascriptInterface(new KeyHapticBridge(webView),"HapticBridge");
         webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");
         webView.addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge");
         webView.setWebViewClient(new NetClient(this));
@@ -96,6 +97,6 @@ public final class MainActivity extends Activity {
     @Override protected void onResume(){super.onResume();configureWindow();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);}}
     @Override protected void onPause(){if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","TimeBridge","PrintBridge");}
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","HapticBridge","TimeBridge","PrintBridge");}
     @Override protected void onDestroy(){NtpTime.removeListener(ntpListener);DebugReporter.dismissPendingReport(this);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;destroyWebView();super.onDestroy();}
 }
