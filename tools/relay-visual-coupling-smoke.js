@@ -11,17 +11,17 @@ function req(source,token,label){if(!source.includes(token))fail(`${label} missi
 
 const source=read('relay-visual-coupling.js'),stabilitySource=read('relay-stretch-stability.js'),html=read('index.html');
 new vm.Script(source,{filename:'relay-visual-coupling.js'});new vm.Script(stabilitySource,{filename:'relay-stretch-stability.js'});
-const identityAt=html.indexOf('<script src="relay-identity-audio.js"></script>'),visualAt=html.indexOf('<script src="relay-visual-coupling.js"></script>'),stabilityAt=html.indexOf('<script src="relay-stretch-stability.js"></script>'),panelAt=html.indexOf('<script src="relay-panel.js"></script>');
-assert(identityAt>=0&&visualAt>identityAt&&stabilityAt>visualAt&&panelAt>stabilityAt,'relay identity/visual/stability/panel parser order changed');
+const identityAt=html.indexOf('<script src="relay-identity-audio.js"></script>'),visualAt=html.indexOf('<script src="relay-visual-coupling.js"></script>'),stabilityAt=html.indexOf('<script src="relay-stretch-stability.js"></script>');
+assert(identityAt>=0&&visualAt>identityAt&&stabilityAt>visualAt,'relay identity/visual/stability parser order changed');
+assert(!html.includes('relay-panel.js')&&!html.includes('relay-panel.css')&&!html.includes('id="relay-panel"'),'removed relay rack UI reappeared');
 for(const token of [
   "mode:'single-event-relay-contact-coupled'","audioModel.playRelayImpact?.(","audioModel.contactTraceFor(","type:'relay-drive'","type:'relay-contact'",
   'function presentDrive(','function subscribe(','display.installImplementation(\'decodeChannel10\',relayContactVisualDecode',"hardware.registerSettledPaintPolicy('relay-visual-coupling'"
 ])req(source,token,'single-event relay contract');
 
-let now=0,nextTimerId=1;const timers=[],raf=[],renders=[],baseDecode=[],impacts=[],events=[],storage=new Map(),buttonListeners={};
-const timingButton={textContent:'',title:'',attrs:{},addEventListener(type,fn){buttonListeners[type]=fn},setAttribute(name,value){this.attrs[name]=String(value)}};
+let now=0,nextTimerId=1;const timers=[],raf=[],renders=[],baseDecode=[],impacts=[],events=[],storage=new Map();
 const context={console,window:null,globalThis:null,Object,Map,Set,Number,String,Math,TypeError,Promise,
-  document:{getElementById:id=>id==='relay-timing'?timingButton:null},
+  document:{getElementById:()=>null},
   setTimeout(fn,ms=0){const item={id:nextTimerId++,fn,due:now+Math.max(0,Number(ms)||0)};timers.push(item);return item.id},
   clearTimeout(id){const i=timers.findIndex(x=>x.id===id);if(i>=0)timers.splice(i,1)},
   requestAnimationFrame(fn){raf.push(fn);return raf.length}
@@ -90,7 +90,7 @@ assert(renders.some(x=>x.word===0&&x.at===5.5),'DSKY projection did not follow c
 runAllTimers();
 assert(renders[renders.length-1].word===33,'authentic transition did not settle to target contact word');
 
-buttonListeners.click();
+visual.setTimingMode('stretched',false);
 assert(visual.getTimingMode()==='stretched'&&paintPolicy()===false,'stretched mode/paint policy changed');
 timers.length=0;raf.length=0;renders.length=0;impacts.length=0;events.length=0;now=100;
 decodeImpl(command);
@@ -105,4 +105,4 @@ assert(renders.some(x=>x.at===frameAt),'stretched DSKY contact was not rendered 
 assert(visual.lastPresentationClick()&&visual.lastPresentationClick().bit===0,'last presentation click diagnostic changed');
 
 console.log('relay visual coupling smoke: PASS');
-console.log('  one manufactured contact event drives relay rack subscribers, sound, DSKY projection and contact bounce; stretched mode remains frame-coupled');
+console.log('  one manufactured contact event drives subscribers, sound, DSKY projection and contact bounce; stretched mode remains frame-coupled without a rack UI');
