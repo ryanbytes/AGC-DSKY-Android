@@ -9,7 +9,7 @@
   --numerics-level:1;
   --integral-level:1;
   --key-el-color:rgba(245,247,237,1);
-  --key-el-shadow:0 0 .18vmin rgba(244,250,236,.46),0 .08em #000;
+  --key-el-filter:drop-shadow(0 0 .18vmin rgba(244,250,236,.46)) drop-shadow(0 .08vmin 0 #000);
 }
 
 /* 1006315G sheet 2 specifies the upper display legends as .125-in-high
@@ -152,9 +152,12 @@ body.spacecraft-cm .comp-el{opacity:var(--numerics-level)}
 /* White EL key legends ride on the moving keycap.  Each key receives a stable
    manufacturing-style travel variation from flight-hardware-ui.js. */
 body.spacecraft-cm .key{
-  color:var(--key-el-color);
-  text-shadow:var(--key-el-shadow);
-  transition:transform 55ms linear,background 55ms linear,box-shadow 55ms linear,color 90ms linear,text-shadow 90ms linear;
+  transition:transform 55ms linear,background 55ms linear,box-shadow 55ms linear;
+}
+body.spacecraft-cm .key .key-legend{
+  fill:var(--key-el-color);
+  filter:var(--key-el-filter);
+  transition:fill 90ms linear,filter 90ms linear;
 }
 body.spacecraft-cm .key.pressed{
   transform:translateY(var(--key-travel,.42vmin));
