@@ -15,7 +15,7 @@ function hasUnqualified(source,token){
 const explicit=[
   ['app-shell-runtime.js','shellState'],['dsky-geometry.js','geometryState'],['hardware-fidelity.js','fidelityState'],
   ['background-audio-guard.js','guardState'],['relay-show.js','showState'],['screen-only.js','screenState'],
-  ['dream-agc.js','dreamState'],['relay-identity-audio.js','identityState'],['relay-visual-coupling.js','visualState']
+  ['dream-agc.js','dreamState'],['relay-identity-audio.js','identityState']
 ];
 for(const [name,alias] of explicit){const source=read(name);assert(source.includes(alias)&&source.includes('window.AGCDSKY_APP_STATE'),`${name} is not an explicit shared-state consumer`)}
 const shell=read('app-shell-runtime.js'),geometry=read('dsky-geometry.js'),hardware=read('hardware-fidelity.js'),guard=read('background-audio-guard.js'),show=read('relay-show.js'),screen=read('screen-only.js'),dream=read('dream-agc.js'),identity=read('relay-identity-audio.js'),visual=read('relay-visual-coupling.js'),snapshot=read('agc-snapshot-runtime.js'),life=read('agc-lifecycle-runtime.js'),api=read('agc-api-runtime.js'),renderer=read('dsky-display-renderer.js'),clock=read('phone-clock-runtime.js'),display=read('agc-display-runtime.js');
@@ -36,7 +36,7 @@ for(const [name,source,forbidden] of [
 assert(shell.includes('shellState.appVisible')&&shell.includes('function shellCore()')&&shell.includes('window.AGCDSKY_CORE_SESSION'),'shell does not use explicit visibility/core session');
 assert(geometry.includes("geometryState.mode==='agc'")&&geometry.includes('shell.show(geometryState.verb,geometryState.noun)')&&geometry.includes("geometryState.mode!=='clock'"),'geometry startup/repaint does not use explicit shared mode/command state through shell service');
 assert(identity.includes('!identityState.tickSound'),'relay identity audio does not read shared audio preference');
-assert(visual.includes('!visualState.tickSound'),'relay visual layer does not read shared audio preference');
+assert(!visual.includes('AGCDSKY_APP_STATE'),'relay visual layer must not duplicate audio-preference ownership');
 for(const [name,source,alias] of [['snapshot',snapshot,'snapshotCore'],['lifecycle',life,'lifecycleCore'],['API',api,'apiCore'],['relay show',show,'showCore'],['Dream AGC',dream,'dreamCore']])assert(source.includes(alias)&&source.includes('window.AGCDSKY_CORE_SESSION'),`${name} does not bind explicit core session`);
 const appState=read('app-state-runtime.js');
 assert(appState.includes('window.AGCDSKY_CORE_SESSION = Object.seal({'),'core session bootstrap is missing or unsealed');
