@@ -8,12 +8,16 @@ const read=name=>fs.readFileSync(path.join(ASSETS,name),'utf8');
 function fail(message){throw new Error(`RELAY PANEL FAIL: ${message}`)}
 function assert(condition,message){if(!condition)fail(message)}
 
-const source=read('relay-panel.js'),css=read('relay-panel.css'),html=read('index.html');
+const source=read('relay-panel.js'),css=read('relay-panel.css'),html=read('index.html'),identity=read('relay-identity-audio.js');
 new vm.Script(source,{filename:'relay-panel.js'});
 assert(html.includes('<section id="relay-panel" class="relay-rack"'),'relay rack host missing above DSKY');
 assert(html.indexOf('id="relay-panel"')<html.indexOf('id="dsky"'),'relay rack must precede DSKY');
 assert(html.includes('<link rel="stylesheet" href="relay-panel.css">'),'relay panel stylesheet missing');
 assert(!source.includes('textContent=')&&!source.includes('innerHTML='),'relay rack must not add a decorative heading/label block');
+assert(identity.includes('const LATCHING_RELAY_COUNT = 132;'),'production identity model must retain 132 latching relays');
+assert(identity.includes("const AUX_ORDER=Object.freeze(['comp','uplink','temp','keyrel','oprerr','flash','restart','stby']);"),'production identity model must retain 8 auxiliary relays');
+assert(identity.includes('totalIndividualRelays:LATCHING_RELAY_COUNT+AUX_ORDER.length'),'production identity total must remain derived as 140');
+for(const token of ['function playRelayImpact(','function playAuxImpact(','contactTraceFor:','auxiliaryContactTraceFor:','auxiliaryNames:Object.freeze(AUX_ORDER.slice())'])assert(identity.includes(token),`production identity event API missing ${token}`);
 for(const token of ['repeat(11','repeat(13','body.dream .relay-rack','body.display-only .relay-rack'])assert(css.includes(token),`relay panel CSS missing ${token}`);
 
 class FakeClassList{
