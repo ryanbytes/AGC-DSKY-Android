@@ -33,15 +33,16 @@ for(const marker of [
   'VibrationEffect.EFFECT_CLICK',
   'VibrationEffect.EFFECT_TICK',
   'VibrationEffect.createPredefined(predefinedEffect)',
-  'VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH)',
-  'vibrator.vibrate(effect',
+  'vibrator.vibrate(VibrationEffect.createPredefined(predefinedEffect))',
+  'VibrationEffect.EFFECT_HEAVY_CLICK',
+  'testPulse()',
   'HapticFeedbackConstants.VIRTUAL_KEY',
   'HapticFeedbackConstants.VIRTUAL_KEY_RELEASE',
   'target.performHapticFeedback(legacyViewEffect)',
   'setHapticFeedbackEnabled(true)'
 ])assert(bridge.includes(marker),'native haptic bridge missing: '+marker);
-for(const forbidden of ['VibrationEffect.createOneShot','VibrationEffect.createWaveform'])
-  assert(!bridge.includes(forbidden),'native bridge invented raw vibration pattern: '+forbidden);
+for(const forbidden of ['VibrationEffect.createOneShot','VibrationEffect.createWaveform','VibrationAttributes.USAGE_TOUCH','USAGE_TOUCH'])
+  assert(!bridge.includes(forbidden),'native bridge retained suppressed/raw vibration path: '+forbidden);
 assert(manifest.includes('android.permission.VIBRATE'),'predefined VibrationEffect path requires VIBRATE permission');
 
 for(const [source,label] of [[main,'MainActivity'],[sensor,'SensorMainActivity']]){
@@ -68,9 +69,11 @@ assert(proceed.includes("releaseProceedWithHaptic()"),'PRO release haptic missin
 const calls=[];
 const context={console,Date,window:null,HapticBridge:{
   available(){return true},
-  backend(){return 'VibrationEffect.createPredefined'},
+  backend(){return 'Vibrator.predefined-unclassified'},
+  amplitudeControl(){return true},
   keyMake(){calls.push('make');return true},
-  keyRelease(){calls.push('release');return true}
+  keyRelease(){calls.push('release');return true},
+  testPulse(){calls.push('test');return true}
 }};
 context.window=context;
 const registry=installServiceRegistry(context);
@@ -92,7 +95,9 @@ assert(service.make('1')===true&&service.release('1')===true,'native bridge call
 assert(calls.join(',')==='make,release','native bridge event order wrong');
 const status=service.status();
 assert(status.nativeBridge===true,'native bridge status false');
-assert(status.nativeBackend==='VibrationEffect.createPredefined','native backend status wrong');
+assert(status.nativeBackend==='Vibrator.predefined-unclassified','native backend status wrong');
+assert(status.amplitudeControl===true,'amplitude-control status wrong');
+assert(service.test()===true&&calls[calls.length-1]==='test','direct native haptic probe failed');
 assert(status.platformEffects.make==='VibrationEffect.EFFECT_CLICK'&&status.platformEffects.release==='VibrationEffect.EFFECT_TICK','predefined effect mapping wrong');
 assert(status.makeCount===1&&status.releaseCount===1,'tactile event counters wrong');
 assert(status.actuationTravelIn===3/16&&status.overtravelToBottomIn===1/16&&status.totalTravelIn===1/4,'R-700 travel not propagated');
