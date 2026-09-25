@@ -204,34 +204,41 @@
   const lampPersonalities = Object.create(null);
   function prepareAnnunciatorLegends() {
     for (const lamp of document.querySelectorAll('.ann-grid .lamp:not(.blank)')) {
-      if (lamp.querySelector('.lamp-legend')) continue;
       const lampName = lamp.dataset.lamp || 'unknown';
       const family = lamp.classList.contains('yellow') ? 'yellow' : 'white';
       const model = LAMP_MODEL[family];
       lamp.dataset.lampPart = model.part;
 
-      const legend = document.createElement('span');
-      legend.className = 'lamp-legend';
-      while (lamp.firstChild) legend.appendChild(lamp.firstChild);
+      // Production markup carries fixed Gorton SVG outlines. Keep a text
+      // fallback only for old/cached markup; never replace a vector legend.
+      let legend = lamp.querySelector('.lamp-legend');
+      if (!legend) {
+        legend = document.createElement('span');
+        legend.className = 'lamp-legend';
+        while (lamp.firstChild) legend.appendChild(lamp.firstChild);
+      }
 
       const sources = [];
       const sourceData = [];
-      for (let i = 0; i < 3; i++) {
-        const source = document.createElement('span');
-        source.className = `lamp-source lamp-source-${i + 1}`;
-        source.setAttribute('aria-hidden', 'true');
-        const prefix = `lamp:${lampName}:${i + 1}`;
-        const rise = vary(model.riseMs, 0.13, `${prefix}:rise`);
-        const fall = vary(model.fallMs, 0.13, `${prefix}:fall`);
-        const gain = Math.max(0.82, Math.min(1.18, vary(1, 0.10, `${prefix}:gain`)));
-        source.style.setProperty('--lamp-rise', `${rise.toFixed(1)}ms`);
-        source.style.setProperty('--lamp-fall', `${fall.toFixed(1)}ms`);
-        source.style.setProperty('--lamp-gain', gain.toFixed(3));
-        sources.push(source);
-        sourceData.push(Object.freeze({riseMs:Number(rise.toFixed(1)), fallMs:Number(fall.toFixed(1)), gain:Number(gain.toFixed(3))}));
+      if (!lamp.querySelector('.lamp-source')) {
+        for (let i = 0; i < 3; i++) {
+          const source = document.createElement('span');
+          source.className = `lamp-source lamp-source-${i + 1}`;
+          source.setAttribute('aria-hidden', 'true');
+          const prefix = `lamp:${lampName}:${i + 1}`;
+          const rise = vary(model.riseMs, 0.13, `${prefix}:rise`);
+          const fall = vary(model.fallMs, 0.13, `${prefix}:fall`);
+          const gain = Math.max(0.82, Math.min(1.18, vary(1, 0.10, `${prefix}:gain`)));
+          source.style.setProperty('--lamp-rise', `${rise.toFixed(1)}ms`);
+          source.style.setProperty('--lamp-fall', `${fall.toFixed(1)}ms`);
+          source.style.setProperty('--lamp-gain', gain.toFixed(3));
+          sources.push(source);
+          sourceData.push(Object.freeze({riseMs:Number(rise.toFixed(1)), fallMs:Number(fall.toFixed(1)), gain:Number(gain.toFixed(3))}));
+        }
+        for (const source of sources) lamp.insertBefore(source, legend);
       }
-      for (const source of sources) lamp.appendChild(source);
-      lamp.appendChild(legend);
+      // Keep the legend above the three simulated bulb-source layers.
+      if (legend.parentNode === lamp) lamp.appendChild(legend);
       lampPersonalities[lampName] = Object.freeze({part:model.part, sources:Object.freeze(sourceData)});
     }
     document.body.classList.add('lamp-hardware-ready');
