@@ -254,13 +254,11 @@
     const p = Object.freeze({
       contactMs: Number(vary(KEY_CONTACT_BASE_MS, 0.14, `key:${key}:contact`).toFixed(1)),
       returnSoundMs: Number(vary(KEY_RETURN_SOUND_BASE_MS, 0.18, `key:${key}:return`).toFixed(1)),
-      travelVmin: Number(vary(0.42, 0.08, `key:${key}:travel`).toFixed(3)),
       makePitch: Number(vary(520, 0.055, `key:${key}:make-pitch`).toFixed(1)),
       returnPitch: Number(vary(330, 0.055, `key:${key}:return-pitch`).toFixed(1)),
       soundGain: Number(vary(1, 0.09, `key:${key}:gain`).toFixed(3))
     });
     keyPersonalities[key] = p;
-    if (button) button.style.setProperty('--key-travel', `${p.travelVmin}vmin`);
     return p;
   }
 
