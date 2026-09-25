@@ -26,8 +26,8 @@
     if(lifecycleCore.core)lifecycleCore.core.stop();
     if(canResume)lifecycleSnapshot.save('suspend for clock');
     lifecycleCore.suspendedForClock=!!canResume;
-    lifecycleCore.pausedForVisibility=false;lifecycleState.mode='clock';lifecycleShell.rememberRunMode('clock');
-    lifecycleShell.element('agc').textContent='AGC MODE';lifecycleShell.element('mode').textContent=status;lifecycleRenderer.clearLamps();lifecycleRenderer.set2('prog','00');lifecycleState.verb='16';lifecycleState.noun='65';lifecycleShell.show(lifecycleState.verb,lifecycleState.noun);lifecycleClock.stopQueue();lifecycleClock.syncFace();
+    lifecycleCore.pausedForVisibility=false;lifecycleState.mode='clock';lifecycleShell.rememberRunMode('clock');lifecycleShell.updateModeControl();
+    lifecycleShell.element('mode').textContent=status;lifecycleRenderer.clearLamps();lifecycleRenderer.set2('prog','00');lifecycleState.verb='16';lifecycleState.noun='65';lifecycleShell.show(lifecycleState.verb,lifecycleState.noun);lifecycleClock.stopQueue();lifecycleClock.syncFace();
   }
   function status(){
     const display=lifecycleDisplay.status(),snapshot=lifecycleSnapshot.status(),core=lifecycleCore.core;
@@ -40,11 +40,11 @@
     lifecycleClock.cancelLampTest();
     const selected=lifecycleShell.missionSpec();
     if(lifecycleCore.suspendedForClock&&lifecycleCore.core&&lifecycleCore.loadedMission===lifecycleState.selectedMission){
-      lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;lifecycleShell.rememberRunMode('agc');lifecycleShell.element('agc').textContent='AGC MODE';lifecycleShell.element('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}`;lifecycleDisplay.renderSnapshot();
+      lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;lifecycleShell.rememberRunMode('agc');lifecycleShell.updateModeControl();lifecycleShell.element('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}`;lifecycleDisplay.renderSnapshot();
       if(lifecycleState.appVisible){lifecycleCore.core.start(1);lifecycleCore.pausedForVisibility=false}else{lifecycleCore.pausedForVisibility=true}
       return;
     }
-    lifecycleState.mode='agc-loading';lifecycleClock.stopQueue();lifecycleShell.element('agc').textContent='...';lifecycleShell.element('mode').textContent=`LOADING ${selected.label} · AGC`;lifecycleDisplay.resetFace();
+    lifecycleState.mode='agc-loading';lifecycleClock.stopQueue();lifecycleShell.updateModeControl();lifecycleShell.element('mode').textContent=`LOADING ${selected.label} · AGC`;lifecycleDisplay.resetFace();
     try{
       if(!lifecycleCore.core||lifecycleCore.loadedMission!==lifecycleState.selectedMission){
         if(lifecycleCore.core)lifecycleCore.core.stop();
@@ -55,7 +55,7 @@
         lifecycleCore.core.reset();lifecycleCore.core.configureInputMasks();
       }
       const restored=lifecycleSnapshot.restore();
-      lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;lifecycleShell.rememberRunMode('agc');lifecycleShell.element('agc').textContent='AGC MODE';lifecycleShell.element('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}${restored?' · STATE RESTORED':''}`;
+      lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;lifecycleShell.rememberRunMode('agc');lifecycleShell.updateModeControl();lifecycleShell.element('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}${restored?' · STATE RESTORED':''}`;
       if(restored)lifecycleDisplay.renderSnapshot();
       if(lifecycleState.appVisible){lifecycleCore.core.start(1);lifecycleCore.pausedForVisibility=false}else{lifecycleCore.pausedForVisibility=true}
     }catch(error){fail(error)}
