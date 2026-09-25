@@ -224,6 +224,7 @@ window.AGCDSKY_SHELL=Object.freeze({
   missionSpec,
   rememberRunMode,
   cycleMission,
+  updateModeControl:updateModeButton,
   showControls,
   initialize:initializeAppShell
 });
