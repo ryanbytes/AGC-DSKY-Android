@@ -175,8 +175,10 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on.yellow{
 /* SCD 1006387D requires .156-in Gorton Condensed with .025-.030-in
    strokes. The ten CM legends are static SVG outlines from the OFL Gorton
    source, not runtime text, so Android/WebView font availability cannot alter
-   their geometry. A 60-unit outline compensation yields the accepted visual
-   weight; the SVG viewBox preserves the annunciator-cell aspect ratio. */
+   their geometry. A 56.9-unit outline compensation preserves the Pixel-mass
+   correction while putting the nominal 120-unit straight stem at about
+   .0300 in on the .156/920 construction scale; the SVG viewBox preserves the
+   annunciator-cell aspect ratio. */
 .gorton-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-legend{
   position:absolute;
@@ -191,7 +193,7 @@ body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-legend{
 body.spacecraft-cm .lamp .lamp-legend .gorton-glyph{
   fill:#10110e;
   stroke:#10110e;
-  stroke-width:60;
+  stroke-width:56.9;
   stroke-linecap:round;
   stroke-linejoin:round;
   paint-order:stroke fill;
