@@ -8,6 +8,7 @@ This repository is an Android Apollo DSKY project. Read `docs/PROGRESS.md`, `doc
 - Maintain `docs/PROGRESS.md` whenever architecture, blockers, verification gates, or next actions change materially.
 - Do **not** add or use GitHub Actions, Codespaces, or other GitHub-hosted build infrastructure unless the owner explicitly reverses this instruction.
 - Build, sign, inspect, and test APKs locally/manual when build tooling is available.
+- Every AGC DSKY APK handed to Ryan for installation or update must use the established standalone release signing key stored privately in Google Drive `AGC-DSKY-Private`; never hand off a CI-generated temporary/debug-key APK as an update. Before handoff, verify APK Signature Scheme v2 or newer and certificate SHA-256 `40:9A:D6:76:E8:05:2E:50:41:6A:1B:F6:9E:09:51:37:EF:63:9A:C1:3C:E4:65:21:60:A1:93:80:A1:17:FA:1F`. Do not copy the private key or passwords into this repository.
 - Never commit private signing keys, passwords, tokens, or other credentials.
 - Do not claim an APK builds, installs, or runs unless that specific result was actually verified.
 - Do not replace the normal Java/Gradle application with hand-written/repacked DEX or diagnostic APK surgery as the final implementation.
