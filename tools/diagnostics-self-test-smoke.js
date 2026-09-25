@@ -49,6 +49,10 @@ for(const marker of [
   "section('KEY MECHANICS / TACTILE')",
   "'Total finger force'",
   "'Tactile cue'",
+  "'Vibrator amplitude control'",
+  'id="diag-haptic-test"',
+  "document.getElementById('diag-haptic-test').onclick",
+  "tactile.test()",
   "fullSelfTestRunning?'RUNNING':(failed?'FAIL':'PASS')",
   "Object.freeze({open,close,runFullSelfTest})"
 ]) assert(SRC.includes(marker),'diagnostics contract missing: '+marker);
