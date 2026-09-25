@@ -59,6 +59,7 @@
   let electricalMadeAt = 0;
   let clockHandoffPending = false;
   let keyboardState = null;
+  let pointerCancelCount = 0;
 
   function normalButton(event) {
     const button = event.target && event.target.closest ? event.target.closest('[data-key]') : null;
@@ -302,13 +303,14 @@
     if (!cancelled && !state.made) makeContact(state);
     state.down = false;
     state.button.classList.remove('pressed');
-    if (state.made) {
+    if (state.made && !cancelled) {
       const p = personality(state.button);
       setTimeout(() => {
         keySound(state.button, true);
         if (state.source === 'pointer') keyHaptic(state.button, true);
       }, Math.max(0, Number(p.returnSoundMs) || FALLBACK_RETURN_MS));
     }
+    if (cancelled) pointerCancelCount += 1;
     try { state.button.releasePointerCapture(state.pointerId); } catch (_) {}
     pointers.delete(event.pointerId);
     assertKeyResetIfReady();
@@ -382,6 +384,7 @@
       clockHandoffPending,
       keyResetExpression:ELECTRICAL_SPEC.keyReset.expression,
       electricalSource:ELECTRICAL_SPEC.source.drawing,
+      pointerCancelCount,
       keys:Array.from(pointers.values()).map(s => ({key:s.button.dataset.key, accepted:s.accepted, made:s.made})).concat(keyboardState ? [{key:keyboardState.key, accepted:keyboardState.accepted, made:keyboardState.made, source:'keyboard'}] : [])
     }),
     releaseAll: releaseEverything
