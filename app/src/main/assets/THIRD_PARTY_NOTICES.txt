@@ -31,6 +31,15 @@ Source blob: 15fdfc7ac3507c79fb6bfdb2102acd14d35b0e76
 Copyright (c) 2019 Eugene Dorr (gene.dorr@gmail.com)
 Selected glyph outlines are converted to static SVG paths; no font file is bundled.
 
+Gorton Normal DSKY key vector outlines
+https://github.com/ehdorrii/dsky-fonts
+Sources: source/Gorton-Normal-120.sfd (33028992cb971f4045b8c5e9ffac720f8307588c)
+         source/Gorton-Normal-180.sfd (9356a37a8c9aed5a7471a5559a9a9c8ac13c1ad1)
+Generated OTF outline inputs: 314500f5587b5afe27f52c5069efeb12262909c2
+                              1f2b149a9916433bef3cde56e4b8dd16aa1b7241
+Copyright (c) 2019 Eugene Dorr (gene.dorr@gmail.com)
+Selected glyph outlines are converted to static SVG paths; no font file is bundled.
+
 Copyright (c) 2019 Eugene Dorr (gene.dorr@gmail.com)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
