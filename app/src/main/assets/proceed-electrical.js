@@ -31,6 +31,22 @@
     catch (_) { return ''; }
   }
 
+  function tactileService() {
+    try { return window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_KEY_TACTILE'); }
+    catch (_) { return null; }
+  }
+
+  function keyHaptic(returning = false) {
+    const service = tactileService();
+    if (!service) return false;
+    try {
+      const fn = returning ? service.release : service.make;
+      return typeof fn === 'function' ? !!fn('P') : false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function reportFailure(error) {
     try {
       if (typeof agcFailure === 'function') agcFailure(error);
@@ -40,7 +56,7 @@
     }
   }
 
-  function releaseProceed() {
+  function releaseProceed(withHaptic = false) {
     if (proPointer === null) return false;
     proPointer = null;
     if (pro) pro.classList.remove('pressed');
@@ -48,6 +64,7 @@
       try { input.proceed(false); }
       catch (error) { reportFailure(error); }
     }
+    if (withHaptic) keyHaptic(true);
     return true;
   }
 
@@ -63,9 +80,11 @@
     proPointer = event.pointerId;
     pro.classList.add('pressed');
     try { if (pro.setPointerCapture) pro.setPointerCapture(event.pointerId); } catch (_) {}
-    try { input.proceed(true); }
-    catch (error) {
-      releaseProceed();
+    try {
+      input.proceed(true);
+      keyHaptic(false);
+    } catch (error) {
+      releaseProceed(false);
       reportFailure(error);
     }
   }
@@ -74,7 +93,7 @@
     if (event.pointerId !== proPointer) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    releaseProceed();
+    releaseProceed(true);
   }
 
   function onPointerCancel(event) {
