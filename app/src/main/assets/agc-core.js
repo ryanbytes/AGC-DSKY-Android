@@ -11,6 +11,9 @@
   // Pinned yaAGC agc_t ABI: from &State.Erasable to State.InputChannel.
   // Erasable 8*0400*2 + Fixed 40*02000*2 + Parities 40*(02000/32)*4.
   const ERASABLE_TO_INPUT_CHANNELS = 91136;
+  // agc_t layout relative to &State.Erasable. VirtualAGC ringbuffer_api.c
+  // sets State->InterruptRequests[5] when channel 015 receives a DSKY key.
+  const ERASABLE_TO_INTERRUPT_REQUESTS = 92196;
   const WASI_ESPIPE = 70;
 
   function makeWasi(memory){
@@ -86,10 +89,6 @@
       this.running = false;
       this.timer = 0;
       this.startTime = 0;
-      // A successful packet_write is asynchronous.  Remember only the make
-      // that may still be queued so KEYRST can flush it when necessary without
-      // advancing the AGC on every ordinary physical release.
-      this.pendingNormalKeyCode = 0;
     }
 
     async load(options={}){
@@ -174,17 +173,18 @@
       this.exports.cpu_reset();
 
       this.channels = Object.create(null);
-      this.pendingNormalKeyCode = 0;
       this.totalSteps = 0;
       this.startTime = performance.now();
     }
 
     writeIo(channel, value){
-      // Channel 015 zero is the physical KEY RESET/release state, not a new
-      // key event. ringbuffer_api would raise KEYRUPT1 for a zero packet too,
-      // so intercept it and clear the input register directly instead.
-      if ((channel|0) === NORMAL_KEY_CHANNEL && ((value|0) & NORMAL_KEY_MASK) === 0) {
-        return this.keyRelease() ? 1 : 0;
+      // DSKY channel 015 is a physical contact/interrupt pair. Keep it
+      // synchronous in the embedded wrapper so a human make followed by an
+      // immediate release cannot be reordered by the asynchronous ringbuffer.
+      if ((channel|0) === NORMAL_KEY_CHANNEL) {
+        return ((value|0) & NORMAL_KEY_MASK)
+          ? this.keyPress(value)
+          : (this.keyRelease() ? 1 : 0);
       }
       return this.exports.packet_write(channel, value);
     }
@@ -214,39 +214,43 @@
       return true;
     }
 
+    setInterruptRequest(request){
+      if (!this.memory || !this.exports || typeof this.exports.get_erasable_ptr !== 'function') return false;
+      const req = request|0;
+      if (req < 1 || req > 10) return false;
+      const erasable = this.exports.get_erasable_ptr() >>> 0;
+      const address = erasable + ERASABLE_TO_INTERRUPT_REQUESTS + req;
+      if (address < 0 || address >= this.memory.buffer.byteLength) return false;
+      new Uint8Array(this.memory.buffer)[address] = 1;
+      return true;
+    }
+
     keyPress(keyCode){
       const code = keyCode & NORMAL_KEY_MASK;
       if (!code) return 0;
-      const accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);
-      if (accepted > 0) this.pendingNormalKeyCode = code;
-      return accepted;
+
+      // This is the exact state transition performed by VirtualAGC's
+      // ringbuffer_api.c after parsing a channel-015 DSKY packet: update the
+      // masked input channel and request KEYRUPT1 (InterruptRequests[5]).
+      // Doing both synchronously removes the WebView fast-tap race without
+      // inventing a minimum mechanical key-hold duration.
+      if (!this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, code)) return 0;
+      if (!this.setInterruptRequest(5)) {
+        this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
+        return 0;
+      }
+      return 1;
     }
 
     keyRelease(){
-      // KEY RESET is a separate DSKY discrete.  Do NOT send channel 015=0
-      // through ringbuffer_api: that transport raises KEYRUPT1 for every
-      // channel-015 packet, including zero, which would create a fictitious
-      // second keystroke on physical release.
-      //
-      // Normally the 4-ms scheduler has already consumed the make packet long
-      // before a human releases the key.  Advance one MCT only when the make is
-      // demonstrably still pending; an ordinary settled release must not alter
-      // AGC execution timing merely to clear the external keyboard contact.
-      const pending = this.pendingNormalKeyCode & NORMAL_KEY_MASK;
-      if (pending && this.inputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK) !== pending
-          && this.exports && typeof this.exports.cpu_step === 'function') {
-        this.exports.cpu_step(1);
-        this.totalSteps += 1;
-        this.drainIo();
-      }
-      this.pendingNormalKeyCode = 0;
+      // KEYRST is the all-released physical contact state.  It clears the
+      // five channel-015 keycode bits directly and never asserts KEYRUPT1.
       return this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
     }
 
     releaseExternalDskyInputs(){
       // Physical controls are not persistent AGC state.  A restored snapshot
       // must come back with the normal keyboard released and PRO released.
-      this.pendingNormalKeyCode = 0;
       const keyOk = this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
       const proOk = this.setInputChannelBits(PROCEED_CHANNEL, PROCEED_MASK, PROCEED_MASK);
       return keyOk && proOk;
@@ -279,16 +283,9 @@
       this.totalSteps += 1;
       this.drainIo();
 
-      // ABI of the pinned yaAGC agc_t following Erasable: Fixed, Parities,
-      // InputChannel, OutputChannel7, OutputChannel10, IndexValue, then
-      // InterruptRequests[]. KEYRUPT1 is request 5; KEYRUPT2 is request 6.
-      const ERASABLE_TO_INTERRUPT_REQUESTS = 92196;
-      const erasable = this.exports.get_erasable_ptr() >>> 0;
-      const addr = erasable + ERASABLE_TO_INTERRUPT_REQUESTS + 6;
-      const bytes = new Uint8Array(this.memory.buffer);
-      if (addr >= bytes.length) return false;
-      bytes[addr] = 1;
-      return true;
+      // KEYRUPT2 is interrupt request 6 in the same agc_t request array used
+      // by the synchronous DSKY KEYRUPT1 path.
+      return this.setInterruptRequest(6);
     }
 
     navKeyRelease(){
