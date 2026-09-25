@@ -9,8 +9,8 @@
  * but the surviving source set does not establish total installed finger
  * force. Haptics therefore mark the physical contact/release events only.
  *
- * Android uses View.performHapticFeedback(VIRTUAL_KEY / VIRTUAL_KEY_RELEASE),
- * which is device-calibrated and respects the user's system haptic setting.
+ * Android uses device-tuned predefined VibrationEffect primitives:
+ * EFFECT_CLICK for contact/make and the lighter EFFECT_TICK for release.
  * Browser/PWA/Apple surfaces remain a clean no-op instead of inventing another
  * vibration model.
  */
@@ -42,8 +42,8 @@
     const native = bridge();
     if (!native) return false;
     try {
-      if (kind === 'make') native.keyMake();
-      else native.keyRelease();
+      const dispatched = kind === 'make' ? native.keyMake() : native.keyRelease();
+      if (dispatched === false) return false;
       if (kind === 'make') makeCount += 1;
       else releaseCount += 1;
       lastEvent = Object.freeze({kind, key:String(key || '?'), at:Date.now()});
@@ -67,12 +67,13 @@
     const force = spec?.springForceEnvelope || {};
     return Object.freeze({
       nativeBridge: !!bridge(),
+      nativeBackend: (() => { try { return bridge()?.backend?.() || null; } catch (_) { return null; } })(),
       platformEffects: Object.freeze({
-        make:'VIRTUAL_KEY',
-        release:'VIRTUAL_KEY_RELEASE',
-        api26ReleaseFallback:'KEYBOARD_TAP'
+        make:'VibrationEffect.EFFECT_CLICK',
+        release:'VibrationEffect.EFFECT_TICK',
+        legacyFallback:'View.performHapticFeedback'
       }),
-      policy:'event-cue-only; no force-to-vibration amplitude mapping',
+      policy:'event-cue-only; predefined device-tuned effects; no force-to-vibration amplitude mapping',
       actuationTravelIn: spec?.assembly?.actuationTravelIn ?? null,
       overtravelToBottomIn: spec?.assembly?.overtravelToBottomIn ?? null,
       totalTravelIn: spec?.assembly?.totalTravelIn ?? null,
