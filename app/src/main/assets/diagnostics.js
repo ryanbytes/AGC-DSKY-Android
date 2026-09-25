@@ -47,7 +47,7 @@
   ]);
   const SELF_TEST_KEYS=Object.freeze({'1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37});
   const SELF_TEST_RELAY_CODES=Object.freeze({'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31});
-  const SELF_TEST_TOTAL=13;
+  const SELF_TEST_TOTAL=14;
   function selfTestResult(name,ok,detail){return Object.freeze({name:String(name),ok:!!ok,detail:String(detail||'')})}
   function hex(bytes){return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('')}
   async function gitBlobSha1(bytes){
@@ -128,6 +128,18 @@
       for(const key of [...Object.keys(SELF_TEST_KEYS),'P'])if(keys.filter(x=>x===key).length!==1)throw new Error('key '+key+' DOM wiring count != 1');
       if(!input||typeof input.keyMake!=='function'||typeof input.keyReset!=='function'||typeof input.proceed!=='function')throw new Error('input runtime unavailable');
       return '18 Pinball keycodes + separate PRO contact wired';
+    });
+    await run('Key tactile model',async()=>{
+      const tactile=lateService('AGCDSKY_KEY_TACTILE');
+      if(!tactile||typeof tactile.status!=='function'||typeof tactile.make!=='function'||typeof tactile.release!=='function')throw new Error('key tactile service unavailable');
+      const status=tactile.status();
+      if(status.policy!=='event-cue-only; no force-to-vibration amplitude mapping')throw new Error('tactile force policy changed');
+      if(status.actuationTravelIn!==3/16||status.overtravelToBottomIn!==1/16||status.totalTravelIn!==1/4)throw new Error('R-700 key travel metadata mismatch');
+      if(status.springForceIncreaseToActuationOzMin!==9||status.springForceIncreaseToActuationOzMax!==10.5)throw new Error('spring actuation ΔF envelope mismatch');
+      if(status.springForceIncreaseToBottomOzMin!==12||status.springForceIncreaseToBottomOzMax!==14)throw new Error('spring bottom ΔF envelope mismatch');
+      if(status.totalFingerForceOz!==null)throw new Error('total finger force must remain unresolved');
+      if(window.TimeBridge&&(!window.HapticBridge||typeof HapticBridge.keyMake!=='function'||typeof HapticBridge.keyRelease!=='function'))throw new Error('Android HapticBridge unavailable');
+      return status.nativeBridge?'Android VIRTUAL_KEY / VIRTUAL_KEY_RELEASE active':'source-backed tactile model active · native haptics unavailable on this surface';
     });
     await run('Native/browser bridges',async()=>{
       const native=!!window.TimeBridge;
@@ -210,6 +222,8 @@
     const core=coreSession.core;
     const phone=phoneStatus();
     const sxt=opticsStatus();
+    const tactile=lateService('AGCDSKY_KEY_TACTILE');
+    const tactileStatus=tactile&&typeof tactile.status==='function'?tactile.status():null;
     const pwa=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function'?window.AGCDSKYPWA.parityStatus():null;
     const r=(bank,addr)=>core&&typeof core.readErasable==='function'?core.readErasable(bank,addr):null;
     const state3=r(0,0o77),imodes30=r(2,0o320);
@@ -232,6 +246,17 @@
     if(dskyTest)h+=row('Clock DSKY self-test',`${dskyTest.ok?'STARTED':'BLOCKED'} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
     h+=row('PROG / VERB / NOUN',`${(d.prog||[]).join('')||'--'} / ${(d.verb||[]).join('')||'--'} / ${(d.noun||[]).join('')||'--'}`);
     const ch=app.channels||{};h+=row('Channels 011 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
+    h+=section('KEY MECHANICS / TACTILE');
+    if(tactileStatus){
+      h+=row('Key travel',`${f(tactileStatus.actuationTravelIn,4)} in to contact · +${f(tactileStatus.overtravelToBottomIn,4)} in overtravel · ${f(tactileStatus.totalTravelIn,4)} in total · PANEL-NORMAL`);
+      h+=row('Compression spring',`${f(tactileStatus.springRateLbPerInMin,1)}–${f(tactileStatus.springRateLbPerInMax,1)} lb/in · ΔF contact ${f(tactileStatus.springForceIncreaseToActuationOzMin,1)}–${f(tactileStatus.springForceIncreaseToActuationOzMax,1)} oz · bottom ${f(tactileStatus.springForceIncreaseToBottomOzMin,1)}–${f(tactileStatus.springForceIncreaseToBottomOzMax,1)} oz`);
+      h+=row('Sensitive switch',`actuate ≤${f(tactileStatus.switchActuatingForceOzMax,1)} oz · release ≥${f(tactileStatus.switchReleaseForceOzMin,1)} oz`);
+      h+=row('Total finger force','UNKNOWN · installed preload / leaf-spring leverage / friction unresolved');
+      h+=row('Tactile cue',tactileStatus.nativeBridge?'ANDROID VIRTUAL_KEY / VIRTUAL_KEY_RELEASE · SYSTEM HAPTIC SETTING RESPECTED':'NO NATIVE HAPTIC BRIDGE ON THIS SURFACE');
+      h+=row('Tactile events',`${tactileStatus.makeCount} make · ${tactileStatus.releaseCount} release`);
+    }else{
+      h+=row('Key tactile model','UNAVAILABLE');
+    }
     h+=section('ISS / ALIGNMENT');
     h+=row('IMODES30',`${oct(imodes30)} · ${iss}`);
     h+=row('REFSMFLG',`${refsm} · STATE+3 ${oct(state3)}`);
