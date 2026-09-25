@@ -41,6 +41,12 @@ jobs:
             "$RUNNER_TEMP/mac-build/AGC DSKY.app" \
             "$RUNNER_TEMP/AGC-DSKY-macOS.zip"
 
+      - name: Verify macOS shared frontend parity
+        run: |
+          WEB_ASSETS="$(find "$RUNNER_TEMP/mac-build/AGC DSKY.app" -type d -name WebAssets -print -quit)"
+          test -n "$WEB_ASSETS"
+          python3 tools/verify-shared-frontend-parity.py --source app/src/main/assets --dir "$WEB_ASSETS" --label macOS
+
       - name: Upload macOS app
         uses: actions/upload-artifact@v4
         with:
@@ -61,6 +67,12 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent \
             "$RUNNER_TEMP/ios-simulator-build/AGC DSKY.app" \
             "$RUNNER_TEMP/AGC-DSKY-iOS-Simulator.zip"
+
+      - name: Verify iOS shared frontend parity
+        run: |
+          WEB_ASSETS="$(find "$RUNNER_TEMP/ios-simulator-build/AGC DSKY.app" -type d -name WebAssets -print -quit)"
+          test -n "$WEB_ASSETS"
+          python3 tools/verify-shared-frontend-parity.py --source app/src/main/assets --dir "$WEB_ASSETS" --label iOS-simulator
 
       - name: Upload iOS simulator app
         uses: actions/upload-artifact@v4
