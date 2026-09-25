@@ -1,6 +1,38 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-18
+Last updated: 2026-09-25
+
+## 2026-09-25 full 140-relay live rack / unified contact-event presentation
+
+A new relay-rack view is mounted above the DSKY in the normal interactive layout. It has no decorative title/legend block and depicts every relay currently modeled by the app:
+
+- 132 latching display relays: 12 selectable channel-010 banks x 11 relays (B + C-K1..K5 + D-K1..K5);
+- 8 auxiliary relays: COMP ACTY, UPLINK ACTY, TEMP, KEY REL, OPR ERR, FLASH, RESTART, STBY;
+- 140 modeled relays total.
+
+The rack is not a separate animation. relay-visual-coupling.js is now the single presentation-event authority for relay contact motion. For each changed latching relay, one deterministic per-relay event path uses the existing manufacturing profile from relay-identity-audio.js to drive:
+
+1. relay-rack armature/contact motion;
+2. that exact relay's manufactured sound identity;
+3. the DSKY EL/contact projection.
+
+Set/reset travel, stable time, contact bounce, pole skew, and per-relay acoustic identity remain deterministic per installed relay. Authentic mode keeps the original 20-ms physical bank/latch boundary unchanged. Stretched mode remains presentation-only, but its armature arrival is frame-coupled so rack motion, sound, and DSKY contact change occur on the same presentation frame. Bounce timing is anchored to that actual shared impact event rather than the earlier command time.
+
+The 20-ms latch commit in hardware-fidelity.js remains authoritative for settled hardware state. Raw channel 011/0163 backing state is recorded immediately for diagnostics, while modeled auxiliary relay contacts own the corresponding annunciator transition. PHONE CLOCK and real AGC channel-010 paths now use the same relay-contact presentation path rather than maintaining a separate visual/audio timing approximation.
+
+Source/test work on branch feature/relay-panel-140:
+
+- added relay-panel.js and relay-panel.css;
+- added canonical relay-panel-smoke.js;
+- strengthened relay-visual-coupling-smoke.js to prove the same manufactured contact event drives rack subscribers, sound, DSKY projection, and bounce;
+- updated hardware/service/output/state ownership smokes for the new authority boundary;
+- connector-backed syntax compilation passed for all changed JavaScript files;
+- direct branch execution with mocked hardware verified a 5.0-ms relay produces rack/contact, sound, and DSKY projection at 5.0 ms and its modeled bounce at 5.5 ms;
+- direct stretched-mode execution verified rack/contact, sound, and DSKY projection share the same stretched frame, with bounce scheduled from that frame;
+- direct relay-panel execution verified 132 latching + 8 auxiliary = 140 live cells.
+
+These are source-level checks. The canonical bash tools/build-local.sh, Gradle APK build/signature verification, and Android device smokes have not yet been executed for this feature and must not be marked verified until observed.
+
 
 ## 2026-09-18 SNTP / network-time repair
 

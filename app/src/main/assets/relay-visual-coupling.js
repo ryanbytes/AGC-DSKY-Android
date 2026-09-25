@@ -1,43 +1,44 @@
 'use strict';
 
 /*
- * Couple visible EL/contact output to the individual relay that drives it.
- * AUTHENTIC mode follows modeled per-relay travel inside the 20-ms bank settle.
- * STRETCHED is presentation-only: AGC/latch timing stays authentic while contact
- * transitions are frame-separated for visibility. Channel-010 interception and
- * rendering flow through AGCDSKY_DISPLAY; audio/state use their owning services.
+ * One presentation authority for every modeled DSKY relay transition.
+ *
+ * A single per-relay contact event drives all crew-facing consequences:
+ *   1. the relay-rack armature/contact visualization,
+ *   2. that exact relay's deterministic manufactured click/bounce identity,
+ *   3. the DSKY EL/annunciator contact projection.
+ *
+ * AUTHENTIC mode follows the deterministic per-relay set/reset travel and
+ * contact trace inside the unchanged 20-ms bank envelope. STRETCHED mode only
+ * separates armature arrivals for human visibility; AGC/latch timing remains
+ * authentic and sound + relay rack + DSKY projection stay frame-coupled.
  */
 (() => {
-  const visualState=window.AGCDSKY_APP_STATE;
   const display=window.AGCDSKY_DISPLAY;
-  const audio=window.AGCDSKY_AUDIO;
-  const environment=window.AGCDSKY_ENVIRONMENT;
   const shell=window.AGCDSKY_SHELL;
   const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   const audioModel=window.DSKY_RELAY_AUDIO;
   const relayMatrix=window.DSKY_RELAY_MATRIX;
-  if(!visualState||!display||!audio||!environment||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');
+  if(!display||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');
   const baseDecodeChannel10=display.implementation('decodeChannel10');
-  const baseIdentityEmitTick=audio.implementation('emitTick');
-  if(typeof baseDecodeChannel10!=='function'||typeof baseIdentityEmitTick!=='function')throw new Error('Relay visual implementation hooks unavailable');
+  if(typeof baseDecodeChannel10!=='function')throw new Error('Relay visual implementation hook unavailable');
 
   const STORAGE_KEY='relayVisualTimingV1',MODE_AUTHENTIC='authentic',MODE_STRETCHED='stretched',FINAL_SETTLE_MS=20;
   const STRETCH_FIRST_BASE_MS=20,STRETCH_MIN_GAP_MS=18,STRETCH_MAX_GAP_MS=28,STRETCH_RELEASE_HOLD_MS=24;
-  const generation=Object.create(null),presentation=Object.create(null),settledWordOverride=Object.create(null),presentationBufferCache=new Map();
+  const generation=Object.create(null),auxGeneration=Object.create(null),presentation=Object.create(null),settledWordOverride=Object.create(null);
+  const listeners=new Set();
   let frameLoopRunning=false,lastPresentationClick=null;
 
   function getStoredMode(){const value=shell.store.get(STORAGE_KEY);return value===MODE_STRETCHED?MODE_STRETCHED:MODE_AUTHENTIC}
   function saveMode(value){shell.store.set(STORAGE_KEY,value)}
   let timingMode=getStoredMode();
 
-  function relayVisualTimingAwareTick(ctx,when=ctx.currentTime,strength=1){
-    if(timingMode===MODE_STRETCHED){
-      const state=hardware.snapshot(),row=Number(state&&state.activeDrive)||0,deltaMs=Math.max(0,(Number(when)-Number(ctx.currentTime))*1000);
-      if(row>=1&&row<=12&&deltaMs>=4)return;
-    }
-    return baseIdentityEmitTick(ctx,when,strength);
+  function emit(event){
+    const frozen=Object.freeze({...event,timingMode});
+    for(const listener of Array.from(listeners)){try{listener(frozen)}catch(error){console.error('DSKY relay presentation listener',error)}}
+    return frozen;
   }
-  audio.installImplementation('emitTick',relayVisualTimingAwareTick,'relay visual timing audio gate');
+  function subscribe(listener){if(typeof listener!=='function')throw new TypeError('Relay presentation listener must be a function');listeners.add(listener);return()=>listeners.delete(listener)}
 
   function currentSettledWord(row){
     if(Object.prototype.hasOwnProperty.call(settledWordOverride,row))return settledWordOverride[row]&0o3777;
@@ -51,62 +52,128 @@
   }
   function renderWord(row,low11){display.renderRelayWord(row,Number(low11)&0o3777)}
   function profileFor(row,bit){try{return audioModel.profileFor(row,bit)||null}catch(_){return null}}
-  function contactDelayMs(row,bit,engaging){const profile=profileFor(row,bit);if(profile){const value=engaging?profile.setTravelMs:profile.resetTravelMs;if(Number.isFinite(value))return Math.max(0,Math.min(19.5,value))}const fallback=[6.2,11.7,8.4,13.6,7.1,15.0,9.5,12.5,5.6,14.3,10.5];return fallback[bit]||10}
+  function contactDelayMs(row,bit,engaging){const p=profileFor(row,bit);if(p){const value=engaging?p.setTravelMs:p.resetTravelMs;if(Number.isFinite(value))return Math.max(0,Math.min(19.5,value))}return 10}
+  function contactTrace(row,bit,engaging){
+    try{const trace=audioModel.contactTraceFor(row,bit,!!engaging);if(Array.isArray(trace)&&trace.length)return trace.map(item=>({...item}))}catch(_){}
+    const atMs=contactDelayMs(row,bit,engaging);return[{atMs,state:!!engaging,kind:'armature'},{atMs,state:!!engaging,kind:'settled'}];
+  }
   function collectMotions(row,prior,target){
     const motions=[],diff=(prior^target)&0o3777;
     for(let bit=0;bit<11;bit++){
-      const mask=1<<bit;if(!(diff&mask))continue;const on=!!(target&mask),profile=profileFor(row,bit),physicalMs=contactDelayMs(row,bit,on),stableCandidate=profile?(on?profile.setStableMs:profile.resetStableMs):physicalMs,stableMs=Number.isFinite(stableCandidate)?Math.max(physicalMs,stableCandidate):physicalMs,bounceCountCandidate=profile?(on?profile.setBounceCount:profile.resetBounceCount):0,bounceCount=Number.isFinite(bounceCountCandidate)?Math.max(0,bounceCountCandidate):0,poleSkewUs=profile&&Number.isFinite(profile.poleSkewUs)?profile.poleSkewUs:0;motions.push({bit,mask,on,physicalMs,stableMs,bounceCount,poleSkewUs});
+      const mask=1<<bit;if(!(diff&mask))continue;const on=!!(target&mask),profile=profileFor(row,bit),physicalMs=contactDelayMs(row,bit,on),trace=contactTrace(row,bit,on),stableEvent=trace[trace.length-1],stableMs=Number(stableEvent&&stableEvent.atMs)||physicalMs,bounceCount=trace.filter(item=>item.kind==='bounce').length,poleSkewUs=profile&&Number.isFinite(profile.poleSkewUs)?profile.poleSkewUs:0;
+      motions.push({row,bit,mask,on,physicalMs,stableMs,bounceCount,poleSkewUs,profile,trace});
     }
     motions.sort((a,b)=>a.physicalMs-b.physicalMs||a.bit-b.bit);return motions;
   }
   function stretchedGapMs(motion){const tailMs=Math.max(0,motion.stableMs-motion.physicalMs),signature=tailMs*2+Math.min(5,Math.abs(motion.poleSkewUs)/35)+Math.min(4,motion.bounceCount*.55)+(motion.physicalMs-4.7)*.45;return Math.max(STRETCH_MIN_GAP_MS,Math.min(STRETCH_MAX_GAP_MS,STRETCH_MIN_GAP_MS+signature))}
   function stretchedSchedule(motions){let at=0;return motions.map((motion,index)=>{if(index===0)at=STRETCH_FIRST_BASE_MS+motion.physicalMs*1.25+Math.min(8,Math.abs(motion.poleSkewUs)/32);else at+=stretchedGapMs(motion);return{...motion,stretchedMs:Math.round(at*10)/10}})}
-  function xorshift32(seed){let state=(Number(seed)>>>0)||1;return()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return(state>>>0)/4294967296}}
-  function presentationBuffer(ctx,row,bit,engaging,p){
-    const key=`${ctx.sampleRate}|${row}|${bit}|${engaging?'set':'reset'}`,cached=presentationBufferCache.get(key);if(cached)return cached;
-    const sr=ctx.sampleRate,duration=engaging?.0105:.0097,n=Math.max(32,Math.floor(sr*duration)),buffer=ctx.createBuffer(1,n,sr),data=buffer.getChannelData(0),rnd=xorshift32((p.phaseSeed>>>0)^(engaging?0x53455421:0x52535421)),phase=[rnd(),rnd(),rnd(),rnd()].map(v=>v*Math.PI*2),resetScale=engaging?1:.93,decayScale=engaging?1:.90;let prevNoise=0,prevDiff=0;
-    for(let i=0;i<n;i++){const t=i/sr,noise=rnd()*2-1,diff=noise-prevNoise,highNoise=diff-prevDiff;prevNoise=noise;prevDiff=diff;const strike=highNoise*Math.exp(-t/p.strikeDecay)*p.strikeMix*resetScale,ring=p.ringMix*(Math.sin(2*Math.PI*p.f1*t+phase[0])*Math.exp(-t/(p.d1*decayScale))*.24+Math.sin(2*Math.PI*p.f2*t+phase[1])*Math.exp(-t/(p.d2*decayScale))*.34+Math.sin(2*Math.PI*p.f3*t+phase[2])*Math.exp(-t/(p.d3*decayScale))*.25+Math.sin(2*Math.PI*p.f4*t+phase[3])*Math.exp(-t/(p.d4*decayScale))*.13);data[i]=(strike+ring)*Math.min(1,t/.00009)}
-    let mean=0;for(let i=0;i<n;i++)mean+=data[i];mean/=n;let peak=0;for(let i=0;i<n;i++){data[i]-=mean;peak=Math.max(peak,Math.abs(data[i]))}if(peak>0){const scale=.82/peak;for(let i=0;i<n;i++)data[i]*=scale}presentationBufferCache.set(key,buffer);return buffer;
+
+  function applyRelayContact(state,motion,traceEvent){
+    if(motion.row<1||motion.row>12)return;
+    if(traceEvent.state)state.contactWord|=motion.mask;else state.contactWord&=~motion.mask;
+    renderWord(motion.row,state.contactWord);
+    if(traceEvent.kind==='armature'){
+      lastPresentationClick={row:motion.row,bit:motion.bit,engaging:motion.on};
+      audioModel.playRelayImpact?.(motion.row,motion.bit,motion.on,.66);
+    }
+    emit({type:'relay-contact',row:motion.row,bit:motion.bit,id:audioModel.relayIdentity(motion.row,motion.bit),state:!!traceEvent.state,targetOn:motion.on,phase:traceEvent.kind,contactWord:state.contactWord,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount});
   }
-  function playPresentationClick(row,bit,engaging){
-    lastPresentationClick={row,bit,engaging:!!engaging};if(!visualState.tickSound)return;const p=profileFor(row,bit),ctx=audio.ensure();if(!p||!ctx)return;
-    const play=()=>{const start=ctx.currentTime+.00005,source=ctx.createBufferSource(),gain=ctx.createGain(),level=environment.tickLevel(),setReset=engaging?1.035:.915;source.buffer=presentationBuffer(ctx,row,bit,engaging,p);gain.gain.setValueAtTime(.0001,start);gain.gain.linearRampToValueAtTime(.43*level*.66*p.level*setReset,start+.00008);gain.gain.exponentialRampToValueAtTime(.0001,start+(engaging?.0062:.0055));source.connect(gain);gain.connect(ctx.destination);source.start(start);source.stop(start+.0115)};
-    if(ctx.state==='running')play();else ctx.resume().then(play).catch(()=>{});
+  function scheduleContactTail(motion,token,armatureTraceMs,requiredMode){
+    for(const item of motion.trace){
+      if(item.kind==='armature')continue;
+      const relative=Math.max(0,Number(item.atMs)-armatureTraceMs);
+      setTimeout(()=>{
+        if(generation[motion.row]!==token||timingMode!==requiredMode)return;
+        const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;
+        applyRelayContact(live,motion,item);
+      },relative);
+    }
+  }
+  function scheduleTraceFromArmature(state,motion,token,armatureAtMs){
+    const armature=motion.trace.find(item=>item.kind==='armature')||motion.trace[0];
+    const armatureTraceMs=Number(armature&&armature.atMs)||motion.physicalMs;
+    if(timingMode===MODE_STRETCHED){
+      const armatureEvent={...armature,atMs:armatureAtMs};
+      setTimeout(()=>{
+        if(generation[motion.row]!==token||timingMode!==MODE_STRETCHED)return;
+        const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;
+        live.frameQueue.push({motion,item:armatureEvent,armatureTraceMs,token});requestFrameLoop();
+      },armatureAtMs);return;
+    }
+    setTimeout(()=>{
+      if(generation[motion.row]!==token||timingMode!==MODE_AUTHENTIC)return;
+      const live=presentation[motion.row];if(!live||!live.active||live.token!==token)return;
+      applyRelayContact(live,motion,armature);
+      scheduleContactTail(motion,token,armatureTraceMs,MODE_AUTHENTIC);
+    },Math.max(0,armatureAtMs));
   }
   function activePresentations(){for(let row=1;row<=12;row++){const state=presentation[row];if(state&&state.active)return true}return false}
   function frameStep(){
     frameLoopRunning=false;if(timingMode!==MODE_STRETCHED)return;
-    for(let row=1;row<=12;row++){const state=presentation[row];if(!state||!state.active)continue;if(generation[row]!==state.token){state.active=false;continue}renderWord(row,state.contactWord);if(state.pendingClicks&&state.pendingClicks.length){const pending=state.pendingClicks.splice(0);for(const motion of pending)playPresentationClick(row,motion.bit,motion.on)}}
+    for(let row=1;row<=12;row++){
+      const state=presentation[row];if(!state||!state.active)continue;if(generation[row]!==state.token){state.active=false;continue}
+      const queued=state.frameQueue.splice(0);for(const entry of queued){applyRelayContact(state,entry.motion,entry.item);scheduleContactTail(entry.motion,entry.token,entry.armatureTraceMs,MODE_STRETCHED)}
+    }
     if(activePresentations())requestFrameLoop();
   }
   function requestFrameLoop(){if(frameLoopRunning||timingMode!==MODE_STRETCHED)return;frameLoopRunning=true;if(typeof requestAnimationFrame==='function')requestAnimationFrame(frameStep);else setTimeout(frameStep,16)}
-  function releasePresentation(row,token,target){setTimeout(()=>{const state=presentation[row];if(!state||!state.active||state.token!==token||generation[row]!==token)return;state.contactWord=target&0o3777;renderWord(row,state.contactWord);state.active=false},STRETCH_RELEASE_HOLD_MS)}
-  function scheduleContactVisuals(row,prior,target){
-    const token=(generation[row]||0)+1;generation[row]=token;const motions=collectMotions(row,prior,target);if(!motions.length)return;
-    if(timingMode===MODE_STRETCHED){
-      const scheduled=stretchedSchedule(motions),state=presentation[row]={token,active:true,contactWord:prior&0o3777,target:target&0o3777,scheduled,pendingClicks:[]};renderWord(row,state.contactWord);requestFrameLoop();
-      scheduled.forEach((motion,index)=>setTimeout(()=>{const live=presentation[row];if(!live||!live.active||live.token!==token||generation[row]!==token||timingMode!==MODE_STRETCHED)return;if(motion.on)live.contactWord|=motion.mask;else live.contactWord&=~motion.mask;live.pendingClicks.push(motion);requestFrameLoop();if(index===scheduled.length-1)releasePresentation(row,token,target)},motion.stretchedMs));return;
+  function releasePresentation(row,token,target,afterMs){setTimeout(()=>{const state=presentation[row];if(!state||!state.active||state.token!==token||generation[row]!==token)return;state.contactWord=target&0o3777;renderWord(row,state.contactWord);state.active=false;emit({type:'relay-bank-settled',row,contactWord:state.contactWord})},Math.max(0,afterMs))}
+
+  function presentDrive(row,prior,target,{renderContact=true}={}){
+    row=Number(row);prior=Number(prior)&0o3777;target=Number(target)&0o3777;
+    if(row<1||row>12)return 0;
+    const token=(generation[row]||0)+1;generation[row]=token;const motions=collectMotions(row,prior,target);
+    const state=presentation[row]={token,active:motions.length>0,contactWord:prior,target,frameQueue:[],renderContact:!!renderContact};
+    if(!motions.length){renderWord(row,target);emit({type:'relay-bank-settled',row,contactWord:target});return 0}
+    for(const motion of motions){
+      const arrival=timingMode===MODE_STRETCHED?(stretchedSchedule(motions).find(item=>item.bit===motion.bit)?.stretchedMs??motion.physicalMs):motion.physicalMs;
+      emit({type:'relay-drive',row,bit:motion.bit,id:audioModel.relayIdentity(row,motion.bit),fromOn:!!(prior&motion.mask),targetOn:motion.on,durationMs:arrival,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount});
+      scheduleTraceFromArmature(state,motion,token,arrival);
     }
-    let contactWord=prior&0o3777;for(const motion of motions)setTimeout(()=>{if(generation[row]!==token||timingMode!==MODE_AUTHENTIC)return;if(motion.on)contactWord|=motion.mask;else contactWord&=~motion.mask;renderWord(row,contactWord)},motion.physicalMs);
+    const end=timingMode===MODE_STRETCHED?Math.max(...stretchedSchedule(motions).map(item=>item.stretchedMs+Math.max(0,item.stableMs-item.physicalMs)))+STRETCH_RELEASE_HOLD_MS:FINAL_SETTLE_MS;
+    releasePresentation(row,token,target,end);return end;
   }
-  function cancelPendingVisuals(){for(let row=1;row<=12;row++){generation[row]=(generation[row]||0)+1;if(presentation[row])presentation[row].active=false}}
+
+  function presentAux(next,{render=true,commit}={}){
+    if(typeof commit!=='function')throw new TypeError('Aux relay presentation requires commit callback');
+    const snapshot=hardware.snapshot(),prior=snapshot&&snapshot.auxRelays?snapshot.auxRelays:{};
+    for(const [name,requested] of Object.entries(next||{})){
+      if(!audioModel.auxiliaryNames?.includes(name)){commit(name,!!requested,render);continue}
+      const on=!!requested,before=!!prior[name];if(before===on){commit(name,on,render);continue}
+      const token=(auxGeneration[name]||0)+1;auxGeneration[name]=token;
+      const p=audioModel.auxiliaryProfileFor(name),trace=audioModel.auxiliaryContactTraceFor(name,on),armature=trace.find(item=>item.kind==='armature')||trace[0],travel=Number(armature&&armature.atMs)||(on?p.setTravelMs:p.resetTravelMs);
+      emit({type:'aux-drive',name,id:`AUX:${name.toUpperCase()}`,fromOn:before,targetOn:on,durationMs:travel,physicalMs:travel,stableMs:on?p.setStableMs:p.resetStableMs,poleSkewUs:p.poleSkewUs,bounceCount:trace.filter(item=>item.kind==='bounce').length});
+      for(const item of trace)setTimeout(()=>{
+        if(auxGeneration[name]!==token)return;commit(name,!!item.state,render);
+        if(item.kind==='armature')audioModel.playAuxImpact?.(name,on,.62);
+        emit({type:'aux-contact',name,id:`AUX:${name.toUpperCase()}`,state:!!item.state,targetOn:on,phase:item.kind,physicalMs:travel,stableMs:on?p.setStableMs:p.resetStableMs,poleSkewUs:p.poleSkewUs,bounceCount:trace.filter(e=>e.kind==='bounce').length});
+      },Math.max(0,Number(item.atMs)||0));
+    }
+    return true;
+  }
+
+  function cancelPendingVisuals(){for(let row=1;row<=12;row++){generation[row]=(generation[row]||0)+1;if(presentation[row])presentation[row].active=false}for(const name of Object.keys(auxGeneration))auxGeneration[name]++}
+  function resetPresentation(){cancelPendingVisuals();emit({type:'reset'})}
   function syncSettledVisuals(){for(let row=1;row<=12;row++)renderWord(row,currentSettledWord(row))}
-  function setTimingMode(next,persist=true){const normalized=next===MODE_STRETCHED?MODE_STRETCHED:MODE_AUTHENTIC;if(normalized===timingMode){updateButton();return timingMode}cancelPendingVisuals();timingMode=normalized;if(persist)saveMode(timingMode);syncSettledVisuals();updateButton();return timingMode}
+  function setTimingMode(next,persist=true){const normalized=next===MODE_STRETCHED?MODE_STRETCHED:MODE_AUTHENTIC;if(normalized===timingMode){updateButton();return timingMode}cancelPendingVisuals();timingMode=normalized;if(persist)saveMode(timingMode);syncSettledVisuals();emit({type:'timing-mode',mode:timingMode});updateButton();return timingMode}
   function presentationDurationMs(row,prior,target){if(timingMode!==MODE_STRETCHED)return FINAL_SETTLE_MS;const schedule=stretchedSchedule(collectMotions(row,prior,target));return schedule.length?schedule[schedule.length-1].stretchedMs+STRETCH_RELEASE_HOLD_MS:0}
 
   const button=document.getElementById('relay-timing');
-  function updateButton(){if(!button)return;const stretched=timingMode===MODE_STRETCHED;button.textContent=stretched?'RELAY VISUAL STRETCHED':'RELAY VISUAL AUTHENTIC';button.setAttribute('aria-pressed',stretched?'true':'false');button.title=stretched?'Frame-synchronized per-relay stretched visuals and clicks; AGC timing remains authentic':'Authentic modeled relay contact timing'}
+  function updateButton(){if(!button)return;const stretched=timingMode===MODE_STRETCHED;button.textContent=stretched?'RELAY VISUAL STRETCHED':'RELAY VISUAL AUTHENTIC';button.setAttribute('aria-pressed',stretched?'true':'false');button.title=stretched?'Frame-coupled relay motion, sound and DSKY contacts; AGC timing remains authentic':'Authentic manufactured per-relay travel/contact timing'}
   if(button)button.addEventListener('click',()=>{setTimingMode(timingMode===MODE_AUTHENTIC?MODE_STRETCHED:MODE_AUTHENTIC,true);shell.showControls()});updateButton();
 
   function relayContactVisualDecode(value){
     const word=Number(value)&0o77777,row=(word>>11)&0o17,target=word&0o3777;
-    if(row>=1&&row<=12){const prior=currentSettledWord(row);scheduleContactVisuals(row,prior,target)}
+    if(row>=1&&row<=12){const prior=currentSettledWord(row);presentDrive(row,prior,target,{renderContact:true})}
     return baseDecodeChannel10(value);
   }
-  display.installImplementation('decodeChannel10',relayContactVisualDecode,'relay contact visual coupling');
+  display.installImplementation('decodeChannel10',relayContactVisualDecode,'relay contact/audio/rack coupling');
   hardware.registerSettledPaintPolicy('relay-visual-coupling',()=>timingMode!==MODE_STRETCHED);
 
   window.DSKY_RELAY_VISUAL=Object.freeze({
-    mode:'individual-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:false,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedBounceAudio:false,stretchFirstBaseMs:STRETCH_FIRST_BASE_MS,stretchMinGapMs:STRETCH_MIN_GAP_MS,stretchMaxGapMs:STRETCH_MAX_GAP_MS,stretchReleaseHoldMs:STRETCH_RELEASE_HOLD_MS,getTimingMode:()=>timingMode,setTimingMode,contactDelayMs,stretchedGapMs,stretchedScheduleFor:(row,prior,target)=>stretchedSchedule(collectMotions(row,prior,target)).map(item=>({...item})),presentationDurationMs,lastPresentationClick:()=>lastPresentationClick?{...lastPresentationClick}:null,renderWord,currentSettledWord,withSettledWordOverride
+    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedBounceAudio:true,
+    stretchFirstBaseMs:STRETCH_FIRST_BASE_MS,stretchMinGapMs:STRETCH_MIN_GAP_MS,stretchMaxGapMs:STRETCH_MAX_GAP_MS,stretchReleaseHoldMs:STRETCH_RELEASE_HOLD_MS,
+    getTimingMode:()=>timingMode,setTimingMode,contactDelayMs,stretchedGapMs,stretchedScheduleFor:(row,prior,target)=>stretchedSchedule(collectMotions(row,prior,target)).map(item=>({...item})),presentationDurationMs,lastPresentationClick:()=>lastPresentationClick?{...lastPresentationClick}:null,
+    renderWord,currentSettledWord,withSettledWordOverride,presentDrive,presentAux,subscribe,resetPresentation
   });
 })();

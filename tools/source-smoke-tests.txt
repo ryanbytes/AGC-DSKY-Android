@@ -48,6 +48,7 @@ optics-service-smoke.js
 optics-lifecycle-smoke.js
 relay-show-smoke.js
 relay-visual-coupling-smoke.js
+relay-panel-smoke.js
 relay-stretch-stability-smoke.js
 
 dream-mode-smoke.js
