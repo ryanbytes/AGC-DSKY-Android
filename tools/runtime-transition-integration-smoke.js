@@ -11,6 +11,7 @@ const html = asset('index.html');
 const keycodeSource = asset('dsky-keycodes.js');
 const transitionSource = asset('runtime-transitions.js');
 const inputSource = asset('dsky-input-runtime.js');
+const electricalSpecSource = asset('key-electrical-spec.js');
 const clockSource = asset('clock-behavior.js');
 const keyboardSource = asset('keyboard-electrical-interlock.js');
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
@@ -109,6 +110,7 @@ async function flush(count = 12) { for (let i = 0; i < count; i++) await Promise
   const oldPublicClock = api.enterClock;
   vm.runInContext(transitionSource, context, {filename:'runtime-transitions.js'});
   vm.runInContext(inputSource, context, {filename:'dsky-input-runtime.js'});
+  vm.runInContext(electricalSpecSource, context, {filename:'key-electrical-spec.js'});
   vm.runInContext(clockSource, context, {filename:'clock-behavior.js'});
   vm.runInContext(keyboardSource, context, {filename:'keyboard-electrical-interlock.js'});
 
