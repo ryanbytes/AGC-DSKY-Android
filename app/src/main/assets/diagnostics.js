@@ -21,7 +21,7 @@
   function build(){
     if(document.getElementById('diag-view'))return;
     const el=document.createElement('section');el.id='diag-view';el.setAttribute('aria-label','AGC diagnostics');
-    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-haptic-test">TEST KEY HAPTIC</button><button id="diag-haptic-settings">OPEN VIBRATION SETTINGS</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
+    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><div class="diag-action-title">HARDWARE / SENSOR</div><button id="imu-zero">IMU SENSOR WAITING</button><button id="mag-lock">MAGNETOMETER WAITING</button><button id="pipa-cal">PIPA SENSOR WAITING</button><button id="diag-relay-show">RELAY SHOW</button><div class="diag-action-title">TESTS / STATE</div><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-haptic-test">TEST KEY HAPTIC</button><button id="diag-haptic-settings">OPEN VIBRATION SETTINGS</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
     document.getElementById('diag-full-test').onclick=runFullSelfTest;
@@ -30,6 +30,17 @@
     document.getElementById('diag-ntp-sync').onclick=syncNetworkTimeNow;
     document.getElementById('diag-pipa-test').onclick=startPipaTest;
     document.getElementById('diag-dsky-test').onclick=startDskyTest;
+    document.getElementById('diag-relay-show').onclick=()=>{
+      const relay=lateService('AGCDSKY_RELAY_SHOW');
+      if(!relay)return;
+      if(typeof relay.active==='function'&&relay.active()){
+        if(typeof relay.stop==='function')relay.stop();
+        update();
+        return;
+      }
+      close();
+      try{Promise.resolve(relay.start?.()).catch(error=>console.error('Relay show failed',error))}catch(error){console.error('Relay show failed',error)}
+    };
     document.getElementById('diag-haptic-test').onclick=()=>{
       const tactile=lateService('AGCDSKY_KEY_TACTILE');
       if(tactile&&typeof tactile.test==='function') tactile.test();
@@ -236,6 +247,32 @@
   }
   function ageText(ms){return ms==null?'---':(ms<1000?Math.round(ms)+' ms':(ms/1000).toFixed(1)+' s')}
   function hzText(h){return Number.isFinite(Number(h))?Number(h).toFixed(1)+' Hz':'---'}
+  function updateHardwareActions(phone){
+    const imu=document.getElementById('imu-zero');
+    const mag=document.getElementById('mag-lock');
+    const pipa=document.getElementById('pipa-cal');
+    const relayButton=document.getElementById('diag-relay-show');
+    if(imu){
+      imu.textContent=phone?.sensorSeen?(phone.sensorSource==='native'?'IMU ZERO':'IMU ZERO · WEB'):'IMU SENSOR WAITING';
+      imu.disabled=!phone?.sensorSeen;
+    }
+    if(mag){
+      mag.textContent=phone?.magnetic?.seen?(phone.magnetic.enabled?'MAGNETOMETER ON':'MAGNETOMETER OFF'):'MAGNETOMETER WAITING';
+      mag.disabled=!phone?.magnetic?.seen;
+    }
+    if(pipa){
+      const state=phone?.pipa;
+      pipa.textContent=!state?.sensorSeen?'PIPA SENSOR WAITING':(state.calRemaining>0?`PIPA CALIBRATING · ${state.calRemaining}`:(state.calibrated?'PIPA RECALIBRATE':'PIPA CALIBRATE'));
+      pipa.disabled=!state?.sensorSeen;
+    }
+    if(relayButton){
+      const relay=lateService('AGCDSKY_RELAY_SHOW');
+      const available=!!(relay&&typeof relay.start==='function');
+      const active=!!(available&&typeof relay.active==='function'&&relay.active());
+      relayButton.disabled=!available;
+      relayButton.textContent=active?'STOP RELAY SHOW':'RELAY SHOW';
+    }
+  }
   function update(){
     const t=document.getElementById('diag-table');if(!t)return;
     const app=lifecycle.status();
@@ -364,6 +401,7 @@
     if(dskyBtn){dskyBtn.disabled=app.mode!=='clock';dskyBtn.textContent=app.mode==='clock'?'RUN CLOCK DSKY SELF-TEST':'DSKY SELF-TEST · CLOCK MODE ONLY'}
     if(ntpBtn){ntpBtn.disabled=!!ntp.syncInFlight;ntpBtn.textContent=ntp.syncInFlight?'NETWORK TIME SYNCING…':'SYNC NETWORK TIME NOW'}
     if(fullBtn){fullBtn.disabled=fullSelfTestRunning;fullBtn.textContent=fullSelfTestRunning?'FULL SELF-TEST RUNNING…':'RUN FULL DSKY SELF-TEST'}
+    updateHardwareActions(phone);
   }
   function open(){build();document.getElementById('diag-view').classList.add('open');update();if(!timer)timer=setInterval(update,250)}
   function close(){document.getElementById('diag-view')?.classList.remove('open');if(timer){clearInterval(timer);timer=0}}
