@@ -53,3 +53,9 @@ assert(!/startDskyTest[\s\S]{0,900}(?:keyMake|writeIo|proceed)/.test(SRC),
 console.log('diagnostics self-test / network-time smoke: PASS');
 
 assert(!SRC.includes('onclick=startFullSelfTest'),'diagnostics full self-test handler must reference the implemented runFullSelfTest function');
+const planned=(SRC.match(/await run\('/g)||[]).length;
+const totalMatch=SRC.match(/const SELF_TEST_TOTAL=(\d+);/);
+assert(totalMatch,'diagnostics must declare SELF_TEST_TOTAL');
+assert(Number(totalMatch[1])===planned,`diagnostics SELF_TEST_TOTAL ${totalMatch[1]} != ${planned} planned tests`);
+assert(SRC.includes("+total+'/'+SELF_TEST_TOTAL+' complete'"),'diagnostics summary must use SELF_TEST_TOTAL');
+assert(!SRC.includes("+total+'/12 complete'"),'diagnostics summary must not retain stale /12 literal');
