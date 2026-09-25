@@ -12,7 +12,7 @@ def digest(data: bytes) -> str:
 def source_files(root: Path):
     out = {}
     for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.name == ".DS_Store":
+        if not path.is_file() or path.name in {".DS_Store", ".self-contained-assets-note"}:
             continue
         out[path.relative_to(root).as_posix()] = path.read_bytes()
     return out
