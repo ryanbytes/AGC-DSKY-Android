@@ -38,7 +38,7 @@ const blankCount=(html.match(/class="lamp (?:white|yellow) blank"/g)||[]).length
 if(blankCount!==4)fail('expected four blank CM cells, found '+blankCount);
 for(const ch of ['A','B','C','E','G','I','K','L','M','N','O','P','R','S','T','U','Y'])req(html,`id="gorton-${ch}"`,'required Gorton glyph');
 
-const strokeMatch=finish.match(/stroke-width:\s*([0-9.]+);/);
+const strokeMatch=finish.match(/\.gorton-glyph\{[\s\S]*?stroke-width:\s*([0-9.]+);/);
 if(!strokeMatch)fail('fixed-vector stroke width missing');
 const outlineUnits=Number(strokeMatch[1]);
 const CHAR_HEIGHT_IN=.156;
