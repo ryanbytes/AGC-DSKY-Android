@@ -8,7 +8,7 @@ function assert(c,m){if(!c)throw new Error(m)}
 
 const stateSource=read('app-state-runtime.js'),hardwareSource=read('hardware-fidelity.js');
 const timers=new Map();let timerId=0,now=0;
-const commits=[],renders=[],lamps=new Map();
+const commits=[],renders=[],lamps=new Map(),channelState=[];
 const document={hidden:false,body:{classList:{toggle(){},remove(){}}}};
 const context={console,window:null,document,performance:{now:()=>now},setTimeout(fn,ms=0){const id=++timerId;timers.set(id,{fn,due:now+Math.max(0,Number(ms)||0)});return id},clearTimeout(id){timers.delete(id)},setInterval(){return 1},clearInterval(){},Object,Map,Set,Number,String,Math,TypeError,Promise};
 context.window=context;installServiceRegistry(context);vm.createContext(context);
@@ -56,6 +56,7 @@ context.AGCDSKY_CLOCK={
 const displaySlots={decodeChannel10:()=>{},decodeChannel11:()=>{},decodeChannel13:()=>{},decodeChannel163:()=>{},resetFace:()=>{}};
 context.AGCDSKY_DISPLAY={
   commitRelayWord:(relay,word,options)=>{commits.push({relay,word,render:options&&options.render,at:now});return true},
+  setChannelState:(channel,value,options)=>{channelState.push({channel,value,render:!!(options&&options.render),at:now});return true},
   implementation:name=>displaySlots[name],
   installImplementation(name,next){if(typeof next!=='function')throw new TypeError(`invalid display implementation ${name}`);displaySlots[name]=next;return next}
 };
@@ -76,6 +77,13 @@ const first=[...timers.values()].sort((a,b)=>a.due-b.due)[0];
 assert(first&&first.due===20,'channel 010 settle callback is not 20 ms');
 runNext();
 assert(commits.length===1&&commits[0].relay===10&&commits[0].word===0o123&&commits[0].render===true&&commits[0].at===20,'20-ms settled relay commit changed');
+
+display.implementation('decodeChannel11')(0o6);
+assert(channelState.some(item=>item.channel===0o11&&item.value===0o6&&item.render===false),'channel 011 raw state must update without bypassing relay contacts');
+assert(lamps.get('comp')===true&&lamps.get('uplink')===true,'auxiliary relay fallback did not project channel 011 lamps');
+display.implementation('decodeChannel163')(0o730);
+assert(channelState.some(item=>item.channel===0o163&&item.value===0o730&&item.render===false),'channel 0163 raw state must update without bypassing relay contacts');
+assert(lamps.get('temp')===true&&lamps.get('keyrel')===true&&lamps.get('oprerr')===true&&lamps.get('restart')===true&&lamps.get('stby')===true,'auxiliary relay fallback did not project channel 0163 lamps');
 
 const removePolicy=hardware.registerSettledPaintPolicy('test',()=>false);
 display.implementation('decodeChannel10')((9<<11)|0o456);
