@@ -191,7 +191,23 @@ html,body,#app{background:#000!important}
     <button class="key k-r3c2" data-key="0" aria-label="0"><svg class="key-legend key-legend-big" viewBox="0 0 860 860" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><g class="key-weight-adjust key-weight-big" transform="translate(430 430) scale(1.012) translate(-430 -430)" filter="url(#key-erode-big)"><use href="#key-g120-0" transform="translate(332.174 538.696) scale(0.271739130435 -0.271739130435)"/></g></svg></button><button class="key k-r3c3" data-key="1" aria-label="1"><svg class="key-legend key-legend-big" viewBox="0 0 860 860" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><g class="key-weight-adjust key-weight-big" transform="translate(430 430) scale(1.012) translate(-430 -430)" filter="url(#key-erode-big)"><use href="#key-g120-1" transform="translate(410.693 538.696) scale(0.271739130435 -0.271739130435)"/></g></svg></button><button class="key k-r3c4" data-key="2" aria-label="2"><svg class="key-legend key-legend-big" viewBox="0 0 860 860" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><g class="key-weight-adjust key-weight-big" transform="translate(430 430) scale(1.012) translate(-430 -430)" filter="url(#key-erode-big)"><use href="#key-g120-2" transform="translate(338.967 538.696) scale(0.271739130435 -0.271739130435)"/></g></svg></button><button class="key k-r3c5" data-key="3" aria-label="3"><svg class="key-legend key-legend-big" viewBox="0 0 860 860" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><g class="key-weight-adjust key-weight-big" transform="translate(430 430) scale(1.012) translate(-430 -430)" filter="url(#key-erode-big)"><use href="#key-g120-3" transform="translate(335.672 538.696) scale(0.271739130435 -0.271739130435)"/></g></svg></button><button class="key k-r3c6 fn keyrel" data-key="K" aria-label="KEY REL"><svg class="key-legend key-legend-small" viewBox="0 0 860 860" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><g class="key-weight-adjust key-weight-small key-weight-keyrel-top" transform="translate(430 336.5) scale(1.0094) translate(-430 -336.5)" filter="url(#key-erode-small)"><use href="#key-g180-K" transform="translate(261.261 387.52) scale(0.127551020408 -0.127551020408)"/><use href="#key-g180-E" transform="translate(371.338 387.52) scale(0.127551020408 -0.127551020408)"/><use href="#key-g180-Y" transform="translate(483.2 387.52) scale(0.127551020408 -0.127551020408)"/></g><g class="key-weight-adjust key-weight-small key-weight-keyrel-bottom" transform="translate(430 523.5) scale(1.0094) translate(-430 -523.5)" filter="url(#key-erode-small)"><use href="#key-g180-R" transform="translate(261.663 574.52) scale(0.127551020408 -0.127551020408)"/><use href="#key-g180-E" transform="translate(374.29 574.52) scale(0.127551020408 -0.127551020408)"/><use href="#key-g180-L" transform="translate(486.152 574.52) scale(0.127551020408 -0.127551020408)"/></g></svg></button>
     <i class="fastener f1"></i><i class="fastener f2"></i><i class="fastener f3"></i><i class="fastener f4"></i>
   </section>
-  <div class="app-controls" id="controls"><button id="dim">PANEL DIMMER</button><button id="dreambright">DREAM BRIGHTNESS DIM</button><button id="sound">RELAY CLICKS ON</button><button id="relay-show">RELAY SHOW</button><button id="display">FULL DSKY DISPLAY</button><button id="agc">AGC MODE</button><button id="clock">CLOCK MODE</button><button id="imu-zero">IMU SENSOR WAITING</button><button id="mag-lock">MAGNETOMETER WAITING</button><button id="pipa-cal">PIPA SENSOR WAITING</button><button id="sxt">SEXTANT</button><button id="cheat">CHEAT SHEET</button><button id="diagnostics">DIAGNOSTICS</button><button id="legal">LEGAL / SOURCE</button><span id="mode">PHONE CLOCK · LOCAL WALL TIME</span></div>
+  <div class="app-controls" id="controls">
+    <button id="dim" hidden>PANEL DIMMER</button>
+    <button id="dreambright" hidden>DREAM BRIGHTNESS DIM</button>
+    <button id="sound">RELAY CLICKS ON</button>
+    <button id="display">FULL DSKY DISPLAY</button>
+    <button id="mode-toggle" aria-pressed="false">MODE · CLOCK</button>
+    <button id="sxt">SEXTANT</button>
+    <button id="diagnostics">DIAGNOSTICS</button>
+    <details class="options-tools">
+      <summary>TOOLS / INFO</summary>
+      <div class="options-tools-menu">
+        <button id="cheat">CHEAT SHEET</button>
+        <button id="legal">LEGAL / SOURCE</button>
+      </div>
+    </details>
+    <span id="mode">PHONE CLOCK · LOCAL WALL TIME</span>
+  </div>
   <div class="hint" id="hint">Hold panel for controls</div>
 </main>
 <script src="agc-core.js"></script>
