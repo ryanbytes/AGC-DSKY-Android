@@ -60,6 +60,7 @@ parallax-3d-smoke.js
 parallax-reduced-motion-override-smoke.js
 el-only-parallax-smoke.js
 el-widget-smoke.js
+el-geometry-lock-smoke.js
 widget-relay-model-smoke.js
 solar-model-smoke.js
 agc-core-smoke.js
