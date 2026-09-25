@@ -35,7 +35,7 @@ assert(activity.includes('addJavascriptInterface(new ChecklistPrintBridge(),"Pri
 assert(activity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","HapticBridge","TimeBridge","PrintBridge")'), 'legacy activity TimeBridge/PrintBridge must be removed during WebView teardown');
 assert(sensorActivity.includes('addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge")'), 'real Android launcher must install PrintBridge');
 assert(sensorActivity.includes('PrintAttributes.MediaSize.NA_LETTER.asLandscape()'), 'real Android launcher checklist must request Letter landscape media');
-assert(sensorActivity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","SkyBridge","TimeBridge","PrintBridge")'), 'real Android launcher must remove PrintBridge during teardown');
+assert(sensorActivity.includes('WebViewTeardown.destroy(doomed,"DebugBridge","HapticBridge","SkyBridge","TimeBridge","PrintBridge")'), 'real Android launcher must remove PrintBridge during teardown');
 assert(apple.includes('configuration.userContentController.add(self, name: "PrintBridge")'), 'Apple PrintBridge must be installed');
 assert(apple.includes('window.webkit.messageHandlers.PrintBridge.postMessage'), 'Apple PrintBridge JavaScript shim missing');
 assert(apple.includes('width: 11.0 * 72.0, height: 8.5 * 72.0'), 'iOS checklist print renderer must be US Letter landscape');
