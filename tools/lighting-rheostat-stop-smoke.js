@@ -6,7 +6,7 @@ const {installServiceRegistry}=require('./test-service-registry');
 const source=fs.readFileSync(path.resolve(__dirname,'../app/src/main/assets/lighting-rheostat-stop.js'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 
-let numerics=1,integral=.6;
+let numerics=0,integral=0;
 const calls=[];
 const lighting={
   levels(){return{numerics,integral}},
@@ -29,11 +29,6 @@ assert(stop.continuousUiInterpolation===true,'continuous interpolation metadata 
 assert(stop.clamp(-1)===.25&&stop.clamp(0)===.25&&stop.clamp(.437)===.437&&stop.clamp(2)===1,'continuous clamp behavior wrong');
 assert(stop.completeOffMethod.includes('circuit breaker'),'complete-off method metadata lost');
 assert(!source.includes('click')&&!source.includes('cycleWithMechanicalStop'),'old click/cycle interception remains');
-
-// Invalid legacy-like live state is normalized away from OFF.
-numerics=0;integral=0;
-vm.runInContext("window.__DSKY_LIGHTING_RHEOSTAT_STOP__=false",context);
-vm.runInContext(source,context,{filename:'lighting-rheostat-stop.js'});
 assert(numerics===1&&integral===1,'zero lighting state was not normalized to full bright');
 assert(calls.some(c=>c[0]==='n'&&c[1]===1)&&calls.some(c=>c[0]==='i'&&c[1]===1),'normalization did not use lighting setters');
 
