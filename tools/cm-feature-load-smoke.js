@@ -22,6 +22,7 @@ const features = [
   'flight-hardware-ui',
   'lighting-rheostat-stop',
   'key-mechanical-spec',
+  'key-electrical-spec',
   'key-tactile-feedback',
   'keyboard-electrical-interlock',
   'lighting-electrical-model',
