@@ -60,6 +60,7 @@ parallax-3d-smoke.js
 parallax-reduced-motion-override-smoke.js
 el-only-parallax-smoke.js
 el-widget-smoke.js
+el-geometry-lock-smoke.js
 widget-relay-model-smoke.js
 solar-model-smoke.js
 agc-core-smoke.js
@@ -69,6 +70,7 @@ diagnostics-self-test-smoke.js
 dsky-mapping-smoke.js
 dsky-keycode-consistency-smoke.js
 flight-hardware-ui-smoke.js
+annunciator-vector-smoke.js
 key-mechanical-spec-smoke.js
 keyboard-electrical-interlock-smoke.js
 keyboard-hardware-input-smoke.js

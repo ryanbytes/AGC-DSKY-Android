@@ -36,6 +36,16 @@ The normalized numeric-segment path outlines currently used by `dsky-geometry.js
 
 The copyright and MIT permission notice are retained in the source and packaged `THIRD_PARTY_NOTICES.txt`.
 
+## Gorton Condensed annunciator vector outlines
+
+- Project: https://github.com/ehdorrii/dsky-fonts
+- Source: `source/Gorton-Condensed.sfd`
+- Source blob: `15fdfc7ac3507c79fb6bfdb2102acd14d35b0e76`
+- Copyright (c) 2019 Eugene Dorr
+- License: SIL Open Font License 1.1.
+
+The ten CM alarm-indicator legends use selected Gorton Condensed glyph outlines converted to static SVG paths. No font file is bundled or loaded at runtime. SCD `1006387D` remains the controlling source for the .156-in character height, .025-.030-in stroke envelope, centering, black fill, and legend arrangement; the reconstructed Gorton source supplies the glyph construction.
+
 ## Reference material
 
 Historical Apollo documentation, Virtual AGC data, and CuriousMarc restoration material were used as technical/visual references. CuriousMarc restoration imagery is a useful cross-check for surviving hardware appearance but does not override the original engineering drawings. No CuriousMarc video frames are bundled.
