@@ -48,12 +48,8 @@ if (dreamIndex < 0 || priorIndex >= dreamIndex) {
   fail('all CM hardware/presentation layers must initialize before dream-agc.js readiness marker');
 }
 
-const relayShowButton = html.indexOf('<button id="relay-show">RELAY SHOW</button>');
-const displayButton = html.indexOf('<button id="display">FULL DSKY DISPLAY</button>');
-assert(relayShowButton >= 0, 'Relay Show control is not statically declared');
-assert(displayButton > relayShowButton, 'Relay Show control must remain immediately before the display control group');
-assert((html.match(/id="relay-show"/g) || []).length === 1,
-  'Relay Show control must be declared exactly once');
+assert(!html.includes('id="relay-show"'), 'Relay Show must stay out of primary Options');
+assert(diagnostics.includes('id="diag-relay-show"'), 'Diagnostics Relay Show control is missing');
 assert((html.match(/src="relay-show\.js"/g) || []).length === 1,
   'relay-show.js must be parser-loaded exactly once');
 
