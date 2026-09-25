@@ -111,6 +111,20 @@
     }
     fallbackEmitTick(ctx,when,strength);
   }
+  function playRelayImpact(row,bit,engaging,strength=.66){
+    if(!identityState.tickSound)return false;
+    row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
+    const ctx=audio.ensure();if(!ctx)return false;const id=relayIdentity(row,bit),ordinal=relayOrdinal(row,bit),on=!!engaging;
+    const play=()=>playIdentity(ctx,ctx.currentTime+.00005,Number(strength)||.66,id,ordinal,on);
+    if(ctx.state==='running')play();else ctx.resume().then(play).catch(()=>{});return true;
+  }
+  function playAuxImpact(name,engaging,strength=.62){
+    if(!identityState.tickSound||!AUX_ORDER.includes(name))return false;
+    const ctx=audio.ensure();if(!ctx)return false;const id=`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,ordinal=auxOrdinal(name),on=!!engaging;
+    const play=()=>playIdentity(ctx,ctx.currentTime+.00005,Number(strength)||.62,id,ordinal,on);
+    if(ctx.state==='running')play();else ctx.resume().then(play).catch(()=>{});return true;
+  }
+
   audio.installImplementation('emitTick',individualDskyRelayClick,'individual relay identity audio');
 
   const RELAY_SETTLE_MS=Object.freeze(Array.from({length:12},(_,rowIndex)=>Object.freeze(Array.from({length:11},(_,bit)=>{const p=profileFor(relayIdentity(rowIndex+1,bit),relayOrdinal(rowIndex+1,bit));return Math.max(p.setStableMs,p.resetStableMs)}))));
@@ -124,6 +138,10 @@
     settleMsFor:(row,bit)=>{const p=profileFor(relayIdentity(row,bit),relayOrdinal(row,bit));return Math.max(p.setStableMs,p.resetStableMs)},
     profileFor:(row,bit)=>profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),
     contactTraceFor:(row,bit,engaging)=>contactTraceFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
-    auxiliaryProfileFor:name=>profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name))
+    playRelayImpact,
+    auxiliaryNames:Object.freeze(AUX_ORDER.slice()),
+    auxiliaryProfileFor:name=>profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),
+    auxiliaryContactTraceFor:(name,engaging)=>contactTraceFromProfile(profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),!!engaging),
+    playAuxImpact
   });
 })();
