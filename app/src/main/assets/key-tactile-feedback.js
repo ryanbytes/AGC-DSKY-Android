@@ -68,6 +68,7 @@
     return Object.freeze({
       nativeBridge: !!bridge(),
       nativeBackend: (() => { try { return bridge()?.backend?.() || null; } catch (_) { return null; } })(),
+      amplitudeControl: (() => { try { return !!bridge()?.amplitudeControl?.(); } catch (_) { return false; } })(),
       platformEffects: Object.freeze({
         make:'VibrationEffect.EFFECT_CLICK',
         release:'VibrationEffect.EFFECT_TICK',
@@ -92,9 +93,17 @@
     });
   }
 
+  function test() {
+    const native = bridge();
+    if (!native || typeof native.testPulse !== 'function') return false;
+    try { return native.testPulse() !== false; }
+    catch (_) { return false; }
+  }
+
   registry.publish('AGCDSKY_KEY_TACTILE', Object.freeze({
     make: key => fire('make', key),
     release: key => fire('release', key),
+    test,
     status
   }), 'key tactile feedback publication');
 })();
