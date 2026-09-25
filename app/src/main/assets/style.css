@@ -136,8 +136,22 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
    SCD 2004968E front housing: .970 in switch-center pitch and .485 in
    half-pitch stagger for the four outer function keys. The UI uses the
    .860-in tolerance midpoint while preserving every existing switch center. */
-.key{position:absolute;width:12.4677835%;height:10.7249751%;z-index:6;border:.12vmin solid #090a09;border-radius:7.5581395%;background:linear-gradient(145deg,#353633 0%,#262724 36%,#181917 78%,#111210 100%);color:#eef2e8;font:800 clamp(12px,3.25vmin,24px)/1 Arial,Helvetica,sans-serif;letter-spacing:-.02em;text-shadow:0 0 .12vmin rgba(241,255,227,.34),0 .09em #000;box-shadow:inset .20vmin .18vmin .22vmin rgba(255,255,255,.16),inset -.22vmin -.25vmin .26vmin rgba(0,0,0,.76),0 .15vmin .1vmin #66665f;-webkit-tap-highlight-color:transparent;padding:0}
-.key.fn{font-size:clamp(8px,2.2vmin,17px)}.key.keyrel{line-height:.86}.key:active,.key.pressed{transform:translateY(.30vmin);background:linear-gradient(#191a18,#111210);box-shadow:inset .08vmin .12vmin .12vmin rgba(255,255,255,.08),inset 0 0 .35vmin #000}
+.key{position:absolute;width:12.4677835%;height:10.7249751%;z-index:6;border:.12vmin solid #090a09;border-radius:7.5581395%;background:linear-gradient(145deg,#353633 0%,#262724 36%,#181917 78%,#111210 100%);color:#eef2e8;appearance:none;box-shadow:inset .20vmin .18vmin .22vmin rgba(255,255,255,.16),inset -.22vmin -.25vmin .26vmin rgba(0,0,0,.76),0 .15vmin .1vmin #66665f;-webkit-tap-highlight-color:transparent;padding:0}
+
+/* SCD 1006353 key legends. Gorton Normal centerlines are static SVG geometry.
+   Stroke widths are solved against the 800-unit engraving centerline cap height
+   so the rendered overall heights/strokes are exactly .250/.030 in and
+   .125/.022 in at the representative .860-in key-cap size. */
+.key-gorton-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+.key-copy{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important}
+.key-legend{position:absolute;left:50%;top:50%;width:auto;max-width:88%;transform:translate(-50%,-50%);overflow:visible;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 .10vmin rgba(244,250,236,.30));pointer-events:none}
+.key-legend-large{height:29.0697674%}
+.key-legend-small{height:14.5348837%}
+.key-legend-large .key-glyph{stroke-width:109.0909091}
+.key-legend-small .key-glyph{stroke-width:170.8737864}
+.key-legend-stack{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4%;pointer-events:none}
+.key-legend-stack .key-legend{position:relative;left:auto;top:auto;transform:none;flex:0 0 14.5348837%;height:14.5348837%;max-width:88%}
+.key:active,.key.pressed{transform:translateY(.30vmin);background:linear-gradient(#191a18,#111210);box-shadow:inset .08vmin .12vmin .12vmin rgba(255,255,255,.08),inset 0 0 .35vmin #000}
 .k-r1c1,.k-r2c1{left:1.5786082%}.k-r1c2,.k-r2c2,.k-r3c2{left:15.6411082%}.k-r1c3,.k-r2c3,.k-r3c3{left:29.7036082%}.k-r1c4,.k-r2c4,.k-r3c4{left:43.7661082%}.k-r1c5,.k-r2c5,.k-r3c5{left:57.8286082%}.k-r1c6,.k-r2c6,.k-r3c6{left:71.8911082%}.k-r1c7,.k-r2c7{left:85.9536082%}[class*="k-r1"]{top:63.4547168%}[class*="k-r2"]{top:75.551491%}[class*="k-r3"]{top:87.6482652%}
 /* The four outer function keys are half-row staggered on the Block II keyboard. */
 .k-r1c1,.k-r1c7{top:69.5031039%}
