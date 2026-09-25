@@ -33,6 +33,14 @@ for(const [name,label] of Object.entries(labels)){
 for(const raw of ['>UPLINK<br>ACTY<','>GIMBAL<br>LOCK<','>KEY REL<','>RESTART<','>TRACKER<'])no(html,raw,'runtime text annunciator');
 
 const vectorCount=(html.match(/<svg class="lamp-legend"/g)||[]).length;
+const legendBlocks=[...html.matchAll(/<svg class="lamp-legend"[\s\S]*?<\/svg>/g)].map(m=>m[0]);
+if(legendBlocks.length!==10)fail('expected 10 vector legend blocks, found '+legendBlocks.length);
+for(const [i,legend] of legendBlocks.entries())no(legend,'scale(1 -1)','legend '+(i+1)+' vertical inversion');
+const legendTransforms=[...legendBlocks.join('\n').matchAll(/transform="translate\(([-0-9.]+)\s+([-0-9.]+)\)"/g)];
+if(legendTransforms.length!==63)fail('expected 63 Gorton glyph transforms, found '+legendTransforms.length);
+const uprightY=new Set(['619.504','1209.503','1799.503']);
+for(const m of legendTransforms){if(!uprightY.has(m[2]))fail('unexpected upright legend Y offset '+m[2]);}
+req(html,'id="gorton-T" d="M95,60','pre-oriented Gorton SVG outline');
 if(vectorCount!==10)fail('expected 10 vector legends, found '+vectorCount);
 const blankCount=(html.match(/class="lamp (?:white|yellow) blank"/g)||[]).length;
 if(blankCount!==4)fail('expected four blank CM cells, found '+blankCount);
