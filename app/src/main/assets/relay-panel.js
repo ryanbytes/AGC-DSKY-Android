@@ -9,12 +9,14 @@
  */
 (() => {
   const host=document.getElementById('relay-panel');
+  const viewButton=document.getElementById('relay-view');
   const visual=window.DSKY_RELAY_VISUAL;
   const audioModel=window.DSKY_RELAY_AUDIO;
   const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   if(!host||!visual||!audioModel||!hardware||typeof visual.subscribe!=='function')return;
 
   const relayCells=new Map(),auxCells=new Map();
+  let viewVisible=false;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const relayKey=(row,bit)=>`${Number(row)}:${Number(bit)}`;
 
@@ -86,7 +88,30 @@
     for(const [name,cell] of auxCells){cell.classList.remove('moving','target-on');setCellState(cell,!!aux[name])}
   }
 
+  function updateViewButton(){
+    if(!viewButton)return;
+    viewButton.textContent=viewVisible?'RELAY VIEW ON':'RELAY VIEW OFF';
+    viewButton.setAttribute('aria-pressed',viewVisible?'true':'false');
+    viewButton.title=viewVisible?'Hide the physical relay inspection rack':'Show the physical relay inspection rack above the DSKY';
+  }
+  function setViewVisible(next){
+    viewVisible=!!next;
+    if(document.body&&document.body.classList)document.body.classList.toggle('relay-view-visible',viewVisible);
+    host.setAttribute('aria-hidden',viewVisible?'false':'true');
+    if(viewVisible)syncSnapshot();
+    updateViewButton();
+    return viewVisible;
+  }
+
   build();syncSnapshot();
+  setViewVisible(false);
+  if(viewButton&&typeof viewButton.addEventListener==='function'){
+    viewButton.addEventListener('click',()=>{
+      setViewVisible(!viewVisible);
+      const shell=window.AGCDSKY_SHELL;
+      if(shell&&typeof shell.showControls==='function')shell.showControls();
+    });
+  }
   visual.subscribe(event=>{
     if(event.type==='relay-drive')beginMotion(relayCells.get(relayKey(event.row,event.bit)),event.targetOn,event.durationMs);
     else if(event.type==='relay-contact')contactEvent(relayCells.get(relayKey(event.row,event.bit)),event);
@@ -99,6 +124,8 @@
     latchingCells:relayCells.size,
     auxiliaryCells:auxCells.size,
     totalCells:relayCells.size+auxCells.size,
+    isVisible:()=>viewVisible,
+    setVisible:setViewVisible,
     sync:syncSnapshot
   });
 })();
