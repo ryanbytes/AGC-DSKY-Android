@@ -33,7 +33,7 @@
     yellow:Object.freeze({part:'MS24367-680', riseMs:40, fallMs:58})
   });
   const HARDWARE_SEED_KEY = 'dskyHardwareUnitSeedV1';
-  const clampLight = value => Math.max(MIN_LIGHT_LEVEL, Math.min(MAX_LIGHT_LEVEL, Number(value) || MAX_LIGHT_LEVEL));
+  const clampLight = value => { const n=Number(value); return Number.isFinite(n) ? Math.max(MIN_LIGHT_LEVEL, Math.min(MAX_LIGHT_LEVEL, n)) : MAX_LIGHT_LEVEL; };
   const readLevel = (valueKey, legacyIndexKey) => {
     try {
       const stored = Number(localStorage.getItem(valueKey));
