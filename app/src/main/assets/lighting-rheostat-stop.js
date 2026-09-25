@@ -18,7 +18,8 @@
   const MAX_NORMAL_LEVEL = 1.00;
 
   function clamp(value) {
-    return Math.max(MIN_NORMAL_LEVEL, Math.min(MAX_NORMAL_LEVEL, Number(value) || MAX_NORMAL_LEVEL));
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(MIN_NORMAL_LEVEL, Math.min(MAX_NORMAL_LEVEL, n)) : MAX_NORMAL_LEVEL;
   }
 
   function normalize() {
