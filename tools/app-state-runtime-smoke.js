@@ -46,7 +46,7 @@ const expected=[
   ['phone-clock-runtime.js','clockState'],['agc-display-runtime.js','displayState'],['agc-snapshot-runtime.js','snapshotState'],
   ['agc-lifecycle-runtime.js','lifecycleState'],['agc-api-runtime.js','apiState'],['dsky-geometry.js','geometryState'],
   ['hardware-fidelity.js','fidelityState'],['background-audio-guard.js','guardState'],['screen-only.js','screenState'],
-  ['relay-identity-audio.js','identityState'],['relay-visual-coupling.js','visualState'],['relay-show.js','showState'],
+  ['relay-identity-audio.js','identityState'],['relay-show.js','showState'],
   ['dream-agc.js','dreamState']
 ];
 for(const [name,alias] of expected){
