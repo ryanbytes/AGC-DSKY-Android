@@ -17,6 +17,11 @@
 (() => {
   const DSKY_KEY_CODE = window.AGCDSKY_KEY_CODES;
   if (!DSKY_KEY_CODE) throw new Error('Shared DSKY keycode table unavailable');
+  const ELECTRICAL_SPEC = window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_KEY_ELECTRICAL_SPEC');
+  if (!ELECTRICAL_SPEC || typeof ELECTRICAL_SPEC.verifyKeycodes !== 'function'
+      || !ELECTRICAL_SPEC.verifyKeycodes(DSKY_KEY_CODE)) {
+    throw new Error('Block II keyboard electrical specification/keycode mismatch');
+  }
   if (window.__DSKY_KEYBOARD_ELECTRICAL_INTERLOCK__) return;
   window.__DSKY_KEYBOARD_ELECTRICAL_INTERLOCK__ = true;
 
@@ -38,7 +43,6 @@
 
   const FALLBACK_CONTACT_MS = 36;
   const FALLBACK_RETURN_MS = 18;
-  const MIN_KEYCODE_HOLD_MS = 12;
   // Desktop/PWA hardware-keyboard aliases. These feed the same channel-015
   // electrical interlock as pointer input; they are not a second input model.
   const KEYBOARD_MAP = Object.freeze({
@@ -53,7 +57,6 @@
   let electricalKeyCode = 0;
   let electricalMade = false;
   let electricalMadeAt = 0;
-  let keyResetTimer = 0;
   let clockHandoffPending = false;
   let keyboardState = null;
 
@@ -206,21 +209,13 @@
   }
 
   function assertKeyResetIfReady() {
+    // 2005903A: KEYRST is "AND OF S1 THRU S18NC".  Therefore reset follows
+    // the physical all-released condition directly; there is no source-backed
+    // fixed software dwell after the last NO make contact opens.
     if (!allNormalKeysReleased()) return;
     if (clockHandoffPending && !electricalMade) return;
 
     if (electricalMade) {
-      const elapsed = Math.max(0, performance.now() - electricalMadeAt);
-      const remaining = MIN_KEYCODE_HOLD_MS - elapsed;
-      if (remaining > 0.01) {
-        if (!keyResetTimer) {
-          keyResetTimer = setTimeout(() => {
-            keyResetTimer = 0;
-            assertKeyResetIfReady();
-          }, remaining);
-        }
-        return;
-      }
       try {
         if (electricalCore) input.keyReset(electricalCore);
         else if (input.ready()) input.keyReset();
@@ -228,8 +223,6 @@
         console.error('DSKY KEYRST failed', error);
       }
     }
-    if (keyResetTimer) clearTimeout(keyResetTimer);
-    keyResetTimer = 0;
     clearElectricalCycle();
   }
 
@@ -266,8 +259,6 @@
   function releaseForClock() {
     clearPointers();
     clearKeyboard();
-    if (keyResetTimer) clearTimeout(keyResetTimer);
-    keyResetTimer = 0;
     if (electricalMade) {
       try {
         if (electricalCore) input.keyReset(electricalCore);
@@ -388,9 +379,9 @@
       electricalMade,
       electricalKeyCode,
       electricalMadeAt,
-      keyResetPending:!!keyResetTimer,
       clockHandoffPending,
-      minKeycodeHoldMs:MIN_KEYCODE_HOLD_MS,
+      keyResetExpression:ELECTRICAL_SPEC.keyReset.expression,
+      electricalSource:ELECTRICAL_SPEC.source.drawing,
       keys:Array.from(pointers.values()).map(s => ({key:s.button.dataset.key, accepted:s.accepted, made:s.made})).concat(keyboardState ? [{key:keyboardState.key, accepted:keyboardState.accepted, made:keyboardState.made, source:'keyboard'}] : [])
     }),
     releaseAll: releaseEverything
