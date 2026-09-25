@@ -59,7 +59,7 @@ no(ui,"P:0o",'presentation layer normal-key map');
 
 for(const marker of ["part:'MS24367-713'","part:'MS24367-680'","riseMs:32, fallMs:48","riseMs:40, fallMs:58","source.className = `lamp-source lamp-source-${i + 1}`","--lamp-rise","--lamp-fall","--lamp-gain","legend.className = 'lamp-legend'","document.body.classList.add('lamp-hardware-ready')",".lamp .lamp-source","transition-duration:var(--lamp-fall,52ms)","transition-duration:var(--lamp-rise,36ms)"])req(ui+finish,marker,'three-bulb incandescent model');
 no(finish,'transition:opacity 145ms','obsolete generic annunciator decay');no(finish,'transition-duration:85ms','obsolete generic annunciator rise');
-for(const marker of ['--key-el-color','--key-el-shadow','.key.pressed','translateY(var(--key-travel,.42vmin))','color:var(--key-el-color','text-shadow:var(--key-el-shadow'])req(finish+controls,marker,'white EL key illumination / options styling');
+for(const marker of ['--key-el-color','--key-el-shadow','--key-el-filter','.key.pressed','translateY(var(--key-travel,.42vmin))','fill:var(--key-el-color','filter:var(--key-el-filter','text-shadow:var(--key-el-shadow'])req(finish+controls,marker,'white EL key illumination / vector and options styling');
 req(ui,"oldDim.hidden = true",'retired whole-panel dimmer');req(ui,"document.body.classList.remove('dim')",'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');

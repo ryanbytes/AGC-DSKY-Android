@@ -46,6 +46,17 @@ The copyright and MIT permission notice are retained in the source and packaged 
 
 The ten CM alarm-indicator legends use selected Gorton Condensed glyph outlines converted to static SVG paths. No font file is bundled or loaded at runtime. SCD `1006387D` remains the controlling source for the .156-in character height, .025-.030-in stroke envelope, centering, black fill, and legend arrangement; the reconstructed Gorton source supplies the glyph construction.
 
+## Gorton Normal key vector outlines
+
+- Project: https://github.com/ehdorrii/dsky-fonts
+- Sources: `source/Gorton-Normal-120.sfd` and `source/Gorton-Normal-180.sfd`
+- Source blobs: `33028992cb971f4045b8c5e9ffac720f8307588c` and `9356a37a8c9aed5a7471a5559a9a9c8ac13c1ad1`
+- Generated OTF blobs used only as outline-extraction inputs: `314500f5587b5afe27f52c5069efeb12262909c2` and `1f2b149a9916433bef3cde56e4b8dd16aa1b7241`
+- Copyright (c) 2019 Eugene Dorr
+- License: SIL Open Font License 1.1.
+
+The nineteen DSKY pushbutton legends use selected Gorton Normal glyph outlines converted to static SVG paths. No font file is bundled or loaded at runtime. SCD `1006353B` / ND `1002122` remain controlling for key marking size and stroke: .250-in characters with .030-in strokes for digits/operators and .125-in characters with .022-in strokes for function legends. The SVG normalization keeps those overall-height/stroke pairs while using the reconstructed Gorton geometry.
+
 ## Reference material
 
 Historical Apollo documentation, Virtual AGC data, and CuriousMarc restoration material were used as technical/visual references. CuriousMarc restoration imagery is a useful cross-check for surviving hardware appearance but does not override the original engineering drawings. No CuriousMarc video frames are bundled.
