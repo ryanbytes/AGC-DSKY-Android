@@ -1,0 +1,47 @@
+name: Publish v1.1.39 release
+
+on:
+  push:
+    branches:
+      - publish/v1.1.39-release
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      REGULAR_URL: 'https://sdmntprcentralus.oaiusercontent.com/files/00000000-089c-81f5-b3af-51c22052a676/raw?se=2026-09-25T11%3A43%3A04Z&sp=r&sv=2026-02-06&sr=b&scid=8c39ffc5-053a-5d35-a860-72e29b7cb567&skoid=38550de5-1fab-49d1-9ebb-83af5557cc43&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-25T11%3A11%3A05Z&ske=2026-09-26T11%3A11%3A05Z&sks=b&skv=2026-02-06&sig=4thkXgudOx06A3VrKb/GEJQing2zhuOcmkqcVFeVxnI%3D'
+      FIRE_URL: 'https://sdmntprcentralus.oaiusercontent.com/files/00000000-ee90-81f5-a245-bf7f2af27cb8/raw?se=2026-09-25T11%3A43%3A04Z&sp=r&sv=2026-02-06&sr=b&scid=1111b335-b318-5dda-bda2-5073b5e732b0&skoid=38550de5-1fab-49d1-9ebb-83af5557cc43&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-25T10%3A43%3A25Z&ske=2026-09-26T10%3A43%3A25Z&sks=b&skv=2026-02-06&sig=Jzw4rcOWxFtX0Rr2EQ1Vw2HqkJkiC8UIDLJOB7luQ%2B4%3D'
+      REGULAR_SHA: '09ecc38e3d0b2beb969a5e1df30a1ecbc8a8a004f7db7244b0cf30660b4af760'
+      FIRE_SHA: 'f3de7b394f7ce62254cc6c29e00e55abc008eacacdce1868b68f00e6af8719c2'
+      TARGET_SHA: '3ac4e0dbd6db79dc92d54aaa2f3ca17c3c343c48'
+    steps:
+      - name: Download signed release APKs
+        run: |
+          curl --fail --location --retry 3 "$REGULAR_URL" -o app-regular-release.apk
+          curl --fail --location --retry 3 "$FIRE_URL" -o app-fire-release.apk
+
+      - name: Verify exact signed APKs
+        run: |
+          printf '%s  %s\n' "$REGULAR_SHA" app-regular-release.apk > app-regular-release.apk.sha256
+          printf '%s  %s\n' "$FIRE_SHA" app-fire-release.apk > app-fire-release.apk.sha256
+          sha256sum -c app-regular-release.apk.sha256
+          sha256sum -c app-fire-release.apk.sha256
+
+      - name: Publish updater release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh release view v1.1.39 --json tagName --jq .tagName 2>/dev/null || true)" != "v1.1.39"
+          gh release create v1.1.39 \
+            --repo "${{ github.repository }}" \
+            --target "$TARGET_SHA" \
+            --title "AGC DSKY v1.1.39" \
+            --notes "Final consolidated 1.1.39 release from verified main. Fire and regular self-update APKs are signed with the established standalone signing identity. No DSKY behavior changes beyond the release metadata bump from 1.1.38." \
+            app-regular-release.apk \
+            app-regular-release.apk.sha256 \
+            app-fire-release.apk \
+            app-fire-release.apk.sha256
