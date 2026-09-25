@@ -19,6 +19,7 @@ const ASSETS = path.join(ROOT, 'app/src/main/assets');
 const keycodesSource = fs.readFileSync(path.join(ASSETS, 'dsky-keycodes.js'), 'utf8');
 const transitionsSource = fs.readFileSync(path.join(ASSETS, 'runtime-transitions.js'), 'utf8');
 const inputSource = fs.readFileSync(path.join(ASSETS, 'dsky-input-runtime.js'), 'utf8');
+const electricalSpecSource = fs.readFileSync(path.join(ASSETS, 'key-electrical-spec.js'), 'utf8');
 const keyboardSource = fs.readFileSync(path.join(ASSETS, 'keyboard-electrical-interlock.js'), 'utf8');
 const clockSource = fs.readFileSync(path.join(ASSETS, 'clock-behavior.js'), 'utf8');
 
@@ -218,6 +219,7 @@ async function main() {
   vm.runInContext(clockSource,context,{filename:'clock-behavior.js'});
   assert(context.AGCDSKY_CLOCK_BEHAVIOR === AGCDSKY.clockBehavior,
     'RSET harness did not initialize the clock behavior service');
+  vm.runInContext(electricalSpecSource,context,{filename:'key-electrical-spec.js'});
   vm.runInContext(keyboardSource,context,{filename:'keyboard-electrical-interlock.js'});
   assert(context.AGCDSKY_KEYBOARD_ELECTRICAL === AGCDSKY.keyboardElectrical,
     'bootstrap-owned keyboardElectrical getter did not resolve the physical interlock service');
