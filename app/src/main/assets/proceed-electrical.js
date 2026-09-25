@@ -56,7 +56,7 @@
     }
   }
 
-  function releaseProceed(withHaptic = false) {
+  function releaseProceedInternal(withHaptic) {
     if (proPointer === null) return false;
     proPointer = null;
     if (pro) pro.classList.remove('pressed');
@@ -66,6 +66,14 @@
     }
     if (withHaptic) keyHaptic(true);
     return true;
+  }
+
+  function releaseProceed() {
+    return releaseProceedInternal(false);
+  }
+
+  function releaseProceedWithHaptic() {
+    return releaseProceedInternal(true);
   }
 
   function onPointerDown(event) {
@@ -84,7 +92,7 @@
       input.proceed(true);
       keyHaptic(false);
     } catch (error) {
-      releaseProceed(false);
+      releaseProceed();
       reportFailure(error);
     }
   }
@@ -93,7 +101,7 @@
     if (event.pointerId !== proPointer) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    releaseProceed(true);
+    releaseProceedWithHaptic();
   }
 
   function onPointerCancel(event) {
