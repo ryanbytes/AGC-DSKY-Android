@@ -131,12 +131,15 @@ body{font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select
 /* Lower EL voltage reduces light output while preserving the phosphor hue. */
 .dim .el-seg.on,.dim .el-legend-bg,.dim .el-rule,.dim .comp-el.on .el-comp-bg{opacity:.62}
 
-/* SCD 1006353 rev B: .855-.865 in square acrylic cap envelope on the 2004968E .970-in switch pitch.\n   Use the .860-in tolerance midpoint; origin offsets below preserve every existing switch center. */\n.key{position:absolute;width:12.467784%;height:10.724975%;z-index:6;border:.12vmin solid #090a09;border-radius:7.558140%;background:linear-gradient(145deg,#353633 0%,#262724 36%,#181917 78%,#111210 100%);color:#eef2e8;font:800 clamp(12px,3.25vmin,24px)/1 Arial,Helvetica,sans-serif;letter-spacing:-.02em;text-shadow:0 0 .12vmin rgba(241,255,227,.34),0 .09em #000;box-shadow:inset .20vmin .18vmin .22vmin rgba(255,255,255,.16),inset -.22vmin -.25vmin .26vmin rgba(0,0,0,.76),0 .15vmin .1vmin #66665f;-webkit-tap-highlight-color:transparent;padding:0}
+/* SCD 1006353 rev B: .855-.865 in square acrylic cap envelope on the 2004968E .970-in switch pitch.
+   Use the .860-in tolerance midpoint; origin offsets below preserve every existing switch center. */
+.key{position:absolute;width:12.467784%;height:10.724975%;z-index:6;border:.12vmin solid #090a09;border-radius:7.558140%;background:linear-gradient(145deg,#353633 0%,#262724 36%,#181917 78%,#111210 100%);color:#eef2e8;font:800 clamp(12px,3.25vmin,24px)/1 Arial,Helvetica,sans-serif;letter-spacing:-.02em;text-shadow:0 0 .12vmin rgba(241,255,227,.34),0 .09em #000;box-shadow:inset .20vmin .18vmin .22vmin rgba(255,255,255,.16),inset -.22vmin -.25vmin .26vmin rgba(0,0,0,.76),0 .15vmin .1vmin #66665f;-webkit-tap-highlight-color:transparent;padding:0}
 .key.fn{font-size:clamp(8px,2.2vmin,17px)}.key.keyrel{line-height:.86}.key:active,.key.pressed{transform:translateY(.30vmin);background:linear-gradient(#191a18,#111210);box-shadow:inset .08vmin .12vmin .12vmin rgba(255,255,255,.08),inset 0 0 .35vmin #000}
 .k-r1c1,.k-r2c1{left:1.578608%}.k-r1c2,.k-r2c2,.k-r3c2{left:15.641108%}.k-r1c3,.k-r2c3,.k-r3c3{left:29.703608%}.k-r1c4,.k-r2c4,.k-r3c4{left:43.766108%}.k-r1c5,.k-r2c5,.k-r3c5{left:57.828608%}.k-r1c6,.k-r2c6,.k-r3c6{left:71.891108%}.k-r1c7,.k-r2c7{left:85.953608%}[class*="k-r1"]{top:63.454717%}[class*="k-r2"]{top:75.551491%}[class*="k-r3"]{top:87.648265%}
 /* The four outer function keys are half-row staggered on the Block II keyboard,
    rather than sharing the three center-row baselines. */
-.k-r1c1,.k-r1c7{top:69.503104%}\n.k-r2c1,.k-r2c7{top:81.599878%}
+.k-r1c1,.k-r1c7{top:69.503104%}
+.k-r2c1,.k-r2c7{top:81.599878%}
 
 .fastener{position:absolute;z-index:7;width:2.55%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 37% 32%,#4a4b47 0 18%,#242522 44%,#121311 75%);border:.11vmin solid #a5a59e;box-shadow:0 .08vmin .12vmin rgba(0,0,0,.6)}.fastener:after{content:"";position:absolute;left:15%;right:15%;top:46%;height:9%;background:#8b8c86;transform:rotate(-14deg);box-shadow:0 -.04vmin #151515}.f1{left:.9%;top:.9%}.f2{right:.9%;top:.9%}.f3{left:.9%;bottom:.9%}.f4{right:.9%;bottom:.9%}
 
