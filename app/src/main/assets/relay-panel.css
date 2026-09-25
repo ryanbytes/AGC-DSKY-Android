@@ -1,62 +1,68 @@
-/* Full 140-relay physical-model view.
-   The rack is an optional inspection view, not part of the normal DSKY face.
-   It starts collapsed; relay-panel.js adds body.relay-view-visible only after
-   the user explicitly selects RELAY VIEW. No heading/legend block is drawn. */
+/* Full 140-relay physical-model inspection view.
+   The normal app is only the DSKY. Relay inspection is opt-in and intentionally
+   quiet at rest: all 140 mechanisms remain present, but only relays that are
+   actually moving receive strong visual emphasis. */
 .relay-rack{
   flex:0 0 auto;
   position:relative;
   z-index:2;
-  width:min(92vw,760px);
+  width:min(90vw,690px);
   height:0;
   max-height:0;
   min-height:0;
   display:grid;
   grid-template-columns:repeat(11,minmax(0,1fr));
   grid-template-rows:repeat(13,minmax(0,1fr));
-  gap:0 3px;
-  padding:0 10px;
+  gap:1px 4px;
+  padding:0 12px;
   overflow:hidden;
   opacity:0;
   visibility:hidden;
   pointer-events:none;
-  transform:translateY(-14px) scale(.985);
+  transform:translateY(-10px);
   transform-origin:center bottom;
   background:
-    repeating-linear-gradient(0deg,transparent 0 calc((100% / 13) - 1px),rgba(169,175,166,.11) calc((100% / 13) - 1px) calc(100% / 13)),
-    linear-gradient(90deg,rgba(255,255,255,.025),transparent 7% 93%,rgba(255,255,255,.018)),
-    linear-gradient(145deg,#252a25 0%,#131713 58%,#090b09 100%);
-  border:0 solid #252925;
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 calc((100% / 13) - 1px),
+      rgba(154,162,153,.055) calc((100% / 13) - 1px) calc(100% / 13)
+    ),
+    linear-gradient(180deg,#171b17 0%,#0c0f0c 100%);
+  border:0 solid #222722;
   border-radius:2px;
   box-shadow:none;
   transition:
-    height .38s cubic-bezier(.22,.72,.18,1),
-    max-height .38s cubic-bezier(.22,.72,.18,1),
-    padding .38s cubic-bezier(.22,.72,.18,1),
-    border-width .38s cubic-bezier(.22,.72,.18,1),
-    opacity .18s ease,
-    transform .38s cubic-bezier(.22,.72,.18,1),
-    visibility 0s linear .38s;
+    height .34s cubic-bezier(.22,.72,.18,1),
+    max-height .34s cubic-bezier(.22,.72,.18,1),
+    padding .34s cubic-bezier(.22,.72,.18,1),
+    border-width .34s cubic-bezier(.22,.72,.18,1),
+    opacity .16s ease,
+    transform .34s cubic-bezier(.22,.72,.18,1),
+    visibility 0s linear .34s;
 }
 body.relay-view-visible:not(.dream):not(.display-only):not(.screen-only) .relay-rack{
-  height:min(32vh,360px);
-  max-height:min(32vh,360px);
-  min-height:190px;
-  padding:7px 10px;
+  height:min(25vh,270px);
+  max-height:min(25vh,270px);
+  min-height:150px;
+  padding:6px 12px;
   opacity:1;
   visibility:visible;
   pointer-events:auto;
   transform:none;
   border-width:1px;
   box-shadow:
-    inset 0 0 0 1px rgba(133,141,132,.22),
-    inset 0 0 18px rgba(0,0,0,.78),
-    0 2px 6px rgba(0,0,0,.58);
+    inset 0 0 0 1px rgba(130,139,130,.12),
+    inset 0 0 16px rgba(0,0,0,.88),
+    0 2px 5px rgba(0,0,0,.52);
   transition-delay:0s;
 }
 
-/* Each grid position is an open relay mechanism on the common tray, not a
-   framed "button". The latched state is conveyed by contact/armature position;
-   coil light appears only while that relay is actually being driven. */
+/* Timing mode only matters while inspecting the relay mechanism. */
+#relay-timing{display:none}
+body.relay-view-visible #relay-timing{display:inline-block}
+
+/* Idle mechanisms deliberately recede into the tray. Their armature position
+   still shows the true latched state, but they do not all compete for attention. */
 .relay-cell{
   --relay-travel-ms:10ms;
   --relay-skew:0deg;
@@ -65,144 +71,132 @@ body.relay-view-visible:not(.dream):not(.display-only):not(.screen-only) .relay-
   min-width:0;
   min-height:0;
   overflow:visible;
-  background:transparent;
-  border:0;
-  border-radius:0;
-  box-shadow:none;
+  opacity:.27;
+  filter:saturate(.72) brightness(.76);
+  transition:opacity 55ms linear,filter 55ms linear;
 }
-.relay-cell::before,.relay-cell::after{
-  content:"";
-  position:absolute;
-  top:50%;
-  width:3px;
-  height:3px;
-  margin-top:-1.5px;
-  border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#b8bdb7 0 25%,#555b55 48%,#171a17 75%);
-  box-shadow:0 0 0 1px rgba(0,0,0,.8);
-  opacity:.78;
-}
-.relay-cell::before{left:3%}
-.relay-cell::after{right:3%}
+.relay-cell::before,.relay-cell::after{content:none}
 
 .relay-coil{
   position:absolute;
-  left:11%;
-  top:34%;
-  width:45%;
-  height:40%;
-  border-radius:42% / 26%;
-  border:1px solid rgba(39,27,18,.9);
+  left:13%;
+  top:39%;
+  width:42%;
+  height:28%;
+  border-radius:999px;
+  border:0;
   background:
-    repeating-linear-gradient(90deg,rgba(184,94,43,calc(.26 * var(--relay-copper))) 0 1px,rgba(75,39,24,.62) 1px 2px),
-    linear-gradient(180deg,#302117 0%,#8d4b29 48%,#352319 100%);
-  box-shadow:
-    inset 0 1px 1px rgba(247,174,105,.13),
-    inset 0 -1px 2px rgba(0,0,0,.82);
+    repeating-linear-gradient(
+      90deg,
+      rgba(142,72,38,calc(.20 * var(--relay-copper))) 0 1px,
+      rgba(61,36,25,.42) 1px 2px
+    ),
+    #241a14;
+  box-shadow:inset 0 0 2px rgba(0,0,0,.9);
 }
-.relay-coil::before,.relay-coil::after{
-  content:"";
-  position:absolute;
-  top:8%;
-  bottom:8%;
-  width:8%;
-  border-radius:50%;
-  background:#343934;
-  box-shadow:inset 0 0 1px #000;
-}
-.relay-coil::before{left:-5%}
-.relay-coil::after{right:-5%}
+.relay-coil::before,.relay-coil::after{content:none}
 
 .relay-armature{
   position:absolute;
-  left:42%;
-  top:22%;
-  width:38%;
-  height:7%;
+  left:43%;
+  top:29%;
+  width:35%;
+  height:4%;
+  min-height:1px;
   border-radius:999px;
-  transform-origin:4% 50%;
-  transform:rotate(calc(-13deg + var(--relay-skew)));
-  background:linear-gradient(180deg,#b0b5af 0%,#676d67 48%,#2b302c 100%);
-  box-shadow:0 1px 1px rgba(0,0,0,.9);
+  transform-origin:3% 50%;
+  transform:rotate(calc(-12deg + var(--relay-skew)));
+  background:#737a73;
+  box-shadow:none;
   transition-property:transform;
   transition-duration:var(--relay-travel-ms);
   transition-timing-function:cubic-bezier(.28,.04,.2,1);
 }
 .relay-cell.moving.target-on .relay-armature,
 .relay-cell.on .relay-armature{
-  transform:rotate(calc(1.8deg + var(--relay-skew)));
+  transform:rotate(calc(1.6deg + var(--relay-skew)));
 }
 
 .relay-fixed-contact,.relay-moving-contact{
   position:absolute;
-  width:6px;
-  height:6px;
+  width:3px;
+  height:3px;
   border-radius:50%;
-  background:radial-gradient(circle at 33% 30%,#e2e4df 0 20%,#8b918b 42%,#303430 73%);
-  border:1px solid rgba(8,9,8,.92);
+  border:0;
+  background:#858b85;
+  opacity:.46;
 }
-.relay-fixed-contact{right:12%;top:28%}
+.relay-fixed-contact{right:15%;top:31%}
 .relay-moving-contact{
   left:72%;
-  top:27%;
-  transition:box-shadow 25ms linear,transform var(--relay-travel-ms) cubic-bezier(.28,.04,.2,1);
+  top:31%;
+  transition:transform var(--relay-travel-ms) cubic-bezier(.28,.04,.2,1),opacity 35ms linear;
 }
-.relay-cell.on .relay-moving-contact{
-  transform:translate(2px,2px);
-  box-shadow:0 0 3px rgba(230,235,225,.38);
+.relay-cell.on .relay-moving-contact{transform:translate(1px,1px)}
+
+/* Only an energized/moving relay comes forward visually. */
+.relay-cell.moving{
+  opacity:1;
+  filter:saturate(1.08) brightness(1.08);
 }
-.relay-cell.on .relay-fixed-contact{box-shadow:0 0 3px rgba(230,235,225,.26)}
 .relay-cell.moving .relay-coil{
   background:
-    repeating-linear-gradient(90deg,rgba(245,145,72,.82) 0 1px,rgba(113,55,27,.9) 1px 2px),
-    linear-gradient(180deg,#4e2b19 0%,#c86b34 48%,#472819 100%);
-  box-shadow:
-    0 0 5px rgba(226,116,45,.32),
-    inset 0 1px 1px rgba(255,196,126,.22),
-    inset 0 -1px 2px rgba(0,0,0,.72);
+    repeating-linear-gradient(
+      90deg,
+      rgba(239,132,66,.84) 0 1px,
+      rgba(107,52,28,.88) 1px 2px
+    ),
+    #5a301d;
+  box-shadow:0 0 5px rgba(218,107,44,.30),inset 0 0 2px rgba(0,0,0,.68);
 }
-.relay-cell.bounce .relay-moving-contact{box-shadow:0 0 6px rgba(244,233,201,.8)}
-.relay-aux{background:linear-gradient(90deg,rgba(130,138,130,.035),transparent 16% 84%,rgba(130,138,130,.035))}
+.relay-cell.moving .relay-armature{background:#aab0aa}
+.relay-cell.moving .relay-fixed-contact,
+.relay-cell.moving .relay-moving-contact{opacity:.92;background:#c3c8c2}
+.relay-cell.bounce{opacity:.9;filter:brightness(1.08)}
+.relay-cell.bounce .relay-moving-contact{box-shadow:0 0 4px rgba(239,226,194,.72)}
+.relay-aux{opacity:.32}
+.relay-aux.moving{opacity:1}
 .relay-filler{visibility:hidden}
 
-/* Expanding the rack changes normal flex layout, so the complete DSKY moves
-   down smoothly instead of having an overlay painted across its face. */
+/* Expanding the inspection rack changes real flex layout, so the entire DSKY
+   slides down and scales only as much as needed. */
 body:not(.dream):not(.display-only):not(.screen-only) .dsky{
-  transition:width .38s cubic-bezier(.22,.72,.18,1),transform .38s cubic-bezier(.22,.72,.18,1);
+  transition:width .34s cubic-bezier(.22,.72,.18,1),transform .34s cubic-bezier(.22,.72,.18,1);
 }
 body.relay-view-visible:not(.dream):not(.display-only):not(.screen-only) .dsky{
   width:min(
     calc(100vw - 4px),
-    calc((100vh - min(32vh,360px) - 146px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372)
+    calc((100vh - min(25vh,270px) - 146px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372)
   );
 }
 body.dream .relay-rack,body.display-only .relay-rack,body.screen-only .relay-rack{display:none!important}
 
 @media (max-width:380px){
-  .relay-rack{gap:0 2px;width:94vw}
+  .relay-rack{gap:1px 3px;width:92vw;padding-left:9px;padding-right:9px}
   body.relay-view-visible:not(.dream):not(.display-only):not(.screen-only) .relay-rack{
-    height:min(30vh,310px);
-    max-height:min(30vh,310px);
-    min-height:168px;
-    padding:6px 7px;
+    height:min(24vh,245px);
+    max-height:min(24vh,245px);
+    min-height:138px;
+    padding-top:5px;
+    padding-bottom:5px;
   }
   body.relay-view-visible:not(.dream):not(.display-only):not(.screen-only) .dsky{
     width:min(
       calc(100vw - 4px),
-      calc((100vh - min(30vh,310px) - 166px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372)
+      calc((100vh - min(24vh,245px) - 166px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372)
     );
   }
 }
 @media (orientation:landscape){
   body.relay-view-visible:not(.dream):not(.display-only):not(.screen-only) .relay-rack{
-    height:min(36vh,250px);
-    max-height:min(36vh,250px);
-    min-height:112px;
-    width:min(88vw,760px);
+    height:min(29vh,190px);
+    max-height:min(29vh,190px);
+    min-height:100px;
+    width:min(82vw,690px);
   }
   body.relay-view-visible:not(.dream):not(.display-only):not(.screen-only) .dsky{
     width:auto!important;
-    height:min(45vh,calc(64vh - 76px - max(4px,env(safe-area-inset-bottom))))!important;
+    height:min(48vh,calc(68vh - 70px - max(4px,env(safe-area-inset-bottom))))!important;
     max-width:92vw;
   }
 }
