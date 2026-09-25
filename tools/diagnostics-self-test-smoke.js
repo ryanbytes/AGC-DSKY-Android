@@ -39,12 +39,16 @@ for(const marker of [
   "'EL segment renderer'",
   "'Annunciator lamps'",
   "'Keypad wiring'",
+  "'Key tactile model'",
   "'Native/browser bridges'",
   "'Sensor plumbing'",
   "'Network time'",
   "'Saved-state read/write'",
   "'Audio subsystem'",
   "'Packaged assets'",
+  "section('KEY MECHANICS / TACTILE')",
+  "'Total finger force'",
+  "'Tactile cue'",
   "fullSelfTestRunning?'RUNNING':(failed?'FAIL':'PASS')",
   "Object.freeze({open,close,runFullSelfTest})"
 ]) assert(SRC.includes(marker),'diagnostics contract missing: '+marker);
