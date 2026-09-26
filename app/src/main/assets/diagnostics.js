@@ -304,7 +304,7 @@
     h+=section('OPERATION AUTHORITY');
     h+=row('Normal DSKY keys','AGC MODE · CHANNEL 015 → yaAGC / COMANCHE');
     h+=row('PRO','AGC MODE · CHANNEL 032 ACTIVE-LOW → yaAGC / COMANCHE');
-    h+=row('DSKY outputs','yaAGC → CHANNELS 010 / 011 / 013 / 0163 → HARDWARE / DISPLAY');
+    h+=row('DSKY outputs','yaAGC → CHANNELS 010 / 011 / 012 / 013 / 0163 → HARDWARE / DISPLAY');
     h+=row('PHONE CLOCK','NON-FLIGHT · WALL-CLOCK PRESENTATION ONLY');
     h+=row('Relay Show','NON-FLIGHT · PRESENTATION CHOREOGRAPHY');
     h+=row('Diagnostics','NON-FLIGHT · NO SYNTHETIC AGC DISPLAY OUTPUT');
@@ -315,7 +315,7 @@
     h+=row('Sextant tap-to-mark','NON-FLIGHT SIM AID · SCREEN TAP → CDU PULSES + CHANNEL 016 MARK');
     if(dskyTest)h+=row('AGC V35 test',`${dskyTest.ok?'READY':'BLOCKED'} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
     h+=row('PROG / VERB / NOUN',`${(d.prog||[]).join('')||'--'} / ${(d.verb||[]).join('')||'--'} / ${(d.noun||[]).join('')||'--'}`);
-    const ch=app.channels||{};h+=row('Channels 011 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
+    const ch=app.channels||{};h+=row('Channels 011 / 012 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch012)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
     h+=section('KEY ELECTRICAL');
     if(electricalSpec){
       h+=row('Keyboard schematic',`${electricalSpec.source.drawing} · assembly ${electricalSpec.source.assembly} · module ${electricalSpec.source.module}`);
