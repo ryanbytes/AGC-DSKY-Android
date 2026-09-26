@@ -5,11 +5,20 @@ const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 class Classes{constructor(){this.values=new Set()}add(...n){n.forEach(x=>this.values.add(x))}remove(...n){n.forEach(x=>this.values.delete(x))}toggle(n,f){if(f===undefined)f=!this.values.has(n);f?this.values.add(n):this.values.delete(n);return f}contains(n){return this.values.has(n)}}
-class Element{constructor(id=''){this.id=id;this.innerHTML='';this.textContent='';this.classList=new Classes();this.style={filter:''}}}
+class Element{
+  constructor(id=''){this.id=id;this.attrs=new Map();this.children=[];this.parentNode=null;this._innerHTML='';this.textContent='';this.classList=new Classes();this.style={filter:''}}
+  setAttribute(n,v){this.attrs.set(String(n),String(v))}
+  getAttribute(n){return this.attrs.has(String(n))?this.attrs.get(String(n)):null}
+  appendChild(node){node.parentNode=this;this.children.push(node);return node}
+  removeChild(node){const i=this.children.indexOf(node);if(i<0)throw new Error('child not found');this.children.splice(i,1);node.parentNode=null;return node}
+  get firstChild(){return this.children[0]||null}
+  set innerHTML(v){this._innerHTML=String(v)}
+  get innerHTML(){return this._innerHTML}
+}
 const elements=Object.fromEntries(['prog','verb','noun','r1','r2','r3','sound','mode','dsky'].map(id=>[id,new Element(id)]));
 const lamps={};for(const name of ['comp','uplink','temp','keyrel','oprerr','restart','stby','vel','noatt','alt','gimbal','tracker','prog'])lamps[name]=new Element(`lamp-${name}`);
 const timers=[];
-const document={hidden:false,body:new Element('body'),getElementById:id=>elements[id]||null,querySelector(selector){const match=selector.match(/^\[data-lamp="(.+)"\]$/);return match?lamps[match[1]]||null:null},querySelectorAll(selector){return selector==='[data-lamp]'?Object.values(lamps):[]}};
+const document={hidden:false,body:new Element('body'),getElementById:id=>elements[id]||null,createElementNS:()=>new Element(),querySelector(selector){const match=selector.match(/^\[data-lamp="(.+)"\]$/);return match?lamps[match[1]]||null:null},querySelectorAll(selector){return selector==='[data-lamp]'?Object.values(lamps):[]}};
 const storage=new Map();
 const shell={store:{get:key=>storage.has(key)?storage.get(key):null,set(key,value){storage.set(key,String(value));return true},remove:key=>storage.delete(key)},element:id=>elements[id]||null,accurateDate:()=>new Date('2026-09-15T13:07:05Z'),show:(verb,noun)=>{elements.verb.textContent=verb;elements.noun.textContent=noun}};
 const environment={tickLevel:()=>1};
@@ -23,7 +32,7 @@ assert(state&&Object.isSealed(state),'app state missing or unsealed');assert(cor
 for(const name of ['mode','verb','tickSound','agcCore'])assert(!Object.getOwnPropertyDescriptor(context,name),`state field leaked onto Window: ${name}`);
 
 load('dsky-display-renderer.js');
-const renderer=context.AGCDSKY_RENDERER;renderer.set2('prog','16');assert(elements.prog.innerHTML.includes('el-glyph'),'base renderer did not render');
+const renderer=context.AGCDSKY_RENDERER;renderer.set2('prog','16');assert(elements.prog.children.length===2&&elements.prog.children.every(slot=>slot.firstChild&&slot.firstChild.getAttribute('data-el-base-glyph')==='1'),'base renderer did not render stable glyphs');
 const renderVersion=renderer.compatibilityVersions().renderDigits;
 vm.runInContext("'use strict'; renderDigits=function(el,text){renderReplacementCalls++;el.innerHTML='replacement:'+text}",context);
 renderer.set2('prog','88');assert(elements.prog.innerHTML==='replacement:88'&&context.renderReplacementCalls===1,'strict renderer replacement did not dispatch through service');assert(renderer.compatibilityVersions().renderDigits===renderVersion+1,'renderer replacement was not versioned');
