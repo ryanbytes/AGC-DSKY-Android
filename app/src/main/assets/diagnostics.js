@@ -21,7 +21,7 @@
   function build(){
     if(document.getElementById('diag-view'))return;
     const el=document.createElement('section');el.id='diag-view';el.setAttribute('aria-label','AGC diagnostics');
-    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><div class="diag-action-title">HARDWARE / SENSOR</div><button id="imu-zero">IMU SENSOR WAITING</button><button id="mag-lock">MAGNETOMETER WAITING</button><button id="pipa-cal">PIPA SENSOR WAITING</button><button id="diag-relay-show">RELAY SHOW</button><div class="diag-action-title">TESTS / STATE</div><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">ENTER V35 ENTR THROUGH AGC</button><button id="diag-haptic-test">TEST KEY HAPTIC</button><button id="diag-haptic-settings">OPEN VIBRATION SETTINGS</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
+    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><div class="diag-action-title">HARDWARE / SENSOR</div><button id="imu-zero">IMU SENSOR WAITING</button><button id="mag-lock">MAGNETOMETER WAITING</button><button id="pipa-cal">PIPA SENSOR WAITING</button><button id="diag-relay-show">NON-FLIGHT RELAY SHOW</button><div class="diag-action-title">TESTS / STATE</div><button id="diag-full-test">RUN NON-FLIGHT APP SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">ENTER V35 ENTR THROUGH AGC</button><button id="diag-haptic-test">TEST KEY HAPTIC</button><button id="diag-haptic-settings">OPEN VIBRATION SETTINGS</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
     document.getElementById('diag-full-test').onclick=runFullSelfTest;
@@ -267,7 +267,7 @@
       const available=!!(relay&&typeof relay.start==='function');
       const active=!!(available&&typeof relay.active==='function'&&relay.active());
       relayButton.disabled=!available;
-      relayButton.textContent=active?'STOP RELAY SHOW':'RELAY SHOW';
+      relayButton.textContent=active?'STOP NON-FLIGHT RELAY SHOW':'NON-FLIGHT RELAY SHOW';
     }
   }
   function update(){
@@ -296,11 +296,18 @@
     if(fullSelfTest){
       const passed=fullSelfTest.results.filter(x=>x.ok).length,failed=fullSelfTest.results.filter(x=>!x.ok).length,total=fullSelfTest.results.length;
       const overall=fullSelfTestRunning?'RUNNING':(failed?'FAIL':'PASS');
-      h+=row('Full DSKY self-test',overall+' · '+passed+' PASS'+(failed?' · '+failed+' FAIL':'')+' · '+total+'/'+SELF_TEST_TOTAL+' complete');
+      h+=row('Non-flight app self-test',overall+' · '+passed+' PASS'+(failed?' · '+failed+' FAIL':'')+' · '+total+'/'+SELF_TEST_TOTAL+' complete');
       for(const result of fullSelfTest.results)h+=row('↳ '+result.name,(result.ok?'PASS':'FAIL')+' · '+result.detail);
     }
     h+=row('Mode',String(app.mode||'---').toUpperCase());
     h+=row('Core',app.coreLoaded?`${app.coreVersion||'---'} · ${app.coreRunning?'RUNNING':'SUSPENDED'}`:'not loaded');
+    h+=section('OPERATION AUTHORITY');
+    h+=row('Normal DSKY keys','AGC MODE · CHANNEL 015 → yaAGC / COMANCHE');
+    h+=row('PRO','AGC MODE · CHANNEL 032 ACTIVE-LOW → yaAGC / COMANCHE');
+    h+=row('DSKY outputs','yaAGC → CHANNELS 010 / 011 / 013 / 0163 → HARDWARE / DISPLAY');
+    h+=row('PHONE CLOCK','NON-FLIGHT · WALL-CLOCK PRESENTATION ONLY');
+    h+=row('Relay Show','NON-FLIGHT · PRESENTATION CHOREOGRAPHY');
+    h+=row('Diagnostics','NON-FLIGHT · NO SYNTHETIC AGC DISPLAY OUTPUT');
     if(dskyTest)h+=row('AGC V35 test',`${dskyTest.ok?'READY':'BLOCKED'} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
     h+=row('PROG / VERB / NOUN',`${(d.prog||[]).join('')||'--'} / ${(d.verb||[]).join('')||'--'} / ${(d.noun||[]).join('')||'--'}`);
     const ch=app.channels||{};h+=row('Channels 011 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
@@ -397,7 +404,7 @@
     if(verifyBtn)verifyBtn.disabled=!app.coreLoaded;
     if(dskyBtn){const ready=app.mode==='agc'&&app.coreLoaded&&app.coreRunning;dskyBtn.disabled=!ready;dskyBtn.textContent=ready?'REAL V35 · CLOSE AND KEY V 3 5 ENTR':'V35 · AGC MUST BE RUNNING'}
     if(ntpBtn){ntpBtn.disabled=!!ntp.syncInFlight;ntpBtn.textContent=ntp.syncInFlight?'NETWORK TIME SYNCING…':'SYNC NETWORK TIME NOW'}
-    if(fullBtn){fullBtn.disabled=fullSelfTestRunning;fullBtn.textContent=fullSelfTestRunning?'FULL SELF-TEST RUNNING…':'RUN FULL DSKY SELF-TEST'}
+    if(fullBtn){fullBtn.disabled=fullSelfTestRunning;fullBtn.textContent=fullSelfTestRunning?'NON-FLIGHT APP SELF-TEST RUNNING…':'RUN NON-FLIGHT APP SELF-TEST'}
     updateHardwareActions(phone);
   }
   function open(){build();document.getElementById('diag-view').classList.add('open');update();if(!timer)timer=setInterval(update,250)}
