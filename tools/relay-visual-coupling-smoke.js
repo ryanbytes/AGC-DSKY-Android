@@ -15,11 +15,11 @@ const identityAt=html.indexOf('<script src="relay-identity-audio.js"></script>')
 assert(identityAt>=0&&visualAt>identityAt&&stabilityAt>visualAt,'relay identity/visual/stability parser order changed');
 assert(!html.includes('relay-panel.js')&&!html.includes('relay-panel.css')&&!html.includes('id="relay-panel"'),'removed relay rack UI reappeared');
 for(const token of [
-  "mode:'single-event-relay-contact-coupled'","audioModel.playRelayImpact?.(","audioModel.contactTraceFor(","type:'relay-drive'","type:'relay-contact'",
+  "mode:'single-event-relay-contact-coupled'","audioModel.playRelayImpact?.(","audioModel.playRelayBankHaptic?.(","audioModel.contactTraceFor(","type:'relay-drive'","type:'relay-contact'",
   'function presentDrive(','function subscribe(','display.installImplementation(\'decodeChannel10\',relayContactVisualDecode',"hardware.registerSettledPaintPolicy('relay-visual-coupling'"
 ])req(source,token,'single-event relay contract');
 
-let now=0,nextTimerId=1;const timers=[],raf=[],renders=[],baseDecode=[],impacts=[],events=[],storage=new Map();
+let now=0,nextTimerId=1;const timers=[],raf=[],renders=[],baseDecode=[],impacts=[],bankHaptics=[],events=[],storage=new Map();
 const context={console,window:null,globalThis:null,Object,Map,Set,Number,String,Math,TypeError,Promise,
   document:{getElementById:()=>null},
   setTimeout(fn,ms=0){const item={id:nextTimerId++,fn,due:now+Math.max(0,Number(ms)||0)};timers.push(item);return item.id},
@@ -47,7 +47,8 @@ context.DSKY_RELAY_AUDIO={
     return[{atMs:travel,state:!!on,kind:'armature'},{atMs:stable,state:!!on,kind:'settled'}];
   },
   playRelayImpact:(row,bit,on,strength)=>{impacts.push({row,bit,on:!!on,strength,at:now});return true},
-  auxiliaryNames:[],auxiliaryProfileFor:()=>fallback,auxiliaryContactTraceFor:()=>[],playAuxImpact:()=>true
+  playRelayBankHaptic:entries=>{bankHaptics.push({entries:entries.map(x=>({...x})),at:now});return true},
+  auxiliaryNames:[],auxiliaryProfileFor:()=>fallback,auxiliaryContactTraceFor:()=>[],playAuxImpact:()=>true,playAuxHaptic:()=>true
 };
 context.DSKY_RELAY_MATRIX={segmentsForCode:()=>''};
 let decodeImpl=value=>{baseDecode.push({value:Number(value),at:now});return true};
@@ -77,6 +78,8 @@ decodeImpl(command);
 assert(baseDecode.length===1&&baseDecode[0].value===command,'wrapper bypassed hardware decoder');
 const drives=events.filter(e=>e.type==='relay-drive');
 assert(drives.length===2&&drives.some(e=>e.bit===0&&e.durationMs===5)&&drives.some(e=>e.bit===5&&e.durationMs===11),'manufactured drive durations not published');
+assert(bankHaptics.length===1&&bankHaptics[0].entries.length===2,'authentic drive did not compose one bank haptic');
+assert(bankHaptics[0].entries.some(e=>e.bit===0&&e.arrivalMs===5)&&bankHaptics[0].entries.some(e=>e.bit===5&&e.arrivalMs===11),'bank haptic schedule does not match manufactured armature arrivals');
 
 runNextTimer();
 const armature0=events.find(e=>e.type==='relay-contact'&&e.bit===0&&e.phase==='armature');
@@ -92,8 +95,10 @@ assert(renders[renders.length-1].word===33,'authentic transition did not settle 
 
 visual.setTimingMode('stretched',false);
 assert(visual.getTimingMode()==='stretched'&&paintPolicy()===false,'stretched mode/paint policy changed');
-timers.length=0;raf.length=0;renders.length=0;impacts.length=0;events.length=0;now=100;
+timers.length=0;raf.length=0;renders.length=0;impacts.length=0;bankHaptics.length=0;events.length=0;now=100;
 decodeImpl(command);
+assert(bankHaptics.length===1&&bankHaptics[0].entries.length===2,'stretched drive did not compose one bank haptic');
+assert(bankHaptics[0].entries[0].arrivalMs>=20&&bankHaptics[0].entries[1].arrivalMs>bankHaptics[0].entries[0].arrivalMs,'stretched bank haptic did not use stretched armature schedule');
 const beforeRender=renders.length,beforeImpact=impacts.length;
 runNextTimer();
 assert(raf.length===1&&renders.length===beforeRender&&impacts.length===beforeImpact,'stretched armature must wait for presentation frame');
@@ -105,4 +110,4 @@ assert(renders.some(x=>x.at===frameAt),'stretched DSKY contact was not rendered 
 assert(visual.lastPresentationClick()&&visual.lastPresentationClick().bit===0,'last presentation click diagnostic changed');
 
 console.log('relay visual coupling smoke: PASS');
-console.log('  one manufactured contact event drives subscribers, sound, DSKY projection and contact bounce; stretched mode remains frame-coupled without a rack UI');
+console.log('  one manufactured contact event drives subscribers, sound and DSKY projection; haptics are composed once per relay bank to prevent Android vibration replacement');
