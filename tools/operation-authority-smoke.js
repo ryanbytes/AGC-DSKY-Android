@@ -17,6 +17,9 @@ const visual=read('relay-visual-coupling.js');
 const clock=read('phone-clock-runtime.js');
 const diagnostics=read('diagnostics.js');
 const relayShow=read('relay-show.js');
+const optics=read('optics.js');
+const tapMark=read('sextant-tap-mark.js');
+const phoneIcdu=read('phone-icdu.js');
 
 for(const marker of [
   'const NORMAL_KEY_CHANNEL = 0o15;',
@@ -83,5 +86,54 @@ assert(!/startDskyTest[\s\S]{0,1200}(?:keyMake|keyReset|writeIo|lampTest)/.test(
 assert(relayShow.includes('presentation choreography over the same physical relay service'),'Relay Show lost explicit presentation-only classification');
 assert(relayShow.includes("showState.mode='relay-show'"),'Relay Show no longer isolates itself from AGC mode');
 
+for(const marker of [
+  'const accepted = this.writeIo(0o16, value & 0o177);',
+  'this.exports.cpu_step(1);',
+  'const ERASABLE_TO_INTERRUPT_REQUESTS = 92196;',
+  'const addr = erasable + ERASABLE_TO_INTERRUPT_REQUESTS + 6;',
+  'bytes[addr] = 1;',
+  'return this.writeIo(0o16, 0);'
+]) assert(core.includes(marker),'navigation KEYRUPT2 transport path missing: '+marker);
+assert(core.includes('does not raise the')&&core.includes('corresponding KEYRUPT2 request'),'navigation transport shim is not explicitly documented');
+
+for(const marker of [
+  'const MARK_BIT = 0o40;',
+  'const REJECT_BIT = 0o100;',
+  "document.getElementById('sxt-mark').addEventListener('click', () => navPulse(MARK_BIT))",
+  "document.getElementById('sxt-reject').addEventListener('click', () => navPulse(REJECT_BIT))",
+  'const ok=c.navKeyPulse(bit,90);'
+]) assert(optics.includes(marker),'optics MARK/MARK REJECT authority path missing: '+marker);
+for(const forbidden of ['commitRelayWord(','setChannelState(','AGCDSKY_DISPLAY'])
+  assert(!optics.includes(forbidden),'optics MARK/MARK REJECT bypasses yaAGC output authority: '+forbidden);
+
+for(const marker of [
+  'NON-FLIGHT SIMULATOR AID: tap-to-mark',
+  "mode:'non-flight-simulator-aid'",
+  "inputPath:'screen tap -> simulated CDU pulses -> channel 016 MARK -> yaAGC'",
+  'writePulses(c, SHAFT_CH, shaftCounts)',
+  'writePulses(c, TRUNNION_CH, trunnionCounts)',
+  'c.navKeyPulse(MARK_BIT, 90)'
+]) assert(tapMark.includes(marker),'tap-to-mark provenance/path missing: '+marker);
+for(const forbidden of ['commitRelayWord(','setChannelState(','AGCDSKY_DISPLAY'])
+  assert(!tapMark.includes(forbidden),'tap-to-mark bypasses yaAGC and writes DSKY output directly: '+forbidden);
+
+for(const marker of [
+  'This deliberately does NOT write Noun 20, erasable memory, or DSKY fields.',
+  'const CDU_CHANNEL = [0o200 | 0o32, 0o200 | 0o33, 0o200 | 0o34];',
+  'const PIPA_CHANNEL = [0o200 | 0o37, 0o200 | 0o40, 0o200 | 0o41];',
+  'core.writeIo(CDU_CHANNEL[axis], sign > 0 ? PCDU_FAST : MCDU_FAST)',
+  'core.writeIo(PIPA_CHANNEL[axis], sign > 0 ? PINC : MINC)'
+]) assert(phoneIcdu.includes(marker),'phone spacecraft-peripheral path missing: '+marker);
+for(const forbidden of ['commitRelayWord(','setChannelState(','AGCDSKY_DISPLAY'])
+  assert(!phoneIcdu.includes(forbidden),'phone spacecraft peripheral writes DSKY output directly: '+forbidden);
+
+for(const marker of [
+  'CHANNEL 016 → yaAGC · KEYRUPT2 WASM TRANSPORT SHIM',
+  'SIMULATED SPACECRAFT PERIPHERAL · UNPROGRAMMED INCREMENTS → yaAGC',
+  'SIMULATED SPACECRAFT PERIPHERAL · PINC / MINC → yaAGC',
+  'SIMULATED OPTICS PERIPHERAL · CDU PULSES → yaAGC',
+  'NON-FLIGHT SIM AID · SCREEN TAP → CDU PULSES + CHANNEL 016 MARK'
+]) assert(diagnostics.includes(marker),'peripheral authority label missing: '+marker);
+
 console.log('operation authority smoke: PASS');
-console.log('  normal keys and PRO enter yaAGC; AGC output channels own the DSKY; PHONE CLOCK, Relay Show, and diagnostics are explicitly non-flight and cannot synthesize V35');
+console.log('  DSKY keys/PRO, navigation keys, and simulated spacecraft peripherals enter yaAGC; AGC channels own DSKY output; simulator aids/non-flight paths are explicitly labeled');
