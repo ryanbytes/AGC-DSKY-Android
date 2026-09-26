@@ -7,7 +7,8 @@
  * R-700 §3.10.1.5 establishes the key travel geometry, drawing 2004941 gives
  * the compression-spring rate, and SCD 1010901 bounds the sensitive switch,
  * but the surviving source set does not establish total installed finger
- * force. Haptics therefore mark the physical contact/release events only.
+ * force. Normal key vibration is therefore disabled rather than pretending to
+ * reproduce an unsupported force signature.
  *
  * Normal DSKY key make/release haptics are intentionally disabled. Relay
  * haptics remain separate and active through the relay-specific bridge methods.
@@ -93,9 +94,10 @@
       makeDurationMs: (() => { try { return Number(bridge()?.makeDurationMs?.()) || null; } catch (_) { return null; } })(),
       releaseDurationMs: (() => { try { return Number(bridge()?.releaseDurationMs?.()) || null; } catch (_) { return null; } })(),
       platformEffects: Object.freeze({
-        make:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)',
-        release:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)',
-        legacyFallback:'View.performHapticFeedback'
+        make:'disabled',
+        release:'disabled',
+        diagnostic:'explicit test pulse only',
+        relay:'separate relay-specific bridge'
       }),
       keyHapticsEnabled:false,
       policy:'normal DSKY key make/release haptics disabled; diagnostic test pulse only; relay haptics are separate',
