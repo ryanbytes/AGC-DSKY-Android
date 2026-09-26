@@ -26,10 +26,10 @@ for(const marker of [
 ])assert(coupling.includes(marker),'relay armature/haptic coupling missing: '+marker);
 
 for(const marker of [
-  'RELAY_MIN_MS = 4L',
-  'RELAY_MAX_MS = 8L',
-  'RELAY_MIN_AMPLITUDE = 32',
-  'RELAY_MAX_AMPLITUDE = 64',
+  'RELAY_MIN_MS = 6L',
+  'RELAY_MAX_MS = 18L',
+  'RELAY_MIN_AMPLITUDE = 48',
+  'RELAY_MAX_AMPLITUDE = 192',
   'relayImpact(int durationMs, int amplitude)',
   'vibrator.hasAmplitudeControl()',
   'HapticFeedbackConstants.CLOCK_TICK'
@@ -80,21 +80,23 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   const set=model.hapticSignatureFor(row,bit,true);
   const reset=model.hapticSignatureFor(row,bit,false);
   setSignatures.push(set);resetSignatures.push(reset);
-  assert(set.durationMs>=5&&set.durationMs<=8,'set duration escaped subtle bounds');
-  assert(set.amplitude>=42&&set.amplitude<=60,'set amplitude escaped subtle bounds');
-  assert(reset.durationMs>=4&&reset.durationMs<=7,'reset duration escaped subtle bounds');
-  assert(reset.amplitude>=34&&reset.amplitude<=52,'reset amplitude escaped subtle bounds');
+  assert(set.durationMs>=11&&set.durationMs<=16,'set duration escaped perceptible bounds');
+  assert(set.amplitude>=110&&set.amplitude<=180,'set amplitude escaped perceptible bounds');
+  assert(reset.durationMs>=7&&reset.durationMs<=10,'reset duration escaped perceptible bounds');
+  assert(reset.amplitude>=60&&reset.amplitude<=115,'reset amplitude escaped perceptible bounds');
+  assert(set.durationMs-reset.durationMs>=2,'same-relay set/reset duration separation collapsed');
+  assert(set.amplitude-reset.amplitude>=40,'same-relay set/reset amplitude separation collapsed');
   assert(JSON.stringify(set)===JSON.stringify(model.hapticSignatureFor(row,bit,true)),'relay set haptic is not deterministic');
   assert(JSON.stringify(reset)===JSON.stringify(model.hapticSignatureFor(row,bit,false)),'relay reset haptic is not deterministic');
 }
 const setDur=setSignatures.map(x=>x.durationMs),setAmp=setSignatures.map(x=>x.amplitude);
 const resetDur=resetSignatures.map(x=>x.durationMs),resetAmp=resetSignatures.map(x=>x.amplitude);
-assert(Math.max(...setDur)-Math.min(...setDur)<=3,'set haptic duration variation is too broad');
-assert(Math.max(...setAmp)-Math.min(...setAmp)<=18,'set haptic amplitude variation is too broad');
-assert(Math.max(...resetDur)-Math.min(...resetDur)<=3,'reset haptic duration variation is too broad');
-assert(Math.max(...resetAmp)-Math.min(...resetAmp)<=18,'reset haptic amplitude variation is too broad');
-assert(new Set(setSignatures.map(x=>x.durationMs+':'+x.amplitude)).size>=8,'relay set haptic identities are not meaningfully varied');
-assert(new Set(resetSignatures.map(x=>x.durationMs+':'+x.amplitude)).size>=8,'relay reset haptic identities are not meaningfully varied');
+assert(Math.max(...setDur)-Math.min(...setDur)<=5,'set haptic duration variation is too broad');
+assert(Math.max(...setAmp)-Math.min(...setAmp)<=70,'set haptic amplitude variation is too broad');
+assert(Math.max(...resetDur)-Math.min(...resetDur)<=4,'reset haptic duration variation is too broad');
+assert(Math.max(...resetAmp)-Math.min(...resetAmp)<=55,'reset haptic amplitude variation is too broad');
+assert(new Set(setSignatures.map(x=>x.durationMs+':'+x.amplitude)).size>=40,'relay set haptic identities are not meaningfully varied');
+assert(new Set(resetSignatures.map(x=>x.durationMs+':'+x.amplitude)).size>=35,'relay reset haptic identities are not meaningfully varied');
 
 const expected=model.hapticSignatureFor(4,7,true);
 assert(model.playRelayHaptic(4,7,true)===true,'native relay haptic dispatch failed');
@@ -102,8 +104,8 @@ assert(calls.length===1,'native relay haptic dispatched wrong number of pulses')
 assert(calls[0].durationMs===expected.durationMs&&calls[0].amplitude===expected.amplitude,'native relay haptic did not use deterministic identity');
 
 const aux=model.auxiliaryHapticSignatureFor('comp',true);
-assert(aux.durationMs>=5&&aux.durationMs<=8&&aux.amplitude>=42&&aux.amplitude<=60,'aux haptic escaped shared bounds');
+assert(aux.durationMs>=11&&aux.durationMs<=16&&aux.amplitude>=110&&aux.amplitude<=180,'aux haptic escaped shared bounds');
 assert(model.playAuxHaptic('comp',true)===true&&calls.length===2,'aux native haptic dispatch failed');
 
 console.log('relay haptic smoke: PASS');
-console.log('  140 relay identities use deterministic, tightly bounded set/reset haptic signatures coupled to armature events');
+console.log('  140 relay identities use deterministic, perceptibly separated set/reset haptic signatures coupled to armature events');
