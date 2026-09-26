@@ -144,12 +144,15 @@ final class KeyHapticBridge {
             return false;
         }
         try {
-            if (!vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK)) {
+            float scale = Math.max(0.06f, Math.min(0.18f, scalePermille / 1000f));
+            int primitive = vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK)
+                    ? VibrationEffect.Composition.PRIMITIVE_LOW_TICK
+                    : VibrationEffect.Composition.PRIMITIVE_TICK;
+            if (!vibrator.areAllPrimitivesSupported(primitive)) {
                 return false;
             }
-            float scale = Math.max(0.08f, Math.min(0.50f, scalePermille / 1000f));
             VibrationEffect effect = VibrationEffect.startComposition()
-                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, scale)
+                    .addPrimitive(primitive, scale)
                     .compose();
             vibrator.vibrate(effect);
             return true;
