@@ -21,9 +21,10 @@ function assert(c,m){if(!c)throw new Error(m)}
 for(const marker of [
   "window.AGCDSKY_SERVICE_REGISTRY",
   "registry.publish('AGCDSKY_KEY_TACTILE'",
-  "make:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'",
-  "release:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'",
-  "legacyFallback:'View.performHapticFeedback'",
+  "make:'disabled'",
+  "release:'disabled'",
+  "diagnostic:'explicit test pulse only'",
+  "relay:'separate relay-specific bridge'",
   "keyHapticsEnabled:false",
   "policy:'normal DSKY key make/release haptics disabled; diagnostic test pulse only; relay haptics are separate'",
   "browserVibration:",
@@ -151,7 +152,8 @@ assert(status.powerSaveMode===false,'power-saver status wrong');
 assert(status.makeDurationMs===22&&status.releaseDurationMs===10,'one-shot pulse durations wrong');
 assert(service.test()===true&&calls[calls.length-1]==='test','direct native haptic probe failed');
 assert(service.openSystemSettings()===true&&calls[calls.length-1]==='settings','system vibration settings launcher failed');
-assert(status.platformEffects.make==='VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'&&status.platformEffects.release==='VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)','one-shot effect mapping wrong');
+assert(status.platformEffects.make==='disabled'&&status.platformEffects.release==='disabled','key haptic diagnostics must report disabled');
+assert(status.platformEffects.relay==='separate relay-specific bridge','relay haptics must remain explicitly separate');
 assert(status.keyHapticsEnabled===false,'key haptic disable flag missing');
 assert(status.makeCount===0&&status.releaseCount===0&&status.lastEvent===null,'disabled key haptics must not record tactile events');
 assert(status.actuationTravelIn===3/16&&status.overtravelToBottomIn===1/16&&status.totalTravelIn===1/4,'R-700 travel not propagated');
