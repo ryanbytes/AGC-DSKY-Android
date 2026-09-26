@@ -151,19 +151,29 @@
     return waveformFromPatterns(patterns);
   }
   function contactHapticSignatureFromProfile(p,engaging,phase){
-    const base=hapticSignatureFromProfile(p,engaging),kind=String(phase||'armature');
-    if(kind==='armature')return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:base.durationMs,amplitude:base.amplitude});
-    const ordinalPhase=((p.ordinal*29+7)%140)/139;
-    if(kind==='bounce'){
-      const amplitude=Math.round(clamp(base.amplitude*.54+(ordinalPhase-.5)*4,engaging?26:22,engaging?40:34));
-      return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:2,amplitude});
+    const on=!!engaging,base=hapticSignatureFromProfile(p,on),kind=String(phase||'armature'),ordinalPhase=((p.ordinal*29+7)%140)/139;
+    if(kind==='armature'){
+      const minAmp=on?50:35,maxAmp=on?72:56,norm=clamp((base.amplitude-minAmp)/Math.max(1,maxAmp-minAmp),0,1);
+      const primitiveScalePermille=Math.round((on?96:84)+norm*(on?28:22)+(ordinalPhase-.5)*6);
+      return Object.freeze({id:p.id,engaging:on,phase:kind,durationMs:base.durationMs,amplitude:base.amplitude,primitiveScalePermille});
     }
-    const amplitude=Math.round(clamp(base.amplitude*.46+(ordinalPhase-.5)*3,engaging?24:20,engaging?36:31));
-    return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:2,amplitude});
+    if(kind==='bounce'){
+      const amplitude=Math.round(clamp(base.amplitude*.54+(ordinalPhase-.5)*4,on?26:22,on?40:34));
+      const norm=clamp((amplitude-(on?26:22))/Math.max(1,(on?40:34)-(on?26:22)),0,1);
+      const primitiveScalePermille=Math.round((on?72:66)+norm*(on?16:14)+(ordinalPhase-.5)*4);
+      return Object.freeze({id:p.id,engaging:on,phase:kind,durationMs:2,amplitude,primitiveScalePermille});
+    }
+    const amplitude=Math.round(clamp(base.amplitude*.46+(ordinalPhase-.5)*3,on?24:20,on?36:31));
+    const norm=clamp((amplitude-(on?24:20))/Math.max(1,(on?36:31)-(on?24:20)),0,1);
+    const primitiveScalePermille=Math.round((on?64:60)+norm*(on?12:10)+(ordinalPhase-.5)*3);
+    return Object.freeze({id:p.id,engaging:on,phase:kind,durationMs:2,amplitude,primitiveScalePermille});
   }
   function playRelayContactHaptic(row,bit,engaging,phase){
     row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
     const p=profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),signature=contactHapticSignatureFromProfile(p,!!engaging,phase),native=nativeHapticBridge();
+    if(native&&typeof native.relayPrimitiveTick==='function'){
+      try{if(native.relayPrimitiveTick(signature.primitiveScalePermille)!==false)return true}catch(_){}
+    }
     if(native){try{return native.relayImpact(signature.durationMs,signature.amplitude)!==false}catch(_){}}
     try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')return navigator.vibrate(signature.durationMs)!==false}catch(_){}
     return false;

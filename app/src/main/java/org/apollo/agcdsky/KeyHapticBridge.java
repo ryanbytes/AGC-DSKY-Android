@@ -133,6 +133,35 @@ final class KeyHapticBridge {
     }
 
     /**
+     * Hardware-tuned micro-click for an individual visible relay-contact change.
+     * Pixels tune PRIMITIVE_TICK to the actuator far better than a 1-4 ms custom
+     * waveform can. Scale is supplied as permille so JavaScript does not depend
+     * on floating-point bridge conversion. Returns false when primitives are
+     * unavailable so the caller can fall back to relayImpact().
+     */
+    @JavascriptInterface public boolean relayPrimitiveTick(int scalePermille) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || vibrator == null || !vibrator.hasVibrator()) {
+            return false;
+        }
+        try {
+            float scale = Math.max(0.06f, Math.min(0.18f, scalePermille / 1000f));
+            int primitive = vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK)
+                    ? VibrationEffect.Composition.PRIMITIVE_LOW_TICK
+                    : VibrationEffect.Composition.PRIMITIVE_TICK;
+            if (!vibrator.areAllPrimitivesSupported(primitive)) {
+                return false;
+            }
+            VibrationEffect effect = VibrationEffect.startComposition()
+                    .addPrimitive(primitive, scale)
+                    .compose();
+            vibrator.vibrate(effect);
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    /**
      * Plays one already-composed relay-bank waveform. This avoids the Android
      * behavior where a later vibrate() call replaces an earlier relay pulse.
      * JavaScript composes all relay armature/rebound contributions for the bank
