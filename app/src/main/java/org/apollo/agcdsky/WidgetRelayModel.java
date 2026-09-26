@@ -8,8 +8,8 @@ import java.util.Locale;
  * The widget is hosted by the launcher, so Android does not provide a reliable
  * way to repaint RemoteViews at the DSKY's sub-20-ms contact times.  This model
  * nevertheless keeps the native widget electrically honest: decimal glyphs are
- * generated from the real K1..K5 contact matrix, every one of the 12 x 11
- * latching relays has a stable manufacturing fingerprint, and callers can
+ * generated from the real K1..K5 contact matrix, all 120 populated latching
+ * relay positions have stable manufacturing fingerprints, and callers can
  * sample the modeled set/reset travel, DPST pole skew and contact bounce at any
  * instant inside the documented 20-ms drive/settle envelope.  The widget face
  * publishes the settled result; it never invents a partially settled state.
@@ -18,14 +18,23 @@ final class WidgetRelayModel {
     static final int BANKS = 12;
     static final int RELAYS_PER_BANK = 11;
     static final int CHARACTER_RELAYS = 5;
+    static final int PHYSICAL_LATCHING_RELAYS = 120;
     static final double DRIVE_ENVELOPE_MS = 20.0;
-    static final double CONTACT_GUARD_MS = 0.35;
-    static final double MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
+    static final double LATCHING_OPERATE_MAX_MS = 3.0;
+    static final double LATCHING_RELEASE_MAX_MS = 3.0;
+    static final double LATCHING_BOUNCE_MAX_MS = 2.0;
 
-    private static final double SET_TRAVEL_MIN_MS = 5.1;
-    private static final double SET_TRAVEL_MAX_MS = 13.6;
-    private static final double RESET_TRAVEL_MIN_MS = 4.7;
-    private static final double RESET_TRAVEL_MAX_MS = 12.8;
+    // Populated channel-010 positions, rows 1..12.  Unset bits have no relay.
+    private static final int[] PHYSICAL_MASK = {
+        0, 03777, 03777, 01777, 03777, 03777, 03777,
+        03777, 00037, 01777, 01777, 01777, 00777
+    };
+
+    // Deterministic unit variation is deliberately bounded by SCD 1006282.
+    private static final double SET_TRAVEL_MIN_MS = 1.75;
+    private static final double SET_TRAVEL_MAX_MS = 2.95;
+    private static final double RESET_TRAVEL_MIN_MS = 1.65;
+    private static final double RESET_TRAVEL_MAX_MS = 2.90;
 
     // Comanche RELTAB low-five-bit codes for decimal 0..9.
     private static final int[] DIGIT_RELAY = {21, 3, 25, 27, 15, 30, 28, 19, 29, 31};
@@ -33,10 +42,16 @@ final class WidgetRelayModel {
     private static final Profile[][] PROFILES = new Profile[BANKS + 1][RELAYS_PER_BANK];
 
     static {
+        int count = 0;
         for (int row = 1; row <= BANKS; row++) {
             for (int bit = 0; bit < RELAYS_PER_BANK; bit++) {
+                if (!isPhysicalRelay(row, bit)) continue;
                 PROFILES[row][bit] = makeProfile(row, bit);
+                count++;
             }
+        }
+        if (count != PHYSICAL_LATCHING_RELAYS) {
+            throw new IllegalStateException("physical DSKY relay inventory mismatch: " + count);
         }
     }
 
@@ -72,9 +87,19 @@ final class WidgetRelayModel {
         }
     }
 
+    static boolean isPhysicalRelay(int row, int bit) {
+        return row >= 1 && row <= BANKS && bit >= 0 && bit < RELAYS_PER_BANK
+                && (PHYSICAL_MASK[row] & (1 << bit)) != 0;
+    }
+
+    static int physicalMask(int row) {
+        if (row < 1 || row > BANKS) throw new IllegalArgumentException("bank out of range: " + row);
+        return PHYSICAL_MASK[row];
+    }
+
     static Profile profile(int row, int bit) {
-        if (row < 1 || row > BANKS || bit < 0 || bit >= RELAYS_PER_BANK) {
-            throw new IllegalArgumentException("relay out of range: row=" + row + " bit=" + bit);
+        if (!isPhysicalRelay(row, bit)) {
+            throw new IllegalArgumentException("no physical relay: row=" + row + " bit=" + bit);
         }
         return PROFILES[row][bit];
     }
@@ -106,21 +131,23 @@ final class WidgetRelayModel {
      * the 20-ms settled boundary.
      */
     static int low11At(int row, int priorLow11, int targetLow11, double elapsedMs) {
-        int prior = priorLow11 & 0x7ff;
-        int target = targetLow11 & 0x7ff;
+        int physical = physicalMask(row);
+        int prior = priorLow11 & physical;
+        int target = targetLow11 & physical;
         if (elapsedMs >= DRIVE_ENVELOPE_MS) return target;
         if (elapsedMs <= 0) return prior;
 
         int out = prior;
         for (int bit = 0; bit < RELAYS_PER_BANK; bit++) {
             int mask = 1 << bit;
+            if ((physical & mask) == 0) continue;
             boolean before = (prior & mask) != 0;
             boolean after = (target & mask) != 0;
             if (before == after) continue;
             boolean state = contactState(profile(row, bit), before, after, elapsedMs, -1);
             if (state) out |= mask; else out &= ~mask;
         }
-        return out & 0x7ff;
+        return out & physical;
     }
 
     /**
@@ -157,7 +184,7 @@ final class WidgetRelayModel {
     }
 
     static double maxStableMsForRow(int row, int priorLow11, int targetLow11) {
-        int diff = (priorLow11 ^ targetLow11) & 0x7ff;
+        int diff = (priorLow11 ^ targetLow11) & physicalMask(row);
         double max = 0;
         for (int bit = 0; bit < RELAYS_PER_BANK; bit++) {
             if ((diff & (1 << bit)) == 0) continue;
@@ -165,7 +192,7 @@ final class WidgetRelayModel {
             Profile p = profile(row, bit);
             max = Math.max(max, engaging ? p.setStableMs : p.resetStableMs);
         }
-        return Math.min(MAX_CONTACT_STABLE_MS, max);
+        return Math.min(DRIVE_ENVELOPE_MS, max);
     }
 
     private static boolean contactState(Profile p, boolean before, boolean after,
@@ -183,8 +210,8 @@ final class WidgetRelayModel {
             travel += offset;
             stable += offset;
         }
-        travel = clamp(travel, 0.05, MAX_CONTACT_STABLE_MS);
-        stable = clamp(stable, travel, MAX_CONTACT_STABLE_MS);
+        travel = clamp(travel, 0.05, LATCHING_OPERATE_MAX_MS);
+        stable = clamp(stable, travel, travel + LATCHING_BOUNCE_MAX_MS);
 
         if (elapsedMs < travel) return before;
         if (elapsedMs >= stable) return after;
@@ -226,10 +253,10 @@ final class WidgetRelayModel {
 
     private static Profile makeProfile(int row, int bit) {
         String id = String.format(Locale.US, "ROW-%02d:%s", row, bitName(bit));
-        int ordinal = (row - 1) * RELAYS_PER_BANK + bit;
+        int ordinal = physicalOrdinal(row, bit);
         XorShift32 rnd = new XorShift32(hash32(id + ":manufacture"));
-        double positionPhase = ((ordinal * 73 + 17) % (BANKS * RELAYS_PER_BANK)) /
-                (double)(BANKS * RELAYS_PER_BANK - 1);
+        double positionPhase = ((ordinal * 73 + 17) % PHYSICAL_LATCHING_RELAYS) /
+                (double)(PHYSICAL_LATCHING_RELAYS - 1);
 
         double setTravel = clamp(
             SET_TRAVEL_MIN_MS + (SET_TRAVEL_MAX_MS - SET_TRAVEL_MIN_MS) *
@@ -241,19 +268,19 @@ final class WidgetRelayModel {
             RESET_TRAVEL_MIN_MS, RESET_TRAVEL_MAX_MS);
 
         int poleSkewUs = (int)Math.round((rnd.next() * 2 - 1) * 185.0);
-        int setBounceCount = 2 + (int)Math.floor(rnd.next() * 5.0);
-        int resetBounceCount = 1 + (int)Math.floor(rnd.next() * 4.0);
-        double setBounceWindow = 0.55 + rnd.next() * 2.35;
-        double resetBounceWindow = 0.35 + rnd.next() * 1.85;
+        int setBounceCount = 1 + (int)Math.floor(rnd.next() * 3.0);
+        int resetBounceCount = 1 + (int)Math.floor(rnd.next() * 3.0);
+        double setBounceWindow = 0.25 + rnd.next() * 1.55;
+        double resetBounceWindow = 0.20 + rnd.next() * 1.50;
         double[] setBounce = bouncePattern(rnd, setBounceCount, setBounceWindow);
         double[] resetBounce = bouncePattern(rnd, resetBounceCount, resetBounceWindow);
-        double setTail = 0.12 + rnd.next() * 0.34;
-        double resetTail = 0.10 + rnd.next() * 0.28;
+        double setTail = 0.04 + rnd.next() * 0.11;
+        double resetTail = 0.04 + rnd.next() * 0.11;
 
         double setLast = setBounce.length == 0 ? 0 : setBounce[setBounce.length - 1];
         double resetLast = resetBounce.length == 0 ? 0 : resetBounce[resetBounce.length - 1];
-        double setStable = Math.min(MAX_CONTACT_STABLE_MS, setTravel + setLast + setTail);
-        double resetStable = Math.min(MAX_CONTACT_STABLE_MS, resetTravel + resetLast + resetTail);
+        double setStable = Math.min(setTravel + LATCHING_BOUNCE_MAX_MS, setTravel + setLast + setTail);
+        double resetStable = Math.min(resetTravel + LATCHING_BOUNCE_MAX_MS, resetTravel + resetLast + resetTail);
 
         return new Profile(id, row, bit, setTravel, resetTravel,
                 setStable, resetStable, setBounce, resetBounce, poleSkewUs);
@@ -269,6 +296,14 @@ final class WidgetRelayModel {
         }
         java.util.Arrays.sort(out);
         return out;
+    }
+
+    private static int physicalOrdinal(int row, int bit) {
+        if (!isPhysicalRelay(row, bit)) throw new IllegalArgumentException("no physical relay");
+        int ordinal = 0;
+        for (int r = 1; r < row; r++) ordinal += Integer.bitCount(PHYSICAL_MASK[r]);
+        for (int b = 0; b < bit; b++) if ((PHYSICAL_MASK[row] & (1 << b)) != 0) ordinal++;
+        return ordinal;
     }
 
     private static String bitName(int bit) {
