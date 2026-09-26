@@ -84,14 +84,75 @@
     const amplitude=Math.round(clamp((on?112:60)+travelNorm*(on?40:28)+tailNorm*(on?16:10)+skewNorm*(on?8:6)+Math.min(4,bounces)*(on?2.5:2.0)+(ordinalPhase-.5)*(on?16:12),on?110:60,on?180:115));
     return Object.freeze({id:p.id,engaging:on,durationMs,amplitude});
   }
+  function hapticPatternFromProfile(p,engaging,atMs=0){
+    const on=!!engaging,signature=hapticSignatureFromProfile(p,on),source=on?p.setBounceTimesMs:p.resetBounceTimesMs,windowMs=on?p.setBounceWindowMs:p.resetBounceWindowMs,pulses=[];
+    const baseAt=Math.max(0,Number(atMs)||0);
+    pulses.push(Object.freeze({atMs:baseAt,durationMs:signature.durationMs,amplitude:signature.amplitude,kind:'armature'}));
+    if(source&&source.length){
+      const reboundCount=Math.min(on?3:2,Math.max(1,Math.ceil(source.length/2)));
+      for(let i=0;i<reboundCount;i++){
+        const index=reboundCount===1?source.length-1:Math.round(i*(source.length-1)/(reboundCount-1));
+        const physicalOffset=Math.max(0,Number(source[index])||0),normalized=clamp(physicalOffset/Math.max(.01,windowMs),0,1);
+        const gapMs=(on?7:6)+Math.round(normalized*(on?12:9))+i*(on?2:1);
+        const durationMs=Math.max(3,Math.min(6,Math.round((on?4.5:3.5)+(Math.abs(p.poleSkewUs)/185)*.8-i*.45)));
+        const amplitude=Math.round(clamp(signature.amplitude*(on?.44:.38)*Math.pow(.72,i),on?48:40,on?92:72));
+        pulses.push(Object.freeze({atMs:baseAt+signature.durationMs+gapMs,durationMs,amplitude,kind:'rebound',sourceBounceIndex:index,physicalOffsetMs:physicalOffset}));
+      }
+    }
+    return Object.freeze({id:p.id,engaging:on,pulses:Object.freeze(pulses)});
+  }
+  function waveformFromPatterns(patterns){
+    const pulses=[];for(const pattern of patterns||[])for(const pulse of pattern&&pattern.pulses||[])pulses.push(pulse);
+    if(!pulses.length)return Object.freeze({timings:Object.freeze([]),amplitudes:Object.freeze([]),totalMs:0,pulseCount:0});
+    const totalMs=Math.min(720,Math.max(...pulses.map(p=>Math.ceil(p.atMs+p.durationMs)))+1),levels=new Array(totalMs).fill(0);
+    for(const pulse of pulses){
+      const start=Math.max(0,Math.min(totalMs-1,Math.floor(pulse.atMs))),end=Math.max(start+1,Math.min(totalMs,Math.ceil(pulse.atMs+pulse.durationMs)));
+      for(let t=start;t<end;t++)levels[t]=Math.max(levels[t],Math.round(pulse.amplitude));
+    }
+    const timings=[],amplitudes=[];let current=levels[0],run=1;
+    for(let i=1;i<levels.length;i++){
+      if(levels[i]===current){run++;continue}
+      timings.push(run);amplitudes.push(current);current=levels[i];run=1;
+    }
+    timings.push(run);amplitudes.push(current);
+    return Object.freeze({timings:Object.freeze(timings),amplitudes:Object.freeze(amplitudes),totalMs,pulseCount:pulses.length});
+  }
+  function browserPatternFromWaveform(waveform){
+    const out=[];let active=false,run=0;
+    for(let i=0;i<waveform.timings.length;i++){
+      const next=waveform.amplitudes[i]>0,duration=Math.max(0,Number(waveform.timings[i])||0);
+      if(next===active)run+=duration;
+      else{out.push(run);run=duration;active=next}
+    }
+    out.push(run);if(!out.length||out[0]!==0)out.unshift(0);return out;
+  }
   function nativeHapticBridge(){
     try{const candidate=window.HapticBridge;if(!candidate||typeof candidate.relayImpact!=='function')return null;if(typeof candidate.available==='function'&&!candidate.available())return null;return candidate}catch(_){return null}
   }
-  function playHapticProfile(p,engaging){
-    const signature=hapticSignatureFromProfile(p,engaging),native=nativeHapticBridge();
-    if(native){try{return native.relayImpact(signature.durationMs,signature.amplitude)!==false}catch(_){}}
-    try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')return navigator.vibrate(signature.durationMs)!==false}catch(_){}
+  function playWaveform(waveform,fallbackSignature){
+    const native=nativeHapticBridge();
+    if(native&&typeof native.relayWaveform==='function'&&waveform.timings.length){
+      try{return native.relayWaveform(waveform.timings.join(','),waveform.amplitudes.join(','))!==false}catch(_){}
+    }
+    if(native&&fallbackSignature){try{return native.relayImpact(fallbackSignature.durationMs,fallbackSignature.amplitude)!==false}catch(_){}}
+    try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function'&&waveform.timings.length)return navigator.vibrate(browserPatternFromWaveform(waveform))!==false}catch(_){}
     return false;
+  }
+  function playHapticProfile(p,engaging){
+    const pattern=hapticPatternFromProfile(p,engaging,0),waveform=waveformFromPatterns([pattern]);
+    return playWaveform(waveform,hapticSignatureFromProfile(p,engaging));
+  }
+  function relayBankHapticPattern(events){
+    const patterns=[];
+    for(const event of events||[]){
+      const row=Number(event.row),bit=Number(event.bit);if(row<1||row>12||bit<0||bit>10)continue;
+      patterns.push(hapticPatternFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!event.on,Math.max(0,Number(event.arrivalMs)||0)));
+    }
+    return waveformFromPatterns(patterns);
+  }
+  function playRelayBankHaptic(events){
+    const waveform=relayBankHapticPattern(events);if(!waveform.timings.length)return false;
+    return playWaveform(waveform,null);
   }
 
   function buildRelayBuffer(ctx,p,engaging){
@@ -170,11 +231,14 @@
     profileFor:(row,bit)=>profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),
     contactTraceFor:(row,bit,engaging)=>contactTraceFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
     hapticSignatureFor:(row,bit,engaging)=>hapticSignatureFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
-    playRelayImpact,playRelayHaptic,
+    hapticPatternFor:(row,bit,engaging)=>hapticPatternFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging,0),
+    relayBankHapticPatternFor:events=>relayBankHapticPattern(events),
+    playRelayImpact,playRelayHaptic,playRelayBankHaptic,
     auxiliaryNames:Object.freeze(AUX_ORDER.slice()),
     auxiliaryProfileFor:name=>profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),
     auxiliaryContactTraceFor:(name,engaging)=>contactTraceFromProfile(profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),!!engaging),
     auxiliaryHapticSignatureFor:(name,engaging)=>hapticSignatureFromProfile(profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),!!engaging),
+    auxiliaryHapticPatternFor:(name,engaging)=>hapticPatternFromProfile(profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),!!engaging,0),
     playAuxImpact,playAuxHaptic
   });
 })();
