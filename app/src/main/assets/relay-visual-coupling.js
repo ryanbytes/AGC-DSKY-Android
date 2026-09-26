@@ -86,7 +86,7 @@
     const priorWord=state.contactWord;
     if(traceEvent.state)state.contactWord|=motion.mask;else state.contactWord&=~motion.mask;
     const contactChanged=priorWord!==state.contactWord;
-    renderWord(motion.row,state.contactWord);
+    if(state.renderContact)renderWord(motion.row,state.contactWord);
     if(timingMode===MODE_STRETCHED&&contactChanged)audioModel.playRelayContactHaptic?.(motion.row,motion.bit,motion.on,traceEvent.kind);
     if(traceEvent.kind==='armature'){
       lastPresentationClick={row:motion.row,bit:motion.bit,engaging:motion.on};
@@ -134,14 +134,14 @@
     if(activePresentations())requestFrameLoop();
   }
   function requestFrameLoop(){if(frameLoopRunning||timingMode!==MODE_STRETCHED)return;frameLoopRunning=true;if(typeof requestAnimationFrame==='function')requestAnimationFrame(frameStep);else setTimeout(frameStep,16)}
-  function releasePresentation(row,token,target,afterMs){setTimeout(()=>{const state=presentation[row];if(!state||!state.active||state.token!==token||generation[row]!==token)return;state.contactWord=target&0o3777;renderWord(row,state.contactWord);state.active=false;emit({type:'relay-bank-settled',row,contactWord:state.contactWord})},Math.max(0,afterMs))}
+  function releasePresentation(row,token,target,afterMs){setTimeout(()=>{const state=presentation[row];if(!state||!state.active||state.token!==token||generation[row]!==token)return;state.contactWord=target&0o3777;if(state.renderContact)renderWord(row,state.contactWord);state.active=false;emit({type:'relay-bank-settled',row,contactWord:state.contactWord})},Math.max(0,afterMs))}
 
   function presentDrive(row,prior,target,{renderContact=true}={}){
     row=Number(row);prior=Number(prior)&0o3777;target=Number(target)&0o3777;
     if(row<1||row>12)return 0;
     const token=(generation[row]||0)+1;generation[row]=token;const motions=collectMotions(row,prior,target);
     const state=presentation[row]={token,active:motions.length>0,contactWord:prior,target,frameQueue:[],renderContact:!!renderContact};
-    if(!motions.length){renderWord(row,target);emit({type:'relay-bank-settled',row,contactWord:target});return 0}
+    if(!motions.length){if(renderContact)renderWord(row,target);emit({type:'relay-bank-settled',row,contactWord:target});return 0}
     const stretched=timingMode===MODE_STRETCHED?stretchedSchedule(motions):null;
     const baseScheduled=motions.map(motion=>({motion,arrival:stretched?(stretched.find(item=>item.bit===motion.bit)?.stretchedMs??motion.physicalMs):motion.physicalMs}));
     const scheduled=baseScheduled.map((item,index)=>{

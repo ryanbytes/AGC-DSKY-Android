@@ -111,7 +111,7 @@
     hw.relayGeneration[relay]=generation;hw.activeDrive=relay;hw.lastWrite={relay,low11,changed:motions.length,at:performance.now()};
     if(present){
       const visual=window.DSKY_RELAY_VISUAL;
-      if(visual&&typeof visual.presentDrive==='function')visual.presentDrive(relay,prior,low11,{renderContact:true});
+      if(visual&&typeof visual.presentDrive==='function')visual.presentDrive(relay,prior,low11,{renderContact:!!render});
     }
     later(()=>{
       if(hw.relayGeneration[relay]!==generation)return;
