@@ -7,12 +7,13 @@
  * R-700 §3.10.1.5 establishes the key travel geometry, drawing 2004941 gives
  * the compression-spring rate, and SCD 1010901 bounds the sensitive switch,
  * but the surviving source set does not establish total installed finger
- * force. Haptics therefore mark the physical contact/release events only.
+ * force. Normal key vibration is therefore disabled rather than pretending to
+ * reproduce an unsupported force signature.
  *
- * Native wrappers provide platform haptics where hardware supports them.
- * Plain web/PWA surfaces use navigator.vibrate() only when the browser exposes
- * it. Presentation timing is never derived from Apollo spring/switch force;
- * unsupported browser/hardware surfaces remain an explicit no-op.
+ * Normal DSKY key make/release haptics are intentionally disabled. Relay
+ * haptics remain separate and active through the relay-specific bridge methods.
+ * The diagnostic test pulse is retained so the vibration hardware can still be
+ * checked explicitly without coupling vibration to a key press.
  */
 (() => {
   if (window.__DSKY_KEY_TACTILE_FEEDBACK__) return;
@@ -63,18 +64,9 @@
   }
 
   function fire(kind, key = '?') {
-    const native = bridge();
-    if (!native) return false;
-    try {
-      const dispatched = kind === 'make' ? native.keyMake() : native.keyRelease();
-      if (dispatched === false) return false;
-      if (kind === 'make') makeCount += 1;
-      else releaseCount += 1;
-      lastEvent = Object.freeze({kind, key:String(key || '?'), at:Date.now()});
-      return true;
-    } catch (_) {
-      return false;
-    }
+    void kind;
+    void key;
+    return false;
   }
 
   function mechanicalSpec() {
@@ -102,11 +94,13 @@
       makeDurationMs: (() => { try { return Number(bridge()?.makeDurationMs?.()) || null; } catch (_) { return null; } })(),
       releaseDurationMs: (() => { try { return Number(bridge()?.releaseDurationMs?.()) || null; } catch (_) { return null; } })(),
       platformEffects: Object.freeze({
-        make:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)',
-        release:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)',
-        legacyFallback:'View.performHapticFeedback'
+        make:'disabled',
+        release:'disabled',
+        diagnostic:'explicit test pulse only',
+        relay:'separate relay-specific bridge'
       }),
-      policy:'event-cue-only; platform-native/browser-supported haptics; no force-to-vibration amplitude mapping',
+      keyHapticsEnabled:false,
+      policy:'normal DSKY key make/release haptics disabled; diagnostic test pulse only; relay haptics are separate',
       actuationTravelIn: spec?.assembly?.actuationTravelIn ?? null,
       overtravelToBottomIn: spec?.assembly?.overtravelToBottomIn ?? null,
       totalTravelIn: spec?.assembly?.totalTravelIn ?? null,
