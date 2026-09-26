@@ -42,6 +42,7 @@ runtime-clock-transition-smoke.js
 runtime-transition-integration-smoke.js
 dsky-input-runtime-smoke.js
 app-input-boundary-smoke.js
+operation-authority-smoke.js
 audio-recovery-smoke.js
 cheatsheet-smoke.js
 optics-service-smoke.js
