@@ -24,7 +24,8 @@ for(const marker of [
   "make:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'",
   "release:'VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'",
   "legacyFallback:'View.performHapticFeedback'",
-  "policy:'event-cue-only; platform-native/browser-supported haptics; no force-to-vibration amplitude mapping'",
+  "keyHapticsEnabled:false",
+  "policy:'normal DSKY key make/release haptics disabled; diagnostic test pulse only; relay haptics are separate'",
   "browserVibration:",
   "hapticPlatform:",
   "backend: () => 'navigator.vibrate'",
@@ -136,8 +137,8 @@ vm.createContext(context);
 vm.runInContext(tactile,context,{filename:'key-tactile-feedback.js'});
 const service=registry.get('AGCDSKY_KEY_TACTILE');
 assert(service&&Object.isFrozen(service),'tactile service missing/mutable');
-assert(service.make('1')===true&&service.release('1')===true,'native bridge calls rejected');
-assert(calls.join(',')==='make,release','native bridge event order wrong');
+assert(service.make('1')===false&&service.release('1')===false,'normal key haptics must be disabled');
+assert(calls.length===0,'disabled normal key haptics must not reach native vibration');
 const status=service.status();
 assert(status.nativeBridge===true,'native bridge status false');
 assert(status.browserVibration===false,'native surface incorrectly reports browser vibration');
@@ -151,7 +152,8 @@ assert(status.makeDurationMs===22&&status.releaseDurationMs===10,'one-shot pulse
 assert(service.test()===true&&calls[calls.length-1]==='test','direct native haptic probe failed');
 assert(service.openSystemSettings()===true&&calls[calls.length-1]==='settings','system vibration settings launcher failed');
 assert(status.platformEffects.make==='VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)'&&status.platformEffects.release==='VibrationEffect.createOneShot(DEFAULT_AMPLITUDE)','one-shot effect mapping wrong');
-assert(status.makeCount===1&&status.releaseCount===1,'tactile event counters wrong');
+assert(status.keyHapticsEnabled===false,'key haptic disable flag missing');
+assert(status.makeCount===0&&status.releaseCount===0&&status.lastEvent===null,'disabled key haptics must not record tactile events');
 assert(status.actuationTravelIn===3/16&&status.overtravelToBottomIn===1/16&&status.totalTravelIn===1/4,'R-700 travel not propagated');
 assert(status.springForceIncreaseToActuationOzMin===9&&status.springForceIncreaseToActuationOzMax===10.5,'actuation spring ΔF wrong');
 assert(status.springForceIncreaseToBottomOzMin===12&&status.springForceIncreaseToBottomOzMax===14,'bottom spring ΔF wrong');
@@ -163,9 +165,10 @@ browser.window=browser;const browserRegistry=installServiceRegistry(browser);
 browserRegistry.publish('AGCDSKY_KEY_MECHANICAL_SPEC',registry.get('AGCDSKY_KEY_MECHANICAL_SPEC'),'mechanical fixture');
 vm.createContext(browser);vm.runInContext(tactile,browser,{filename:'key-tactile-feedback-browser.js'});
 const browserService=browserRegistry.get('AGCDSKY_KEY_TACTILE');
-assert(browserService.make('1')===true&&browserService.release('1')===true,'supported browser vibration rejected');
+assert(browserService.make('1')===false&&browserService.release('1')===false,'browser key haptics must be disabled');
+assert(browserCalls.length===0,'disabled browser key haptics must not call navigator.vibrate');
 assert(browserService.test()===true,'supported browser diagnostic vibration rejected');
-assert(browserCalls.join(',')==='22,10,120','browser vibration timing wrong');
+assert(browserCalls.join(',')==='120','browser diagnostic vibration timing wrong');
 const browserStatus=browserService.status();
 assert(browserStatus.nativeBridge===false&&browserStatus.browserVibration===true,'browser fallback status wrong');
 assert(browserStatus.hapticPlatform==='web'&&browserStatus.nativeBackend==='navigator.vibrate','browser backend status wrong');
@@ -179,4 +182,4 @@ assert(unsupportedService.make('1')===false&&unsupportedService.release('1')===f
 assert(unsupportedService.status().nativeBridge===false&&unsupportedService.status().browserVibration===false,'unsupported web surface incorrectly reports haptics');
 
 console.log('key tactile feedback smoke: PASS');
-console.log('  Android native, Apple native wrapper, and navigator.vibrate browser fallback are gated; unsupported web surfaces remain explicit no-ops; Apollo force is never mapped to vibration amplitude');
+console.log('  normal DSKY button make/release haptics are disabled on native and web; diagnostic test pulse remains available; relay haptics are separate');
