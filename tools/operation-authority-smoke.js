@@ -21,7 +21,7 @@ const relayShow=read('relay-show.js');
 for(const marker of [
   'const NORMAL_KEY_CHANNEL = 0o15;',
   'const PROCEED_CHANNEL = 0o32;',
-  'return this.writeIo(NORMAL_KEY_CHANNEL, code);',
+  'const accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);',
   'return this.writeIo(PROCEED_CHANNEL, pressed ? 0 : PROCEED_MASK);',
   'this.onChannelUpdate(channel, value);'
 ]) assert(core.includes(marker),'AGC core authority path missing: '+marker);
