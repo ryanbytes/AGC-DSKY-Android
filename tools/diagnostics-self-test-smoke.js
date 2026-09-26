@@ -10,7 +10,7 @@ for(const marker of [
   "document.getElementById('diag-dsky-test').onclick=startDskyTest",
   "appState.mode!=='agc'",
   "'AGC V35 test'",
-  "'USE THE DSKY KEYS: VERB 3 5 ENTR'",
+  "USE THE DSKY KEYS: VERB 3 5 ENTR",
   "'REAL V35 · CLOSE AND KEY V 3 5 ENTR'",
   'id="diag-ntp-sync"',
   "document.getElementById('diag-ntp-sync').onclick=syncNetworkTimeNow",
