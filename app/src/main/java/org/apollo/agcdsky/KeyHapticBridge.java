@@ -25,10 +25,10 @@ final class KeyHapticBridge {
     private static final long MAKE_MS = 22L;
     private static final long RELEASE_MS = 10L;
     private static final long DIAGNOSTIC_MS = 120L;
-    private static final long RELAY_MIN_MS = 2L;
-    private static final long RELAY_MAX_MS = 8L;
-    private static final int RELAY_MIN_AMPLITUDE = 12;
-    private static final int RELAY_MAX_AMPLITUDE = 96;
+    private static final long RELAY_MIN_MS = 1L;
+    private static final long RELAY_MAX_MS = 1L;
+    private static final int RELAY_MIN_AMPLITUDE = 1;
+    private static final int RELAY_MAX_AMPLITUDE = 8;
     private static final int RELAY_MAX_WAVEFORM_SEGMENTS = 192;
     private static final long RELAY_MAX_WAVEFORM_MS = 750L;
 
@@ -129,7 +129,7 @@ final class KeyHapticBridge {
     @JavascriptInterface public boolean relayImpact(int durationMs, int amplitude) {
         long clampedDuration = Math.max(RELAY_MIN_MS, Math.min(RELAY_MAX_MS, durationMs));
         int clampedAmplitude = Math.max(RELAY_MIN_AMPLITUDE, Math.min(RELAY_MAX_AMPLITUDE, amplitude));
-        return performVariableOneShot(clampedDuration, clampedAmplitude, HapticFeedbackConstants.CLOCK_TICK);
+        return performRelayOneShot(clampedDuration, clampedAmplitude, HapticFeedbackConstants.CLOCK_TICK);
     }
 
     /**
@@ -187,6 +187,23 @@ final class KeyHapticBridge {
         return performVariableOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE, legacyViewEffect);
     }
 
+    private boolean performRelayOneShot(long durationMs, int amplitude, int legacyViewEffect) {
+        if (vibrator != null && vibrator.hasVibrator() && vibrator.hasAmplitudeControl()) {
+            try {
+                vibrator.vibrate(VibrationEffect.createOneShot(durationMs, amplitude));
+                return true;
+            } catch (RuntimeException ignored) {
+                // Fall through to the light platform haptic.
+            }
+        }
+
+        final WebView target = view;
+        target.post(() -> {
+            if (target.isAttachedToWindow()) target.performHapticFeedback(legacyViewEffect);
+        });
+        return true;
+    }
+
     private boolean performVariableOneShot(long durationMs, int amplitude, int legacyViewEffect) {
         if (vibrator != null && vibrator.hasVibrator()) {
             try {
@@ -210,15 +227,10 @@ final class KeyHapticBridge {
     private boolean performWaveform(long[] timings, int[] amplitudes, int legacyViewEffect) {
         if (vibrator != null && vibrator.hasVibrator()) {
             try {
-                int[] effectAmplitudes = amplitudes;
-                if (!vibrator.hasAmplitudeControl()) {
-                    effectAmplitudes = new int[amplitudes.length];
-                    for (int i = 0; i < amplitudes.length; i++) {
-                        effectAmplitudes[i] = amplitudes[i] == 0 ? 0 : 255;
-                    }
+                if (vibrator.hasAmplitudeControl()) {
+                    vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1));
+                    return true;
                 }
-                vibrator.vibrate(VibrationEffect.createWaveform(timings, effectAmplitudes, -1));
-                return true;
             } catch (RuntimeException ignored) {
                 // Fall through to a single platform haptic if waveform playback fails.
             }
