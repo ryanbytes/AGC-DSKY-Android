@@ -29,6 +29,8 @@ final class KeyHapticBridge {
     private static final long RELAY_MAX_MS = 18L;
     private static final int RELAY_MIN_AMPLITUDE = 48;
     private static final int RELAY_MAX_AMPLITUDE = 192;
+    private static final int RELAY_MAX_WAVEFORM_SEGMENTS = 192;
+    private static final long RELAY_MAX_WAVEFORM_MS = 750L;
 
     private final WebView view;
     private final Context context;
@@ -130,6 +132,43 @@ final class KeyHapticBridge {
         return performVariableOneShot(clampedDuration, clampedAmplitude, HapticFeedbackConstants.CLOCK_TICK);
     }
 
+    /**
+     * Plays one already-composed relay-bank waveform. This avoids the Android
+     * behavior where a later vibrate() call replaces an earlier relay pulse.
+     * JavaScript composes all relay armature/rebound contributions for the bank
+     * from the same deterministic relay profiles that drive sound/contact state.
+     */
+    @JavascriptInterface public boolean relayWaveform(String timingsCsv, String amplitudesCsv) {
+        if (timingsCsv == null || amplitudesCsv == null) return false;
+        String[] timingParts = timingsCsv.split(",");
+        String[] amplitudeParts = amplitudesCsv.split(",");
+        if (timingParts.length == 0 || timingParts.length != amplitudeParts.length
+                || timingParts.length > RELAY_MAX_WAVEFORM_SEGMENTS) return false;
+
+        long[] timings = new long[timingParts.length];
+        int[] amplitudes = new int[amplitudeParts.length];
+        long totalMs = 0L;
+        boolean hasActiveSegment = false;
+        try {
+            for (int i = 0; i < timingParts.length; i++) {
+                long duration = Math.max(0L, Math.min(80L, Long.parseLong(timingParts[i])));
+                int amplitude = Math.max(0, Math.min(RELAY_MAX_AMPLITUDE, Integer.parseInt(amplitudeParts[i])));
+                if (amplitude > 0) {
+                    amplitude = Math.max(RELAY_MIN_AMPLITUDE, amplitude);
+                    hasActiveSegment = true;
+                }
+                totalMs += duration;
+                if (totalMs > RELAY_MAX_WAVEFORM_MS) return false;
+                timings[i] = duration;
+                amplitudes[i] = amplitude;
+            }
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+        if (!hasActiveSegment) return false;
+        return performWaveform(timings, amplitudes, HapticFeedbackConstants.CLOCK_TICK);
+    }
+
     @JavascriptInterface public boolean testPulse() {
         return performOneShot(DIAGNOSTIC_MS, HapticFeedbackConstants.LONG_PRESS);
     }
@@ -158,6 +197,30 @@ final class KeyHapticBridge {
                 return true;
             } catch (RuntimeException ignored) {
                 // Fall through to View feedback only if direct vibration fails.
+            }
+        }
+
+        final WebView target = view;
+        target.post(() -> {
+            if (target.isAttachedToWindow()) target.performHapticFeedback(legacyViewEffect);
+        });
+        return true;
+    }
+
+    private boolean performWaveform(long[] timings, int[] amplitudes, int legacyViewEffect) {
+        if (vibrator != null && vibrator.hasVibrator()) {
+            try {
+                int[] effectAmplitudes = amplitudes;
+                if (!vibrator.hasAmplitudeControl()) {
+                    effectAmplitudes = new int[amplitudes.length];
+                    for (int i = 0; i < amplitudes.length; i++) {
+                        effectAmplitudes[i] = amplitudes[i] == 0 ? 0 : 255;
+                    }
+                }
+                vibrator.vibrate(VibrationEffect.createWaveform(timings, effectAmplitudes, -1));
+                return true;
+            } catch (RuntimeException ignored) {
+                // Fall through to a single platform haptic if waveform playback fails.
             }
         }
 
