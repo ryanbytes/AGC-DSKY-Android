@@ -8,9 +8,10 @@ const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
 for(const marker of [
   'id="diag-dsky-test"',
   "document.getElementById('diag-dsky-test').onclick=startDskyTest",
-  "clock.lampTest()",
-  "appState.mode!=='clock'",
-  "'Clock DSKY self-test'",
+  "appState.mode!=='agc'",
+  "'AGC V35 test'",
+  "'USE THE DSKY KEYS: VERB 3 5 ENTR'",
+  "'REAL V35 · CLOSE AND KEY V 3 5 ENTR'",
   'id="diag-ntp-sync"',
   "document.getElementById('diag-ntp-sync').onclick=syncNetworkTimeNow",
   "window.AGCDSKY_SHELL.requestNetworkTimeSync",
@@ -71,8 +72,9 @@ for(const marker of [
   "fullSelfTestRunning?'RUNNING':(failed?'FAIL':'PASS')",
   "Object.freeze({open,close,runFullSelfTest})"
 ]) assert(SRC.includes(marker),'diagnostics contract missing: '+marker);
-assert(!/startDskyTest[\s\S]{0,900}(?:keyMake|writeIo|proceed)/.test(SRC),
-  'diagnostics self-test must not inject AGC inputs; AGC-mode V35 stays user-driven');
+assert(!/startDskyTest[\s\S]{0,1200}(?:keyMake|keyReset|writeIo|proceed|lampTest)/.test(SRC),
+  'diagnostics V35 must not inject AGC inputs or synthesize display state; V35 stays user-driven through physical DSKY keys');
+assert(!SRC.includes('RUN CLOCK DSKY SELF-TEST')&&!SRC.includes('V35 HARDWARE SEQUENCE STARTED'),'synthetic CLOCK V35 wording returned');
 console.log('diagnostics self-test / network-time smoke: PASS');
 
 assert(!SRC.includes('onclick=startFullSelfTest'),'diagnostics full self-test handler must reference the implemented runFullSelfTest function');
