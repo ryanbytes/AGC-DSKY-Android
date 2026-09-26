@@ -12,11 +12,11 @@ assert(core&&Object.isSealed(core),'shared AGC core session must exist and be se
 assert(compat&&Object.isFrozen(compat),'compatibility registry must exist and be frozen');
 assert(!('mutable' in compat)&&!('accessor' in compat),'compatibility registry must not expose mutable/accessor ownership primitives');
 assert(state.mode==='clock'&&state.selectedMission==='comanche055'&&state.verb==='16'&&state.noun==='65','shared app-state core defaults changed');
-assert(state.dream===false&&state.dreamMode==='dim'&&state.dim===false&&state.tickSound===true&&state.displayOnly===false&&state.appVisible===true,'shared presentation/visibility defaults changed');
+assert(state.dream===false&&state.dreamMode==='dim'&&state.dim===false&&state.tickSound===true&&state.relayHaptics===true&&state.displayOnly===false&&state.appVisible===true,'shared presentation/visibility defaults changed');
 assert(state.ntpStatus&&state.ntpStatus.server==='time.cloudflare.com'&&state.ntpStatus.state==='unavailable','NTP state defaults changed');
 assert(core.core===null&&core.loadedMission===''&&core.suspendedForClock===false&&core.pausedForVisibility===false,'core-session defaults changed');
 
-const stateNames=['mode','selectedMission','verb','noun','dream','dreamMode','dim','tickSound','displayOnly','appVisible','ntpStatus','agcCore','agcLoadedMission','agcSuspendedForClock','agcPausedForVisibility'];
+const stateNames=['mode','selectedMission','verb','noun','dream','dreamMode','dim','tickSound','relayHaptics','displayOnly','appVisible','ntpStatus','agcCore','agcLoadedMission','agcSuspendedForClock','agcPausedForVisibility'];
 for(const name of stateNames)assert(!Object.getOwnPropertyDescriptor(context,name),`${name} must not be a Window state property`);
 
 const readonlyProbe=compat.readonly('readonlyProbe',()=>42);
@@ -31,8 +31,8 @@ context.forwardedProbe=2;assert(forwarded===2&&forwardedVersion===1,'forwarded c
 compat.replace('forwardedProbe',3,'forwarded replacement');assert(forwarded===3&&forwardedVersion===2,'forwarded explicit replacement did not reach owner');
 const forwardedDescription=compat.describe().find(item=>item.name==='forwardedProbe');assert(forwardedDescription&&forwardedDescription.kind==='alias'&&forwardedDescription.version===2,'forwarded compatibility diagnostics do not reflect owner version');
 
-state.mode='agc';state.verb='35';state.noun='00';state.tickSound=false;state.dream=true;state.displayOnly=true;state.dreamMode='solar';state.dim=true;state.appVisible=false;core.loadedMission='comanche055';core.suspendedForClock=true;core.pausedForVisibility=true;core.core={running:false};
-assert(state.mode==='agc'&&state.verb==='35'&&state.noun==='00'&&state.tickSound===false&&state.dream&&state.displayOnly&&state.dreamMode==='solar'&&state.dim&&state.appVisible===false,'direct shared-state writes changed');
+state.mode='agc';state.verb='35';state.noun='00';state.tickSound=false;state.relayHaptics=false;state.dream=true;state.displayOnly=true;state.dreamMode='solar';state.dim=true;state.appVisible=false;core.loadedMission='comanche055';core.suspendedForClock=true;core.pausedForVisibility=true;core.core={running:false};
+assert(state.mode==='agc'&&state.verb==='35'&&state.noun==='00'&&state.tickSound===false&&state.relayHaptics===false&&state.dream&&state.displayOnly&&state.dreamMode==='solar'&&state.dim&&state.appVisible===false,'direct shared-state writes changed');
 assert(core.core&&core.loadedMission==='comanche055'&&core.suspendedForClock&&core.pausedForVisibility,'direct core-session writes changed');
 const originalState=state,originalCore=core,originalCompat=compat;new vm.Script(source).runInContext(context);assert(context.AGCDSKY_APP_STATE===originalState&&context.AGCDSKY_CORE_SESSION===originalCore&&context.AGCDSKY_COMPAT===originalCompat&&state.mode==='agc'&&core.loadedMission==='comanche055','bootstrap reinitialized an existing session/registry');
 assert(source.includes('window.AGCDSKY_COMPAT = Object.freeze({alias,readonly,get,replace,describe});'),'audited forwarding/read-only compatibility registry publication missing');
