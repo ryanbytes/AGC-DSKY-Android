@@ -15,7 +15,7 @@ const identityAt=html.indexOf('<script src="relay-identity-audio.js"></script>')
 assert(identityAt>=0&&visualAt>identityAt&&stabilityAt>visualAt,'relay identity/visual/stability parser order changed');
 assert(!html.includes('relay-panel.js')&&!html.includes('relay-panel.css')&&!html.includes('id="relay-panel"'),'removed relay rack UI reappeared');
 for(const token of [
-  "mode:'single-event-relay-contact-coupled'","audioModel.playRelayImpact?.(","audioModel.playRelayBankHaptic?.(","audioModel.playRelayContactHaptic?.(","audioModel.contactTraceFor(","type:'relay-drive'","type:'relay-contact'",
+  "mode:'single-event-relay-contact-coupled'","overlapAudioBoost:true","overlapHapticBoost:true","audioModel.playRelayImpact?.(","audioModel.playRelayBankHaptic?.(","audioModel.playRelayContactHaptic?.(","audioModel.contactTraceFor(","type:'relay-drive'","type:'relay-contact'",
   'function presentDrive(','function subscribe(','display.installImplementation(\'decodeChannel10\',relayContactVisualDecode',"hardware.registerSettledPaintPolicy('relay-visual-coupling'"
 ])req(source,token,'single-event relay contract');
 
@@ -82,6 +82,8 @@ decodeImpl(command);
 assert(baseDecode.length===1&&baseDecode[0].value===command,'wrapper bypassed hardware decoder');
 const drives=events.filter(e=>e.type==='relay-drive');
 assert(drives.length===2&&drives.some(e=>e.bit===0&&e.durationMs===5)&&drives.some(e=>e.bit===5&&e.durationMs===11),'manufactured drive durations not published');
+assert(drives.every(e=>e.audioOverlapCount===2),'real overlapping acoustic windows were not detected');
+assert(drives.every(e=>e.audioStrength>.66&&e.audioStrength<.75),'overlapping relay sound did not receive the small capped gain');
 assert(bankHaptics.length===1&&bankHaptics[0].entries.length===2,'authentic drive did not compose one bank haptic');
 assert(bankHaptics[0].entries.some(e=>e.bit===0&&e.arrivalMs===5)&&bankHaptics[0].entries.some(e=>e.bit===5&&e.arrivalMs===11),'bank haptic schedule does not match manufactured armature arrivals');
 
@@ -89,6 +91,7 @@ runNextTimer();
 const armature0=events.find(e=>e.type==='relay-contact'&&e.bit===0&&e.phase==='armature');
 assert(armature0&&armature0.at===5,'first contact event did not occur at manufactured 5 ms travel');
 assert(impacts.some(x=>x.bit===0&&x.at===5),'relay sound was not emitted by the same 5 ms contact event');
+assert(impacts.find(x=>x.bit===0&&x.at===5).strength>.66,'overlapping relay sound did not use boosted gain');
 assert(renders.some(x=>x.word===1&&x.at===5),'DSKY contact projection was not emitted by the same 5 ms event');
 assert(contactHaptics.length===0,'authentic mode must retain composed-bank haptics rather than per-contact one-shots');
 
@@ -127,6 +130,7 @@ const frameAt=now;raf.shift()();
 const stretchedArm=events.find(e=>e.type==='relay-contact'&&e.phase==='armature');
 assert(stretchedArm&&stretchedArm.at===frameAt,'stretched rack event was not frame-coupled');
 assert(impacts.some(x=>x.at===frameAt),'stretched relay sound was not emitted on the contact frame');
+assert(Math.abs(impacts.find(x=>x.at===frameAt).strength-.66)<1e-9,'non-overlapping stretched relay sound must keep base gain');
 assert(renders.some(x=>x.at===frameAt),'stretched DSKY contact was not rendered on the same frame');
 assert(contactHaptics.some(x=>x.bit===0&&x.phase==='armature'&&x.at===frameAt),'stretched armature haptic was not emitted on the exact rendered contact frame');
 runNextTimer();
@@ -138,6 +142,7 @@ const settleAt=now;
 assert(renders.some(x=>x.word===1&&x.at===settleAt),'stretched contact settle was not visibly rendered');
 assert(contactHaptics.some(x=>x.bit===0&&x.phase==='settled'&&x.at===settleAt),'stretched contact settle had no same-event tactile tick');
 assert(visual.stretchedContactHapticLocked===true,'stretched contact/haptic lock flag missing');
+assert(visual.overlapAudioBoost===true&&visual.overlapHapticBoost===true,'overlap-only boost diagnostics missing');
 assert(visual.lastPresentationClick()&&visual.lastPresentationClick().bit===0,'last presentation click diagnostic changed');
 
 console.log('relay visual coupling smoke: PASS');
