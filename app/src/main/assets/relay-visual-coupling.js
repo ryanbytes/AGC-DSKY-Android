@@ -26,6 +26,7 @@
 
   const STORAGE_KEY='relayVisualTimingV1',MODE_AUTHENTIC='authentic',MODE_STRETCHED='stretched',FINAL_SETTLE_MS=20;
   const STRETCH_FIRST_BASE_MS=20,STRETCH_MIN_GAP_MS=18,STRETCH_MAX_GAP_MS=28,STRETCH_RELEASE_HOLD_MS=24;
+  const RELAY_AUDIO_OVERLAP_WINDOW_MS=11.5,RELAY_AUDIO_OVERLAP_STEP=.04,RELAY_AUDIO_OVERLAP_MAX_MULTIPLIER=1.12;
   const generation=Object.create(null),auxGeneration=Object.create(null),presentation=Object.create(null),settledWordOverride=Object.create(null);
   const listeners=new Set();
   let frameLoopRunning=false,lastPresentationClick=null;
@@ -69,6 +70,17 @@
   function stretchedGapMs(motion){const tailMs=Math.max(0,motion.stableMs-motion.physicalMs),signature=tailMs*2+Math.min(5,Math.abs(motion.poleSkewUs)/35)+Math.min(4,motion.bounceCount*.55)+(motion.physicalMs-4.7)*.45;return Math.max(STRETCH_MIN_GAP_MS,Math.min(STRETCH_MAX_GAP_MS,STRETCH_MIN_GAP_MS+signature))}
   function stretchedSchedule(motions){let at=0;return motions.map((motion,index)=>{if(index===0)at=STRETCH_FIRST_BASE_MS+motion.physicalMs*1.25+Math.min(8,Math.abs(motion.poleSkewUs)/32);else at+=stretchedGapMs(motion);return{...motion,stretchedMs:Math.round(at*10)/10}})}
 
+  function acousticOverlapCount(schedule,index){
+    const item=schedule[index];if(!item)return 1;
+    const start=Number(item.arrival)||0,end=start+RELAY_AUDIO_OVERLAP_WINDOW_MS;let count=0;
+    for(const other of schedule){const otherStart=Number(other.arrival)||0,otherEnd=otherStart+RELAY_AUDIO_OVERLAP_WINDOW_MS;if(otherStart<end&&otherEnd>start)count++}
+    return Math.max(1,count);
+  }
+  function overlapAudioStrength(count,base=.66){
+    const multiplier=Math.min(RELAY_AUDIO_OVERLAP_MAX_MULTIPLIER,1+Math.max(0,Number(count)-1)*RELAY_AUDIO_OVERLAP_STEP);
+    return base*multiplier;
+  }
+
   function applyRelayContact(state,motion,traceEvent){
     if(motion.row<1||motion.row>12)return;
     const priorWord=state.contactWord;
@@ -78,7 +90,8 @@
     if(timingMode===MODE_STRETCHED&&contactChanged)audioModel.playRelayContactHaptic?.(motion.row,motion.bit,motion.on,traceEvent.kind);
     if(traceEvent.kind==='armature'){
       lastPresentationClick={row:motion.row,bit:motion.bit,engaging:motion.on};
-      audioModel.playRelayImpact?.(motion.row,motion.bit,motion.on,.66);
+      const soundStrength=Number.isFinite(motion.audioStrength)?motion.audioStrength:.66;
+      audioModel.playRelayImpact?.(motion.row,motion.bit,motion.on,soundStrength);
     }
     emit({type:'relay-contact',row:motion.row,bit:motion.bit,id:audioModel.relayIdentity(motion.row,motion.bit),state:!!traceEvent.state,targetOn:motion.on,phase:traceEvent.kind,contactWord:state.contactWord,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount});
   }
@@ -130,11 +143,15 @@
     const state=presentation[row]={token,active:motions.length>0,contactWord:prior,target,frameQueue:[],renderContact:!!renderContact};
     if(!motions.length){renderWord(row,target);emit({type:'relay-bank-settled',row,contactWord:target});return 0}
     const stretched=timingMode===MODE_STRETCHED?stretchedSchedule(motions):null;
-    const scheduled=motions.map(motion=>({motion,arrival:stretched?(stretched.find(item=>item.bit===motion.bit)?.stretchedMs??motion.physicalMs):motion.physicalMs}));
+    const baseScheduled=motions.map(motion=>({motion,arrival:stretched?(stretched.find(item=>item.bit===motion.bit)?.stretchedMs??motion.physicalMs):motion.physicalMs}));
+    const scheduled=baseScheduled.map((item,index)=>{
+      const audioOverlapCount=acousticOverlapCount(baseScheduled,index),audioStrength=overlapAudioStrength(audioOverlapCount);
+      return{...item,motion:{...item.motion,audioOverlapCount,audioStrength}};
+    });
     if(timingMode===MODE_AUTHENTIC)audioModel.playRelayBankHaptic?.(scheduled.map(item=>({row:item.motion.row,bit:item.motion.bit,on:item.motion.on,arrivalMs:item.arrival})));
     for(const item of scheduled){
       const motion=item.motion,arrival=item.arrival;
-      emit({type:'relay-drive',row,bit:motion.bit,id:audioModel.relayIdentity(row,motion.bit),fromOn:!!(prior&motion.mask),targetOn:motion.on,durationMs:arrival,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount});
+      emit({type:'relay-drive',row,bit:motion.bit,id:audioModel.relayIdentity(row,motion.bit),fromOn:!!(prior&motion.mask),targetOn:motion.on,durationMs:arrival,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount,audioOverlapCount:motion.audioOverlapCount,audioStrength:motion.audioStrength});
       scheduleTraceFromArmature(state,motion,token,arrival);
     }
     const end=timingMode===MODE_STRETCHED?Math.max(...scheduled.map(item=>item.arrival+Math.max(0,item.motion.stableMs-item.motion.physicalMs)))+STRETCH_RELEASE_HOLD_MS:FINAL_SETTLE_MS;
@@ -178,8 +195,8 @@
   hardware.registerSettledPaintPolicy('relay-visual-coupling',()=>timingMode!==MODE_STRETCHED);
 
   window.DSKY_RELAY_VISUAL=Object.freeze({
-    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,stretchedContactHapticLocked:true,hapticBankComposed:true,stretchedBounceAudio:true,
-    stretchFirstBaseMs:STRETCH_FIRST_BASE_MS,stretchMinGapMs:STRETCH_MIN_GAP_MS,stretchMaxGapMs:STRETCH_MAX_GAP_MS,stretchReleaseHoldMs:STRETCH_RELEASE_HOLD_MS,
+    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,stretchedContactHapticLocked:true,hapticBankComposed:true,overlapAudioBoost:true,overlapHapticBoost:true,stretchedBounceAudio:true,
+    stretchFirstBaseMs:STRETCH_FIRST_BASE_MS,stretchMinGapMs:STRETCH_MIN_GAP_MS,stretchMaxGapMs:STRETCH_MAX_GAP_MS,stretchReleaseHoldMs:STRETCH_RELEASE_HOLD_MS,relayAudioOverlapWindowMs:RELAY_AUDIO_OVERLAP_WINDOW_MS,relayAudioOverlapStep:RELAY_AUDIO_OVERLAP_STEP,relayAudioOverlapMaxMultiplier:RELAY_AUDIO_OVERLAP_MAX_MULTIPLIER,
     getTimingMode:()=>timingMode,setTimingMode,contactDelayMs,stretchedGapMs,stretchedScheduleFor:(row,prior,target)=>stretchedSchedule(collectMotions(row,prior,target)).map(item=>({...item})),presentationDurationMs,lastPresentationClick:()=>lastPresentationClick?{...lastPresentationClick}:null,
     renderWord,currentSettledWord,withSettledWordOverride,presentDrive,presentAux,subscribe,resetPresentation
   });
