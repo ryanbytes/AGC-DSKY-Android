@@ -104,8 +104,8 @@
     if(!pulses.length)return Object.freeze({timings:Object.freeze([]),amplitudes:Object.freeze([]),totalMs:0,pulseCount:0});
     const totalMs=Math.min(720,Math.max(...pulses.map(p=>Math.ceil(p.atMs+p.durationMs)))+1),levels=new Array(totalMs).fill(0);
     for(const pulse of pulses){
-      const start=Math.max(0,Math.min(totalMs-1,Math.floor(pulse.atMs))),end=Math.max(start+1,Math.min(totalMs,Math.ceil(pulse.atMs+pulse.durationMs)));
-      for(let t=start;t<end;t++)levels[t]=Math.max(levels[t],Math.round(pulse.amplitude));
+      const start=Math.max(0,Math.min(totalMs-1,Math.floor(pulse.atMs))),end=Math.max(start+1,Math.min(totalMs,Math.ceil(pulse.atMs+pulse.durationMs))),amplitude=Math.max(1,Math.round(pulse.amplitude));
+      for(let t=start;t<end;t++)levels[t]=levels[t]===0?amplitude:Math.min(3,levels[t]+amplitude);
     }
     const timings=[],amplitudes=[];let current=levels[0],run=1;
     for(let i=1;i<levels.length;i++){
