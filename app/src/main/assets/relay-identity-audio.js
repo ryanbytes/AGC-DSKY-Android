@@ -80,8 +80,11 @@
     const on=!!engaging,travel=on?p.setTravelMs:p.resetTravelMs,stable=on?p.setStableMs:p.resetStableMs,bounces=on?p.setBounceCount:p.resetBounceCount;
     const travelMin=on?SET_TRAVEL_MIN_MS:RESET_TRAVEL_MIN_MS,travelMax=on?SET_TRAVEL_MAX_MS:RESET_TRAVEL_MAX_MS;
     const travelNorm=clamp((travel-travelMin)/Math.max(.001,travelMax-travelMin),0,1),tailNorm=clamp((stable-travel)/3.0,0,1),skewNorm=clamp(Math.abs(p.poleSkewUs)/185,0,1),ordinalPhase=((p.ordinal*37+11)%140)/139;
-    const durationMs=Math.round(clamp((on?3.0:2.0)+travelNorm*(on?1.15:.8)+tailNorm*.35+ordinalPhase*.30,on?3:2,on?5:4));
-    const amplitude=Math.round(clamp((on?44:32)+travelNorm*(on?16:12)+tailNorm*(on?6:5)+skewNorm*4+Math.min(4,bounces)*(on?1.4:1.1)+(ordinalPhase-.5)*(on?10:8),on?40:28,on?72:56));
+    // One millisecond is the smallest non-zero active pulse this Android bridge
+    // can express. Keep only a tiny 1-4/255 amplitude fingerprint; relay identity
+    // still comes primarily from the real manufactured arrival/bounce timing.
+    const durationMs=1;
+    const amplitude=Math.round(clamp((on?2.0:1.0)+travelNorm*(on?1.0:.8)+tailNorm*.20+skewNorm*.15+Math.min(4,bounces)*.08+(ordinalPhase-.5)*.45,on?2:1,on?4:3));
     return Object.freeze({id:p.id,engaging:on,durationMs,amplitude});
   }
   function hapticPatternFromProfile(p,engaging,atMs=0){
@@ -94,8 +97,8 @@
         const index=reboundCount===1?source.length-1:Math.round(i*(source.length-1)/(reboundCount-1));
         const physicalOffset=Math.max(0,Number(source[index])||0),normalized=clamp(physicalOffset/Math.max(.01,windowMs),0,1);
         const gapMs=(on?3:3)+Math.round(normalized*(on?7:5))+i;
-        const durationMs=Math.max(1,Math.min(2,Math.round((on?1.35:1.15)+(Math.abs(p.poleSkewUs)/185)*.55-i*.20)));
-        const amplitude=Math.round(clamp(signature.amplitude*(on?.42:.36)*Math.pow(.70,i),on?14:12,on?30:24));
+        const durationMs=1;
+        const amplitude=Math.round(clamp(signature.amplitude*(on?.45:.40)*Math.pow(.72,i),1,2));
         pulses.push(Object.freeze({atMs:baseAt+signature.durationMs+gapMs,durationMs,amplitude,kind:'rebound',sourceBounceIndex:index,physicalOffsetMs:physicalOffset}));
       }
     }
@@ -152,14 +155,14 @@
   }
   function contactHapticSignatureFromProfile(p,engaging,phase){
     const base=hapticSignatureFromProfile(p,engaging),kind=String(phase||'armature');
-    if(kind==='armature')return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:base.durationMs,amplitude:base.amplitude});
+    if(kind==='armature')return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude:base.amplitude});
     const ordinalPhase=((p.ordinal*29+7)%140)/139;
     if(kind==='bounce'){
-      const amplitude=Math.round(clamp(base.amplitude*.54+(ordinalPhase-.5)*4,engaging?26:22,engaging?40:34));
-      return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:2,amplitude});
+      const amplitude=Math.round(clamp(base.amplitude*.55+(ordinalPhase-.5)*.7,1,3));
+      return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
     }
-    const amplitude=Math.round(clamp(base.amplitude*.46+(ordinalPhase-.5)*3,engaging?24:20,engaging?36:31));
-    return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:2,amplitude});
+    const amplitude=Math.round(clamp(base.amplitude*.45+(ordinalPhase-.5)*.5,1,2));
+    return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
   }
   function playRelayContactHaptic(row,bit,engaging,phase){
     row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
