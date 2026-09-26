@@ -81,12 +81,14 @@
   }
 
   const SVG_NS='http://www.w3.org/2000/svg';
+  const SEGMENT_NAMES=Object.freeze(Object.keys(SEGMENT_PATH_IN));
+  function clearNode(node){while(node.firstChild)node.removeChild(node.firstChild)}
   function stableSlots(el,kind,count){
     const existing=Array.from(el.children||[]);
     const valid=existing.length===count&&existing.every((node,index)=>
       node.getAttribute&&node.getAttribute('data-el-slot')===kind&&node.getAttribute('data-el-slot-index')===String(index));
     if(valid)return existing;
-    while(el.firstChild)el.removeChild(el.firstChild);
+    clearNode(el);
     const slots=[];
     for(let index=0;index<count;index++){
       const slot=document.createElementNS(SVG_NS,'g');
@@ -103,18 +105,85 @@
     slot.setAttribute('data-el-value',key);
     return true;
   }
+  function createSvgPath(className,dataName,dataValue,pathData){
+    const path=document.createElementNS(SVG_NS,'path');
+    path.setAttribute('class',className);
+    path.setAttribute(dataName,dataValue);
+    path.setAttribute('d',pathData);
+    return path;
+  }
+  function ensureApolloDigitSlot(slot,xIn){
+    const xKey=Number(xIn).toFixed(6),existing=slot.firstChild;
+    const valid=slot.getAttribute('data-el-apollo-digit')===xKey&&existing&&existing.getAttribute&&existing.getAttribute('data-el-static-glyph')==='1'&&Array.from(existing.children||[]).length===SEGMENT_NAMES.length;
+    if(valid)return existing;
+    clearNode(slot);
+    const glyph=document.createElementNS(SVG_NS,'g');
+    glyph.setAttribute('class','el-glyph');
+    glyph.setAttribute('data-el-static-glyph','1');
+    glyph.setAttribute('transform',`translate(${Number(xIn*U).toFixed(3)} 0) scale(${U.toFixed(6)}) translate(0 ${(-DIGIT_TOP_IN).toFixed(6)})`);
+    for(const name of SEGMENT_NAMES)glyph.appendChild(createSvgPath('el-seg','data-seg',name,SEGMENT_PATH_IN[name]));
+    slot.appendChild(glyph);
+    slot.setAttribute('data-el-apollo-digit',xKey);
+    slot.setAttribute('data-el-value','');
+    return glyph;
+  }
+  function paintApolloDigitSlot(slot,ch,xIn,glyphVersion){
+    const glyph=ensureApolloDigitSlot(slot,xIn),key=`${glyphVersion}:${ch}`;
+    if(slot.getAttribute('data-el-value')===key)return false;
+    const lit=renderer.segmentPattern(ch);
+    for(const path of Array.from(glyph.children||[])){
+      const on=lit.includes(path.getAttribute('data-seg')),next=on?'el-seg on':'el-seg';
+      if(path.getAttribute('class')!==next)path.setAttribute('class',next);
+    }
+    slot.setAttribute('data-el-value',key);
+    return true;
+  }
+  function ensureApolloSignSlot(slot){
+    const existing=slot.firstChild;
+    const valid=existing&&existing.getAttribute&&existing.getAttribute('data-el-static-sign')==='1'&&Array.from(existing.children||[]).length===3;
+    if(valid)return existing;
+    clearNode(slot);
+    const sign=document.createElementNS(SVG_NS,'g');
+    sign.setAttribute('class','el-sign');
+    sign.setAttribute('data-el-static-sign','1');
+    sign.setAttribute('transform',`scale(${U.toFixed(6)}) translate(0 ${(-DIGIT_TOP_IN).toFixed(6)})`);
+    sign.appendChild(createSvgPath('el-seg','data-sign-part','aTop',SIGN_PATH_IN.aTop));
+    sign.appendChild(createSvgPath('el-seg','data-sign-part','aBottom',SIGN_PATH_IN.aBottom));
+    sign.appendChild(createSvgPath('el-seg','data-sign-part','b',SIGN_PATH_IN.b));
+    slot.appendChild(sign);
+    slot.setAttribute('data-el-value','');
+    return sign;
+  }
+  function paintApolloSignSlot(slot,value,signVersion){
+    const sign=String(value||' '),group=ensureApolloSignSlot(slot),key=`${signVersion}:${sign}`;
+    if(slot.getAttribute('data-el-value')===key)return false;
+    for(const path of Array.from(group.children||[])){
+      const part=path.getAttribute('data-sign-part'),on=sign==='+'||(sign==='-'&&part==='b'),next=on?'el-seg on':'el-seg';
+      if(path.getAttribute('class')!==next)path.setAttribute('class',next);
+    }
+    slot.setAttribute('data-el-value',key);
+    return true;
+  }
   function apolloRenderDigits(el,text){
     const chars=String(text).split(''),glyph=renderer.implementation('glyph'),glyphVersion=renderer.compatibilityVersions().glyph;
     const slots=stableSlots(el,'upper-digit',chars.length);
-    chars.forEach((ch,i)=>paintStableSlot(slots[i],`${glyphVersion}:${ch}`,glyph(ch,i*UPPER_ADVANCE_IN)));
+    chars.forEach((ch,i)=>{
+      if(glyph===apolloGlyph)paintApolloDigitSlot(slots[i],ch,i*UPPER_ADVANCE_IN,glyphVersion);
+      else paintStableSlot(slots[i],`${glyphVersion}:${ch}`,glyph(ch,i*UPPER_ADVANCE_IN));
+    });
   }
   const FIRST_DIGIT_X_IN=.180;
   function apolloRenderReg(el,text){
     text=String(text);
     const chars=text.slice(1).split(''),signGlyph=renderer.implementation('signGlyph'),glyph=renderer.implementation('glyph'),versions=renderer.compatibilityVersions();
     const slots=stableSlots(el,'register',1+chars.length);
-    paintStableSlot(slots[0],`${versions.signGlyph}:${text[0]??''}`,signGlyph(text[0]));
-    chars.forEach((ch,i)=>paintStableSlot(slots[i+1],`${versions.glyph}:${ch}`,glyph(ch,FIRST_DIGIT_X_IN+i*REGISTER_ADVANCE_IN)));
+    if(signGlyph===apolloSignGlyph)paintApolloSignSlot(slots[0],text[0],versions.signGlyph);
+    else paintStableSlot(slots[0],`${versions.signGlyph}:${text[0]??''}`,signGlyph(text[0]));
+    chars.forEach((ch,i)=>{
+      const xIn=FIRST_DIGIT_X_IN+i*REGISTER_ADVANCE_IN;
+      if(glyph===apolloGlyph)paintApolloDigitSlot(slots[i+1],ch,xIn,versions.glyph);
+      else paintStableSlot(slots[i+1],`${versions.glyph}:${ch}`,glyph(ch,xIn));
+    });
   }
 
   renderer.installImplementation('glyph',apolloGlyph,'Apollo drawing geometry');
