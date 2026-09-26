@@ -27,9 +27,12 @@ for(const marker of [
   'RELAY_MAX_WAVEFORM_SEGMENTS = 192','RELAY_MAX_WAVEFORM_MS = 750L',
   'relayWaveform(String timingsCsv, String amplitudesCsv)',
   'relayPrimitiveTick(int scalePermille)',
-  'areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK)',
+  'areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK)',
+  'VibrationEffect.Composition.PRIMITIVE_LOW_TICK',
+  'VibrationEffect.Composition.PRIMITIVE_TICK',
+  'Math.max(0.06f, Math.min(0.18f, scalePermille / 1000f))',
   'VibrationEffect.startComposition()',
-  '.addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, scale)',
+  '.addPrimitive(primitive, scale)',
   'VibrationEffect.createWaveform(timings, effectAmplitudes, -1)',
   'vibrator.hasAmplitudeControl()'
 ])assert(bridge.includes(marker),'native relay waveform bridge missing: '+marker);
@@ -85,9 +88,9 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   assert(arm.durationMs>=3&&arm.durationMs<=4&&arm.amplitude>=50&&arm.amplitude<=72,'stretched armature tick escaped micro-switch bounds');
   assert(bounce.durationMs===2&&bounce.amplitude>=26&&bounce.amplitude<=40,'stretched bounce tick escaped subtle visible-contact bounds');
   assert(settled.durationMs===2&&settled.amplitude>=24&&settled.amplitude<=36,'stretched settled tick escaped subtle visible-contact bounds');
-  assert(arm.primitiveScalePermille>=294&&arm.primitiveScalePermille<=426,'armature primitive scale escaped bounds');
-  assert(bounce.primitiveScalePermille>=216&&bounce.primitiveScalePermille<=284,'bounce primitive scale escaped bounds');
-  assert(settled.primitiveScalePermille>=187&&settled.primitiveScalePermille<=243,'settle primitive scale escaped bounds');
+  assert(arm.primitiveScalePermille>=97&&arm.primitiveScalePermille<=127,'armature primitive scale escaped light-tick bounds');
+  assert(bounce.primitiveScalePermille>=72&&bounce.primitiveScalePermille<=90,'bounce primitive scale escaped light-tick bounds');
+  assert(settled.primitiveScalePermille>=63&&settled.primitiveScalePermille<=76,'settle primitive scale escaped light-tick bounds');
   assert(JSON.stringify(bounce)===JSON.stringify(model.contactHapticSignatureFor(row,bit,true,'bounce')),'contact tick identity is not deterministic');
 }
 
@@ -137,4 +140,4 @@ assert(aux.pulses.length>=2,'aux relay rebound pattern missing');
 assert(model.playAuxHaptic('comp',true)===true&&waveformCalls.length===1,'aux waveform dispatch failed');
 
 console.log('relay haptic smoke: PASS');
-console.log('  authentic mode uses one non-overwriting bank waveform; stretched mode uses hardware-tuned PRIMITIVE_TICK on the exact rendered contact transition with deterministic one-shot fallback');
+console.log('  authentic mode uses one non-overwriting bank waveform; stretched mode prefers near-minimum PRIMITIVE_LOW_TICK on the exact rendered contact transition with deterministic fallbacks');
