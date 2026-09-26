@@ -1,9 +1,10 @@
 'use strict';
 
 /*
- * Tap-to-mark for the CM sextant view.
+ * NON-FLIGHT SIMULATOR AID: tap-to-mark for the CM sextant view.
  *
- * A short tap inside the 1.8-degree circular field offsets the simulated SXT
+ * This is not a literal Apollo control operation. A short tap inside the
+ * 1.8-degree circular field offsets the simulated SXT
  * shaft/trunnion CDU counters to the touched line of sight, waits for those
  * real CDU pulses to be accepted by the running AGC, then issues the normal
  * MARK discrete through navKeyPulse(). Drags never mark.
@@ -153,7 +154,7 @@
       if (!ok) throw new Error('mark input busy');
       lastMark = {...lastMark, state:'marked', markedAt:Date.now()};
       showMarker(point, 'marked');
-      status('SXT · TAP MARK');
+      status('SXT · SIM AID TAP MARK');
       if (typeof api.scheduleAgcAutosave === 'function') api.scheduleAgcAutosave('SXT TAP MARK');
       resetStatusSoon(650);
       return true;
@@ -228,6 +229,8 @@
   });
 
   window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_SEXTANT_TAP_MARK',Object.freeze({
+    mode:'non-flight-simulator-aid',
+    inputPath:'screen tap -> simulated CDU pulses -> channel 016 MARK -> yaAGC',
     enabled:() => true,
     lastMark:() => lastMark ? JSON.parse(JSON.stringify(lastMark)) : null,
     cancel:() => { pointer = null; markToken++; }
