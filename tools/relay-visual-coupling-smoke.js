@@ -19,7 +19,7 @@ for(const token of [
   'function presentDrive(','function subscribe(','display.installImplementation(\'decodeChannel10\',relayContactVisualDecode',"hardware.registerSettledPaintPolicy('relay-visual-coupling'"
 ])req(source,token,'single-event relay contract');
 
-let now=0,nextTimerId=1;const timers=[],raf=[],renders=[],baseDecode=[],impacts=[],bankHaptics=[],contactHaptics=[],events=[],storage=new Map();
+let now=0,nextTimerId=1;const timers=[],raf=[],renders=[],baseDecode=[],impacts=[],bankHaptics=[],contactHaptics=[],auxImpacts=[],auxHaptics=[],auxCommits=[],events=[],storage=new Map();
 const context={console,window:null,globalThis:null,Object,Map,Set,Number,String,Math,TypeError,Promise,
   document:{getElementById:()=>null},
   setTimeout(fn,ms=0){const item={id:nextTimerId++,fn,due:now+Math.max(0,Number(ms)||0)};timers.push(item);return item.id},
@@ -30,8 +30,8 @@ context.window=context;context.globalThis=context;vm.createContext(context);
 const registry=installServiceRegistry(context);
 context.AGCDSKY_APP_STATE=Object.seal({tickSound:true});
 context.AGCDSKY_SHELL={store:{get:key=>storage.has(key)?storage.get(key):null,set(key,value){storage.set(key,String(value));return true}},showControls(){}};
-const hardwareState={latches:{10:0},activeDrive:10};let paintPolicy=null;
-registry.publish('AGCDSKY_HARDWARE',{snapshot:()=>({latches:{...hardwareState.latches},activeDrive:hardwareState.activeDrive}),registerSettledPaintPolicy:(name,fn)=>{assert(name==='relay-visual-coupling','wrong paint-policy owner');paintPolicy=fn;return()=>{};}},'relay visual smoke');
+const hardwareState={latches:{10:0},activeDrive:10,auxRelays:{flash:false}};let paintPolicy=null;
+registry.publish('AGCDSKY_HARDWARE',{snapshot:()=>({latches:{...hardwareState.latches},activeDrive:hardwareState.activeDrive,auxRelays:{...hardwareState.auxRelays}}),registerSettledPaintPolicy:(name,fn)=>{assert(name==='relay-visual-coupling','wrong paint-policy owner');paintPolicy=fn;return()=>{};}},'relay visual smoke');
 
 const profiles={
   0:{setTravelMs:5,resetTravelMs:6,setStableMs:6,resetStableMs:7,setBounceCount:1,resetBounceCount:1,poleSkewUs:0},
@@ -49,7 +49,10 @@ context.DSKY_RELAY_AUDIO={
   playRelayImpact:(row,bit,on,strength)=>{impacts.push({row,bit,on:!!on,strength,at:now});return true},
   playRelayBankHaptic:entries=>{bankHaptics.push({entries:entries.map(x=>({...x})),at:now});return true},
   playRelayContactHaptic:(row,bit,on,phase)=>{contactHaptics.push({row,bit,on:!!on,phase,at:now});return true},
-  auxiliaryNames:[],auxiliaryProfileFor:()=>fallback,auxiliaryContactTraceFor:()=>[],playAuxImpact:()=>true,playAuxHaptic:()=>true
+  auxiliaryNames:['flash'],auxiliaryProfileFor:()=>fallback,
+  auxiliaryContactTraceFor:(_name,on)=>[{atMs:7,state:!!on,kind:'armature'},{atMs:8,state:!!on,kind:'settled'}],
+  playAuxImpact:(name,on,strength)=>{auxImpacts.push({name,on:!!on,strength,at:now});return true},
+  playAuxHaptic:(name,on)=>{auxHaptics.push({name,on:!!on,at:now});return true}
 };
 context.DSKY_RELAY_MATRIX={segmentsForCode:()=>''};
 let decodeImpl=value=>{baseDecode.push({value:Number(value),at:now});return true};
@@ -94,6 +97,23 @@ assert(events.some(e=>e.type==='relay-contact'&&e.bit===0&&e.phase==='bounce'&&e
 assert(renders.some(x=>x.word===0&&x.at===5.5),'DSKY projection did not follow contact bounce');
 runAllTimers();
 assert(renders[renders.length-1].word===33,'authentic transition did not settle to target contact word');
+
+// FLASH is the real yaAGC channel-0163 hardware-phase relay. Its crew-visible
+// blank/unblank contact edge must be the same modeled event that emits relay
+// sound and the light tactile cue; channel 011 is only the flash request.
+const flashStart=now;
+visual.presentAux({flash:true},{render:true,commit:(name,on,render)=>{
+  hardwareState.auxRelays[name]=!!on;auxCommits.push({name,on:!!on,render:!!render,at:now});
+}});
+assert(auxCommits.length===0&&auxImpacts.length===0&&auxHaptics.length===0,'FLASH cue fired before manufactured contact travel');
+runNextTimer();
+const flashContact=events.find(e=>e.type==='aux-contact'&&e.name==='flash'&&e.phase==='armature');
+assert(flashContact&&flashContact.at===flashStart+7&&flashContact.state===true,'FLASH armature contact did not occur at manufactured travel');
+assert(auxCommits.some(x=>x.name==='flash'&&x.on===true&&x.at===flashContact.at),'FLASH visible contact commit was not emitted on the armature event');
+assert(auxImpacts.some(x=>x.name==='flash'&&x.on===true&&x.at===flashContact.at),'FLASH relay sound was not emitted on the visible contact event');
+assert(auxHaptics.some(x=>x.name==='flash'&&x.on===true&&x.at===flashContact.at),'FLASH relay haptic was not emitted on the visible contact event');
+runAllTimers();
+assert(hardwareState.auxRelays.flash===true,'FLASH auxiliary relay did not settle to the requested state');
 
 visual.setTimingMode('stretched',false);
 assert(visual.getTimingMode()==='stretched'&&paintPolicy()===false,'stretched mode/paint policy changed');
