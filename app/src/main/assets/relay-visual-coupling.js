@@ -61,7 +61,9 @@
   function collectMotions(row,prior,target){
     const motions=[],diff=(prior^target)&0o3777;
     for(let bit=0;bit<11;bit++){
-      const mask=1<<bit;if(!(diff&mask))continue;const on=!!(target&mask),profile=profileFor(row,bit),physicalMs=contactDelayMs(row,bit,on),trace=contactTrace(row,bit,on),stableEvent=trace[trace.length-1],stableMs=Number(stableEvent&&stableEvent.atMs)||physicalMs,bounceCount=trace.filter(item=>item.kind==='bounce').length,poleSkewUs=profile&&Number.isFinite(profile.poleSkewUs)?profile.poleSkewUs:0;
+      const mask=1<<bit;if(!(diff&mask))continue;
+      const profile=profileFor(row,bit);if(!profile)continue;
+      const on=!!(target&mask),physicalMs=contactDelayMs(row,bit,on),trace=contactTrace(row,bit,on),stableEvent=trace[trace.length-1],stableMs=Number(stableEvent&&stableEvent.atMs)||physicalMs,bounceCount=trace.filter(item=>item.kind==='bounce').length,poleSkewUs=Number.isFinite(profile.poleSkewUs)?profile.poleSkewUs:0;
       motions.push({row,bit,mask,on,physicalMs,stableMs,bounceCount,poleSkewUs,profile,trace});
     }
     motions.sort((a,b)=>a.physicalMs-b.physicalMs||a.bit-b.bit);return motions;
