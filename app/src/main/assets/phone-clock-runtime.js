@@ -15,10 +15,10 @@
   if(!clockAudio)throw new Error('Relay audio service unavailable');
   if(!compat)throw new Error('Runtime compatibility bridge unavailable');
 
-  const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20,V35_ROW_MS=40,V35_TEST_MS=5000;
+  const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20;
   let clockDigitsValue={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']};
   let clockRelayWordsValue={},relayQueueValue=[],relayBusyValue=false;
-  let lampTestActiveValue=false,lampTestTimerValue=0,lampTestSoundTimers=[];
+  let lampTestActiveValue=false,lampTestTimerValue=0;
   const DIGIT_RELAY_VALUE={' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31};
   const CLOCK_GROUPS_VALUE=[
     {relay:8,cells:[['r1',0]],singleRight:true},
@@ -97,51 +97,12 @@
     if(!jobs.length)return;
     relayQueueValue=jobs;relayBusyValue=true;runQueueSlot.get()();
   }
-  function clearLampTestSoundTimers(){for(const id of lampTestSoundTimers)clearTimeout(id);lampTestSoundTimers=[]}
   function baseCancelLampTest(){
     if(lampTestTimerValue){clearTimeout(lampTestTimerValue);lampTestTimerValue=0}
-    clearLampTestSoundTimers();lampTestActiveValue=false;
-  }
-  function pairLow11(text){
-    const value=String(text||'').padEnd(2,' ').slice(0,2);
-    return ((DIGIT_RELAY_VALUE[value[0]]||0)<<5)|(DIGIT_RELAY_VALUE[value[1]]||0);
-  }
-  function v35Low11(relay){
-    const eight=DIGIT_RELAY_VALUE['8'],plus=(relay===7||relay===5||relay===2)?1:0;
-    return (plus<<10)|(eight<<5)|eight;
-  }
-  function captureClockRelayState(commandVerb=clockState.verb,commandNoun=clockState.noun){
-    const out={11:pairLow11('00'),10:pairLow11(commandVerb),9:pairLow11(commandNoun),12:0};
-    for(const group of CLOCK_GROUPS_VALUE)out[group.relay]=(clockRelayWordsValue[group.relay]??0)&0x7ff;
-    return out;
-  }
-  function v35RelayState(){
-    const out={};for(const relay of [11,10,9,8,7,6,5,4,3,2,1])out[relay]=v35Low11(relay);
-    out[12]=clockState.selectedMission==='comanche055'?0o650:0o674;return out;
-  }
-  function scheduleV35RelaySounds(from,to){
-    clearLampTestSoundTimers();
-    if(!clockState.tickSound)return;
-    clockAudio.ensure();
-    [11,10,9,8,7,6,5,4,3,2,1,12].forEach((relay,index)=>{
-      const changed=popcount11Impl((from[relay]||0)^(to[relay]||0));
-      if(!changed)return;
-      const id=setTimeout(()=>{lampTestSoundTimers=lampTestSoundTimers.filter(x=>x!==id);clockAudio.playBurst(changed)},index*V35_ROW_MS);
-      lampTestSoundTimers.push(id);
-    });
+    lampTestActiveValue=false;
   }
   function baseLampTest(){
-    cancelSlot.get()();stopSlot.get();
-    const prior=captureClockRelayState(),active=v35RelayState();
-    lampTestActiveValue=true;scheduleV35RelaySounds(prior,active);
-    document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.add('on'));
-    clockRenderer.set2('prog','88');clockRenderer.set2('verb','88');clockRenderer.set2('noun','88');['r1','r2','r3'].forEach(x=>clockRenderer.setReg(x,'+','88888'));
-    lampTestTimerValue=setTimeout(()=>{
-      lampTestTimerValue=0;if(clockState.mode!=='clock'){cancelSlot.get()();return}
-      const want=desiredClockDigitsImpl();for(const group of CLOCK_GROUPS_VALUE)clockRelayWordsValue[group.relay]=clockWordImpl(group,want);
-      const restore=captureClockRelayState('16','65');scheduleV35RelaySounds(active,restore);
-      lampTestActiveValue=false;clockRenderer.clearLamps();clockRenderer.set2('prog','00');clockState.verb='16';clockState.noun='65';clockShell.show(clockState.verb,clockState.noun);stopSlot.get()();syncSlot.get();
-    },V35_TEST_MS);
+    throw new Error('V35 is an AGC/Comanche operation; PHONE CLOCK cannot synthesize it');
   }
 
   function cloneClockDigits(value=clockDigitsValue){
@@ -179,8 +140,6 @@
   compat.readonly('CLOCK_GROUPS',()=>CLOCK_GROUPS_VALUE);
   compat.readonly('CLOCK_RELAY_MS',()=>CLOCK_RELAY_MS);
   compat.readonly('CLOCK_SETTLE_MS',()=>CLOCK_SETTLE_MS);
-  compat.readonly('V35_ROW_MS',()=>V35_ROW_MS);
-  compat.readonly('V35_TEST_MS',()=>V35_TEST_MS);
   compat.readonly('desiredClockDigits',()=>desiredClockDigitsImpl);
   compat.readonly('clockWord',()=>clockWordImpl);
   compat.readonly('popcount11',()=>popcount11Impl);
@@ -221,7 +180,6 @@
     lampTest:(...args)=>lampTestSlot.get()(...args),
     renderReg:(...args)=>renderRegSlot.get()(...args),
     captureRelayState:(...args)=>captureClockRelayState(...args),
-    v35RelayState:(...args)=>v35RelayState(...args),
     popcount11:(...args)=>popcount11Impl(...args),
     digitRelayCode,
     relayGroups:()=>CLOCK_GROUPS_VALUE,
