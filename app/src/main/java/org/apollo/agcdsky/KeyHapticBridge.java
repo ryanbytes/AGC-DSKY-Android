@@ -25,10 +25,10 @@ final class KeyHapticBridge {
     private static final long MAKE_MS = 22L;
     private static final long RELEASE_MS = 10L;
     private static final long DIAGNOSTIC_MS = 120L;
-    private static final long RELAY_MIN_MS = 4L;
-    private static final long RELAY_MAX_MS = 8L;
-    private static final int RELAY_MIN_AMPLITUDE = 32;
-    private static final int RELAY_MAX_AMPLITUDE = 64;
+    private static final long RELAY_MIN_MS = 6L;
+    private static final long RELAY_MAX_MS = 18L;
+    private static final int RELAY_MIN_AMPLITUDE = 48;
+    private static final int RELAY_MAX_AMPLITUDE = 192;
 
     private final WebView view;
     private final Context context;
@@ -119,9 +119,10 @@ final class KeyHapticBridge {
     }
 
     /**
-     * Low-energy relay armature cue. Duration and amplitude are supplied by the
-     * shared deterministic per-relay manufacturing profile, not by random input.
-     * Tight native bounds keep individual relay signatures subtle.
+     * Relay armature cue. Duration and amplitude are supplied by the shared
+     * deterministic per-relay manufacturing profile, not by random input. The
+     * bounds are deliberately broad enough to survive real-device perceptual
+     * thresholds while remaining much shorter than notification vibration.
      */
     @JavascriptInterface public boolean relayImpact(int durationMs, int amplitude) {
         long clampedDuration = Math.max(RELAY_MIN_MS, Math.min(RELAY_MAX_MS, durationMs));

@@ -72,14 +72,16 @@
   function profileFor(id,ordinal){const key=`${id}|${ordinal}`;if(!profileCache.has(key))profileCache.set(key,profile(id,ordinal));return profileCache.get(key)}
 
   // Perceptual haptic identity follows the same deterministic mechanical profile
-  // as relay travel/bounce/audio. These are intentionally narrow cues, not a
-  // claim that surviving Apollo documentation specifies handset vibration force.
+  // as relay travel/bounce/audio. Device testing showed the original 4-8 ms /
+  // low-amplitude range collapsed perceptually on Pixel hardware, so this mapping
+  // preserves the same identity inputs with a wider perceptual range. This is not
+  // a claim that surviving Apollo documentation specifies handset vibration force.
   function hapticSignatureFromProfile(p,engaging){
     const on=!!engaging,travel=on?p.setTravelMs:p.resetTravelMs,stable=on?p.setStableMs:p.resetStableMs,bounces=on?p.setBounceCount:p.resetBounceCount;
     const travelMin=on?SET_TRAVEL_MIN_MS:RESET_TRAVEL_MIN_MS,travelMax=on?SET_TRAVEL_MAX_MS:RESET_TRAVEL_MAX_MS;
     const travelNorm=clamp((travel-travelMin)/Math.max(.001,travelMax-travelMin),0,1),tailNorm=clamp((stable-travel)/3.0,0,1),skewNorm=clamp(Math.abs(p.poleSkewUs)/185,0,1),ordinalPhase=((p.ordinal*37+11)%140)/139;
-    const durationMs=Math.round(clamp((on?5.0:4.0)+travelNorm*1.25+tailNorm*.55+ordinalPhase*.35,on?5:4,on?8:7));
-    const amplitude=Math.round(clamp((on?44:36)+travelNorm*7+tailNorm*4+skewNorm*2+Math.min(4,bounces)*.6+(ordinalPhase-.5)*4,on?42:34,on?60:52));
+    const durationMs=Math.round(clamp((on?10.5:6.5)+travelNorm*(on?3.5:2.4)+tailNorm*(on?1.2:1.0)+ordinalPhase*(on?.8:.6),on?11:7,on?16:10));
+    const amplitude=Math.round(clamp((on?112:60)+travelNorm*(on?40:28)+tailNorm*(on?16:10)+skewNorm*(on?8:6)+Math.min(4,bounces)*(on?2.5:2.0)+(ordinalPhase-.5)*(on?16:12),on?110:60,on?180:115));
     return Object.freeze({id:p.id,engaging:on,durationMs,amplitude});
   }
   function nativeHapticBridge(){
