@@ -26,11 +26,18 @@ for(const marker of [
   'RELAY_MIN_MS = 2L','RELAY_MAX_MS = 8L','RELAY_MIN_AMPLITUDE = 12','RELAY_MAX_AMPLITUDE = 96',
   'RELAY_MAX_WAVEFORM_SEGMENTS = 192','RELAY_MAX_WAVEFORM_MS = 750L',
   'relayWaveform(String timingsCsv, String amplitudesCsv)',
+  'relayPrimitiveTick(int scalePermille)',
+  'areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK)',
+  'VibrationEffect.Composition.PRIMITIVE_LOW_TICK',
+  'VibrationEffect.Composition.PRIMITIVE_TICK',
+  'Math.max(0.06f, Math.min(0.18f, scalePermille / 1000f))',
+  'VibrationEffect.startComposition()',
+  '.addPrimitive(primitive, scale)',
   'VibrationEffect.createWaveform(timings, effectAmplitudes, -1)',
   'vibrator.hasAmplitudeControl()'
 ])assert(bridge.includes(marker),'native relay waveform bridge missing: '+marker);
 
-const waveformCalls=[],impactCalls=[];
+const waveformCalls=[],impactCalls=[],primitiveCalls=[];
 const hardware={snapshot(){return {auxRelays:{}}},registerSnapshotExtension(){}};
 const context={
   console,Math,Date,Object,Array,Number,String,Map,Set,
@@ -44,6 +51,7 @@ const context={
   HapticBridge:{
     available(){return true},
     relayImpact(durationMs,amplitude){impactCalls.push({durationMs,amplitude});return true},
+    relayPrimitiveTick(scalePermille){primitiveCalls.push(scalePermille);return true},
     relayWaveform(timingsCsv,amplitudesCsv){waveformCalls.push({timingsCsv,amplitudesCsv});return true}
   }
 };
@@ -80,6 +88,9 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   assert(arm.durationMs>=3&&arm.durationMs<=4&&arm.amplitude>=50&&arm.amplitude<=72,'stretched armature tick escaped micro-switch bounds');
   assert(bounce.durationMs===2&&bounce.amplitude>=26&&bounce.amplitude<=40,'stretched bounce tick escaped subtle visible-contact bounds');
   assert(settled.durationMs===2&&settled.amplitude>=24&&settled.amplitude<=36,'stretched settled tick escaped subtle visible-contact bounds');
+  assert(arm.primitiveScalePermille>=97&&arm.primitiveScalePermille<=127,'armature primitive scale escaped light-tick bounds');
+  assert(bounce.primitiveScalePermille>=72&&bounce.primitiveScalePermille<=90,'bounce primitive scale escaped light-tick bounds');
+  assert(settled.primitiveScalePermille>=63&&settled.primitiveScalePermille<=76,'settle primitive scale escaped light-tick bounds');
   assert(JSON.stringify(bounce)===JSON.stringify(model.contactHapticSignatureFor(row,bit,true,'bounce')),'contact tick identity is not deterministic');
 }
 
@@ -106,15 +117,27 @@ waveformCalls.length=0;
 assert(model.playRelayHaptic(4,7,true)===true,'single relay waveform dispatch failed');
 assert(waveformCalls.length===1&&impactCalls.length===0,'single relay did not use native waveform path');
 
-waveformCalls.length=0;impactCalls.length=0;
+waveformCalls.length=0;impactCalls.length=0;primitiveCalls.length=0;
 const contactExpected=model.contactHapticSignatureFor(4,7,true,'bounce');
 assert(model.playRelayContactHaptic(4,7,true,'bounce')===true,'exact contact-event haptic dispatch failed');
-assert(impactCalls.length===1&&impactCalls[0].durationMs===contactExpected.durationMs&&impactCalls[0].amplitude===contactExpected.amplitude,'exact contact-event haptic did not use deterministic signature');
+assert(primitiveCalls.length===1&&primitiveCalls[0]===contactExpected.primitiveScalePermille,'exact contact-event haptic did not use hardware-tuned primitive scale');
+assert(impactCalls.length===0,'primitive-supported contact event incorrectly used custom one-shot fallback');
 
-waveformCalls.length=0;impactCalls.length=0;
+const fallbackContext={...context,HapticBridge:{
+  available(){return true},
+  relayImpact(durationMs,amplitude){impactCalls.push({durationMs,amplitude});return true},
+  relayPrimitiveTick(){return false},
+  relayWaveform(timingsCsv,amplitudesCsv){waveformCalls.push({timingsCsv,amplitudesCsv});return true}
+}};
+fallbackContext.window=fallbackContext;vm.createContext(fallbackContext);vm.runInContext(identity,fallbackContext,{filename:'relay-identity-audio-fallback.js'});
+impactCalls.length=0;primitiveCalls.length=0;
+assert(fallbackContext.DSKY_RELAY_AUDIO.playRelayContactHaptic(4,7,true,'bounce')===true,'primitive fallback contact haptic failed');
+assert(impactCalls.length===1&&impactCalls[0].durationMs===contactExpected.durationMs&&impactCalls[0].amplitude===contactExpected.amplitude,'unsupported primitive did not fall back to deterministic one-shot');
+
+waveformCalls.length=0;impactCalls.length=0;primitiveCalls.length=0;
 const aux=model.auxiliaryHapticPatternFor('comp',true);
 assert(aux.pulses.length>=2,'aux relay rebound pattern missing');
 assert(model.playAuxHaptic('comp',true)===true&&waveformCalls.length===1,'aux waveform dispatch failed');
 
 console.log('relay haptic smoke: PASS');
-console.log('  authentic mode uses one non-overwriting bank waveform; stretched mode can emit deterministic micro-switch ticks on the exact rendered contact transition');
+console.log('  authentic mode uses one non-overwriting bank waveform; stretched mode prefers near-minimum PRIMITIVE_LOW_TICK on the exact rendered contact transition with deterministic fallbacks');
