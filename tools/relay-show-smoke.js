@@ -40,7 +40,7 @@ for(const token of [
   'window.AGCDSKY_APP_STATE','window.AGCDSKY_CORE_SESSION',
   'window.AGCDSKY_SHELL','window.AGCDSKY_AUDIO','window.AGCDSKY_CLOCK',
   'window.AGCDSKY_DISPLAY','window.AGCDSKY_SNAPSHOT',
-  "window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE')"
+  "window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE')",'window.DSKY_RELAY_INVENTORY'
 ]) req(show,token,'relay-show service dependency');
 forbid(show,'AGCDSKY_COMPAT','relay-show direct compatibility dependency');
 forbid(show,'window.AGCDSKY_HARDWARE','relay-show late-service compatibility read');
@@ -61,13 +61,13 @@ ordered(show,[
 
 /* Choreography uses display-owned decoders and clock-owned relay codes/state. */
 for(const token of [
-  "display.implementation('decodeChannel10')","display.implementation('decodeChannel11')","display.implementation('decodeChannel163')",
+  "display.implementation('decodeChannel10')","display.implementation('decodeChannel11')","display.implementation('decodeChannel12')","display.implementation('decodeChannel163')",
   'clock.digitRelayCode(digit)','clock.snapshotBackingState()',
   'model.profileFor(row,bit)','timing.meanTravelMs','timing.spreadMs',
-  'NON_DECIMAL_CODES','for(let digit=0;digit<=9;digit++)','decode11(0o46)','decode163(0o730)',
-  'await showSleep(1000)'
+  'NON_DECIMAL_CODES','for(let digit=0;digit<=9;digit++)','inventory.physicalMask(row)',
+  'decode11(0o7)','decode12(0o30000)','decode163(0o771)'
 ]) req(show,token,'physical relay choreography');
-for(const token of ["compat.get('decodeChannel10')","compat.get('decodeChannel11')","compat.get('decodeChannel163')","compat.get('clockDigits')","compat.get('clockRelayWords')"])
+for(const token of ["compat.get('decodeChannel10')","compat.get('decodeChannel11')","compat.get('decodeChannel12')","compat.get('decodeChannel163')","compat.get('clockDigits')","compat.get('clockRelayWords')"])
   forbid(show,token,'relay-show ownership bypass');
 
 /* Restore physical state first, quiesce delayed visual callbacks, then return ownership. */
@@ -77,6 +77,7 @@ const restore=show.slice(restoreStart);
 ordered(restore,[
   'let restoreError=null',
   'saved.latches[row]',
+  'decode12(saved.ch12||0)',
   'quiesceRelayPresentation()',
   'clock.restoreBackingState({digits:saved.clockDigits,relayWords:saved.clockRelayWords})',
   'clock.setLampTestActive(false)',
