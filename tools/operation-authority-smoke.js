@@ -53,12 +53,14 @@ assert(lifecycle.includes("await lifecycleCore.core.load({wasmUrl:'yaAGC.wasm',r
 for(const marker of [
   "if(channel===0o10)decode10Slot.get()(value)",
   "else if(channel===0o11)decode11Slot.get()(value)",
+  "else if(channel===0o12)decode12Slot.get()(value)",
   "else if(channel===0o13)decode13Slot.get()(value)",
   "else if(channel===0o163)decode163Slot.get()(value)"
 ]) assert(display.includes(marker),'AGC output channel route missing: '+marker);
 
 assert(hardware.includes("display.installImplementation('decodeChannel10',hardwareDecodeChannel10"),'hardware model not attached to AGC channel 010 decode');
 assert(hardware.includes("display.installImplementation('decodeChannel11',hardwareDecodeChannel11"),'hardware model not attached to AGC channel 011 decode');
+assert(hardware.includes("display.installImplementation('decodeChannel12',hardwareDecodeChannel12"),'hardware model not attached to AGC channel 012 decode');
 assert(hardware.includes("display.installImplementation('decodeChannel163',hardwareDecodeChannel163"),'hardware model not attached to AGC channel 0163 decode');
 for(const forbidden of ['hardwareLampTest','scheduleSyntheticRows','scheduleSyntheticFlash','state[12]=0o650',"clock.installImplementation('lampTest'"])
   assert(!hardware.includes(forbidden),'hardware layer regained synthetic flight operation: '+forbidden);
@@ -75,7 +77,7 @@ assert(diagnostics.includes("section('OPERATION AUTHORITY')"),'diagnostics does 
 for(const marker of [
   'CHANNEL 015 → yaAGC / COMANCHE',
   'CHANNEL 032 ACTIVE-LOW → yaAGC / COMANCHE',
-  'yaAGC → CHANNELS 010 / 011 / 013 / 0163 → HARDWARE / DISPLAY',
+  'yaAGC → CHANNELS 010 / 011 / 012 / 013 / 0163 → HARDWARE / DISPLAY',
   'PHONE CLOCK\',\'NON-FLIGHT',
   'Relay Show\',\'NON-FLIGHT',
   'NO SYNTHETIC AGC DISPLAY OUTPUT'
