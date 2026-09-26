@@ -95,6 +95,9 @@ jobs:
       - name: DSKY glyph stability test
         run: node tools/dsky-render-stability-smoke.js
 
+      - name: EL no-flicker contract test
+        run: node tools/el-no-flicker-contract-smoke.js
+
       - name: Android frontend parity test
         run: node pwa/tools/pwa-parity-smoke.js "$RUNNER_TEMP/agc-dsky-pwa"
 
