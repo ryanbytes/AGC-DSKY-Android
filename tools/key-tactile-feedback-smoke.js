@@ -57,8 +57,11 @@ for(const marker of [
   'target.performHapticFeedback(legacyViewEffect)',
   'setHapticFeedbackEnabled(true)'
 ])assert(bridge.includes(marker),'native haptic bridge missing: '+marker);
-for(const forbidden of ['VibrationEffect.createPredefined','VibrationEffect.createWaveform','import android.os.VibrationAttributes','VibrationAttributes.createForUsage'])
-  assert(!bridge.includes(forbidden),'native bridge retained failed/suppressed vibration path: '+forbidden);
+for(const forbidden of ['VibrationEffect.createPredefined','import android.os.VibrationAttributes','VibrationAttributes.createForUsage'])
+  assert(!bridge.includes(forbidden),'native key bridge retained failed/suppressed vibration path: '+forbidden);
+assert(bridge.includes('@JavascriptInterface public boolean keyMake() {\n        return performOneShot(MAKE_MS, HapticFeedbackConstants.VIRTUAL_KEY);'),'key make no longer uses one-shot native cue');
+assert(bridge.includes('@JavascriptInterface public boolean keyRelease() {\n        return performOneShot(RELEASE_MS,'),'key release no longer uses one-shot native cue');
+assert(bridge.includes('@JavascriptInterface public boolean relayWaveform(String timingsCsv, String amplitudesCsv)'),'relay-only waveform endpoint missing');
 assert(manifest.includes('android.permission.VIBRATE'),'one-shot VibrationEffect path requires VIBRATE permission');
 
 for(const marker of [
