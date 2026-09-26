@@ -48,6 +48,7 @@ cheatsheet-smoke.js
 optics-service-smoke.js
 optics-lifecycle-smoke.js
 relay-show-smoke.js
+relay-inventory-smoke.js
 relay-visual-coupling-smoke.js
 relay-haptic-smoke.js
 relay-rack-absence-smoke.js
