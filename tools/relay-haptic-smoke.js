@@ -26,7 +26,7 @@ for(const marker of [
   'RELAY_MIN_MS = 1L','RELAY_MAX_MS = 1L','RELAY_MIN_AMPLITUDE = 1','RELAY_MAX_AMPLITUDE = 8',
   'RELAY_MAX_WAVEFORM_SEGMENTS = 192','RELAY_MAX_WAVEFORM_MS = 750L',
   'relayWaveform(String timingsCsv, String amplitudesCsv)',
-  'VibrationEffect.createWaveform(timings, effectAmplitudes, -1)',
+  'VibrationEffect.createWaveform(timings, amplitudes, -1)',
   'vibrator.hasAmplitudeControl()'
 ])assert(bridge.includes(marker),'native relay waveform bridge missing: '+marker);
 assert(bridge.includes('performRelayOneShot'),'minimum relay one-shot path missing');
