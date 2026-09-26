@@ -23,7 +23,7 @@ assert(!coupling.includes('audioModel.playRelayHaptic?.(motion.row,motion.bit,mo
   'per-relay native vibration dispatch returned and can overwrite earlier pulses');
 
 for(const marker of [
-  'RELAY_MIN_MS = 1L','RELAY_MAX_MS = 1L','RELAY_MIN_AMPLITUDE = 1','RELAY_MAX_AMPLITUDE = 1',
+  'RELAY_MIN_MS = 1L','RELAY_MAX_MS = 1L','RELAY_MIN_AMPLITUDE = 1','RELAY_MAX_AMPLITUDE = 3',
   'RELAY_MAX_WAVEFORM_SEGMENTS = 192','RELAY_MAX_WAVEFORM_MS = 750L',
   'relayWaveform(String timingsCsv, String amplitudesCsv)',
   'VibrationEffect.createWaveform(timings, amplitudes, -1)',
@@ -96,6 +96,16 @@ assert(bank.timings.length===bank.amplitudes.length&&bank.timings.length>3,'bank
 assert(bank.totalMs>15&&bank.totalMs<60,'bank micro-switch envelope escaped expected range');
 assert(bank.amplitudes.some(a=>a===0)&&bank.amplitudes.some(a=>a>0),'bank waveform needs active and quiet segments');
 assert(JSON.stringify(bank)===JSON.stringify(model.relayBankHapticPatternFor(bankEvents)),'bank waveform is not deterministic');
+
+const isolated=model.relayBankHapticPatternFor([{row:4,bit:7,on:true,arrivalMs:6}]);
+assert(Math.max(...isolated.amplitudes)===1,'isolated relay haptic must remain at absolute minimum 1/255');
+const exactOverlap=model.relayBankHapticPatternFor([
+  {row:4,bit:7,on:true,arrivalMs:6},
+  {row:4,bit:8,on:true,arrivalMs:6},
+  {row:4,bit:9,on:true,arrivalMs:6}
+]);
+assert(Math.max(...exactOverlap.amplitudes)>=2&&Math.max(...exactOverlap.amplitudes)<=3,'overlapping relay haptics must strengthen slightly and stay capped');
+assert(exactOverlap.amplitudes.some(a=>a===3),'three-way exact overlap should reach the capped 3/255 segment');
 
 assert(model.playRelayBankHaptic(bankEvents)===true,'native bank waveform dispatch failed');
 assert(waveformCalls.length===1,'relay bank must issue exactly one native vibration call');
