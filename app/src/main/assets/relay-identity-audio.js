@@ -154,18 +154,18 @@
     const on=!!engaging,base=hapticSignatureFromProfile(p,on),kind=String(phase||'armature'),ordinalPhase=((p.ordinal*29+7)%140)/139;
     if(kind==='armature'){
       const minAmp=on?50:35,maxAmp=on?72:56,norm=clamp((base.amplitude-minAmp)/Math.max(1,maxAmp-minAmp),0,1);
-      const primitiveScalePermille=Math.round((on?300:260)+norm*(on?120:100)+(ordinalPhase-.5)*12);
+      const primitiveScalePermille=Math.round((on?96:84)+norm*(on?28:22)+(ordinalPhase-.5)*6);
       return Object.freeze({id:p.id,engaging:on,phase:kind,durationMs:base.durationMs,amplitude:base.amplitude,primitiveScalePermille});
     }
     if(kind==='bounce'){
       const amplitude=Math.round(clamp(base.amplitude*.54+(ordinalPhase-.5)*4,on?26:22,on?40:34));
       const norm=clamp((amplitude-(on?26:22))/Math.max(1,(on?40:34)-(on?26:22)),0,1);
-      const primitiveScalePermille=Math.round((on?220:205)+norm*(on?60:55)+(ordinalPhase-.5)*8);
+      const primitiveScalePermille=Math.round((on?72:66)+norm*(on?16:14)+(ordinalPhase-.5)*4);
       return Object.freeze({id:p.id,engaging:on,phase:kind,durationMs:2,amplitude,primitiveScalePermille});
     }
     const amplitude=Math.round(clamp(base.amplitude*.46+(ordinalPhase-.5)*3,on?24:20,on?36:31));
     const norm=clamp((amplitude-(on?24:20))/Math.max(1,(on?36:31)-(on?24:20)),0,1);
-    const primitiveScalePermille=Math.round((on?190:180)+norm*(on?50:45)+(ordinalPhase-.5)*6);
+    const primitiveScalePermille=Math.round((on?64:60)+norm*(on?12:10)+(ordinalPhase-.5)*3);
     return Object.freeze({id:p.id,engaging:on,phase:kind,durationMs:2,amplitude,primitiveScalePermille});
   }
   function playRelayContactHaptic(row,bit,engaging,phase){
