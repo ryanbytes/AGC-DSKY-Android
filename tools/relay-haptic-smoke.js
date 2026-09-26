@@ -10,8 +10,8 @@ const bridge=read('app/src/main/java/org/apollo/agcdsky/KeyHapticBridge.java');
 function assert(c,m){if(!c)throw new Error(m)}
 
 for(const marker of [
-  'hapticSignatureFromProfile','hapticPatternFromProfile','waveformFromPatterns',
-  'hapticPatternFor:','relayBankHapticPatternFor:','playRelayBankHaptic',
+  'hapticSignatureFromProfile','hapticPatternFromProfile','contactHapticSignatureFromProfile','waveformFromPatterns',
+  'hapticPatternFor:','contactHapticSignatureFor:','relayBankHapticPatternFor:','playRelayContactHaptic','playRelayBankHaptic',
   'auxiliaryHapticPatternFor:',"typeof native.relayWaveform==='function'"
 ])assert(identity.includes(marker),'relay identity haptic path missing: '+marker);
 
@@ -73,6 +73,16 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
 assert(new Set(setPatterns.map(p=>JSON.stringify(p.pulses))).size>=80,'set tactile identities collapsed');
 assert(new Set(resetPatterns.map(p=>JSON.stringify(p.pulses))).size>=70,'reset tactile identities collapsed');
 
+for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
+  const arm=model.contactHapticSignatureFor(row,bit,true,'armature');
+  const bounce=model.contactHapticSignatureFor(row,bit,true,'bounce');
+  const settled=model.contactHapticSignatureFor(row,bit,true,'settled');
+  assert(arm.durationMs>=3&&arm.durationMs<=4&&arm.amplitude>=50&&arm.amplitude<=72,'stretched armature tick escaped micro-switch bounds');
+  assert(bounce.durationMs===2&&bounce.amplitude>=26&&bounce.amplitude<=40,'stretched bounce tick escaped subtle visible-contact bounds');
+  assert(settled.durationMs===2&&settled.amplitude>=24&&settled.amplitude<=36,'stretched settled tick escaped subtle visible-contact bounds');
+  assert(JSON.stringify(bounce)===JSON.stringify(model.contactHapticSignatureFor(row,bit,true,'bounce')),'contact tick identity is not deterministic');
+}
+
 const bankEvents=[
   {row:4,bit:7,on:true,arrivalMs:6},
   {row:4,bit:2,on:false,arrivalMs:11},
@@ -96,10 +106,15 @@ waveformCalls.length=0;
 assert(model.playRelayHaptic(4,7,true)===true,'single relay waveform dispatch failed');
 assert(waveformCalls.length===1&&impactCalls.length===0,'single relay did not use native waveform path');
 
-waveformCalls.length=0;
+waveformCalls.length=0;impactCalls.length=0;
+const contactExpected=model.contactHapticSignatureFor(4,7,true,'bounce');
+assert(model.playRelayContactHaptic(4,7,true,'bounce')===true,'exact contact-event haptic dispatch failed');
+assert(impactCalls.length===1&&impactCalls[0].durationMs===contactExpected.durationMs&&impactCalls[0].amplitude===contactExpected.amplitude,'exact contact-event haptic did not use deterministic signature');
+
+waveformCalls.length=0;impactCalls.length=0;
 const aux=model.auxiliaryHapticPatternFor('comp',true);
 assert(aux.pulses.length>=2,'aux relay rebound pattern missing');
 assert(model.playAuxHaptic('comp',true)===true&&waveformCalls.length===1,'aux waveform dispatch failed');
 
 console.log('relay haptic smoke: PASS');
-console.log('  140 relay identities encode short low-energy armature + rebound ticks; each latching relay bank is sent as one non-overwriting micro-switch waveform');
+console.log('  authentic mode uses one non-overwriting bank waveform; stretched mode can emit deterministic micro-switch ticks on the exact rendered contact transition');

@@ -150,6 +150,24 @@
     }
     return waveformFromPatterns(patterns);
   }
+  function contactHapticSignatureFromProfile(p,engaging,phase){
+    const base=hapticSignatureFromProfile(p,engaging),kind=String(phase||'armature');
+    if(kind==='armature')return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:base.durationMs,amplitude:base.amplitude});
+    const ordinalPhase=((p.ordinal*29+7)%140)/139;
+    if(kind==='bounce'){
+      const amplitude=Math.round(clamp(base.amplitude*.54+(ordinalPhase-.5)*4,engaging?26:22,engaging?40:34));
+      return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:2,amplitude});
+    }
+    const amplitude=Math.round(clamp(base.amplitude*.46+(ordinalPhase-.5)*3,engaging?24:20,engaging?36:31));
+    return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:2,amplitude});
+  }
+  function playRelayContactHaptic(row,bit,engaging,phase){
+    row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
+    const p=profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),signature=contactHapticSignatureFromProfile(p,!!engaging,phase),native=nativeHapticBridge();
+    if(native){try{return native.relayImpact(signature.durationMs,signature.amplitude)!==false}catch(_){}}
+    try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')return navigator.vibrate(signature.durationMs)!==false}catch(_){}
+    return false;
+  }
   function playRelayBankHaptic(events){
     const waveform=relayBankHapticPattern(events);if(!waveform.timings.length)return false;
     return playWaveform(waveform,null);
@@ -232,8 +250,9 @@
     contactTraceFor:(row,bit,engaging)=>contactTraceFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
     hapticSignatureFor:(row,bit,engaging)=>hapticSignatureFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
     hapticPatternFor:(row,bit,engaging)=>hapticPatternFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging,0),
+    contactHapticSignatureFor:(row,bit,engaging,phase)=>contactHapticSignatureFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging,phase),
     relayBankHapticPatternFor:events=>relayBankHapticPattern(events),
-    playRelayImpact,playRelayHaptic,playRelayBankHaptic,
+    playRelayImpact,playRelayHaptic,playRelayContactHaptic,playRelayBankHaptic,
     auxiliaryNames:Object.freeze(AUX_ORDER.slice()),
     auxiliaryProfileFor:name=>profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),
     auxiliaryContactTraceFor:(name,engaging)=>contactTraceFromProfile(profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),!!engaging),
