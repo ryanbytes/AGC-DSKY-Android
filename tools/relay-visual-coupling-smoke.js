@@ -16,7 +16,7 @@ assert(identityAt>=0&&visualAt>identityAt&&stabilityAt>visualAt,'relay identity/
 assert(!html.includes('relay-panel.js')&&!html.includes('relay-panel.css')&&!html.includes('id="relay-panel"'),'removed relay rack UI reappeared');
 for(const token of [
   "mode:'single-event-relay-contact-coupled'","overlapAudioBoost:true","overlapHapticBoost:true","audioModel.playRelayImpact?.(","audioModel.playRelayBankHaptic?.(","audioModel.playRelayContactHaptic?.(","audioModel.contactTraceFor(","type:'relay-drive'","type:'relay-contact'",
-  'function presentDrive(','function subscribe(','display.installImplementation(\'decodeChannel10\',relayContactVisualDecode',"hardware.registerSettledPaintPolicy('relay-visual-coupling'"
+  'function presentDrive(','function subscribe(','if(state.renderContact)renderWord(motion.row,state.contactWord)','if(state.renderContact)renderWord(row,state.contactWord)','if(renderContact)renderWord(row,target)','display.installImplementation(\'decodeChannel10\',relayContactVisualDecode',"hardware.registerSettledPaintPolicy('relay-visual-coupling'"
 ])req(source,token,'single-event relay contract');
 
 let now=0,nextTimerId=1;const timers=[],raf=[],renders=[],baseDecode=[],impacts=[],bankHaptics=[],contactHaptics=[],auxImpacts=[],auxHaptics=[],auxCommits=[],events=[],storage=new Map();
@@ -100,6 +100,16 @@ assert(events.some(e=>e.type==='relay-contact'&&e.bit===0&&e.phase==='bounce'&&e
 assert(renders.some(x=>x.word===0&&x.at===5.5),'DSKY projection did not follow contact bounce');
 runAllTimers();
 assert(renders[renders.length-1].word===33,'authentic transition did not settle to target contact word');
+
+// PHONE CLOCK drives the same physical relays for sound/haptic fidelity, but its
+// display is owned by clockDigits at the 20-ms settle boundary. Intermediate
+// contact words must therefore never paint R3 (or any other clock register).
+renders.length=0;events.length=0;bankHaptics.length=0;impacts.length=0;now+=10;
+visual.presentDrive(1,0,33,{renderContact:false});
+runAllTimers();
+assert(events.some(e=>e.type==='relay-contact'),'no-paint relay presentation stopped physical contact modeling');
+assert(impacts.length>0&&bankHaptics.length===1,'no-paint relay presentation stopped relay sound/haptic modeling');
+assert(renders.length===0,'renderContact=false leaked transient relay words into the EL display');
 
 // FLASH is the real yaAGC channel-0163 hardware-phase relay. Its crew-visible
 // blank/unblank contact edge must be the same modeled event that emits relay
