@@ -6,7 +6,8 @@
  * A single per-relay contact event drives all crew-facing consequences:
  *   1. the relay-rack armature/contact visualization,
  *   2. that exact relay's deterministic manufactured click/bounce identity,
- *   3. the DSKY EL/annunciator contact projection.
+ *   3. that relay's subtle deterministic haptic identity where supported,
+ *   4. the DSKY EL/annunciator contact projection.
  *
  * AUTHENTIC mode follows the deterministic per-relay set/reset travel and
  * contact trace inside the unchanged 20-ms bank envelope. STRETCHED mode only
@@ -75,6 +76,7 @@
     if(traceEvent.kind==='armature'){
       lastPresentationClick={row:motion.row,bit:motion.bit,engaging:motion.on};
       audioModel.playRelayImpact?.(motion.row,motion.bit,motion.on,.66);
+      audioModel.playRelayHaptic?.(motion.row,motion.bit,motion.on);
     }
     emit({type:'relay-contact',row:motion.row,bit:motion.bit,id:audioModel.relayIdentity(motion.row,motion.bit),state:!!traceEvent.state,targetOn:motion.on,phase:traceEvent.kind,contactWord:state.contactWord,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount});
   }
@@ -145,7 +147,7 @@
       emit({type:'aux-drive',name,id:`AUX:${name.toUpperCase()}`,fromOn:before,targetOn:on,durationMs:travel,physicalMs:travel,stableMs:on?p.setStableMs:p.resetStableMs,poleSkewUs:p.poleSkewUs,bounceCount:trace.filter(item=>item.kind==='bounce').length});
       for(const item of trace)setTimeout(()=>{
         if(auxGeneration[name]!==token)return;commit(name,!!item.state,render);
-        if(item.kind==='armature')audioModel.playAuxImpact?.(name,on,.62);
+        if(item.kind==='armature'){audioModel.playAuxImpact?.(name,on,.62);audioModel.playAuxHaptic?.(name,on)}
         emit({type:'aux-contact',name,id:`AUX:${name.toUpperCase()}`,state:!!item.state,targetOn:on,phase:item.kind,physicalMs:travel,stableMs:on?p.setStableMs:p.resetStableMs,poleSkewUs:p.poleSkewUs,bounceCount:trace.filter(e=>e.kind==='bounce').length});
       },Math.max(0,Number(item.atMs)||0));
     }
@@ -171,7 +173,7 @@
   hardware.registerSettledPaintPolicy('relay-visual-coupling',()=>timingMode!==MODE_STRETCHED);
 
   window.DSKY_RELAY_VISUAL=Object.freeze({
-    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedBounceAudio:true,
+    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,stretchedBounceAudio:true,
     stretchFirstBaseMs:STRETCH_FIRST_BASE_MS,stretchMinGapMs:STRETCH_MIN_GAP_MS,stretchMaxGapMs:STRETCH_MAX_GAP_MS,stretchReleaseHoldMs:STRETCH_RELEASE_HOLD_MS,
     getTimingMode:()=>timingMode,setTimingMode,contactDelayMs,stretchedGapMs,stretchedScheduleFor:(row,prior,target)=>stretchedSchedule(collectMotions(row,prior,target)).map(item=>({...item})),presentationDurationMs,lastPresentationClick:()=>lastPresentationClick?{...lastPresentationClick}:null,
     renderWord,currentSettledWord,withSettledWordOverride,presentDrive,presentAux,subscribe,resetPresentation

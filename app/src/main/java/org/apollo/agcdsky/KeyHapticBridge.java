@@ -25,6 +25,10 @@ final class KeyHapticBridge {
     private static final long MAKE_MS = 22L;
     private static final long RELEASE_MS = 10L;
     private static final long DIAGNOSTIC_MS = 120L;
+    private static final long RELAY_MIN_MS = 4L;
+    private static final long RELAY_MAX_MS = 8L;
+    private static final int RELAY_MIN_AMPLITUDE = 32;
+    private static final int RELAY_MAX_AMPLITUDE = 64;
 
     private final WebView view;
     private final Context context;
@@ -114,6 +118,17 @@ final class KeyHapticBridge {
                         : HapticFeedbackConstants.KEYBOARD_TAP);
     }
 
+    /**
+     * Low-energy relay armature cue. Duration and amplitude are supplied by the
+     * shared deterministic per-relay manufacturing profile, not by random input.
+     * Tight native bounds keep individual relay signatures subtle.
+     */
+    @JavascriptInterface public boolean relayImpact(int durationMs, int amplitude) {
+        long clampedDuration = Math.max(RELAY_MIN_MS, Math.min(RELAY_MAX_MS, durationMs));
+        int clampedAmplitude = Math.max(RELAY_MIN_AMPLITUDE, Math.min(RELAY_MAX_AMPLITUDE, amplitude));
+        return performVariableOneShot(clampedDuration, clampedAmplitude, HapticFeedbackConstants.CLOCK_TICK);
+    }
+
     @JavascriptInterface public boolean testPulse() {
         return performOneShot(DIAGNOSTIC_MS, HapticFeedbackConstants.LONG_PRESS);
     }
@@ -129,10 +144,16 @@ final class KeyHapticBridge {
     }
 
     private boolean performOneShot(long durationMs, int legacyViewEffect) {
+        return performVariableOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE, legacyViewEffect);
+    }
+
+    private boolean performVariableOneShot(long durationMs, int amplitude, int legacyViewEffect) {
         if (vibrator != null && vibrator.hasVibrator()) {
             try {
-                vibrator.vibrate(VibrationEffect.createOneShot(
-                        durationMs, VibrationEffect.DEFAULT_AMPLITUDE));
+                int effectAmplitude = vibrator.hasAmplitudeControl()
+                        ? amplitude
+                        : VibrationEffect.DEFAULT_AMPLITUDE;
+                vibrator.vibrate(VibrationEffect.createOneShot(durationMs, effectAmplitude));
                 return true;
             } catch (RuntimeException ignored) {
                 // Fall through to View feedback only if direct vibration fails.
