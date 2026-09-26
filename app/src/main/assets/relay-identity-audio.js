@@ -77,15 +77,10 @@
   // of notification-like. This is not a claim that surviving Apollo documentation
   // specifies handset vibration force.
   function hapticSignatureFromProfile(p,engaging){
-    const on=!!engaging,travel=on?p.setTravelMs:p.resetTravelMs,stable=on?p.setStableMs:p.resetStableMs,bounces=on?p.setBounceCount:p.resetBounceCount;
-    const travelMin=on?SET_TRAVEL_MIN_MS:RESET_TRAVEL_MIN_MS,travelMax=on?SET_TRAVEL_MAX_MS:RESET_TRAVEL_MAX_MS;
-    const travelNorm=clamp((travel-travelMin)/Math.max(.001,travelMax-travelMin),0,1),tailNorm=clamp((stable-travel)/3.0,0,1),skewNorm=clamp(Math.abs(p.poleSkewUs)/185,0,1),ordinalPhase=((p.ordinal*37+11)%140)/139;
-    // One millisecond is the smallest non-zero active pulse this Android bridge
-    // can express. Keep only a tiny 1-4/255 amplitude fingerprint; relay identity
-    // still comes primarily from the real manufactured arrival/bounce timing.
-    const durationMs=1;
-    const amplitude=Math.round(clamp((on?2.0:1.0)+travelNorm*(on?1.0:.8)+tailNorm*.20+skewNorm*.15+Math.min(4,bounces)*.08+(ordinalPhase-.5)*.45,on?2:1,on?4:3));
-    return Object.freeze({id:p.id,engaging:on,durationMs,amplitude});
+    const on=!!engaging;
+    // Absolute minimum non-zero Android relay pulse: 1 ms at 1/255.
+    // Relay individuality is preserved only by deterministic arrival/bounce timing.
+    return Object.freeze({id:p.id,engaging:on,durationMs:1,amplitude:1});
   }
   function hapticPatternFromProfile(p,engaging,atMs=0){
     const on=!!engaging,signature=hapticSignatureFromProfile(p,on),source=on?p.setBounceTimesMs:p.resetBounceTimesMs,windowMs=on?p.setBounceWindowMs:p.resetBounceWindowMs,pulses=[];
@@ -98,7 +93,7 @@
         const physicalOffset=Math.max(0,Number(source[index])||0),normalized=clamp(physicalOffset/Math.max(.01,windowMs),0,1);
         const gapMs=(on?3:3)+Math.round(normalized*(on?7:5))+i;
         const durationMs=1;
-        const amplitude=Math.round(clamp(signature.amplitude*(on?.45:.40)*Math.pow(.72,i),1,2));
+        const amplitude=1;
         pulses.push(Object.freeze({atMs:baseAt+signature.durationMs+gapMs,durationMs,amplitude,kind:'rebound',sourceBounceIndex:index,physicalOffsetMs:physicalOffset}));
       }
     }
@@ -156,12 +151,11 @@
   function contactHapticSignatureFromProfile(p,engaging,phase){
     const base=hapticSignatureFromProfile(p,engaging),kind=String(phase||'armature');
     if(kind==='armature')return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude:base.amplitude});
-    const ordinalPhase=((p.ordinal*29+7)%140)/139;
     if(kind==='bounce'){
-      const amplitude=Math.round(clamp(base.amplitude*.55+(ordinalPhase-.5)*.7,1,3));
+      const amplitude=1;
       return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
     }
-    const amplitude=Math.round(clamp(base.amplitude*.45+(ordinalPhase-.5)*.5,1,2));
+    const amplitude=1;
     return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
   }
   function playRelayContactHaptic(row,bit,engaging,phase){
