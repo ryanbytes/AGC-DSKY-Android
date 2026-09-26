@@ -76,7 +76,6 @@
     if(traceEvent.kind==='armature'){
       lastPresentationClick={row:motion.row,bit:motion.bit,engaging:motion.on};
       audioModel.playRelayImpact?.(motion.row,motion.bit,motion.on,.66);
-      audioModel.playRelayHaptic?.(motion.row,motion.bit,motion.on);
     }
     emit({type:'relay-contact',row:motion.row,bit:motion.bit,id:audioModel.relayIdentity(motion.row,motion.bit),state:!!traceEvent.state,targetOn:motion.on,phase:traceEvent.kind,contactWord:state.contactWord,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount});
   }
@@ -127,12 +126,15 @@
     const token=(generation[row]||0)+1;generation[row]=token;const motions=collectMotions(row,prior,target);
     const state=presentation[row]={token,active:motions.length>0,contactWord:prior,target,frameQueue:[],renderContact:!!renderContact};
     if(!motions.length){renderWord(row,target);emit({type:'relay-bank-settled',row,contactWord:target});return 0}
-    for(const motion of motions){
-      const arrival=timingMode===MODE_STRETCHED?(stretchedSchedule(motions).find(item=>item.bit===motion.bit)?.stretchedMs??motion.physicalMs):motion.physicalMs;
+    const stretched=timingMode===MODE_STRETCHED?stretchedSchedule(motions):null;
+    const scheduled=motions.map(motion=>({motion,arrival:stretched?(stretched.find(item=>item.bit===motion.bit)?.stretchedMs??motion.physicalMs):motion.physicalMs}));
+    audioModel.playRelayBankHaptic?.(scheduled.map(item=>({row:item.motion.row,bit:item.motion.bit,on:item.motion.on,arrivalMs:item.arrival})));
+    for(const item of scheduled){
+      const motion=item.motion,arrival=item.arrival;
       emit({type:'relay-drive',row,bit:motion.bit,id:audioModel.relayIdentity(row,motion.bit),fromOn:!!(prior&motion.mask),targetOn:motion.on,durationMs:arrival,physicalMs:motion.physicalMs,stableMs:motion.stableMs,poleSkewUs:motion.poleSkewUs,bounceCount:motion.bounceCount});
       scheduleTraceFromArmature(state,motion,token,arrival);
     }
-    const end=timingMode===MODE_STRETCHED?Math.max(...stretchedSchedule(motions).map(item=>item.stretchedMs+Math.max(0,item.stableMs-item.physicalMs)))+STRETCH_RELEASE_HOLD_MS:FINAL_SETTLE_MS;
+    const end=timingMode===MODE_STRETCHED?Math.max(...scheduled.map(item=>item.arrival+Math.max(0,item.motion.stableMs-item.motion.physicalMs)))+STRETCH_RELEASE_HOLD_MS:FINAL_SETTLE_MS;
     releasePresentation(row,token,target,end);return end;
   }
 
@@ -173,7 +175,7 @@
   hardware.registerSettledPaintPolicy('relay-visual-coupling',()=>timingMode!==MODE_STRETCHED);
 
   window.DSKY_RELAY_VISUAL=Object.freeze({
-    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,stretchedBounceAudio:true,
+    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,hapticBankComposed:true,stretchedBounceAudio:true,
     stretchFirstBaseMs:STRETCH_FIRST_BASE_MS,stretchMinGapMs:STRETCH_MIN_GAP_MS,stretchMaxGapMs:STRETCH_MAX_GAP_MS,stretchReleaseHoldMs:STRETCH_RELEASE_HOLD_MS,
     getTimingMode:()=>timingMode,setTimingMode,contactDelayMs,stretchedGapMs,stretchedScheduleFor:(row,prior,target)=>stretchedSchedule(collectMotions(row,prior,target)).map(item=>({...item})),presentationDurationMs,lastPresentationClick:()=>lastPresentationClick?{...lastPresentationClick}:null,
     renderWord,currentSettledWord,withSettledWordOverride,presentDrive,presentAux,subscribe,resetPresentation
