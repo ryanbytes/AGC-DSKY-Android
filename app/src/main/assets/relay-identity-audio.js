@@ -128,6 +128,7 @@
     try{const candidate=window.HapticBridge;if(!candidate||typeof candidate.relayImpact!=='function')return null;if(typeof candidate.available==='function'&&!candidate.available())return null;return candidate}catch(_){return null}
   }
   function playWaveform(waveform,fallbackSignature){
+    if(!identityState.relayHaptics)return false;
     const native=nativeHapticBridge();
     if(native&&typeof native.relayWaveform==='function'&&waveform.timings.length){
       try{return native.relayWaveform(waveform.timings.join(','),waveform.amplitudes.join(','))!==false}catch(_){}
@@ -159,6 +160,7 @@
     return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
   }
   function playRelayContactHaptic(row,bit,engaging,phase){
+    if(!identityState.relayHaptics)return false;
     row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
     const p=profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),signature=contactHapticSignatureFromProfile(p,!!engaging,phase),native=nativeHapticBridge();
     if(native){try{return native.relayImpact(signature.durationMs,signature.amplitude)!==false}catch(_){}}
@@ -249,6 +251,7 @@
     hapticPatternFor:(row,bit,engaging)=>hapticPatternFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging,0),
     contactHapticSignatureFor:(row,bit,engaging,phase)=>contactHapticSignatureFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging,phase),
     relayBankHapticPatternFor:events=>relayBankHapticPattern(events),
+    hapticsEnabled:()=>!!identityState.relayHaptics,
     playRelayImpact,playRelayHaptic,playRelayContactHaptic,playRelayBankHaptic,
     auxiliaryNames:Object.freeze(AUX_ORDER.slice()),
     auxiliaryProfileFor:name=>profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),

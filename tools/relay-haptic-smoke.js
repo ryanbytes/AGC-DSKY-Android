@@ -11,7 +11,7 @@ function assert(c,m){if(!c)throw new Error(m)}
 
 for(const marker of [
   'hapticSignatureFromProfile','hapticPatternFromProfile','contactHapticSignatureFromProfile','waveformFromPatterns',
-  'hapticPatternFor:','contactHapticSignatureFor:','relayBankHapticPatternFor:','playRelayContactHaptic','playRelayBankHaptic',
+  'hapticPatternFor:','contactHapticSignatureFor:','relayBankHapticPatternFor:','hapticsEnabled:','playRelayContactHaptic','playRelayBankHaptic',
   'auxiliaryHapticPatternFor:',"typeof native.relayWaveform==='function'"
 ])assert(identity.includes(marker),'relay identity haptic path missing: '+marker);
 
@@ -39,7 +39,7 @@ const context={
   setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},
   navigator:{vibrate(){throw new Error('native waveform bridge should win')}},
   document:{getElementById(){return null}},
-  AGCDSKY_APP_STATE:{tickSound:false},
+  AGCDSKY_APP_STATE:{tickSound:false,relayHaptics:true},
   AGCDSKY_ENVIRONMENT:{tickLevel(){return 1}},
   AGCDSKY_AUDIO:{implementation(){return()=>true},installImplementation(){},ensure(){return null}},
   AGCDSKY_SERVICE_REGISTRY:{get(name){return name==='AGCDSKY_HARDWARE'?hardware:null}},
@@ -127,6 +127,17 @@ waveformCalls.length=0;impactCalls.length=0;
 const aux=model.auxiliaryHapticPatternFor('comp',true);
 assert(aux.pulses.length>=2,'aux relay rebound pattern missing');
 assert(model.playAuxHaptic('comp',true)===true&&waveformCalls.length===1,'aux waveform dispatch failed');
+
+context.AGCDSKY_APP_STATE.relayHaptics=false;
+waveformCalls.length=0;impactCalls.length=0;
+assert(model.hapticsEnabled()===false,'relay haptic enabled state did not reflect OFF');
+assert(model.playRelayBankHaptic(bankEvents)===false,'disabled relay bank haptic must be suppressed');
+assert(model.playRelayHaptic(4,7,true)===false,'disabled single relay haptic must be suppressed');
+assert(model.playRelayContactHaptic(4,7,true,'armature')===false,'disabled contact relay haptic must be suppressed');
+assert(model.playAuxHaptic('comp',true)===false,'disabled auxiliary relay haptic must be suppressed');
+assert(waveformCalls.length===0&&impactCalls.length===0,'disabled relay haptics reached native vibration');
+context.AGCDSKY_APP_STATE.relayHaptics=true;
+assert(model.hapticsEnabled()===true,'relay haptic enabled state did not restore ON');
 
 console.log('relay haptic smoke: PASS');
 console.log('  authentic mode uses one non-overwriting bank waveform; stretched mode can emit deterministic micro-switch ticks on the exact rendered contact transition');
