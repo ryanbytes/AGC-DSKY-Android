@@ -47,9 +47,86 @@
     });
   }
 
+  const SVG_NS='http://www.w3.org/2000/svg',SEGMENT_NAMES=Object.freeze(Object.keys(PATH));
+  function clearNode(node){while(node&&node.firstChild)node.removeChild(node.firstChild)}
+  function stableSlots(el,kind,count){
+    const existing=Array.from(el&&el.children||[]);
+    const valid=existing.length===count&&existing.every((node,index)=>node.getAttribute&&node.getAttribute('data-el-base-slot')===kind&&node.getAttribute('data-el-base-slot-index')===String(index));
+    if(valid)return existing;
+    clearNode(el);
+    const slots=[];
+    for(let index=0;index<count;index++){
+      const slot=document.createElementNS(SVG_NS,'g');
+      slot.setAttribute('data-el-base-slot',kind);
+      slot.setAttribute('data-el-base-slot-index',String(index));
+      el.appendChild(slot);slots.push(slot);
+    }
+    return slots;
+  }
+  function basePath(name){
+    const path=document.createElementNS(SVG_NS,'path');
+    path.setAttribute('class','el-seg');
+    path.setAttribute('data-seg',name);
+    path.setAttribute('d',PATH[name]);
+    return path;
+  }
+  function ensureBaseDigit(slot,x){
+    const key=String(Number(x)||0),existing=slot.firstChild;
+    const valid=slot.getAttribute('data-el-base-digit-x')===key&&existing&&existing.getAttribute&&existing.getAttribute('data-el-base-glyph')==='1'&&Array.from(existing.children||[]).length===SEGMENT_NAMES.length;
+    if(valid)return existing;
+    clearNode(slot);
+    const glyph=document.createElementNS(SVG_NS,'g');
+    glyph.setAttribute('class','el-glyph');
+    glyph.setAttribute('data-el-base-glyph','1');
+    glyph.setAttribute('transform',`translate(${Number(x)||0} 0)`);
+    for(const name of SEGMENT_NAMES)glyph.appendChild(basePath(name));
+    slot.appendChild(glyph);slot.setAttribute('data-el-base-digit-x',key);slot.setAttribute('data-el-base-value','');
+    return glyph;
+  }
+  function paintBaseDigit(slot,ch,x,version){
+    const glyph=ensureBaseDigit(slot,x),key=`${version}:${ch}`;
+    if(slot.getAttribute('data-el-base-value')===key)return false;
+    const lit=segmentPattern(ch);
+    for(const path of Array.from(glyph.children||[])){
+      const next=lit.includes(path.getAttribute('data-seg'))?'el-seg on':'el-seg';
+      if(path.getAttribute('class')!==next)path.setAttribute('class',next);
+    }
+    slot.setAttribute('data-el-base-value',key);return true;
+  }
+  function ensureBaseSign(slot){
+    const existing=slot.firstChild;
+    const valid=existing&&existing.getAttribute&&existing.getAttribute('data-el-base-sign')==='1'&&Array.from(existing.children||[]).length===3;
+    if(valid)return existing;
+    clearNode(slot);
+    const sign=document.createElementNS(SVG_NS,'g');sign.setAttribute('class','el-sign');sign.setAttribute('data-el-base-sign','1');
+    const defs=[
+      ['bar','M.54 10.92 L1.12 10.34 L5.74 10.34 L6.32 10.92 L5.72 11.50 L1.10 11.50 Z'],
+      ['upper','M3.56 4.26 L4.46 4.72 L3.76 10.06 L2.90 10.56 L2.58 10.10 L3.26 4.76 Z'],
+      ['lower','M2.70 11.88 L3.60 12.34 L2.90 17.70 L2.04 18.20 L1.72 17.74 L2.40 12.38 Z']
+    ];
+    for(const [part,d] of defs){const p=document.createElementNS(SVG_NS,'path');p.setAttribute('class','el-seg');p.setAttribute('data-sign-part',part);p.setAttribute('d',d);sign.appendChild(p)}
+    slot.appendChild(sign);slot.setAttribute('data-el-base-value','');return sign;
+  }
+  function paintBaseSign(slot,value,version){
+    const sign=String(value||' '),group=ensureBaseSign(slot),key=`${version}:${sign}`;
+    if(slot.getAttribute('data-el-base-value')===key)return false;
+    for(const path of Array.from(group.children||[])){
+      const part=path.getAttribute('data-sign-part'),on=sign==='+'||(sign==='-'&&part==='bar'),next=on?'el-seg on':'el-seg';
+      if(path.getAttribute('class')!==next)path.setAttribute('class',next);
+    }
+    slot.setAttribute('data-el-base-value',key);return true;
+  }
+
   let glyphSlot,signSlot,digitsSlot,regSlot,set2Slot,setRegSlot,setLampSlot,clearLampsSlot;
-  function baseRenderDigits(el,text){let out='';String(text).split('').forEach((ch,i)=>out+=glyphSlot.get()(ch,i*14));el.innerHTML=out}
-  function baseRenderReg(el,text){text=String(text);let out=signSlot.get()(text[0]);text.slice(1).split('').forEach((ch,i)=>out+=glyphSlot.get()(ch,7+i*14));el.innerHTML=out}
+  function baseRenderDigits(el,text){
+    const chars=String(text).split(''),slots=stableSlots(el,'digits',chars.length),version=glyphSlot.version();
+    chars.forEach((ch,i)=>paintBaseDigit(slots[i],ch,i*14,version));
+  }
+  function baseRenderReg(el,text){
+    text=String(text);const chars=text.slice(1).split(''),slots=stableSlots(el,'register',1+chars.length);
+    paintBaseSign(slots[0],text[0],signSlot.version());
+    chars.forEach((ch,i)=>paintBaseDigit(slots[i+1],ch,7+i*14,glyphSlot.version()));
+  }
   function baseSet2(id,text){digitsSlot.get()(document.getElementById(id),String(text).padEnd(2,' ').slice(0,2))}
   function baseSetReg(id,sign,digits){regSlot.get()(document.getElementById(id),(sign||' ')+String(digits).padEnd(5,' ').slice(0,5))}
   function baseSetLamp(name,on){const x=document.querySelector(`[data-lamp="${name}"]`);if(x)x.classList.toggle('on',!!on)}
