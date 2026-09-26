@@ -9,9 +9,9 @@
  *   - the drive is then removed for 20 ms;
  *   - the next dirty row can therefore begin 40 ms after the previous row.
  *
- * In AGC mode V35 is not synthesized here: the real Comanche 055 program,
- * yaAGC I/O, and yaAGC DSKY hardware-state output are authoritative. The
- * synthetic phone-clock V35 helpers are retained only for clock-mode testing.
+ * V35 is never synthesized here. The real mission program, yaAGC I/O, and
+ * DSKY hardware-state output are authoritative for V35 and all AGC operations.
+ * PHONE CLOCK is explicitly non-flight presentation and cannot invoke V35.
  *
  * This module no longer mutates parser-global implementations directly.
  * Display hooks are installed through AGCDSKY_DISPLAY, clock queue/V35 hooks
@@ -33,18 +33,13 @@
   const T4_MS=120;
   const RELAY_DRIVE_MS=20;
   const DIRTY_ROW_START_MS=40;
-  const V35_HOLD_MS=5000;
-  const DSKY_FLASH_QUANTUM_MS=320;
-  const DSKY_FLASH_PHASES=4;
-  const V35_ORDER=Object.freeze([12,11,10,9,8,7,6,5,4,3,2,1]);
+  const CLOCK_RELAY_ORDER=Object.freeze([12,11,10,9,8,7,6,5,4,3,2,1]);
   const t4Epoch=performance.now();
-  const scalerEpoch=performance.now();
   const CLOCK_ROWS=CLOCK_GROUPS.map(group=>({relay:group.relay,cells:group.cells,native:group}));
 
   const hw={
     latches:Object.create(null),relayGeneration:Object.create(null),activeDrive:0,
-    timers:new Set(),clockToken:0,v35Token:0,v35FlashEnabled:false,
-    v35DirectKeyRel:false,v35DirectOperErr:false,v35FlashTimer:0,lastWrite:null,
+    timers:new Set(),clockToken:0,lastWrite:null,
     auxRelays:Object.assign(Object.create(null),{comp:false,uplink:false,temp:false,keyrel:false,oprerr:false,flash:false,restart:false,stby:false})
   };
   const snapshotExtensions=new Map();
@@ -56,8 +51,6 @@
   const getRelayBusy=()=>clock.queueBusy();
   const setRelayBusy=value=>clock.setQueueBusy(value);
   const getLampTestActive=()=>clock.lampTestActive();
-  const setLampTestActive=value=>clock.setLampTestActive(value);
-  const setLampTestTimer=value=>clock.setLampTestTimer(value);
 
   function later(fn,ms){
     const id=setTimeout(()=>{hw.timers.delete(id);fn()},Math.max(0,ms));hw.timers.add(id);return id;
@@ -99,18 +92,9 @@
   function relayOfJob(job){return job.group?job.group.relay:job.relay}
   function cellsOfJob(job){return job.group?job.group.cells:[]}
   function low11ForPair(text){const s=String(text||'').padEnd(2,' ').slice(0,2);return(clock.digitRelayCode(s[0])<<5)|clock.digitRelayCode(s[1])}
-  function targetClockState(commandVerb=fidelityState.verb,commandNoun=fidelityState.noun){
-    const want=desiredClockDigits(),state={11:low11ForPair('00'),10:low11ForPair(commandVerb),9:low11ForPair(commandNoun),12:0};
-    for(const row of CLOCK_ROWS)state[row.relay]=clockLow11(row,want);return{state,want};
-  }
   function currentClockLatchState(commandVerb=fidelityState.verb,commandNoun=fidelityState.noun){
     const relayWords=getClockRelayWords(),state={11:low11ForPair('00'),10:low11ForPair(commandVerb),9:low11ForPair(commandNoun),12:Object.prototype.hasOwnProperty.call(hw.latches,12)?hw.latches[12]:0};
     for(const row of CLOCK_ROWS)state[row.relay]=(relayWords[row.relay]??0)&0o3777;return state;
-  }
-  function v35State(){
-    const eight=clock.digitRelayCode('8'),state={};
-    for(let relay=1;relay<=11;relay++){const plus=relay===2||relay===5||relay===7;state[relay]=(plus?0o2000:0)|(eight<<5)|eight}
-    state[12]=0o650;return state;
   }
 
   function settledPaintAllowed(relay,low11){
@@ -192,55 +176,14 @@
   }
   clock.installImplementation('runQueue',hardwareRunRelayQueue,'hardware T4 relay queue');
 
-  function flashPhaseOff(){const elapsed=Math.max(0,performance.now()-scalerEpoch);return Math.floor(elapsed/DSKY_FLASH_QUANTUM_MS)%DSKY_FLASH_PHASES===0}
-  function applySyntheticFlash(){
-    if(!getLampTestActive()||!hw.v35FlashEnabled)return;
-    const off=flashPhaseOff();document.body.classList.toggle('vn-flash-off',off);
-    setAuxRelays({keyrel:hw.v35DirectKeyRel&&!off,oprerr:hw.v35DirectOperErr&&!off},true);
-  }
-  function scheduleSyntheticFlash(){
-    if(!getLampTestActive()||!hw.v35FlashEnabled)return;applySyntheticFlash();
-    const elapsed=Math.max(0,performance.now()-scalerEpoch),until=DSKY_FLASH_QUANTUM_MS-(elapsed%DSKY_FLASH_QUANTUM_MS);
-    hw.v35FlashTimer=setTimeout(()=>{hw.v35FlashTimer=0;scheduleSyntheticFlash()},Math.max(1,until));
-  }
-  function seedPhoneLatches(state){
-    for(const relay of V35_ORDER){const low11=(state[relay]??0)&0o3777;hw.latches[relay]=low11;display.commitRelayWord(relay,low11,{render:false})}
-  }
-  function scheduleSyntheticRows(target,token,onComplete){
-    const start=nextT4Delay();
-    V35_ORDER.forEach((relay,index)=>later(()=>{if(token!==hw.v35Token||!getLampTestActive())return;beginRelayDrive(relay,target[relay]??0,true)},start+index*DIRTY_ROW_START_MS));
-    later(()=>{if(token!==hw.v35Token||!getLampTestActive())return;if(onComplete)onComplete()},start+(V35_ORDER.length-1)*DIRTY_ROW_START_MS+RELAY_DRIVE_MS+2);
+  function seedClockLatches(state){
+    for(const relay of CLOCK_RELAY_ORDER){
+      const low11=(state[relay]??0)&0o3777;
+      hw.latches[relay]=low11;
+      display.commitRelayWord(relay,low11,{render:false});
+    }
   }
 
-  const baseCancelLampTest=clock.implementation('cancelLampTest');
-  function hardwareCancelLampTest(...args){
-    hw.v35Token++;hw.v35FlashEnabled=false;hw.v35DirectKeyRel=false;hw.v35DirectOperErr=false;
-    if(hw.v35FlashTimer)clearTimeout(hw.v35FlashTimer);hw.v35FlashTimer=0;document.body.classList.remove('vn-flash-off');
-    if(fidelityState.mode==='clock')setAuxRelays({comp:false,uplink:false,temp:false,keyrel:false,oprerr:false,flash:false,restart:false,stby:false},true);
-    return baseCancelLampTest.apply(this,args);
-  }
-  clock.installImplementation('cancelLampTest',hardwareCancelLampTest,'hardware V35 cancellation');
-
-  function hardwareLampTest(){
-    clock.cancelLampTest();clock.stopQueue();setLampTestActive(true);const token=++hw.v35Token;
-    setAuxRelays({comp:false,uplink:true,temp:true,restart:true,stby:true,flash:true},true);
-    hw.v35DirectKeyRel=true;hw.v35DirectOperErr=true;hw.v35FlashEnabled=true;scheduleSyntheticFlash();
-    const prior=currentClockLatchState(fidelityState.verb,fidelityState.noun);seedPhoneLatches(prior);const active=v35State();scheduleSyntheticRows(active,token,null);
-    const timer=setTimeout(()=>{
-      setLampTestTimer(0);if(token!==hw.v35Token||fidelityState.mode!=='clock')return;
-      setAuxRelays({uplink:false,temp:false,restart:false,stby:false,flash:false},true);hw.v35DirectOperErr=false;hw.v35FlashEnabled=false;
-      if(hw.v35FlashTimer)clearTimeout(hw.v35FlashTimer);hw.v35FlashTimer=0;document.body.classList.remove('vn-flash-off');setAuxRelays({oprerr:false,keyrel:hw.v35DirectKeyRel},true);
-      const restoreData=targetClockState('16','65');restoreData.state[12]=0;
-      scheduleSyntheticRows(restoreData.state,token,()=>{
-        if(token!==hw.v35Token||fidelityState.mode!=='clock')return;
-        hw.v35DirectKeyRel=false;setAuxRelays({keyrel:false,comp:false},true);fidelityState.verb='16';fidelityState.noun='65';
-        const digits=getClockDigits();digits.r1=restoreData.want.r1.slice();digits.r2=restoreData.want.r2.slice();digits.r3=restoreData.want.r3.slice();
-        const relayWords=getClockRelayWords();for(const row of CLOCK_ROWS)relayWords[row.relay]=restoreData.state[row.relay]&0o3777;
-        setLampTestActive(false);const mode=shell.element('mode');if(mode)mode.textContent='V16 N65 · PHONE CLOCK';clock.syncFace();
-      });
-    },V35_HOLD_MS);setLampTestTimer(timer);
-  }
-  clock.installImplementation('lampTest',hardwareLampTest,'hardware V35 sequence');
 
   // Run yaAGC from the original 1024-kHz/12 machine-cycle rate while draining
   // peripheral output at 250 Hz. The faster drain does not speed up the AGC.
@@ -256,11 +199,11 @@
     AgcCore.prototype.__dskyFidelityStart=true;
   }
 
-  try{seedPhoneLatches(currentClockLatchState(fidelityState.verb,fidelityState.noun))}catch(_){}
+  try{seedClockLatches(currentClockLatchState(fidelityState.verb,fidelityState.noun))}catch(_){}
   setInterval(()=>{try{if(fidelityState.mode==='clock'&&!getLampTestActive()&&!getRelayBusy())clock.tick()}catch(_){}},20);
 
   function baseSnapshot(){return{
-    t4Ms:T4_MS,relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),v35Order:V35_ORDER.slice(),flashQuantumMs:DSKY_FLASH_QUANTUM_MS,flashPeriodMs:DSKY_FLASH_QUANTUM_MS*DSKY_FLASH_PHASES,activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
+    t4Ms:T4_MS,relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
   }}
   function snapshot(){
     let state=baseSnapshot();
