@@ -66,7 +66,7 @@ const hardware=context.AGCDSKY_HARDWARE,display=context.AGCDSKY_DISPLAY,clock=co
 assert(hardware&&Object.isFrozen(hardware),'hardware service missing/mutable');
 assert(hardware.relayDriveMs===20&&hardware.dirtyRowStartMs===40,'hardware timing constants changed');
 for(const name of ['decodeChannel10','decodeChannel11','decodeChannel163','resetFace'])assert(typeof display.implementation(name)==='function',`hardware did not install ${name} through display service`);
-for(const name of ['stopQueue','runQueue','cancelLampTest','lampTest'])assert(typeof clock.implementation(name)==='function',`hardware did not install ${name} through clock service`);
+for(const name of ['stopQueue','runQueue'])assert(typeof clock.implementation(name)==='function',`hardware did not install ${name} through clock service`);
 commits.length=0;timers.clear();now=0;
 
 function runNext(){let chosen=null;for(const [id,timer] of timers){if(!chosen||timer.due<chosen.timer.due||(timer.due===chosen.timer.due&&id<chosen.id))chosen={id,timer}}if(!chosen)return false;timers.delete(chosen.id);now=chosen.timer.due;chosen.timer.fn();return true}
@@ -96,9 +96,10 @@ assert(diagnostic.testExtension===true&&diagnostic.latches[10]===0o123&&diagnost
 assert(!hardwareSource.includes('window.AGCDSKY.hardware ='),'hardware source must not patch public facade');
 assert(hardwareSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE'"),'hardware service must publish explicitly through the registry');
 for(const name of ['decodeChannel10','decodeChannel11','decodeChannel163','resetFace'])assert(hardwareSource.includes(`display.installImplementation('${name}'`),`hardware display-service registration missing: ${name}`);
-for(const name of ['stopQueue','runQueue','cancelLampTest','lampTest'])assert(hardwareSource.includes(`clock.installImplementation('${name}'`),`hardware clock-service registration missing: ${name}`);
+for(const name of ['stopQueue','runQueue'])assert(hardwareSource.includes(`clock.installImplementation('${name}'`),`hardware clock-service registration missing: ${name}`);
+for(const forbidden of ["clock.installImplementation('cancelLampTest'","clock.installImplementation('lampTest'",'hardwareLampTest','scheduleSyntheticRows'])assert(!hardwareSource.includes(forbidden),`hardware retained synthetic V35 hook: ${forbidden}`);
 assert(!hardwareSource.includes('AGCDSKY_COMPAT')&&!hardwareSource.includes('compat.'),'hardware retained direct compatibility-registry dependency');
 assert(hardwareSource.includes('display.commitRelayWord(relay,low11,{render:paint})'),'settled commit marker missing');
 
 console.log('hardware service smoke: PASS');
-console.log('  explicit hardware-service publication, display/clock-owned implementation hooks, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
+console.log('  explicit hardware-service publication, normal clock queue hooks, no synthetic V35 hook, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
