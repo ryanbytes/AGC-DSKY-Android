@@ -28,12 +28,15 @@ for(const token of ['paintApolloDigitSlot(','paintApolloSignSlot('])assert(apoll
 const jsFiles=fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js'));
 for(const cls of ['vn-flash-off','el-off']){
   const owners=jsFiles.filter(name=>read(name).includes(cls));
-  const allowed=['agc-display-runtime.js','dsky-display-renderer.js'];
+  const allowed=['agc-display-runtime.js','dsky-display-renderer.js','hardware-fidelity.js'];
   for(const owner of owners)assert(allowed.includes(owner),`unexpected ${cls} mutation path in ${owner}`);
 }
 assert(display.includes("document.body.classList.toggle('vn-flash-off',!!(agcCh163Value&0o00040))"),'VERB/NOUN blanking is no longer tied only to channel 0163 bit 040');
 assert(display.includes("document.body.classList.toggle('el-off',!!(agcCh163Value&0o01000))"),'EL power blanking is no longer tied only to channel 0163 bit 01000');
 assert(renderer.includes("document.body.classList.remove('vn-flash-off','el-off')"),'display reset no longer clears only the intentional blanking classes');
+const hardware=read('hardware-fidelity.js');
+assert(hardware.includes("function hardwareDecodeChannel163(value)")&&hardware.includes("document.body.classList.toggle('el-off',!!(word&0o01000))"),'hardware EL-off path is not owned by channel 0163');
+assert(hardware.includes("if(render&&name==='flash')document.body.classList.toggle('vn-flash-off',on)"),'hardware V/N flash path is not owned by the modeled FLASH relay');
 
 assert(stateCss.includes('.vn-flash-off #verb')&&stateCss.includes('.vn-flash-off #noun'),'intentional VERB/NOUN flash CSS missing');
 assert(stateCss.includes('.el-off .el-static')&&stateCss.includes('.el-off .el-field')&&stateCss.includes('.el-off .comp-el'),'intentional EL supply-off CSS missing');
