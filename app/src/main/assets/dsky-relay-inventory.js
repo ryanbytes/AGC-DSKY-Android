@@ -35,18 +35,18 @@
     11:Object.freeze({C:'PROG-1',D:'PROG-2'})
   });
 
-  // Bank 14 / channel-010 row 12 has nine physical relay positions.  In the
-  // Comanche 055 CM configuration used by this app, only bits 4,6,8,9 are
-  // assigned to visible DSKY annunciators; the other populated positions are
-  // retained as real hardware relays but classified as unused by Comanche055.
+  // Bank 14 / channel-010 row 12 has nine physical relay positions.
+  // The Block II channel definition assigns the common G&N relay functions
+  // below.  A specific CM/LM face may omit a legend even though the physical
+  // relay position remains populated.  Bit 7 is the documented spare.
   const ROW12_ROLE=Object.freeze({
-    0:'BANK14-BIT1-UNUSED-COMANCHE055',
-    1:'BANK14-BIT2-UNUSED-COMANCHE055',
-    2:'BANK14-BIT3-UNUSED-COMANCHE055',
+    0:'PRIO-DISP',
+    1:'NO-DAP',
+    2:'VEL',
     3:'NO-ATT',
-    4:'BANK14-BIT5-UNUSED-COMANCHE055',
+    4:'ALT',
     5:'GIMBAL-LOCK',
-    6:'BANK14-BIT7-UNUSED-COMANCHE055',
+    6:'SPARE',
     7:'TRACKER',
     8:'PROG-CAUTION'
   });
