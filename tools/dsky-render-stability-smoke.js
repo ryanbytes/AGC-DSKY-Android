@@ -52,30 +52,44 @@ new vm.Script(source,{filename:'dsky-geometry.js'}).runInContext(context);
 renderer.setReg('r3','+','00000');
 const initial=elements.r3.children.slice();
 assert(initial.length===6,'register did not create one persistent sign slot plus five digit slots');
-const firstWrites=initial.map(slot=>slot.innerHtmlWrites);
+assert(initial.every(slot=>slot.innerHtmlWrites===0),'normal Apollo register render must not replace slot innerHTML');
+const initialGroups=initial.map(slot=>slot.firstChild);
+const initialPaths=initialGroups.map(group=>Array.from(group.children||[]));
+const initialValues=initial.map(slot=>slot.getAttribute('data-el-value'));
 
 renderer.setReg('r3','-','00000');
 assert(elements.r3.children.every((slot,index)=>slot===initial[index]),'register slot identity changed when only sign changed');
-assert(initial[0].innerHtmlWrites===firstWrites[0]+1,'changed sign slot was not repainted');
-for(let index=1;index<6;index++)assert(initial[index].innerHtmlWrites===firstWrites[index],`unchanged zero slot ${index} repainted when sign changed`);
+assert(initial.every((slot,index)=>slot.firstChild===initialGroups[index]),'register static glyph group identity changed when only sign changed');
+for(let index=1;index<6;index++){
+  assert(initial[index].getAttribute('data-el-value')===initialValues[index],`unchanged zero slot ${index} value changed when sign changed`);
+  assert(Array.from(initial[index].firstChild.children||[]).every((path,pathIndex)=>path===initialPaths[index][pathIndex]),`unchanged zero slot ${index} path identity changed when sign changed`);
+}
+assert(initial.every(slot=>slot.innerHtmlWrites===0),'sign change used innerHTML and can invalidate sibling glyphs');
 
 renderer.setReg('r3','-','80000');
-assert(initial[1].innerHtmlWrites===firstWrites[1]+1,'changed first digit slot was not repainted');
-for(let index=2;index<6;index++)assert(initial[index].innerHtmlWrites===firstWrites[index],`neighboring zero slot ${index} repainted when first digit changed`);
+assert(initial[1].getAttribute('data-el-value')!==initialValues[1],'changed first digit slot did not update');
+for(let index=2;index<6;index++){
+  assert(initial[index].getAttribute('data-el-value')===initialValues[index],`neighboring zero slot ${index} changed when first digit changed`);
+  assert(Array.from(initial[index].firstChild.children||[]).every((path,pathIndex)=>path===initialPaths[index][pathIndex]),`neighboring zero slot ${index} path identity changed when first digit changed`);
+}
+assert(initial.every(slot=>slot.innerHtmlWrites===0),'digit change used innerHTML and can invalidate sibling glyphs');
 
 renderer.setReg('r3','-','80001');
-assert(initial[5].innerHtmlWrites===firstWrites[5]+1,'changed last digit slot was not repainted');
-for(let index=2;index<5;index++)assert(initial[index].innerHtmlWrites===firstWrites[index],`middle zero slot ${index} repainted when last digit changed`);
-const beforeRepeat=initial.map(slot=>slot.innerHtmlWrites);
+for(let index=2;index<5;index++)assert(initial[index].getAttribute('data-el-value')===initialValues[index],`middle zero slot ${index} changed when last digit changed`);
+const beforeRepeat=initial.map(slot=>slot.getAttribute('data-el-value'));
 renderer.setReg('r3','-','80001');
-initial.forEach((slot,index)=>assert(slot.innerHtmlWrites===beforeRepeat[index],`identical register repaint mutated slot ${index}`));
+initial.forEach((slot,index)=>assert(slot.getAttribute('data-el-value')===beforeRepeat[index],`identical register render mutated slot ${index}`));
+assert(initial.every(slot=>slot.innerHtmlWrites===0),'repeated register render used innerHTML');
 
 renderer.set2('prog','00');
-const prog=elements.prog.children.slice(),progWrites=prog.map(slot=>slot.innerHtmlWrites);
+const prog=elements.prog.children.slice(),progGroups=prog.map(slot=>slot.firstChild),progValues=prog.map(slot=>slot.getAttribute('data-el-value'));
+assert(prog.every(slot=>slot.innerHtmlWrites===0),'normal Apollo upper-field render must not replace slot innerHTML');
 renderer.set2('prog','01');
 assert(elements.prog.children[0]===prog[0]&&elements.prog.children[1]===prog[1],'upper-field slot identity changed');
-assert(prog[0].innerHtmlWrites===progWrites[0],'unchanged upper zero repainted when neighbor changed');
-assert(prog[1].innerHtmlWrites===progWrites[1]+1,'changed upper digit did not repaint');
+assert(prog[0].firstChild===progGroups[0]&&prog[1].firstChild===progGroups[1],'upper-field static glyph group identity changed');
+assert(prog[0].getAttribute('data-el-value')===progValues[0],'unchanged upper zero mutated when neighbor changed');
+assert(prog[1].getAttribute('data-el-value')!==progValues[1],'changed upper digit did not update');
+assert(prog.every(slot=>slot.innerHtmlWrites===0),'upper-field neighbor change used innerHTML');
 
 console.log('DSKY render stability smoke: PASS');
-console.log('  unchanged register/upper glyph slots retain SVG node identity and are not repainted when neighboring elements change');
+console.log('  Apollo register/upper glyphs keep immutable SVG subtrees; neighboring changes toggle only energized segment classes with zero innerHTML replacement');
