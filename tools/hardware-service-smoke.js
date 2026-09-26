@@ -104,6 +104,8 @@ for(const name of ['stopQueue','runQueue'])assert(hardwareSource.includes(`clock
 for(const forbidden of ["clock.installImplementation('cancelLampTest'","clock.installImplementation('lampTest'",'hardwareLampTest','scheduleSyntheticRows'])assert(!hardwareSource.includes(forbidden),`hardware retained synthetic V35 hook: ${forbidden}`);
 assert(!hardwareSource.includes('AGCDSKY_COMPAT')&&!hardwareSource.includes('compat.'),'hardware retained direct compatibility-registry dependency');
 assert(hardwareSource.includes('display.commitRelayWord(relay,low11,{render:paint})'),'settled commit marker missing');
+assert(hardwareSource.includes("visual.presentDrive(relay,prior,low11,{renderContact:!!render})"),'clock no-paint policy is not propagated into relay contact presentation');
+assert(hardwareSource.includes('beginRelayDrive(relay,low11,false);relayWords[relay]=low11;'),'PHONE CLOCK queue must retain no-transient-display relay drive');
 
 console.log('hardware service smoke: PASS');
-console.log('  explicit hardware-service publication, normal clock queue hooks, no synthetic V35 hook, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
+console.log('  explicit hardware-service publication, normal clock queue hooks, no synthetic V35 hook, clock no-transient-EL relay presentation, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
