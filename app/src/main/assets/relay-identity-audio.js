@@ -77,14 +77,10 @@
   // of notification-like. This is not a claim that surviving Apollo documentation
   // specifies handset vibration force.
   function hapticSignatureFromProfile(p,engaging){
-    const on=!!engaging,travel=on?p.setTravelMs:p.resetTravelMs,stable=on?p.setStableMs:p.resetStableMs,bounces=on?p.setBounceCount:p.resetBounceCount;
-    const travelMin=on?SET_TRAVEL_MIN_MS:RESET_TRAVEL_MIN_MS,travelMax=on?SET_TRAVEL_MAX_MS:RESET_TRAVEL_MAX_MS;
-    const travelNorm=clamp((travel-travelMin)/Math.max(.001,travelMax-travelMin),0,1),tailNorm=clamp((stable-travel)/3.0,0,1),skewNorm=clamp(Math.abs(p.poleSkewUs)/185,0,1),ordinalPhase=((p.ordinal*37+11)%140)/139;
+    const on=!!engaging;
     // Absolute minimum non-zero Android relay pulse: 1 ms at 1/255.
     // Relay individuality is preserved only by deterministic arrival/bounce timing.
-    const durationMs=1;
-    const amplitude=1;
-    return Object.freeze({id:p.id,engaging:on,durationMs,amplitude});
+    return Object.freeze({id:p.id,engaging:on,durationMs:1,amplitude:1});
   }
   function hapticPatternFromProfile(p,engaging,atMs=0){
     const on=!!engaging,signature=hapticSignatureFromProfile(p,on),source=on?p.setBounceTimesMs:p.resetBounceTimesMs,windowMs=on?p.setBounceWindowMs:p.resetBounceWindowMs,pulses=[];
@@ -155,7 +151,6 @@
   function contactHapticSignatureFromProfile(p,engaging,phase){
     const base=hapticSignatureFromProfile(p,engaging),kind=String(phase||'armature');
     if(kind==='armature')return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude:base.amplitude});
-    const ordinalPhase=((p.ordinal*29+7)%140)/139;
     if(kind==='bounce'){
       const amplitude=1;
       return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
