@@ -29,6 +29,8 @@ for(const marker of [
   'VibrationEffect.createWaveform(timings, effectAmplitudes, -1)',
   'vibrator.hasAmplitudeControl()'
 ])assert(bridge.includes(marker),'native relay waveform bridge missing: '+marker);
+assert(bridge.includes('performRelayOneShot'),'minimum relay one-shot path missing');
+assert(!bridge.includes('amplitudes[i] == 0 ? 0 : 255'),'relay waveform must not promote tiny pulses to full-strength 255 fallback');
 
 const waveformCalls=[],impactCalls=[];
 const hardware={snapshot(){return {auxRelays:{}}},registerSnapshotExtension(){}};
