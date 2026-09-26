@@ -21,7 +21,7 @@
   function build(){
     if(document.getElementById('diag-view'))return;
     const el=document.createElement('section');el.id='diag-view';el.setAttribute('aria-label','AGC diagnostics');
-    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><div class="diag-action-title">HARDWARE / SENSOR</div><button id="imu-zero">IMU SENSOR WAITING</button><button id="mag-lock">MAGNETOMETER WAITING</button><button id="pipa-cal">PIPA SENSOR WAITING</button><button id="diag-relay-show">RELAY SHOW</button><div class="diag-action-title">TESTS / STATE</div><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">RUN CLOCK DSKY SELF-TEST</button><button id="diag-haptic-test">TEST KEY HAPTIC</button><button id="diag-haptic-settings">OPEN VIBRATION SETTINGS</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
+    el.innerHTML=`<div id="diag-head"><strong>NON-FLIGHT DIAGNOSTICS</strong><button id="diag-close">CLOSE</button></div><div id="diag-scroll"><table id="diag-table"></table><div id="diag-actions"><div class="diag-action-title">HARDWARE / SENSOR</div><button id="imu-zero">IMU SENSOR WAITING</button><button id="mag-lock">MAGNETOMETER WAITING</button><button id="pipa-cal">PIPA SENSOR WAITING</button><button id="diag-relay-show">RELAY SHOW</button><div class="diag-action-title">TESTS / STATE</div><button id="diag-full-test">RUN FULL DSKY SELF-TEST</button><button id="diag-save">SAVE AGC STATE NOW</button><button id="diag-verify">VERIFY SNAPSHOT ROUND-TRIP</button><button id="diag-ntp-sync">SYNC NETWORK TIME NOW</button><button id="diag-pipa-test">ARM 5-SECOND PIPA MOTION TEST</button><button id="diag-dsky-test">ENTER V35 ENTR THROUGH AGC</button><button id="diag-haptic-test">TEST KEY HAPTIC</button><button id="diag-haptic-settings">OPEN VIBRATION SETTINGS</button><button id="diag-clear">CLEAR SAVED STATE</button></div><div id="diag-note">Diagnostic readout is phone-side only. It does not write flight-software erasable memory except through the same physical input paths being tested.</div></div>`;
     document.body.appendChild(el);
     document.getElementById('diag-close').onclick=close;
     document.getElementById('diag-full-test').onclick=runFullSelfTest;
@@ -232,16 +232,31 @@
     pipaTest={running:true,start,timestamp:Date.now(),message:'MOVE PHONE NOW'};if(b)b.textContent='MOVE PHONE · TEST RUNNING';
     clearTimeout(pipaTestTimer);pipaTestTimer=setTimeout(()=>{const end=pipaWords(core),delta=end?end.map((v,i)=>((v-start[i]+16384)&0x7fff)-16384):null;const moved=delta&&delta.some(v=>v!==0);pipaTest={running:false,ok:!!moved,start,end,delta,timestamp:Date.now(),message:moved?'PIPA COUNTERS RESPONDED':'NO PIPA COUNTER CHANGE'};if(b)b.textContent='ARM 5-SECOND PIPA MOTION TEST';update()},5000);update();
   }
-  function startDskyTest(){
-    const clock=window.AGCDSKY_CLOCK;
-    if(appState.mode!=='clock'||!clock||typeof clock.lampTest!=='function'){
-      dskyTest={ok:false,message:'CLOCK MODE REQUIRED'};update();return;
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,Math.max(0,Number(ms)||0)));
+  async function pulseAgcDskyKey(input,key){
+    const map=window.AGCDSKY_KEY_CODES,code=map&&map[key];
+    if(code===undefined)throw new Error('DSKY keycode unavailable: '+key);
+    const accepted=input.keyMake(code);
+    if(!(accepted>0))throw new Error('AGC input busy at '+key);
+    try{await wait(80)}
+    finally{
+      if(input.keyReset()===false)throw new Error('KEYRST failed after '+key);
     }
+    await wait(45);
+  }
+  async function startDskyTest(){
+    if(dskyTest?.running)return;
+    const runtime=lateService('AGCDSKY_RUNTIME'),input=lateService('AGCDSKY_INPUT'),core=coreSession.core;
+    if(!runtime||!input||appState.mode!=='agc'||!core||!core.running||!input.ready()){
+      dskyTest={running:false,ok:false,message:'AGC MUST BE RUNNING · V35 IS NOT SYNTHESIZED IN PHONE CLOCK',timestamp:Date.now()};update();return;
+    }
+    dskyTest={running:true,ok:null,message:'ENTERING V35 ENTR THROUGH REAL CHANNEL 015 INPUT',timestamp:Date.now()};update();
     try{
-      clock.lampTest();
-      dskyTest={ok:true,message:'V35 HARDWARE SEQUENCE STARTED',timestamp:Date.now()};
+      for(const key of ['V','3','5','E'])await pulseAgcDskyKey(input,key);
+      dskyTest={running:false,ok:true,message:'V35 ENTR SENT TO COMANCHE THROUGH CHANNEL 015 · FLIGHT SOFTWARE RESPONSE IS AUTHORITATIVE',timestamp:Date.now()};
+      if(typeof snapshot.scheduleAutosave==='function')snapshot.scheduleAutosave('diagnostic V35 AGC input');
     }catch(error){
-      dskyTest={ok:false,message:String(error?.message||error||'SELF-TEST FAILED'),timestamp:Date.now()};
+      dskyTest={running:false,ok:false,message:String(error?.message||error||'V35 INPUT FAILED'),timestamp:Date.now()};
     }
     update();
   }
@@ -304,7 +319,7 @@
     }
     h+=row('Mode',String(app.mode||'---').toUpperCase());
     h+=row('Core',app.coreLoaded?`${app.coreVersion||'---'} · ${app.coreRunning?'RUNNING':'SUSPENDED'}`:'not loaded');
-    if(dskyTest)h+=row('Clock DSKY self-test',`${dskyTest.ok?'STARTED':'BLOCKED'} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
+    if(dskyTest)h+=row('AGC V35 input',`${dskyTest.running?'ENTERING':(dskyTest.ok?'SENT':'BLOCKED')} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
     h+=row('PROG / VERB / NOUN',`${(d.prog||[]).join('')||'--'} / ${(d.verb||[]).join('')||'--'} / ${(d.noun||[]).join('')||'--'}`);
     const ch=app.channels||{};h+=row('Channels 011 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
     h+=section('KEY ELECTRICAL');
@@ -398,7 +413,7 @@
     const canSave=app.mode==='agc'&&app.coreLoaded;
     if(saveBtn){saveBtn.disabled=!canSave;saveBtn.textContent=canSave?'SAVE AGC STATE NOW':'SAVE AGC STATE · AGC MODE ONLY'}
     if(verifyBtn)verifyBtn.disabled=!app.coreLoaded;
-    if(dskyBtn){dskyBtn.disabled=app.mode!=='clock';dskyBtn.textContent=app.mode==='clock'?'RUN CLOCK DSKY SELF-TEST':'DSKY SELF-TEST · CLOCK MODE ONLY'}
+    if(dskyBtn){const ready=app.mode==='agc'&&app.coreLoaded&&app.coreRunning&&!dskyTest?.running;dskyBtn.disabled=!ready;dskyBtn.textContent=dskyTest?.running?'ENTERING V35 ENTR…':(ready?'ENTER V35 ENTR THROUGH AGC':'V35 · AGC MUST BE RUNNING')}
     if(ntpBtn){ntpBtn.disabled=!!ntp.syncInFlight;ntpBtn.textContent=ntp.syncInFlight?'NETWORK TIME SYNCING…':'SYNC NETWORK TIME NOW'}
     if(fullBtn){fullBtn.disabled=fullSelfTestRunning;fullBtn.textContent=fullSelfTestRunning?'FULL SELF-TEST RUNNING…':'RUN FULL DSKY SELF-TEST'}
     updateHardwareActions(phone);
