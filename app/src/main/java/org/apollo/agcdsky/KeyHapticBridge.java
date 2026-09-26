@@ -28,7 +28,7 @@ final class KeyHapticBridge {
     private static final long RELAY_MIN_MS = 1L;
     private static final long RELAY_MAX_MS = 1L;
     private static final int RELAY_MIN_AMPLITUDE = 1;
-    private static final int RELAY_MAX_AMPLITUDE = 1;
+    private static final int RELAY_MAX_AMPLITUDE = 3;
     private static final int RELAY_MAX_WAVEFORM_SEGMENTS = 192;
     private static final long RELAY_MAX_WAVEFORM_MS = 750L;
 
