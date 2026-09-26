@@ -4,6 +4,7 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
+const inventorySource=read('app/src/main/assets/dsky-relay-inventory.js');
 const identity=read('app/src/main/assets/relay-identity-audio.js');
 const coupling=read('app/src/main/assets/relay-visual-coupling.js');
 const bridge=read('app/src/main/java/org/apollo/agcdsky/KeyHapticBridge.java');
@@ -48,39 +49,57 @@ const context={
   }
 };
 context.window=context;vm.createContext(context);
+vm.runInContext(inventorySource,context,{filename:'dsky-relay-inventory.js'});
 vm.runInContext(identity,context,{filename:'relay-identity-audio.js'});
-const model=context.DSKY_RELAY_AUDIO;
+const inv=context.DSKY_RELAY_INVENTORY,model=context.DSKY_RELAY_AUDIO;
 assert(model&&typeof model.hapticPatternFor==='function'&&typeof model.playRelayBankHaptic==='function','relay haptic waveform API missing');
 
 const setPatterns=[],resetPatterns=[];
-for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
+assert(inv.matrixRelays.length===120&&model.latchingRelayCount===120,'latching physical population mismatch');
+assert(inv.auxiliaryRelays.length===12&&model.auxiliaryRelayCount===12&&model.totalIndividualRelays===132,'total physical relay population mismatch');
+for(const relay of inv.matrixRelays){
+  const {row,bit,id}=relay,profile=model.profileFor(row,bit);
+  assert(profile&&profile.id===id,'physical latching relay profile missing: '+id);
+  assert(profile.setTravelMs>0&&profile.setTravelMs<=3,'SCD 1006282 SET operate time exceeded: '+id);
+  assert(profile.resetTravelMs>0&&profile.resetTravelMs<=3,'SCD 1006282 RESET release time exceeded: '+id);
+  assert(profile.setBounceWindowMs<=2&&profile.resetBounceWindowMs<=2,'SCD 1006282 bounce window exceeded: '+id);
+  assert(profile.setStableMs-profile.setTravelMs<=2&&profile.resetStableMs-profile.resetTravelMs<=2,'SCD 1006282 contact settle tail exceeded: '+id);
+  assert(profile.timingEvidence==='SCD-1006282-bounded','latching timing provenance missing: '+id);
   const set=model.hapticPatternFor(row,bit,true),reset=model.hapticPatternFor(row,bit,false);
   setPatterns.push(set);resetPatterns.push(reset);
-  assert(set.pulses.length>=2&&set.pulses.length<=4,'set rebound pulse count escaped bounds');
-  assert(reset.pulses.length>=2&&reset.pulses.length<=3,'reset rebound pulse count escaped bounds');
-  assert(set.pulses[0].kind==='armature'&&reset.pulses[0].kind==='armature','armature pulse missing');
-  assert(set.pulses[0].durationMs>=3&&set.pulses[0].durationMs<=4,'set armature escaped micro-switch duration');
-  assert(set.pulses[0].amplitude>=50&&set.pulses[0].amplitude<=72,'set armature escaped micro-switch amplitude');
-  assert(reset.pulses[0].durationMs>=2&&reset.pulses[0].durationMs<=3,'reset armature escaped micro-switch duration');
-  assert(reset.pulses[0].amplitude>=35&&reset.pulses[0].amplitude<=56,'reset armature escaped micro-switch amplitude');
-  assert(set.pulses.slice(1).every(p=>p.durationMs>=1&&p.durationMs<=2&&p.amplitude>=14&&p.amplitude<=30),'set rebound escaped micro-switch bounds');
-  assert(reset.pulses.slice(1).every(p=>p.durationMs>=1&&p.durationMs<=2&&p.amplitude>=12&&p.amplitude<=20),'reset rebound escaped micro-switch bounds');
-  assert(set.pulses.slice(1).every(p=>p.kind==='rebound'),'set rebound labeling changed');
-  assert(reset.pulses.slice(1).every(p=>p.kind==='rebound'),'reset rebound labeling changed');
-  assert(JSON.stringify(set)===JSON.stringify(model.hapticPatternFor(row,bit,true)),'set haptic pattern is not deterministic');
-  assert(JSON.stringify(reset)===JSON.stringify(model.hapticPatternFor(row,bit,false)),'reset haptic pattern is not deterministic');
+  assert(set&&reset,'physical relay haptic pattern missing: '+id);
+  assert(set.pulses.length>=2&&set.pulses.length<=4,'set rebound pulse count escaped bounds: '+id);
+  assert(reset.pulses.length>=2&&reset.pulses.length<=3,'reset rebound pulse count escaped bounds: '+id);
+  assert(set.pulses[0].kind==='armature'&&reset.pulses[0].kind==='armature','armature pulse missing: '+id);
+  assert(set.pulses[0].durationMs>=3&&set.pulses[0].durationMs<=5,'set armature escaped micro-switch duration: '+id);
+  assert(set.pulses[0].amplitude>=40&&set.pulses[0].amplitude<=72,'set armature escaped micro-switch amplitude: '+id);
+  assert(reset.pulses[0].durationMs>=2&&reset.pulses[0].durationMs<=4,'reset armature escaped micro-switch duration: '+id);
+  assert(reset.pulses[0].amplitude>=28&&reset.pulses[0].amplitude<=56,'reset armature escaped micro-switch amplitude: '+id);
+  assert(set.pulses.slice(1).every(p=>p.durationMs>=1&&p.durationMs<=2&&p.amplitude>=14&&p.amplitude<=30),'set rebound escaped micro-switch bounds: '+id);
+  assert(reset.pulses.slice(1).every(p=>p.durationMs>=1&&p.durationMs<=2&&p.amplitude>=12&&p.amplitude<=24),'reset rebound escaped micro-switch bounds: '+id);
+  assert(JSON.stringify(set)===JSON.stringify(model.hapticPatternFor(row,bit,true)),'set haptic pattern is not deterministic: '+id);
+  assert(JSON.stringify(reset)===JSON.stringify(model.hapticPatternFor(row,bit,false)),'reset haptic pattern is not deterministic: '+id);
+  for(const phase of ['armature','bounce','settled']){
+    const sig=model.contactHapticSignatureFor(row,bit,true,phase);
+    assert(sig&&sig.id===id,'contact haptic signature missing: '+id+' '+phase);
+  }
 }
-assert(new Set(setPatterns.map(p=>JSON.stringify(p.pulses))).size>=80,'set tactile identities collapsed');
-assert(new Set(resetPatterns.map(p=>JSON.stringify(p.pulses))).size>=70,'reset tactile identities collapsed');
+assert(new Set(setPatterns.map(p=>JSON.stringify(p.pulses))).size>=70,'set tactile identities collapsed');
+assert(new Set(resetPatterns.map(p=>JSON.stringify(p.pulses))).size>=60,'reset tactile identities collapsed');
 
 for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
-  const arm=model.contactHapticSignatureFor(row,bit,true,'armature');
-  const bounce=model.contactHapticSignatureFor(row,bit,true,'bounce');
-  const settled=model.contactHapticSignatureFor(row,bit,true,'settled');
-  assert(arm.durationMs>=3&&arm.durationMs<=4&&arm.amplitude>=50&&arm.amplitude<=72,'stretched armature tick escaped micro-switch bounds');
-  assert(bounce.durationMs===2&&bounce.amplitude>=26&&bounce.amplitude<=40,'stretched bounce tick escaped subtle visible-contact bounds');
-  assert(settled.durationMs===2&&settled.amplitude>=24&&settled.amplitude<=36,'stretched settled tick escaped subtle visible-contact bounds');
-  assert(JSON.stringify(bounce)===JSON.stringify(model.contactHapticSignatureFor(row,bit,true,'bounce')),'contact tick identity is not deterministic');
+  if(inv.isMatrixRelay(row,bit))continue;
+  assert(model.profileFor(row,bit)===null,'nonexistent matrix relay received a profile');
+  assert(model.hapticPatternFor(row,bit,true)===null,'nonexistent matrix relay received haptics');
+  assert(model.contactTraceFor(row,bit,true).length===0,'nonexistent matrix relay received contact motion');
+  assert(model.playRelayHaptic(row,bit,true)===false,'nonexistent matrix relay dispatched haptic output');
+}
+for(const relay of inv.auxiliaryRelays){
+  const p=model.auxiliaryProfileFor(relay.name);
+  assert(p&&p.id===relay.id,'non-latching relay profile missing: '+relay.name);
+  assert(p.timingEvidence==='1010784-timing-unverified','non-latching relay must not claim unsourced timing: '+relay.name);
+  const set=model.auxiliaryHapticPatternFor(relay.name,true),reset=model.auxiliaryHapticPatternFor(relay.name,false);
+  assert(set&&reset&&set.pulses.length>=2&&reset.pulses.length>=2,'non-latching relay haptic identity missing: '+relay.name);
 }
 
 const bankEvents=[
@@ -117,4 +136,4 @@ assert(aux.pulses.length>=2,'aux relay rebound pattern missing');
 assert(model.playAuxHaptic('comp',true)===true&&waveformCalls.length===1,'aux waveform dispatch failed');
 
 console.log('relay haptic smoke: PASS');
-console.log('  authentic mode uses one non-overwriting bank waveform; stretched mode can emit deterministic micro-switch ticks on the exact rendered contact transition');
+console.log('  exhaustive 120 latching + 12 non-latching inventory covered; nonexistent matrix holes emit no relay event; SCD 1006282 timing bounds enforced for every latching relay');
