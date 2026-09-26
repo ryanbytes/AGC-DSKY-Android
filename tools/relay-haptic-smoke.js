@@ -23,7 +23,7 @@ assert(!coupling.includes('audioModel.playRelayHaptic?.(motion.row,motion.bit,mo
   'per-relay native vibration dispatch returned and can overwrite earlier pulses');
 
 for(const marker of [
-  'RELAY_MIN_MS = 2L','RELAY_MAX_MS = 8L','RELAY_MIN_AMPLITUDE = 12','RELAY_MAX_AMPLITUDE = 96',
+  'RELAY_MIN_MS = 1L','RELAY_MAX_MS = 1L','RELAY_MIN_AMPLITUDE = 1','RELAY_MAX_AMPLITUDE = 8',
   'RELAY_MAX_WAVEFORM_SEGMENTS = 192','RELAY_MAX_WAVEFORM_MS = 750L',
   'relayWaveform(String timingsCsv, String amplitudesCsv)',
   'VibrationEffect.createWaveform(timings, effectAmplitudes, -1)',
@@ -59,12 +59,12 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   assert(set.pulses.length>=2&&set.pulses.length<=4,'set rebound pulse count escaped bounds');
   assert(reset.pulses.length>=2&&reset.pulses.length<=3,'reset rebound pulse count escaped bounds');
   assert(set.pulses[0].kind==='armature'&&reset.pulses[0].kind==='armature','armature pulse missing');
-  assert(set.pulses[0].durationMs>=3&&set.pulses[0].durationMs<=4,'set armature escaped micro-switch duration');
-  assert(set.pulses[0].amplitude>=50&&set.pulses[0].amplitude<=72,'set armature escaped micro-switch amplitude');
-  assert(reset.pulses[0].durationMs>=2&&reset.pulses[0].durationMs<=3,'reset armature escaped micro-switch duration');
-  assert(reset.pulses[0].amplitude>=35&&reset.pulses[0].amplitude<=56,'reset armature escaped micro-switch amplitude');
-  assert(set.pulses.slice(1).every(p=>p.durationMs>=1&&p.durationMs<=2&&p.amplitude>=14&&p.amplitude<=30),'set rebound escaped micro-switch bounds');
-  assert(reset.pulses.slice(1).every(p=>p.durationMs>=1&&p.durationMs<=2&&p.amplitude>=12&&p.amplitude<=20),'reset rebound escaped micro-switch bounds');
+  assert(set.pulses[0].durationMs===1,'set armature escaped minimum pulse duration');
+  assert(set.pulses[0].amplitude>=2&&set.pulses[0].amplitude<=4,'set armature escaped minimum amplitude envelope');
+  assert(reset.pulses[0].durationMs===1,'reset armature escaped minimum pulse duration');
+  assert(reset.pulses[0].amplitude>=1&&reset.pulses[0].amplitude<=3,'reset armature escaped minimum amplitude envelope');
+  assert(set.pulses.slice(1).every(p=>p.durationMs===1&&p.amplitude>=1&&p.amplitude<=2),'set rebound escaped minimum haptic bounds');
+  assert(reset.pulses.slice(1).every(p=>p.durationMs===1&&p.amplitude>=1&&p.amplitude<=2),'reset rebound escaped minimum haptic bounds');
   assert(set.pulses.slice(1).every(p=>p.kind==='rebound'),'set rebound labeling changed');
   assert(reset.pulses.slice(1).every(p=>p.kind==='rebound'),'reset rebound labeling changed');
   assert(JSON.stringify(set)===JSON.stringify(model.hapticPatternFor(row,bit,true)),'set haptic pattern is not deterministic');
@@ -77,9 +77,9 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   const arm=model.contactHapticSignatureFor(row,bit,true,'armature');
   const bounce=model.contactHapticSignatureFor(row,bit,true,'bounce');
   const settled=model.contactHapticSignatureFor(row,bit,true,'settled');
-  assert(arm.durationMs>=3&&arm.durationMs<=4&&arm.amplitude>=50&&arm.amplitude<=72,'stretched armature tick escaped micro-switch bounds');
-  assert(bounce.durationMs===2&&bounce.amplitude>=26&&bounce.amplitude<=40,'stretched bounce tick escaped subtle visible-contact bounds');
-  assert(settled.durationMs===2&&settled.amplitude>=24&&settled.amplitude<=36,'stretched settled tick escaped subtle visible-contact bounds');
+  assert(arm.durationMs===1&&arm.amplitude>=2&&arm.amplitude<=4,'stretched armature tick escaped minimum haptic bounds');
+  assert(bounce.durationMs===1&&bounce.amplitude>=1&&bounce.amplitude<=3,'stretched bounce tick escaped minimum haptic bounds');
+  assert(settled.durationMs===1&&settled.amplitude>=1&&settled.amplitude<=2,'stretched settled tick escaped minimum haptic bounds');
   assert(JSON.stringify(bounce)===JSON.stringify(model.contactHapticSignatureFor(row,bit,true,'bounce')),'contact tick identity is not deterministic');
 }
 
