@@ -4,7 +4,7 @@ This project separates source-backed AGC/DSKY behavior from acoustic simulation.
 
 ## Block II relay topology
 
-MIT report R-700 describes the Block II DSKY as a relay-decoded electroluminescent display. Output channel 10 supplies a 15-bit parallel interface: bits 15-12 select one relay row and bits 11-1 set or reset the 11 latching relays in that selected row.
+MIT report R-700 describes the Block II DSKY as a relay-decoded electroluminescent display. Output channel 10 supplies a 15-bit parallel interface: bits 15-12 select one relay row and bits 11-1 carry up to 11 relay commands. The electrical word is 11 bits wide, but the physical matrix is not dense: exactly 120 latching relay positions are populated across the 12 rows.
 
 Five bistable relays encode each decimal digit. Their multiple contacts form the hard-wired decoder between the five-bit AGC digit code and the seven visible EL segments; the seven segments are therefore not modeled as seven independent relays. The eleventh relay in a display row may control a sign or discrete. R-700 gives the DSKY total as 120 latching relays plus 12 non-latching relays, with some relays serving spacecraft-interface functions rather than visible DSKY indications.
 
@@ -26,7 +26,7 @@ All values above are octal.
 
 The channel-10 display-selector matrix is shared by both the synthetic phone-clock relay encoder and the authentic AGC decoder. There is intentionally no second `CLOCK_GROUPS` topology. Relay 8 has only its right/D five-relay bank connected to a visible numerical position (R1D1); relay selectors 7/6, 5/4 and 2/1 latch the independent plus/minus sign states for R1, R2 and R3.
 
-A field being visually unconnected does not imply that its physical relays never move. Luminary V35 is the important case: `FULLDSP` commands the digit-8 code into both five-relay banks of every numerical row, including relay 8's visually unused C bank. The frontend decoder still ignores that C field for rendering, while the physical relay-state/click model retains it.
+An output bit being present in a channel-10 word does not prove a relay exists behind it. Row 8 is the important counterexample: only its D/K1-K5 bank is physically populated for R1D1; the C bank and B position have no latching relays. AGC software may write those unused bit positions, but the physical relay/contact/audio/haptic model must ignore them.
 
 Unsupported five-bit character patterns are not treated as blank. The decoder rejects an invalid relay word, leaves the last good latched/displayed state unchanged, and records one diagnostic per unique bad word/detail. This follows VirtualAGC's treatment of non-table character patterns as I/O errors rather than inventing a display glyph.
 
@@ -45,13 +45,13 @@ The clock-mode hardware emulator therefore uses:
 
 The 11 relays in the selected row are electrically commanded in parallel. The model must never present the audible cascade as serial AGC electrical drive.
 
-## Acoustic model
+## Physical relay timing and acoustic model
 
-Physical armatures and contacts need not land at the exact same instant even when their coils are commanded together. To reproduce the short irregular relay rattle heard from restored DSKY hardware, the app distributes individual changed-relay contact snaps across the documented 20 ms drive window.
+The 20 ms HANG20 interval is the selected-bank coil-drive/settle window; it is **not** the armature travel time. SCD 1006282 for the magnetic-latching relay specifies operate time <=3 ms, release time <=3 ms, transfer time <=1 ms, and contact bounce <=2 ms. Every one of the 120 populated latching-relay profiles is therefore constrained to those limits.
 
-That within-bank mechanical scatter is an **acoustic heuristic**, not a measured Apollo relay timing specification. The historical 20/40/120 ms electrical/software timing is kept separate from the sound-calibration constants.
+The app retains deterministic relay-to-relay variation for presentation, but that variation is explicitly synthetic within the SCD envelope; it is not claimed to be serial-number-specific measurement data from the flight relays. Sound, haptic, modeled contact bounce and rendered contact projection all derive from the same relay transition profile.
 
-Both setting and resetting a bistable relay are mechanical transitions and can produce a click. A modeled non-latching relay can also produce a mechanical event on energize and release.
+Both setting and resetting a bistable relay are mechanical transitions and can produce a click. The 12 non-latching 1010784/2004689 relays are separately enumerated and coupled to their actual functional sources. Their exact mechanical timing remains **unverified** until the 1010784 SCD timing table can be inspected; the model must not present the current auxiliary timing spread as measured Apollo data.
 
 ## V35 DSKY light test
 
@@ -95,9 +95,10 @@ The synthetic relay model also accounts for the mechanical transition into and o
 - valid blank code 000 versus invalid five-bit codes;
 - malformed-word state preservation and rate-limited diagnostics;
 - shared phone-clock/AGC relay topology;
-- channel 011 and synthetic channel 0163 mappings.
+- the exact 120-position physical matrix mask, including the 12 nonexistent dense-matrix positions;
+- all 12 non-latching relay identities and their source channels/effective hardware signals.
 
-`tools/v35-model-smoke.js` loads the effective `app.js` + `app-refine.js` behavior and checks the source-backed `FULLDSP`/`FULLDSP1` low-11 relay words on every numerical selector, including relay 8's unused C bank, plus-sign rows, 5-second duration, synthetic-clock COMP exclusion, relay-12 mask, and 1.28-second/75% flash model.
+`tools/v35-model-smoke.js` guards the current V35 authority boundary and relay model: real V35 remains user DSKY input -> yaAGC/Comanche055 -> output channels; PHONE CLOCK and diagnostics cannot synthesize it. The test also requires the physical-inventory/SCD-1006282 latching model.
 
 `tools/app-refine-smoke.js` checks the V35 input lock, natural/RSET return to V16 N65, clock-to-V35-to-clock physical relay deltas, mission cleanup, read-only relay snapshots, and raw channel `011`/`0163` diagnostic snapshots.
 
