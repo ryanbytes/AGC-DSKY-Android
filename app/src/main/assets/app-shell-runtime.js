@@ -17,6 +17,7 @@ shellState.selectedMission='comanche055';
 shellState.dreamMode=store.get('dreamMode')||(oldDreamBright?'bright':'dim');
 shellState.dim=store.get('dim')==='1';
 shellState.tickSound=store.get('audioTickV4')!=='0';
+shellState.relayHaptics=store.get('relayHapticsV1')!=='0';
 shellState.displayOnly=shellState.dream||store.get('displayOnly')==='1';
 store.set('agcMission','comanche055');
 const restoreAgcOnLoad=!shellState.dream&&store.get('runMode')!=='clock';
@@ -118,13 +119,18 @@ function updateModeButton(){
   b.disabled=busy;
   b.setAttribute('aria-pressed',mode==='agc'?'true':'false');
 }
+function updateHapticsButton(){
+  const b=$('haptics');if(!b)return;
+  b.textContent=shellState.relayHaptics?'HAPTICS ON':'HAPTICS OFF';
+  b.setAttribute('aria-pressed',shellState.relayHaptics?'true':'false');
+}
 function updateDreamOptionVisibility(){
   const b=$('dreambright');if(!b)return;
   b.hidden=!(window.TimeBridge&&!shellState.dream);
 }
 function showControls(){
   if(shellState.dream||shellState.displayOnly)return;
-  updateModeButton();updateDreamOptionVisibility();
+  updateModeButton();updateHapticsButton();updateDreamOptionVisibility();
   document.body.classList.add('controls-visible');
 }
 function hideControls(){document.body.classList.remove('controls-visible')}
@@ -180,6 +186,7 @@ function initializeAppShell(api,services){
   $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;environment.applyDim();showControls()});
   $('dreambright').addEventListener('click',()=>{environment.cycleDreamMode();showControls()});
   $('sound').addEventListener('click',()=>{shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)requestRelayAudioStart(true);showControls()});
+  $('haptics').addEventListener('click',()=>{shellState.relayHaptics=!shellState.relayHaptics;store.set('relayHapticsV1',shellState.relayHaptics?'1':'0');updateHapticsButton();showControls()});
   $('display').addEventListener('click',()=>{shellState.displayOnly=true;environment.applyDisplayOnly()});
   $('mode-toggle').addEventListener('click',()=>{
     if(shellState.mode==='agc-loading'||shellState.mode==='relay-show')return;
@@ -194,7 +201,7 @@ function initializeAppShell(api,services){
     document.body.classList.add('first-run');
     setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200);
   }
-  updateModeButton();updateDreamOptionVisibility();refreshTimeStatus();environment.applyDim();environment.applyDreamMode();environment.applyDisplayOnly();audio.applySetting();applyMissionButton();renderer.clearLamps();renderer.set2('prog','00');show(shellState.verb,shellState.noun);clock.syncFace();
+  updateModeButton();updateHapticsButton();updateDreamOptionVisibility();refreshTimeStatus();environment.applyDim();environment.applyDreamMode();environment.applyDisplayOnly();audio.applySetting();applyMissionButton();renderer.clearLamps();renderer.set2('prog','00');show(shellState.verb,shellState.noun);clock.syncFace();
   setInterval(clock.tick,20);
   setInterval(refreshTimeStatus,60000);
   addEventListener('online',()=>{browserTimeLastAttemptMs=0;void syncBrowserNetworkTime(true)},{passive:true});
@@ -225,6 +232,7 @@ window.AGCDSKY_SHELL=Object.freeze({
   rememberRunMode,
   cycleMission,
   updateModeControl:updateModeButton,
+  updateHapticsControl:updateHapticsButton,
   showControls,
   initialize:initializeAppShell
 });
