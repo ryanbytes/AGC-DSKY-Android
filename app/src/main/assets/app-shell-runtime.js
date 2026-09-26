@@ -186,7 +186,7 @@ function initializeAppShell(api,services){
   $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;environment.applyDim();showControls()});
   $('dreambright').addEventListener('click',()=>{environment.cycleDreamMode();showControls()});
   $('sound').addEventListener('click',()=>{shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)requestRelayAudioStart(true);showControls()});
-  $('haptics').addEventListener('click',()=>{shellState.relayHaptics=!shellState.relayHaptics;store.set('relayHapticsV1',shellState.relayHaptics?'1':'0');updateHapticsButton();showControls()});
+  const hapticsButton=$('haptics');if(hapticsButton)hapticsButton.addEventListener('click',()=>{shellState.relayHaptics=!shellState.relayHaptics;store.set('relayHapticsV1',shellState.relayHaptics?'1':'0');updateHapticsButton();showControls()});
   $('display').addEventListener('click',()=>{shellState.displayOnly=true;environment.applyDisplayOnly()});
   $('mode-toggle').addEventListener('click',()=>{
     if(shellState.mode==='agc-loading'||shellState.mode==='relay-show')return;
