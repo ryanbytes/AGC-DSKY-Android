@@ -48,10 +48,14 @@ for(const marker of [
 ]) assert(driver.includes(marker),'device V35 proof path missing: '+marker);
 
 for(const token of [
-  'const DRIVE_ENVELOPE_MS = 20;','MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS',
-  'setTravelMs','resetTravelMs','setStableMs','resetStableMs','setBounceTimesMs','resetBounceTimesMs',
-  'poleSkewUs','contactTraceFor','deterministic-per-relay-set-reset-bounce-v1'
+  'const DRIVE_ENVELOPE_MS=20;','const LATCHING_RELAY_COUNT=inventory.latchingRelayCount;',
+  'const LATCH_BOUNCE_MAX_MS=2.0;','setTravelMs','resetTravelMs','setStableMs','resetStableMs',
+  'setBounceTimesMs','resetBounceTimesMs','poleSkewUs','contactTraceFor',
+  "timingEvidence:latching?'SCD-1006282-bounded':'1010784-timing-unverified'",
+  "relayManufacturingModel='physical-inventory-scd1006282-bounded-v2'"
 ]) assert(relayAudio.includes(token),'relay manufacturing model missing '+token);
+assert(relayAudio.includes('latchingOperateMaxMs:3')&&relayAudio.includes('latchingReleaseMaxMs:3')&&relayAudio.includes('latchingBounceMaxMs:LATCH_BOUNCE_MAX_MS'),
+  'SCD 1006282 latching timing limits not published');
 assert(!relayAudio.includes('Math.random('),'relay manufacturing fingerprints must remain deterministic');
 
 const clockIndex=html.indexOf('<script src="phone-clock-runtime.js"></script>');
