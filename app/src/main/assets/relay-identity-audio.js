@@ -71,6 +71,27 @@
   const profileCache=new Map();
   function profileFor(id,ordinal){const key=`${id}|${ordinal}`;if(!profileCache.has(key))profileCache.set(key,profile(id,ordinal));return profileCache.get(key)}
 
+  // Perceptual haptic identity follows the same deterministic mechanical profile
+  // as relay travel/bounce/audio. These are intentionally narrow cues, not a
+  // claim that surviving Apollo documentation specifies handset vibration force.
+  function hapticSignatureFromProfile(p,engaging){
+    const on=!!engaging,travel=on?p.setTravelMs:p.resetTravelMs,stable=on?p.setStableMs:p.resetStableMs,bounces=on?p.setBounceCount:p.resetBounceCount;
+    const travelMin=on?SET_TRAVEL_MIN_MS:RESET_TRAVEL_MIN_MS,travelMax=on?SET_TRAVEL_MAX_MS:RESET_TRAVEL_MAX_MS;
+    const travelNorm=clamp((travel-travelMin)/Math.max(.001,travelMax-travelMin),0,1),tailNorm=clamp((stable-travel)/3.0,0,1),skewNorm=clamp(Math.abs(p.poleSkewUs)/185,0,1),ordinalPhase=((p.ordinal*37+11)%140)/139;
+    const durationMs=Math.round(clamp((on?5.0:4.0)+travelNorm*1.25+tailNorm*.55+ordinalPhase*.35,on?5:4,on?8:7));
+    const amplitude=Math.round(clamp((on?44:36)+travelNorm*7+tailNorm*4+skewNorm*2+Math.min(4,bounces)*.6+(ordinalPhase-.5)*4,on?42:34,on?60:52));
+    return Object.freeze({id:p.id,engaging:on,durationMs,amplitude});
+  }
+  function nativeHapticBridge(){
+    try{const candidate=window.HapticBridge;if(!candidate||typeof candidate.relayImpact!=='function')return null;if(typeof candidate.available==='function'&&!candidate.available())return null;return candidate}catch(_){return null}
+  }
+  function playHapticProfile(p,engaging){
+    const signature=hapticSignatureFromProfile(p,engaging),native=nativeHapticBridge();
+    if(native){try{return native.relayImpact(signature.durationMs,signature.amplitude)!==false}catch(_){}}
+    try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')return navigator.vibrate(signature.durationMs)!==false}catch(_){}
+    return false;
+  }
+
   function buildRelayBuffer(ctx,p,engaging){
     const key=`${ctx.sampleRate}|${p.id}|${engaging?'set':'reset'}`,cached=bufferCache.get(key);if(cached)return cached;
     const sr=ctx.sampleRate,duration=engaging?.0105:.0097,n=Math.max(32,Math.floor(sr*duration)),buffer=ctx.createBuffer(1,n,sr),data=buffer.getChannelData(0),rnd=xorshift32(p.phaseSeed^(engaging?0x53455421:0x52535421));
@@ -111,6 +132,14 @@
     }
     fallbackEmitTick(ctx,when,strength);
   }
+  function playRelayHaptic(row,bit,engaging){
+    row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
+    return playHapticProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging);
+  }
+  function playAuxHaptic(name,engaging){
+    if(!AUX_ORDER.includes(name))return false;
+    return playHapticProfile(profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),!!engaging);
+  }
   function playRelayImpact(row,bit,engaging,strength=.66){
     if(!identityState.tickSound)return false;
     row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
@@ -138,10 +167,12 @@
     settleMsFor:(row,bit)=>{const p=profileFor(relayIdentity(row,bit),relayOrdinal(row,bit));return Math.max(p.setStableMs,p.resetStableMs)},
     profileFor:(row,bit)=>profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),
     contactTraceFor:(row,bit,engaging)=>contactTraceFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
-    playRelayImpact,
+    hapticSignatureFor:(row,bit,engaging)=>hapticSignatureFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
+    playRelayImpact,playRelayHaptic,
     auxiliaryNames:Object.freeze(AUX_ORDER.slice()),
     auxiliaryProfileFor:name=>profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),
     auxiliaryContactTraceFor:(name,engaging)=>contactTraceFromProfile(profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),!!engaging),
-    playAuxImpact
+    auxiliaryHapticSignatureFor:(name,engaging)=>hapticSignatureFromProfile(profileFor(`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,auxOrdinal(name)),!!engaging),
+    playAuxImpact,playAuxHaptic
   });
 })();
