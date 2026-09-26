@@ -77,7 +77,8 @@
     for(const [name,requested] of Object.entries(next||{})){
       if(!Object.prototype.hasOwnProperty.call(hw.auxRelays,name))continue;
       const on=!!requested;hw.auxRelays[name]=on;
-      if(render&&AUX_VISUAL[name])renderer.setLamp(AUX_VISUAL[name],on);
+      if(render&&name==='flash')document.body.classList.toggle('vn-flash-off',on);
+      else if(render&&AUX_VISUAL[name])renderer.setLamp(AUX_VISUAL[name],on);
     }
   }
   function setAuxRelays(next,render=true){
@@ -131,14 +132,17 @@
 
   function hardwareDecodeChannel11(value){
     const word=Number(value)&0o77777;display.setChannelState(0o11,word,{render:false});
-    setAuxRelays({comp:!!(word&0o00002),uplink:!!(word&0o00004),flash:!!(word&0o00040)},true);return true;
+    // Channel 011 bit 040 is the AGC command requesting VERB/NOUN flash.
+    // yaAGC's channel 0163 bit 040 is the hardware-phase output that actually
+    // changes the DSKY face, so FLASH relay presentation belongs to 0163.
+    setAuxRelays({comp:!!(word&0o00002),uplink:!!(word&0o00004)},true);return true;
   }
   display.installImplementation('decodeChannel11',hardwareDecodeChannel11,'hardware auxiliary relays');
 
   function hardwareDecodeChannel163(value){
     const word=Number(value)&0o77777;display.setChannelState(0o163,word,{render:false});
-    document.body.classList.toggle('vn-flash-off',!!(word&0o00040));document.body.classList.toggle('el-off',!!(word&0o01000));
-    setAuxRelays({temp:!!(word&0o00010),keyrel:!!(word&0o00020),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);return true;
+    document.body.classList.toggle('el-off',!!(word&0o01000));
+    setAuxRelays({temp:!!(word&0o00010),keyrel:!!(word&0o00020),flash:!!(word&0o00040),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);return true;
   }
   display.installImplementation('decodeChannel163',hardwareDecodeChannel163,'hardware pulse-modulated auxiliaries');
 
