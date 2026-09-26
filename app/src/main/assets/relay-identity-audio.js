@@ -80,8 +80,8 @@
     const on=!!engaging,travel=on?p.setTravelMs:p.resetTravelMs,stable=on?p.setStableMs:p.resetStableMs,bounces=on?p.setBounceCount:p.resetBounceCount;
     const travelMin=on?SET_TRAVEL_MIN_MS:RESET_TRAVEL_MIN_MS,travelMax=on?SET_TRAVEL_MAX_MS:RESET_TRAVEL_MAX_MS;
     const travelNorm=clamp((travel-travelMin)/Math.max(.001,travelMax-travelMin),0,1),tailNorm=clamp((stable-travel)/3.0,0,1),skewNorm=clamp(Math.abs(p.poleSkewUs)/185,0,1),ordinalPhase=((p.ordinal*37+11)%140)/139;
-    const durationMs=Math.round(clamp((on?9.0:7.0)+travelNorm*(on?3.8:3.0)+tailNorm*1.4+ordinalPhase*.8,on?9:7,on?15:12));
-    const amplitude=Math.round(clamp((on?96:68)+travelNorm*(on?42:32)+tailNorm*(on?18:14)+skewNorm*8+Math.min(4,bounces)*2.5+(ordinalPhase-.5)*18,on?90:62,on?170:128));
+    const durationMs=Math.round(clamp((on?10.5:6.5)+travelNorm*(on?3.5:2.4)+tailNorm*(on?1.2:1.0)+ordinalPhase*(on?.8:.6),on?11:7,on?16:10));
+    const amplitude=Math.round(clamp((on?112:60)+travelNorm*(on?40:28)+tailNorm*(on?16:10)+skewNorm*(on?8:6)+Math.min(4,bounces)*(on?2.5:2.0)+(ordinalPhase-.5)*(on?16:12),on?110:60,on?180:115));
     return Object.freeze({id:p.id,engaging:on,durationMs,amplitude});
   }
   function nativeHapticBridge(){
