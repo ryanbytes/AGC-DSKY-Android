@@ -16,14 +16,20 @@ const generator=read('tools/generate-el-second-frames.js');
 req(model,'static final int BANKS = 12;','native relay bank count');
 req(model,'static final int RELAYS_PER_BANK = 11;','native relays per bank');
 req(model,'static final int CHARACTER_RELAYS = 5;','native character relay count');
+req(model,'static final int PHYSICAL_LATCHING_RELAYS = 120;','physical latching relay count');
 req(model,'static final double DRIVE_ENVELOPE_MS = 20.0;','20-ms drive envelope');
-req(model,'MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS','settle guard');
+req(model,'static final double LATCHING_OPERATE_MAX_MS = 3.0;','SCD 1006282 operate bound');
+req(model,'static final double LATCHING_RELEASE_MAX_MS = 3.0;','SCD 1006282 release bound');
+req(model,'static final double LATCHING_BOUNCE_MAX_MS = 2.0;','SCD 1006282 bounce bound');
+req(model,'private static final int[] PHYSICAL_MASK = {','physical matrix mask');
 req(model,'private static final int[] DIGIT_RELAY = {21, 3, 25, 27, 15, 30, 28, 19, 29, 31};','Comanche decimal relay codes');
 req(model,'final double setTravelMs;','set travel fingerprint');
 req(model,'final double resetTravelMs;','reset travel fingerprint');
 req(model,'final double[] setBounceTimesMs;','set contact bounce');
 req(model,'final double[] resetBounceTimesMs;','reset contact bounce');
 req(model,'final int poleSkewUs;','DPST pole skew');
+req(model,'static boolean isPhysicalRelay(','physical-position predicate');
+req(model,'static int physicalMask(','physical bank mask');
 req(model,'static int low11At(','bank transition sampler');
 req(model,'static String segmentsDuringDigitTransition(','character transition sampler');
 req(model,'return matrixSegments(k1, k2, k2, k3, k3, k4, k5, k5);','settled relay contact matrix');
@@ -60,10 +66,17 @@ for(let i=0;i<10;i++) if(matrix(codes[i])!==expected[i]) fail(`relay code ${code
 // Ensure the declared set/reset ranges plus modeled bounce can never publish a
 // contact as stable beyond the documented 20-ms drive boundary.
 const envelope=Number((model.match(/DRIVE_ENVELOPE_MS = ([0-9.]+);/)||[])[1]);
-const guard=Number((model.match(/CONTACT_GUARD_MS = ([0-9.]+);/)||[])[1]);
 const setMax=Number((model.match(/SET_TRAVEL_MAX_MS = ([0-9.]+);/)||[])[1]);
 const resetMax=Number((model.match(/RESET_TRAVEL_MAX_MS = ([0-9.]+);/)||[])[1]);
-if(!(envelope===20&&guard>0&&setMax<envelope&&resetMax<envelope)) fail('relay timing bounds escaped 20-ms envelope');
+const operateMax=Number((model.match(/LATCHING_OPERATE_MAX_MS = ([0-9.]+);/)||[])[1]);
+const releaseMax=Number((model.match(/LATCHING_RELEASE_MAX_MS = ([0-9.]+);/)||[])[1]);
+const bounceMax=Number((model.match(/LATCHING_BOUNCE_MAX_MS = ([0-9.]+);/)||[])[1]);
+if(!(envelope===20&&setMax<=3&&resetMax<=3&&operateMax===3&&releaseMax===3&&bounceMax===2)) fail('SCD 1006282 timing bounds not enforced');
+
+const masks=[0o3777,0o3777,0o1777,0o3777,0o3777,0o3777,0o3777,0o0037,0o1777,0o1777,0o1777,0o0777];
+if(masks.reduce((n,m)=>n+m.toString(2).replace(/0/g,'').length,0)!==120)fail('physical matrix mask does not total 120 latching relays');
+for(const token of ['03777, 03777, 01777, 03777, 03777, 03777','03777, 00037, 01777, 01777, 01777, 00777'])
+  req(model,token,'native physical mask literal');
 
 console.log('Widget relay model smoke: PASS');
-console.log('  12x11 latching banks, Comanche digit codes, K1..K5 contact matrix, persistent set/reset travel, DPST skew, bounce, and 20-ms settled boundary verified');
+console.log('  120 populated latching positions, SCD 1006282 timing bounds, Comanche digit codes, K1..K5 contact matrix, DPST skew/bounce, and separate 20-ms bank envelope verified');
