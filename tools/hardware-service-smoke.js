@@ -6,13 +6,14 @@ const {installServiceRegistry}=require('./test-service-registry');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 
-const stateSource=read('app-state-runtime.js'),hardwareSource=read('hardware-fidelity.js');
+const stateSource=read('app-state-runtime.js'),inventorySource=read('dsky-relay-inventory.js'),hardwareSource=read('hardware-fidelity.js');
 const timers=new Map();let timerId=0,now=0;
 const commits=[],renders=[],lamps=new Map(),channelState=[],classStates=new Map();
 const document={hidden:false,body:{classList:{toggle(name,on){classStates.set(name,!!on)},remove(...names){for(const name of names)classStates.set(name,false)}}}};
 const context={console,window:null,document,performance:{now:()=>now},setTimeout(fn,ms=0){const id=++timerId;timers.set(id,{fn,due:now+Math.max(0,Number(ms)||0)});return id},clearTimeout(id){timers.delete(id)},setInterval(){return 1},clearInterval(){},Object,Map,Set,Number,String,Math,TypeError,Promise};
 context.window=context;installServiceRegistry(context);vm.createContext(context);
 new vm.Script(stateSource,{filename:'app-state-runtime.js'}).runInContext(context);
+new vm.Script(inventorySource,{filename:'dsky-relay-inventory.js'}).runInContext(context);
 const state=context.AGCDSKY_APP_STATE;
 state.mode='agc';state.tickSound=false;
 
@@ -53,7 +54,7 @@ context.AGCDSKY_CLOCK={
   syncFace:()=>{},
   tick:()=>{}
 };
-const displaySlots={decodeChannel10:()=>{},decodeChannel11:()=>{},decodeChannel13:()=>{},decodeChannel163:()=>{},resetFace:()=>{}};
+const displaySlots={decodeChannel10:()=>{},decodeChannel11:()=>{},decodeChannel12:()=>{},decodeChannel13:()=>{},decodeChannel163:()=>{},resetFace:()=>{}};
 context.AGCDSKY_DISPLAY={
   commitRelayWord:(relay,word,options)=>{commits.push({relay,word,render:options&&options.render,at:now});return true},
   setChannelState:(channel,value,options)=>{channelState.push({channel,value,render:!!(options&&options.render),at:now});return true},
@@ -65,7 +66,7 @@ new vm.Script(hardwareSource,{filename:'hardware-fidelity.js'}).runInContext(con
 const hardware=context.AGCDSKY_HARDWARE,display=context.AGCDSKY_DISPLAY,clock=context.AGCDSKY_CLOCK;
 assert(hardware&&Object.isFrozen(hardware),'hardware service missing/mutable');
 assert(hardware.relayDriveMs===20&&hardware.dirtyRowStartMs===40,'hardware timing constants changed');
-for(const name of ['decodeChannel10','decodeChannel11','decodeChannel163','resetFace'])assert(typeof display.implementation(name)==='function',`hardware did not install ${name} through display service`);
+for(const name of ['decodeChannel10','decodeChannel11','decodeChannel12','decodeChannel163','resetFace'])assert(typeof display.implementation(name)==='function',`hardware did not install ${name} through display service`);
 for(const name of ['stopQueue','runQueue'])assert(typeof clock.implementation(name)==='function',`hardware did not install ${name} through clock service`);
 commits.length=0;timers.clear();now=0;
 
@@ -78,16 +79,24 @@ assert(first&&first.due===20,'channel 010 settle callback is not 20 ms');
 runNext();
 assert(commits.length===1&&commits[0].relay===10&&commits[0].word===0o123&&commits[0].render===true&&commits[0].at===20,'20-ms settled relay commit changed');
 
-display.implementation('decodeChannel11')(0o46);
-assert(channelState.some(item=>item.channel===0o11&&item.value===0o46&&item.render===false),'channel 011 raw state must update without bypassing relay contacts');
+display.implementation('decodeChannel11')(0o47);
+assert(channelState.some(item=>item.channel===0o11&&item.value===0o47&&item.render===false),'channel 011 raw state must update without bypassing relay contacts');
 assert(lamps.get('comp')===true&&lamps.get('uplink')===true,'auxiliary relay fallback did not project channel 011 lamps');
+assert(hardware.snapshot().auxRelays.isswarn===true,'ISS WARNING non-latching relay missing from channel 011 bit 1');
 assert(hardware.snapshot().auxRelays.flash===false,'channel 011 flash command must not masquerade as the physical FLASH relay');
-display.implementation('decodeChannel163')(0o770);
-assert(channelState.some(item=>item.channel===0o163&&item.value===0o770&&item.render===false),'channel 0163 raw state must update without bypassing relay contacts');
+
+display.implementation('decodeChannel12')(0o30000);
+assert(channelState.some(item=>item.channel===0o12&&item.value===0o30000&&item.render===false),'channel 012 raw state must update without bypassing relay contacts');
+assert(hardware.snapshot().auxRelays.injseq===true&&hardware.snapshot().auxRelays.cutoff===true,'INJ SEQ START/CUTOFF non-latching relays missing from channel 012');
+
+display.implementation('decodeChannel163')(0o771);
+assert(channelState.some(item=>item.channel===0o163&&item.value===0o771&&item.render===false),'channel 0163 raw state must update without bypassing relay contacts');
 assert(lamps.get('temp')===true&&lamps.get('keyrel')===true&&lamps.get('oprerr')===true&&lamps.get('restart')===true&&lamps.get('stby')===true,'auxiliary relay fallback did not project channel 0163 lamps');
+assert(hardware.snapshot().auxRelays.circuit===true,'CIRCUIT/CGC warning non-latching relay missing from effective channel 0163 bit 1');
 assert(hardware.snapshot().auxRelays.flash===true&&classStates.get('vn-flash-off')===true,'channel 0163 flash-off phase must drive the modeled FLASH relay and visible blanking together');
 display.implementation('decodeChannel163')(0o730);
 assert(hardware.snapshot().auxRelays.flash===false&&classStates.get('vn-flash-off')===false,'channel 0163 flash-on phase must release the modeled FLASH relay and visible blanking together');
+assert(Object.keys(hardware.snapshot().auxRelays).length===12,'hardware snapshot does not enumerate all 12 non-latching relays');
 
 const removePolicy=hardware.registerSettledPaintPolicy('test',()=>false);
 display.implementation('decodeChannel10')((9<<11)|0o456);
@@ -99,11 +108,11 @@ const diagnostic=hardware.snapshot();
 assert(diagnostic.testExtension===true&&diagnostic.latches[10]===0o123&&diagnostic.latches[9]===0o456,'hardware diagnostic extension/latches changed');
 assert(!hardwareSource.includes('window.AGCDSKY.hardware ='),'hardware source must not patch public facade');
 assert(hardwareSource.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE'"),'hardware service must publish explicitly through the registry');
-for(const name of ['decodeChannel10','decodeChannel11','decodeChannel163','resetFace'])assert(hardwareSource.includes(`display.installImplementation('${name}'`),`hardware display-service registration missing: ${name}`);
+for(const name of ['decodeChannel10','decodeChannel11','decodeChannel12','decodeChannel163','resetFace'])assert(hardwareSource.includes(`display.installImplementation('${name}'`),`hardware display-service registration missing: ${name}`);
 for(const name of ['stopQueue','runQueue'])assert(hardwareSource.includes(`clock.installImplementation('${name}'`),`hardware clock-service registration missing: ${name}`);
 for(const forbidden of ["clock.installImplementation('cancelLampTest'","clock.installImplementation('lampTest'",'hardwareLampTest','scheduleSyntheticRows'])assert(!hardwareSource.includes(forbidden),`hardware retained synthetic V35 hook: ${forbidden}`);
 assert(!hardwareSource.includes('AGCDSKY_COMPAT')&&!hardwareSource.includes('compat.'),'hardware retained direct compatibility-registry dependency');
 assert(hardwareSource.includes('display.commitRelayWord(relay,low11,{render:paint})'),'settled commit marker missing');
 
 console.log('hardware service smoke: PASS');
-console.log('  explicit hardware-service publication, normal clock queue hooks, no synthetic V35 hook, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
+console.log('  20-ms bank envelope, physical matrix masking, all 12 non-latching source relays including channel 012, settled commits, and service publication verified');
