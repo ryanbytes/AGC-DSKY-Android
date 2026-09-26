@@ -72,16 +72,16 @@
   function profileFor(id,ordinal){const key=`${id}|${ordinal}`;if(!profileCache.has(key))profileCache.set(key,profile(id,ordinal));return profileCache.get(key)}
 
   // Perceptual haptic identity follows the same deterministic mechanical profile
-  // as relay travel/bounce/audio. Device testing showed the original 4-8 ms /
-  // low-amplitude range collapsed perceptually on Pixel hardware, so this mapping
-  // preserves the same identity inputs with a wider perceptual range. This is not
-  // a claim that surviving Apollo documentation specifies handset vibration force.
+  // as relay travel/bounce/audio. With bank-level waveform composition preventing
+  // overwrite, the tactile mapping can stay intentionally small and crisp instead
+  // of notification-like. This is not a claim that surviving Apollo documentation
+  // specifies handset vibration force.
   function hapticSignatureFromProfile(p,engaging){
     const on=!!engaging,travel=on?p.setTravelMs:p.resetTravelMs,stable=on?p.setStableMs:p.resetStableMs,bounces=on?p.setBounceCount:p.resetBounceCount;
     const travelMin=on?SET_TRAVEL_MIN_MS:RESET_TRAVEL_MIN_MS,travelMax=on?SET_TRAVEL_MAX_MS:RESET_TRAVEL_MAX_MS;
     const travelNorm=clamp((travel-travelMin)/Math.max(.001,travelMax-travelMin),0,1),tailNorm=clamp((stable-travel)/3.0,0,1),skewNorm=clamp(Math.abs(p.poleSkewUs)/185,0,1),ordinalPhase=((p.ordinal*37+11)%140)/139;
-    const durationMs=Math.round(clamp((on?10.5:6.5)+travelNorm*(on?3.5:2.4)+tailNorm*(on?1.2:1.0)+ordinalPhase*(on?.8:.6),on?11:7,on?16:10));
-    const amplitude=Math.round(clamp((on?112:60)+travelNorm*(on?40:28)+tailNorm*(on?16:10)+skewNorm*(on?8:6)+Math.min(4,bounces)*(on?2.5:2.0)+(ordinalPhase-.5)*(on?16:12),on?110:60,on?180:115));
+    const durationMs=Math.round(clamp((on?3.0:2.0)+travelNorm*(on?1.15:.8)+tailNorm*.35+ordinalPhase*.30,on?3:2,on?5:4));
+    const amplitude=Math.round(clamp((on?44:32)+travelNorm*(on?16:12)+tailNorm*(on?6:5)+skewNorm*4+Math.min(4,bounces)*(on?1.4:1.1)+(ordinalPhase-.5)*(on?10:8),on?40:28,on?72:56));
     return Object.freeze({id:p.id,engaging:on,durationMs,amplitude});
   }
   function hapticPatternFromProfile(p,engaging,atMs=0){
@@ -93,9 +93,9 @@
       for(let i=0;i<reboundCount;i++){
         const index=reboundCount===1?source.length-1:Math.round(i*(source.length-1)/(reboundCount-1));
         const physicalOffset=Math.max(0,Number(source[index])||0),normalized=clamp(physicalOffset/Math.max(.01,windowMs),0,1);
-        const gapMs=(on?7:6)+Math.round(normalized*(on?12:9))+i*(on?2:1);
-        const durationMs=Math.max(3,Math.min(6,Math.round((on?4.5:3.5)+(Math.abs(p.poleSkewUs)/185)*.8-i*.45)));
-        const amplitude=Math.round(clamp(signature.amplitude*(on?.44:.38)*Math.pow(.72,i),on?48:40,on?92:72));
+        const gapMs=(on?3:3)+Math.round(normalized*(on?7:5))+i;
+        const durationMs=Math.max(1,Math.min(2,Math.round((on?1.35:1.15)+(Math.abs(p.poleSkewUs)/185)*.55-i*.20)));
+        const amplitude=Math.round(clamp(signature.amplitude*(on?.42:.36)*Math.pow(.70,i),on?14:12,on?30:24));
         pulses.push(Object.freeze({atMs:baseAt+signature.durationMs+gapMs,durationMs,amplitude,kind:'rebound',sourceBounceIndex:index,physicalOffsetMs:physicalOffset}));
       }
     }
