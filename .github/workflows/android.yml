@@ -152,3 +152,27 @@ jobs:
           path: app/build/outputs/apk/regular/installfix/app-regular-installfix.apk
           if-no-files-found: error
           retention-days: 30
+
+
+  export-build-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android Build Tools 36
+        run: sdkmanager 'build-tools;36.0.0'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Android-Build-Tools-36-signing-utils
+          path: |
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools/36.0.0/apksigner
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools/36.0.0/lib/apksigner.jar
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools/36.0.0/zipalign
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools/36.0.0/aapt
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools/36.0.0/lib64/libc++.so
+          if-no-files-found: error
+          retention-days: 1
