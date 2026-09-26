@@ -16,6 +16,7 @@
       dreamMode:'dim',
       dim:false,
       tickSound:true,
+      relayHaptics:true,
       displayOnly:false,
       appVisible:!document.hidden,
       ntpStatus:{
