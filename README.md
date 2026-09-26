@@ -49,6 +49,8 @@ bash tools/build-local.sh
 
 The build verifies the pinned webAGC revision and packaged `yaAGC.wasm` / `Comanche055.bin` identities before packaging.
 
+For the exhaustive relay topology and source-routing index, see [docs/RELAY_CODE_MAP.md](docs/RELAY_CODE_MAP.md).
+
 ## Privacy, licensing, and distribution
 
 The Android/frontend project is **GNU GPL version 2**. GPLv2 permits selling copies, but recipients retain the GPL rights to source, modification, and redistribution.
