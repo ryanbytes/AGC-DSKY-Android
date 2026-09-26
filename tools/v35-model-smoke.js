@@ -1,12 +1,63 @@
 #!/usr/bin/env node
 'use strict';
-const fs=require('fs'),path=require('path'),vm=require('vm');const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');function assert(c,m){if(!c)throw new Error(m)}
-const shell=read('app-shell-runtime.js'),api=read('agc-api-runtime.js'),clock=read('phone-clock-runtime.js'),fidelity=read('hardware-fidelity.js'),relayAudio=read('relay-identity-audio.js'),html=read('index.html');
-function literal(source,name){const pattern=new RegExp('const\\s+'+name+'\\s*=\\s*(?:Object\\.freeze\\()?'+ '(\\{[\\s\\S]*?\\}|\\[[\\s\\S]*?\\])\\)?;');const match=source.match(pattern);assert(match,`could not locate ${name}`);return vm.runInNewContext('('+match[1]+')')}
-const digitRelay=literal(clock,'DIGIT_RELAY_VALUE');assert(digitRelay['8']===0o35,'V35 digit 8 relay code changed');assert(clock.includes("compat.readonly('DIGIT_RELAY',()=>DIGIT_RELAY_VALUE)"),'digit-relay table must remain compatibility-readable');assert(!shell.includes('DIGIT_RELAY_VALUE')&&!api.includes('DIGIT_RELAY_VALUE'),'non-clock runtime regained synthetic digit-table ownership');
-const lowStart=clock.indexOf('function v35Low11(relay)'),lowEnd=clock.indexOf('function captureClockRelayState',lowStart);assert(lowStart>=0&&lowEnd>lowStart,'could not isolate v35Low11');const lowContext={DIGIT_RELAY_VALUE:digitRelay};vm.createContext(lowContext);vm.runInContext(clock.slice(lowStart,lowEnd)+'\nthis.v35Low11=v35Low11;',lowContext);for(const relay of [11,10,9,8,7,6,5,4,3,2,1]){const expected=[7,5,2].includes(relay)?0o3675:0o1675;assert(lowContext.v35Low11(relay)===expected,`V35 relay ${relay} low-11 changed`)}
-const stateStart=clock.indexOf('function v35RelayState()'),stateEnd=clock.indexOf('function scheduleV35RelaySounds',stateStart);assert(stateStart>=0&&stateEnd>stateStart,'could not isolate v35RelayState');const stateContext={clockState:{selectedMission:'comanche055'},v35Low11:lowContext.v35Low11};vm.createContext(stateContext);vm.runInContext(clock.slice(stateStart,stateEnd)+'\nthis.v35RelayState=v35RelayState;',stateContext);assert(stateContext.v35RelayState()[12]===0o650,'Comanche V35 relay 12 changed');
-assert(clock.includes('V35_ROW_MS=40,V35_TEST_MS=5000'),'clock V35 timing changed');for(const token of ['In AGC mode V35 is not synthesized here','const V35_HOLD_MS=5000','const DSKY_FLASH_QUANTUM_MS=320','state[12]=0o650','relay===2||relay===5||relay===7','AgcCore.prototype.start=function fidelityStart','},4);',"window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE',Object.freeze({"])assert(fidelity.includes(token),`hardware fidelity missing ${token}`);for(const token of ["clock.implementation('cancelLampTest')","clock.installImplementation('cancelLampTest'","clock.installImplementation('lampTest'","clock.installImplementation('runQueue'",'clock.setLampTestActive','clock.setLampTestTimer'])assert(fidelity.includes(token),`V35/clock hardware service registration missing: ${token}`);assert(!fidelity.includes('AGCDSKY_COMPAT')&&!fidelity.includes('compat.'),'hardware fidelity must not bypass clock service through compatibility registry');
-new vm.Script(relayAudio,{filename:'relay-identity-audio.js'});for(const token of ['const DRIVE_ENVELOPE_MS = 20;','MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS','setTravelMs','resetTravelMs','setStableMs','resetStableMs','setBounceTimesMs','resetBounceTimesMs','poleSkewUs','contactTraceFor','playContactBounce','deterministic-per-relay-set-reset-bounce-v1'])assert(relayAudio.includes(token),`relay manufacturing model missing ${token}`);assert(!relayAudio.includes('Math.random('),'relay manufacturing fingerprints must be persistent');assert(relayAudio.includes('hardware.registerSnapshotExtension'),'relay manufacturing diagnostics must extend hardware service explicitly');assert(!relayAudio.includes('window.AGCDSKY.hardware ='),'relay identity must not monkey-patch hardware diagnostics');
-const stateRuntimeIndex=html.indexOf('<script src="app-state-runtime.js"></script>'),clockIndex=html.indexOf('<script src="phone-clock-runtime.js"></script>'),apiIndex=html.indexOf('<script src="agc-api-runtime.js"></script>'),fidelityIndex=html.indexOf('<script src="hardware-fidelity.js"></script>');assert(stateRuntimeIndex>=0&&clockIndex>stateRuntimeIndex&&apiIndex>clockIndex&&fidelityIndex>apiIndex,'state/clock/API/fidelity parser order changed');assert(!fs.existsSync(path.join(ASSETS,'app.js')),'legacy app.js unexpectedly exists');
-console.log('V35 relay model smoke: PASS');console.log('  Comanche V35 values, 120/20/40-ms hardware timing, explicit hardware registry publication, clock-owned override registration, and deterministic relay manufacturing model verified');
+
+const fs=require('fs'),path=require('path'),vm=require('vm');
+const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets');
+const read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
+function assert(c,m){if(!c)throw new Error(m)}
+
+const clock=read('phone-clock-runtime.js');
+const fidelity=read('hardware-fidelity.js');
+const diagnostics=read('diagnostics.js');
+const relayAudio=read('relay-identity-audio.js');
+const driver=fs.readFileSync(path.join(ROOT,'tools/device-v35-smoke.js'),'utf8');
+const html=read('index.html');
+
+new vm.Script(clock,{filename:'phone-clock-runtime.js'});
+new vm.Script(fidelity,{filename:'hardware-fidelity.js'});
+new vm.Script(diagnostics,{filename:'diagnostics.js'});
+new vm.Script(relayAudio,{filename:'relay-identity-audio.js'});
+
+for(const forbidden of [
+  'function v35Low11(','function v35RelayState(','scheduleV35RelaySounds',
+  'V35_ROW_MS','V35_TEST_MS',"querySelectorAll('[data-lamp]')"
+]) assert(!clock.includes(forbidden),'PHONE CLOCK retained synthetic V35 machinery: '+forbidden);
+assert(clock.includes("throw new Error('V35 is an AGC/Comanche operation; PHONE CLOCK cannot synthesize it')"),
+  'PHONE CLOCK must reject V35 explicitly');
+
+for(const forbidden of [
+  'hardwareLampTest','scheduleSyntheticRows','scheduleSyntheticFlash','applySyntheticFlash',
+  'v35Token','v35Flash','v35Direct','V35_HOLD_MS','DSKY_FLASH_QUANTUM_MS',
+  'clock.installImplementation(\'lampTest\''
+]) assert(!fidelity.includes(forbidden),'hardware layer retained synthetic V35 machinery: '+forbidden);
+assert(fidelity.includes('V35 is never synthesized here'),'hardware V35 authority statement missing');
+assert(fidelity.includes("clock.installImplementation('runQueue'"),'normal clock relay queue hook missing');
+assert(!fidelity.includes('state[12]=0o650'),'hardware layer must not manufacture Comanche V35 relay-12 state');
+
+for(const marker of [
+  "appState.mode!=='agc'","USE THE DSKY KEYS: VERB 3 5 ENTR",
+  "REAL V35 · CLOSE AND KEY V 3 5 ENTR"
+]) assert(diagnostics.includes(marker),'diagnostics real-V35 boundary missing: '+marker);
+assert(!/startDskyTest[\s\S]{0,1200}(?:keyMake|keyReset|writeIo|lampTest)/.test(diagnostics),
+  'diagnostics must not inject V35 or synthesize its outputs');
+
+for(const marker of [
+  "mission === 'comanche055'","keySequence(cdp, ['V','3','7','E','0','0','E']",
+  "keySequence(cdp, ['V','3','5','E']",'12:0o0650',
+  'pointer input -> yaAGC/Comanche055 -> raw channels/hardware latches -> DSKY'
+]) assert(driver.includes(marker),'device V35 proof path missing: '+marker);
+
+for(const token of [
+  'const DRIVE_ENVELOPE_MS = 20;','MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS',
+  'setTravelMs','resetTravelMs','setStableMs','resetStableMs','setBounceTimesMs','resetBounceTimesMs',
+  'poleSkewUs','contactTraceFor','deterministic-per-relay-set-reset-bounce-v1'
+]) assert(relayAudio.includes(token),'relay manufacturing model missing '+token);
+assert(!relayAudio.includes('Math.random('),'relay manufacturing fingerprints must remain deterministic');
+
+const clockIndex=html.indexOf('<script src="phone-clock-runtime.js"></script>');
+const apiIndex=html.indexOf('<script src="agc-api-runtime.js"></script>');
+const fidelityIndex=html.indexOf('<script src="hardware-fidelity.js"></script>');
+assert(clockIndex>=0&&apiIndex>clockIndex&&fidelityIndex>apiIndex,'clock/API/hardware parser order changed');
+
+console.log('V35 authority smoke: PASS');
+console.log('  V35 has one authority: user DSKY input -> yaAGC/Comanche055 -> real output channels; PHONE CLOCK and hardware helpers cannot synthesize it');
