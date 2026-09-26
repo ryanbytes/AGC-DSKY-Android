@@ -23,6 +23,7 @@ assert(!coupling.includes('audioModel.playRelayHaptic?.(motion.row,motion.bit,mo
   'per-relay native vibration dispatch returned and can overwrite earlier pulses');
 
 for(const marker of [
+  'RELAY_MIN_MS = 2L','RELAY_MAX_MS = 8L','RELAY_MIN_AMPLITUDE = 12','RELAY_MAX_AMPLITUDE = 96',
   'RELAY_MAX_WAVEFORM_SEGMENTS = 192','RELAY_MAX_WAVEFORM_MS = 750L',
   'relayWaveform(String timingsCsv, String amplitudesCsv)',
   'VibrationEffect.createWaveform(timings, effectAmplitudes, -1)',
@@ -58,6 +59,12 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   assert(set.pulses.length>=2&&set.pulses.length<=4,'set rebound pulse count escaped bounds');
   assert(reset.pulses.length>=2&&reset.pulses.length<=3,'reset rebound pulse count escaped bounds');
   assert(set.pulses[0].kind==='armature'&&reset.pulses[0].kind==='armature','armature pulse missing');
+  assert(set.pulses[0].durationMs>=3&&set.pulses[0].durationMs<=4,'set armature escaped micro-switch duration');
+  assert(set.pulses[0].amplitude>=50&&set.pulses[0].amplitude<=72,'set armature escaped micro-switch amplitude');
+  assert(reset.pulses[0].durationMs>=2&&reset.pulses[0].durationMs<=3,'reset armature escaped micro-switch duration');
+  assert(reset.pulses[0].amplitude>=35&&reset.pulses[0].amplitude<=56,'reset armature escaped micro-switch amplitude');
+  assert(set.pulses.slice(1).every(p=>p.durationMs>=1&&p.durationMs<=2&&p.amplitude>=14&&p.amplitude<=30),'set rebound escaped micro-switch bounds');
+  assert(reset.pulses.slice(1).every(p=>p.durationMs>=1&&p.durationMs<=2&&p.amplitude>=12&&p.amplitude<=20),'reset rebound escaped micro-switch bounds');
   assert(set.pulses.slice(1).every(p=>p.kind==='rebound'),'set rebound labeling changed');
   assert(reset.pulses.slice(1).every(p=>p.kind==='rebound'),'reset rebound labeling changed');
   assert(JSON.stringify(set)===JSON.stringify(model.hapticPatternFor(row,bit,true)),'set haptic pattern is not deterministic');
@@ -74,7 +81,7 @@ const bankEvents=[
 const bank=model.relayBankHapticPatternFor(bankEvents);
 assert(bank.pulseCount>=6,'bank waveform lost relay rebound pulses');
 assert(bank.timings.length===bank.amplitudes.length&&bank.timings.length>3,'bank waveform was not run-length composed');
-assert(bank.totalMs>20&&bank.totalMs<100,'bank waveform perceptual envelope escaped expected range');
+assert(bank.totalMs>15&&bank.totalMs<60,'bank micro-switch envelope escaped expected range');
 assert(bank.amplitudes.some(a=>a===0)&&bank.amplitudes.some(a=>a>0),'bank waveform needs active and quiet segments');
 assert(JSON.stringify(bank)===JSON.stringify(model.relayBankHapticPatternFor(bankEvents)),'bank waveform is not deterministic');
 
@@ -95,4 +102,4 @@ assert(aux.pulses.length>=2,'aux relay rebound pattern missing');
 assert(model.playAuxHaptic('comp',true)===true&&waveformCalls.length===1,'aux waveform dispatch failed');
 
 console.log('relay haptic smoke: PASS');
-console.log('  140 relay identities encode armature + manufactured rebound character; each latching relay bank is sent as one non-overwriting native waveform');
+console.log('  140 relay identities encode short low-energy armature + rebound ticks; each latching relay bank is sent as one non-overwriting micro-switch waveform');
