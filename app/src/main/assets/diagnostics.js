@@ -232,34 +232,16 @@
     pipaTest={running:true,start,timestamp:Date.now(),message:'MOVE PHONE NOW'};if(b)b.textContent='MOVE PHONE · TEST RUNNING';
     clearTimeout(pipaTestTimer);pipaTestTimer=setTimeout(()=>{const end=pipaWords(core),delta=end?end.map((v,i)=>((v-start[i]+16384)&0x7fff)-16384):null;const moved=delta&&delta.some(v=>v!==0);pipaTest={running:false,ok:!!moved,start,end,delta,timestamp:Date.now(),message:moved?'PIPA COUNTERS RESPONDED':'NO PIPA COUNTER CHANGE'};if(b)b.textContent='ARM 5-SECOND PIPA MOTION TEST';update()},5000);update();
   }
-  const wait=ms=>new Promise(resolve=>setTimeout(resolve,Math.max(0,Number(ms)||0)));
-  async function pulseAgcDskyKey(input,key){
-    const map=window.AGCDSKY_KEY_CODES,code=map&&map[key];
-    if(code===undefined)throw new Error('DSKY keycode unavailable: '+key);
-    const accepted=input.keyMake(code);
-    if(!(accepted>0))throw new Error('AGC input busy at '+key);
-    try{await wait(80)}
-    finally{
-      if(input.keyReset()===false)throw new Error('KEYRST failed after '+key);
-    }
-    await wait(45);
-  }
-  async function startDskyTest(){
-    if(dskyTest?.running)return;
+  function startDskyTest(){
     const runtime=lateService('AGCDSKY_RUNTIME'),input=lateService('AGCDSKY_INPUT'),core=coreSession.core;
     if(!runtime||!input||appState.mode!=='agc'||!core||!core.running||!input.ready()){
-      dskyTest={running:false,ok:false,message:'AGC MUST BE RUNNING · V35 IS NOT SYNTHESIZED IN PHONE CLOCK',timestamp:Date.now()};update();return;
+      dskyTest={ok:false,message:'AGC MUST BE RUNNING · V35 IS NOT AVAILABLE IN PHONE CLOCK',timestamp:Date.now()};update();return;
     }
-    dskyTest={running:true,ok:null,message:'ENTERING V35 ENTR THROUGH REAL CHANNEL 015 INPUT',timestamp:Date.now()};update();
-    try{
-      for(const key of ['V','3','5','E'])await pulseAgcDskyKey(input,key);
-      dskyTest={running:false,ok:true,message:'V35 ENTR SENT TO COMANCHE THROUGH CHANNEL 015 · FLIGHT SOFTWARE RESPONSE IS AUTHORITATIVE',timestamp:Date.now()};
-      if(typeof snapshot.scheduleAutosave==='function')snapshot.scheduleAutosave('diagnostic V35 AGC input');
-    }catch(error){
-      dskyTest={running:false,ok:false,message:String(error?.message||error||'V35 INPUT FAILED'),timestamp:Date.now()};
-    }
+    dskyTest={ok:true,message:'USE THE DSKY KEYS: VERB 3 5 ENTR · COMANCHE OUTPUT IS AUTHORITATIVE',timestamp:Date.now()};
     update();
+    close();
   }
+
   function ageText(ms){return ms==null?'---':(ms<1000?Math.round(ms)+' ms':(ms/1000).toFixed(1)+' s')}
   function hzText(h){return Number.isFinite(Number(h))?Number(h).toFixed(1)+' Hz':'---'}
   function updateHardwareActions(phone){
@@ -319,7 +301,7 @@
     }
     h+=row('Mode',String(app.mode||'---').toUpperCase());
     h+=row('Core',app.coreLoaded?`${app.coreVersion||'---'} · ${app.coreRunning?'RUNNING':'SUSPENDED'}`:'not loaded');
-    if(dskyTest)h+=row('AGC V35 input',`${dskyTest.running?'ENTERING':(dskyTest.ok?'SENT':'BLOCKED')} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
+    if(dskyTest)h+=row('AGC V35 test',`${dskyTest.ok?'READY':'BLOCKED'} · ${dskyTest.message}${dskyTest.timestamp?' · '+ageText(Date.now()-dskyTest.timestamp)+' ago':''}`);
     h+=row('PROG / VERB / NOUN',`${(d.prog||[]).join('')||'--'} / ${(d.verb||[]).join('')||'--'} / ${(d.noun||[]).join('')||'--'}`);
     const ch=app.channels||{};h+=row('Channels 011 / 013 / 0163',`${oct(ch.ch011)} / ${oct(ch.ch013)} / ${oct(ch.ch0163)}`);
     h+=section('KEY ELECTRICAL');
@@ -413,7 +395,7 @@
     const canSave=app.mode==='agc'&&app.coreLoaded;
     if(saveBtn){saveBtn.disabled=!canSave;saveBtn.textContent=canSave?'SAVE AGC STATE NOW':'SAVE AGC STATE · AGC MODE ONLY'}
     if(verifyBtn)verifyBtn.disabled=!app.coreLoaded;
-    if(dskyBtn){const ready=app.mode==='agc'&&app.coreLoaded&&app.coreRunning&&!dskyTest?.running;dskyBtn.disabled=!ready;dskyBtn.textContent=dskyTest?.running?'ENTERING V35 ENTR…':(ready?'ENTER V35 ENTR THROUGH AGC':'V35 · AGC MUST BE RUNNING')}
+    if(dskyBtn){const ready=app.mode==='agc'&&app.coreLoaded&&app.coreRunning;dskyBtn.disabled=!ready;dskyBtn.textContent=ready?'REAL V35 · CLOSE AND KEY V 3 5 ENTR':'V35 · AGC MUST BE RUNNING'}
     if(ntpBtn){ntpBtn.disabled=!!ntp.syncInFlight;ntpBtn.textContent=ntp.syncInFlight?'NETWORK TIME SYNCING…':'SYNC NETWORK TIME NOW'}
     if(fullBtn){fullBtn.disabled=fullSelfTestRunning;fullBtn.textContent=fullSelfTestRunning?'FULL SELF-TEST RUNNING…':'RUN FULL DSKY SELF-TEST'}
     updateHardwareActions(phone);
