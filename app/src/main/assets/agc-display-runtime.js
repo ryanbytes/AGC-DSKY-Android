@@ -14,11 +14,11 @@
   if(!compat)throw new Error('Runtime compatibility bridge unavailable');
 
   const agcRelayWordsValue={};
-  let agcCh11Value=0,agcCh13Value=0,agcCh163Value=0;
+  let agcCh11Value=0,agcCh12Value=0,agcCh13Value=0,agcCh163Value=0;
   const RELAY_DIGIT={0:' ',21:'0',3:'1',25:'2',27:'3',15:'4',30:'5',28:'6',19:'7',29:'8',31:'9'};
   const agcDisplayValue={prog:[' ',' '],verb:[' ',' '],noun:[' ',' '],r1:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false},r2:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false},r3:{digits:[' ',' ',' ',' ',' '],plus:false,minus:false}};
-  let relayDigitSlot,renderRegSlot,resetSlot,decode10Slot,decode11Slot,decode13Slot,decode163Slot,applySnapshotSlot;
-  let ch11StateSlot,ch13StateSlot,ch163StateSlot;
+  let relayDigitSlot,renderRegSlot,resetSlot,decode10Slot,decode11Slot,decode12Slot,decode13Slot,decode163Slot,applySnapshotSlot;
+  let ch11StateSlot,ch12StateSlot,ch13StateSlot,ch163StateSlot;
 
   function createImplementationSlot(name,initial,validate=null){
     if(validate&&!validate(initial))throw new TypeError(`Invalid initial display implementation: ${name}`);
@@ -53,7 +53,7 @@
   function regSign(reg){return reg.plus?'+':reg.minus?'-':' '}
   function baseRenderAgcReg(name){const r=agcDisplayValue[name];displayRenderer.setReg(name,regSign(r),r.digits.join(''))}
   function clearDisplayProjection(){agcDisplayValue.prog.fill(' ');agcDisplayValue.verb.fill(' ');agcDisplayValue.noun.fill(' ');for(const name of ['r1','r2','r3']){agcDisplayValue[name].digits.fill(' ');agcDisplayValue[name].plus=false;agcDisplayValue[name].minus=false}}
-  function baseResetAgcFace(){clearDisplayProjection();Object.keys(agcRelayWordsValue).forEach(key=>delete agcRelayWordsValue[key]);agcCh11Value=0;agcCh13Value=0;agcCh163Value=0;displayRenderer.set2('prog','  ');displayRenderer.set2('verb','  ');displayRenderer.set2('noun','  ');['r1','r2','r3'].forEach(name=>renderRegSlot.get()(name));displayRenderer.clearLamps()}
+  function baseResetAgcFace(){clearDisplayProjection();Object.keys(agcRelayWordsValue).forEach(key=>delete agcRelayWordsValue[key]);agcCh11Value=0;agcCh12Value=0;agcCh13Value=0;agcCh163Value=0;displayRenderer.set2('prog','  ');displayRenderer.set2('verb','  ');displayRenderer.set2('noun','  ');['r1','r2','r3'].forEach(name=>renderRegSlot.get()(name));displayRenderer.clearLamps()}
   function projectRelayWord(relay,low11,render=true){
     low11=Number(low11)&0o3777;const b=(low11>>10)&1,c=(low11>>5)&0o37,d=low11&0o37,digit=code=>relayDigitSlot.get()(code);
     switch(Number(relay)){
@@ -75,15 +75,16 @@
   function baseDecodeChannel10(value){const relay=(value>>11)&0o17,low11=value&0o3777;if(relay<1||relay>12)return;const prior=agcRelayWordsValue[relay];if(prior!==undefined&&displayState.tickSound){const n=displayPopcount11(prior^low11);if(n)displayAudio.playBurst(n)}commitRelayWord(relay,low11,{render:true})}
   function updateAgcCompActy(){displayRenderer.setLamp('comp',!!(agcCh11Value&0o00002))}
   function baseDecodeChannel11(value){agcCh11Value=Number(value)&0o77777;updateAgcCompActy();displayRenderer.setLamp('uplink',agcCh11Value&0o00004)}
+  function baseDecodeChannel12(value){agcCh12Value=Number(value)&0o77777}
   function baseDecodeChannel13(value){agcCh13Value=Number(value)&0o77777}
   function baseDecodeChannel163(value){agcCh163Value=Number(value)&0o77777;displayRenderer.setLamp('temp',agcCh163Value&0o00010);displayRenderer.setLamp('keyrel',agcCh163Value&0o00020);document.body.classList.toggle('vn-flash-off',!!(agcCh163Value&0o00040));displayRenderer.setLamp('oprerr',agcCh163Value&0o00100);displayRenderer.setLamp('restart',agcCh163Value&0o00200);displayRenderer.setLamp('stby',agcCh163Value&0o00400);document.body.classList.toggle('el-off',!!(agcCh163Value&0o01000))}
-  function setChannelState(channel,value,{render=false}={}){value=Number(value)&0o77777;if(channel===0o11){if(render)return decode11Slot.get()(value);agcCh11Value=value;return true}if(channel===0o13){agcCh13Value=value;return true}if(channel===0o163){if(render)return decode163Slot.get()(value);agcCh163Value=value;return true}return false}
-  function onAgcChannelImpl(channel,value){if(displayState.mode!=='agc'&&displayState.mode!=='agc-loading')return;if(channel===0o10)decode10Slot.get()(value);else if(channel===0o11)decode11Slot.get()(value);else if(channel===0o13)decode13Slot.get()(value);else if(channel===0o163)decode163Slot.get()(value)}
+  function setChannelState(channel,value,{render=false}={}){value=Number(value)&0o77777;if(channel===0o11){if(render)return decode11Slot.get()(value);agcCh11Value=value;return true}if(channel===0o12){if(render)return decode12Slot.get()(value);agcCh12Value=value;return true}if(channel===0o13){agcCh13Value=value;return true}if(channel===0o163){if(render)return decode163Slot.get()(value);agcCh163Value=value;return true}return false}
+  function onAgcChannelImpl(channel,value){if(displayState.mode!=='agc'&&displayState.mode!=='agc-loading')return;if(channel===0o10)decode10Slot.get()(value);else if(channel===0o11)decode11Slot.get()(value);else if(channel===0o12)decode12Slot.get()(value);else if(channel===0o13)decode13Slot.get()(value);else if(channel===0o163)decode163Slot.get()(value)}
   function renderAgcSnapshotImpl(){displayRenderer.clearLamps();displayRenderer.set2('prog',agcDisplayValue.prog.join(''));displayRenderer.set2('verb',agcDisplayValue.verb.join(''));displayRenderer.set2('noun',agcDisplayValue.noun.join(''));['r1','r2','r3'].forEach(name=>renderRegSlot.get()(name));projectRelayWord(12,agcRelayWordsValue[12]||0,true);updateAgcCompActy();displayRenderer.setLamp('uplink',agcCh11Value&0o00004);decode163Slot.get()(agcCh163Value)}
-  function snapshotUiStateImpl(){return{display:JSON.parse(JSON.stringify(agcDisplayValue)),relayWords:{...agcRelayWordsValue},ch11:agcCh11Value,ch13:agcCh13Value,ch163:agcCh163Value}}
+  function snapshotUiStateImpl(){return{display:JSON.parse(JSON.stringify(agcDisplayValue)),relayWords:{...agcRelayWordsValue},ch11:agcCh11Value,ch12:agcCh12Value,ch13:agcCh13Value,ch163:agcCh163Value}}
   function snapshotWord(words,row){if(!words||typeof words!=='object')throw new Error('snapshot UI is missing authoritative relay words');const has=Object.prototype.hasOwnProperty.call(words,row)||Object.prototype.hasOwnProperty.call(words,String(row));if(!has)return 0;const value=Number(Object.prototype.hasOwnProperty.call(words,row)?words[row]:words[String(row)]);if(!Number.isFinite(value))throw new Error(`snapshot relay row ${row} is invalid`);return value&0o3777}
-  function baseApplySnapshotUi(ui){if(!ui||typeof ui!=='object'||!ui.relayWords||typeof ui.relayWords!=='object')throw new Error('snapshot UI is missing authoritative relay words');clearDisplayProjection();Object.keys(agcRelayWordsValue).forEach(k=>delete agcRelayWordsValue[k]);for(let row=1;row<=12;row++){if(Object.prototype.hasOwnProperty.call(ui.relayWords,row)||Object.prototype.hasOwnProperty.call(ui.relayWords,String(row))){const word=snapshotWord(ui.relayWords,row);agcRelayWordsValue[row]=word;projectRelayWord(row,word,false)}}agcCh11Value=Number(ui.ch11)&0o77777;agcCh13Value=Number(ui.ch13)&0o77777;agcCh163Value=Number(ui.ch163)&0o77777;return true}
-  function agcDisplayStatus(){return{channels:{ch011:agcCh11Value,ch013:agcCh13Value,ch0163:agcCh163Value},display:JSON.parse(JSON.stringify(agcDisplayValue)),relayWords:{...agcRelayWordsValue}}}
+  function baseApplySnapshotUi(ui){if(!ui||typeof ui!=='object'||!ui.relayWords||typeof ui.relayWords!=='object')throw new Error('snapshot UI is missing authoritative relay words');clearDisplayProjection();Object.keys(agcRelayWordsValue).forEach(k=>delete agcRelayWordsValue[k]);for(let row=1;row<=12;row++){if(Object.prototype.hasOwnProperty.call(ui.relayWords,row)||Object.prototype.hasOwnProperty.call(ui.relayWords,String(row))){const word=snapshotWord(ui.relayWords,row);agcRelayWordsValue[row]=word;projectRelayWord(row,word,false)}}agcCh11Value=Number(ui.ch11)&0o77777;agcCh12Value=Number(ui.ch12)&0o77777;agcCh13Value=Number(ui.ch13)&0o77777;agcCh163Value=Number(ui.ch163)&0o77777;return true}
+  function agcDisplayStatus(){return{channels:{ch011:agcCh11Value,ch012:agcCh12Value,ch013:agcCh13Value,ch0163:agcCh163Value},display:JSON.parse(JSON.stringify(agcDisplayValue)),relayWords:{...agcRelayWordsValue}}}
 
   const isFn=value=>typeof value==='function';
   relayDigitSlot=createImplementationSlot('relayDigit',relayDigitImpl,isFn);
@@ -91,20 +92,22 @@
   resetSlot=createImplementationSlot('resetAgcFace',baseResetAgcFace,isFn);
   decode10Slot=createImplementationSlot('decodeChannel10',baseDecodeChannel10,isFn);
   decode11Slot=createImplementationSlot('decodeChannel11',baseDecodeChannel11,isFn);
+  decode12Slot=createImplementationSlot('decodeChannel12',baseDecodeChannel12,isFn);
   decode13Slot=createImplementationSlot('decodeChannel13',baseDecodeChannel13,isFn);
   decode163Slot=createImplementationSlot('decodeChannel163',baseDecodeChannel163,isFn);
   applySnapshotSlot=createImplementationSlot('applySnapshotUi',baseApplySnapshotUi,isFn);
   ch11StateSlot=createStateSlot('agcCh11',()=>agcCh11Value,next=>{agcCh11Value=Number(next)||0});
+  ch12StateSlot=createStateSlot('agcCh12',()=>agcCh12Value,next=>{agcCh12Value=Number(next)||0});
   ch13StateSlot=createStateSlot('agcCh13',()=>agcCh13Value,next=>{agcCh13Value=Number(next)||0});
   ch163StateSlot=createStateSlot('agcCh163',()=>agcCh163Value,next=>{agcCh163Value=Number(next)||0});
 
   compat.readonly('agcDisplay',()=>agcDisplayValue);
   compat.readonly('agcRelayWords',()=>agcRelayWordsValue);
   compat.readonly('RELAY_DIGIT',()=>RELAY_DIGIT);
-  for(const [name,slot] of Object.entries({agcCh11:ch11StateSlot,agcCh13:ch13StateSlot,agcCh163:ch163StateSlot})){
+  for(const [name,slot] of Object.entries({agcCh11:ch11StateSlot,agcCh12:ch12StateSlot,agcCh13:ch13StateSlot,agcCh163:ch163StateSlot})){
     compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
   }
-  for(const [name,slot] of Object.entries({relayDigit:relayDigitSlot,renderAgcReg:renderRegSlot,resetAgcFace:resetSlot,decodeChannel10:decode10Slot,decodeChannel11:decode11Slot,decodeChannel13:decode13Slot,decodeChannel163:decode163Slot,applySnapshotUi:applySnapshotSlot})){
+  for(const [name,slot] of Object.entries({relayDigit:relayDigitSlot,renderAgcReg:renderRegSlot,resetAgcFace:resetSlot,decodeChannel10:decode10Slot,decodeChannel11:decode11Slot,decodeChannel12:decode12Slot,decodeChannel13:decode13Slot,decodeChannel163:decode163Slot,applySnapshotUi:applySnapshotSlot})){
     compat.alias(name,slot.get,(next,reason)=>slot.set(next,reason),slot.version,slot.history);
   }
   compat.readonly('onAgcChannel',()=>onAgcChannelImpl);
@@ -117,6 +120,7 @@
     resetFace:resetSlot,
     decodeChannel10:decode10Slot,
     decodeChannel11:decode11Slot,
+    decodeChannel12:decode12Slot,
     decodeChannel13:decode13Slot,
     decodeChannel163:decode163Slot,
     applySnapshotUi:applySnapshotSlot
@@ -133,5 +137,5 @@
     return slot.set(next,reason);
   }
 
-  window.AGCDSKY_DISPLAY=Object.freeze({onChannel:(...args)=>onAgcChannelImpl(...args),resetFace:(...args)=>resetSlot.get()(...args),renderSnapshot:(...args)=>renderAgcSnapshotImpl(...args),snapshotUi:(...args)=>snapshotUiStateImpl(...args),applySnapshotUi:(...args)=>applySnapshotSlot.get()(...args),relayDigit:(...args)=>relayDigitSlot.get()(...args),baseRelayDigit:code=>Object.prototype.hasOwnProperty.call(RELAY_DIGIT,Number(code))?RELAY_DIGIT[Number(code)]:undefined,renderReg:(...args)=>renderRegSlot.get()(...args),renderRelayWord:(relay,low11)=>projectRelayWord(relay,low11,true),commitRelayWord:(relay,low11,options)=>commitRelayWord(relay,low11,options),setChannelState,status:()=>agcDisplayStatus(),implementation,installImplementation,compatibilityVersions:()=>({relayDigit:relayDigitSlot.version(),renderReg:renderRegSlot.version(),reset:resetSlot.version(),ch10:decode10Slot.version(),ch11:decode11Slot.version(),ch13:decode13Slot.version(),ch163:decode163Slot.version(),applySnapshot:applySnapshotSlot.version()})});
+  window.AGCDSKY_DISPLAY=Object.freeze({onChannel:(...args)=>onAgcChannelImpl(...args),resetFace:(...args)=>resetSlot.get()(...args),renderSnapshot:(...args)=>renderAgcSnapshotImpl(...args),snapshotUi:(...args)=>snapshotUiStateImpl(...args),applySnapshotUi:(...args)=>applySnapshotSlot.get()(...args),relayDigit:(...args)=>relayDigitSlot.get()(...args),baseRelayDigit:code=>Object.prototype.hasOwnProperty.call(RELAY_DIGIT,Number(code))?RELAY_DIGIT[Number(code)]:undefined,renderReg:(...args)=>renderRegSlot.get()(...args),renderRelayWord:(relay,low11)=>projectRelayWord(relay,low11,true),commitRelayWord:(relay,low11,options)=>commitRelayWord(relay,low11,options),setChannelState,status:()=>agcDisplayStatus(),implementation,installImplementation,compatibilityVersions:()=>({relayDigit:relayDigitSlot.version(),renderReg:renderRegSlot.version(),reset:resetSlot.version(),ch10:decode10Slot.version(),ch11:decode11Slot.version(),ch12:decode12Slot.version(),ch13:decode13Slot.version(),ch163:decode163Slot.version(),applySnapshot:applySnapshotSlot.version()})});
 })();
