@@ -6,7 +6,7 @@
     "nonLatchingRelayPackages": 12,
     "logicalChannel10Positions": 132,
     "unpopulatedLogicalChannel10Positions": 12,
-    "packageSlotCrosswalkStatus": "K1-K20 RESOLVED: original 2005918 relay-word/XDI/YDI signal flow joined to original 2005954A D1-D6 interconnect labels and 2005973 package topology; all 120 latching logical identities map one-to-one to D1-D6/K1-K20. K21/K22 auxiliary function-to-package assignment remains unresolved pending production 2004689 pin/dash evidence.",
+    "packageSlotCrosswalkStatus": "RESOLVED AT PRODUCTION DESIGN-BASIS LEVEL: 120/120 K1-K20 latching identities source-joined through 2005918 + 2005954A + 2005973; 12/12 K21/K22 non-latching function drives source-joined through 2005954A + 2005973. Exact production relay timing remains unresolved.",
     "functionalIdentityCoverage": {
       "requiredFields": [
         "functionalEffect",
@@ -22,14 +22,14 @@
       ],
       "coveredIdentities": 132
     },
-    "packageSlotWiringConflict": "K22 documentation is inconsistent, but provenance favors original drawing 2005973- as the production design basis: immediate relay-circuit assembly 2003910-021 and the DSKY 2003994 manual table call out 2005973, while parent 2003952-031 calls 2005940 and ND-1021042 figure 4-226 preserves older 2005940-style K22 wiring. Virtual AGC 2005973r is a reconstruction from predecessor/manual sources, not an independent original. Exact serial-number/as-flown K22 wiring and the Dn:K22 functional crosswalk remain unverified.",
+    "packageSlotWiringConflict": "K22 switched-contact wiring differs between surviving 2005973- and 2005940A evidence. Original 2005973- is the best-supported production design basis, but a particular flown serial-number K22 contact configuration remains unverified. This conflict does not affect the proven D1-D6/K22 function-to-package drive mapping because both candidate schematics agree on the drive path.",
     "productionRelayTimingStatus": "exact 2004688/2004689 unit timing specifications not recovered; model uses clearly labeled predecessor-spec upper-bound presentation references and invents no per-package timing variation",
     "logicalRelayWordRows": 12,
     "logicalRelayWordBankCodesOctal": "01 through 14 (octal), corresponding to decimal row ordinals 1 through 12",
     "bank00Status": "documented in 1965 AGC Information Series 13-bank description but not emitted by Apollo 11 Comanche055 RELTAB; excluded from flight-configuration runtime mapping",
     "configurationEvidenceStatus": "Apollo 11 flight mapping follows R-700 12-row description plus Comanche055 RELTAB codes 1..12; 1965 13-bank statement retained as historical/document discrepancy",
     "latchingPackageSlotCrosswalkStatus": "resolved: 120/120 source-joined, zero ambiguous, 12 logical holes preserved",
-    "nonLatchingPackageSlotCrosswalkStatus": "unresolved: K21/K22 function assignment not promoted; K22 source conflict preserved",
+    "nonLatchingPackageSlotCrosswalkStatus": "resolved: 12/12 production design-basis K21/K22 function-drive assignments source-joined; K22 switched-contact/as-flown uncertainty preserved",
     "logicalPhysicalCrosswalkEvidence": "docs/relay-logical-physical-crosswalk-2005918.json"
   },
   "evidence": [

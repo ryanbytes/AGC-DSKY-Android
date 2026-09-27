@@ -26,9 +26,11 @@
  *   - yaAGC fake hardware channel 0163 definitions for hardware-origin states
  *
  * Original 2005918 signal-flow plus the source-joined 2005954A/2005973
- * package wiring now proves the complete Channel 010 logical row/bit ->
- * D1-D6/K1-K20 crosswalk for all 120 latching packages.  K21/K22 auxiliary
- * function-to-package assignment remains deliberately unresolved.
+ * package wiring proves the complete Channel 010 logical row/bit ->
+ * D1-D6/K1-K20 crosswalk for all 120 latching packages. The same production
+ * interconnect/schematic join proves all 12 non-latching function drives to
+ * D1-D6/K21-K22. The separate K22 switched-contact documentation conflict is
+ * preserved as an as-flown/contact-topology uncertainty, not a drive-mapping gap.
  */
 (() => {
   const ABSENT_KEYS=new Set([
