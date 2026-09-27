@@ -15,7 +15,7 @@ jobs:
           set -euxo pipefail
           ID='AgcApertureCardsBatch3Images'
           mkdir -p out
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0'             -o out/metadata.json "https://archive.org/metadata/$ID"
+          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o out/metadata.json "https://archive.org/metadata/$ID"
           ZIPNAME="$(jq -r '.files[].name | select(test("_jp2\\.zip$"))' out/metadata.json | head -1)"
           test -n "$ZIPNAME"
           PREFIX="${ZIPNAME%_jp2.zip}"
@@ -28,13 +28,7 @@ jobs:
               curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0'                 -o "$OUT" "https://archive.org/download/$ID/page/n${N}_w2400.jpg"
             fi
             file "$OUT"
-            python3 - "$OUT" <<'PY'
-import sys
-p=sys.argv[1]
-b=open(p,'rb').read(16)
-if not (b.startswith(b'\\xff\\xd8\\xff') or b.startswith(b'\\x89PNG')):
-    raise SystemExit(f"{p}: not an image: {b!r}")
-PY
+            python3 -c 'import sys; b=open(sys.argv[1],"rb").read(16); assert b.startswith(b"\xff\xd8\xff") or b.startswith(b"\x89PNG"), (sys.argv[1], b)' "$OUT"
           done
           sha256sum out/2005954A-n*.jpg > out/SHA256SUMS.txt
           ls -lh out
