@@ -72,12 +72,16 @@ haptic cue. Those are presentation aids, not historical measurements.
 1. Recover readable production SCDs for relay 2004688 and 2004689.
 2. Resolve the exact logical/function-to-D1-D6/K1-K22 package crosswalk from
    the production interconnect documentation.
-3. Reconcile the surviving K22 wiring conflict between production drawings 2005973 and 2005940 before assigning K22 to a specific function. The assembly documentation itself calls out both drawings in different places; this is not merely a transcription discrepancy.
+3. Preserve the K22 documentation conflict without treating all surviving evidence as equally authoritative.
 
-   Exact transcribed K22 delta checked against the Virtual AGC netlists:
-   - 2005973: K22 pin 2 -> J1-5, pin 3 -> J1-3, pin 8 -> J1-6.
-   - 2005940A: K22 pins 2, 3, and 8 are explicitly unconnected.
-   - K22 pins 1, 4, 5, 6, and 7 agree between the two transcriptions; K21 is not the differing relay.
+   Exact K22 delta checked against the Virtual AGC netlists:
+   - original-drawing transcription 2005973-: K22 pin 2 -> J1-5, pin 3 -> J1-3, pin 8 -> J1-6.
+   - original-drawing transcription 2005940A: K22 pins 2, 3, and 8 are explicitly unconnected.
+   - K22 pins 1, 4, 5, 6, and 7 agree; K21 is not the differing relay.
 
-   The 2003994-021 archive note gives circumstantial reasons to prefer 2005973 (later drawing/TDRR, later approval signature, and ND-1021042 table 8-II calling out 2005973), but ND-1021042 figure 4-226 shows K22 wiring matching 2005940. Therefore the surviving record remains contradictory and this audit does not choose a flown K22 function.
+   Provenance matters. Virtual AGC's separate `2005973r` is explicitly a 2018 reconstruction made from predecessor drawing 2005952- plus ND-1021042 figure 4-226; it is not an independently surviving production drawing. Its 2005940-like K22 wiring therefore does not outweigh the later recovered original 2005973- aperture-card drawing.
+
+   The production-design evidence favors 2005973-: the immediate relay-circuit assembly 2003910-021 (the assembly containing the 20 x 2004688 and 2 x 2004689 relays) calls out 2005973; ND-1021042/ND-1021043 table 8-II calls out 2005973 for DSKY 2003994; and original 2005973- has later drawing/TDRR and approval chronology than 2005940A. The parent indicator-driver assembly 2003952-031 still calls out 2005940, and ND-1021042 figure 4-226 carries the older 2005940-style K22 wiring.
+
+   Audit conclusion: use original 2005973- as the best-supported **production design basis** for K22. Do not promote that to a serial-number/as-flown claim: no unit-specific as-built or acceptance-test record has yet been recovered that independently proves the K22 contact wiring of a particular flown DSKY. The runtime still must not invent a Dn:K22 functional crosswalk until the full package/function mapping is proven.
 4. Preserve and explain the 1965 Information Series 13-bank (00..14) statement versus the Apollo 11 flight-software/final-report 12-row (01..14) configuration; do not collapse them into one undocumented model.
