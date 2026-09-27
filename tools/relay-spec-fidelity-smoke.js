@@ -31,7 +31,11 @@ if(crosswalk.validation.latchingRelaysPerModule!==20)fail('crosswalk latching re
 if(crosswalk.validation.latchingPackagesResolved!==120)fail('crosswalk does not resolve all 120 latching packages');
 if(crosswalk.validation.unresolvedK1K20Endpoints!==0)fail('crosswalk has unresolved K1-K20 drive endpoints');
 if(crosswalk.evidenceStatus.K1_K20!=='proven_by_join')fail('K1-K20 crosswalk is not marked source-joined/proven');
+if(crosswalk.evidenceStatus.K21_K22!=='proven_drive_function_mapping_design_basis')fail('K21/K22 drive-function crosswalk is not marked source-joined/proven');
 if(crosswalk.evidenceStatus.AGC_channel_010_address_mapping!=='proven_by_2005918_join')fail('AGC logical-address join is not linked to the 2005918 proof');
+if(crosswalk.validation.nonLatchingPackagesResolved!==12)fail('crosswalk does not resolve all 12 non-latching package drives');
+if(crosswalk.validation.unresolvedK21K22DriveFunctions!==0)fail('crosswalk has unresolved K21/K22 drive functions');
+if(crosswalk.validation.uniqueNonLatchingFunctions!==12)fail('crosswalk does not contain 12 unique non-latching functions');
 let crosswalkCount=0;
 for(let d=1;d<=6;d++){
   const module=crosswalk.modules['D'+d];
@@ -55,8 +59,26 @@ for(let d=1;d<=6;d++){
   }
 }
 if(crosswalkCount!==120)fail('crosswalk enumeration did not total 120 packages');
-if(crosswalk.nonLatchingRelays.K21.status!=='topology_only_function_not_promoted')fail('K21 uncertainty boundary changed');
-if(crosswalk.nonLatchingRelays.K22.status!=='conflicting_transcriptions')fail('K22 conflict boundary changed');
+if(crosswalk.nonLatchingRelays.K21.status!=='functional_drive_mapping_proven')fail('K21 drive mapping is not proven');
+if(crosswalk.nonLatchingRelays.K22.status!=='functional_drive_mapping_proven_contact_conflict_preserved')fail('K22 drive mapping/contact-conflict boundary changed');
+const auxMappings=crosswalk.nonLatchingFunctionalMappings||[];
+if(auxMappings.length!==12)fail('non-latching crosswalk does not contain 12 package mappings');
+if(new Set(auxMappings.map(x=>x.packageSlot)).size!==12)fail('non-latching crosswalk reuses a package slot');
+if(new Set(auxMappings.map(x=>x.function)).size!==12)fail('non-latching crosswalk reuses a function');
+for(const m of auxMappings){
+  if(!/^D[1-6]:K(?:21|22)$/.test(m.packageSlot||''))fail('invalid non-latching package slot '+m.packageSlot);
+  if(m.installedRelayPart!=='2004689-2')fail('non-latching mapping does not identify production 2004689-2: '+m.packageSlot);
+  if(m.status!=='proven_design_basis_drive_join')fail('non-latching mapping status not proven: '+m.packageSlot);
+  if(m.packageSlot.endsWith(':K22')){
+    if(m.moduleInputTerminal!==85||m.driverTransistor!=='Q12'||m.moduleReturnTerminal!==87||m.relayDriveTerminal!==4)
+      fail('K22 drive path mismatch: '+m.packageSlot);
+  }else{
+    if(m.moduleInputTerminal!==86||m.driverTransistor!=='Q13'||m.moduleReturnTerminal!==95||m.relayDriveTerminal!==7)
+      fail('K21 drive path mismatch: '+m.packageSlot);
+  }
+  if(JSON.stringify(m.relayCoilPins)!=='[1,5]'||m.relayCommonTerminal!==26)
+    fail('2004689-2 drive-pin/common path mismatch: '+m.packageSlot);
+}
 
 if(logicalCrosswalk.status!=='proven_for_all_120_latching_packages')fail('logical/physical crosswalk is not marked proven');
 if(logicalCrosswalk.validation.logicalPositions!==132)fail('logical/physical crosswalk does not cover 132 row/bit positions');
@@ -114,12 +136,20 @@ for(const r of inventory.latchingRelays){
   if(!String(r.timingBasis||'').includes('not a measured 2004688'))fail('latching timing uncertainty missing: '+r.id);
 }
 if(new Set(inventory.latchingRelays.map(r=>r.packageSlot)).size!==120)fail('documented latching package slots are not one-to-one');
+const auxBySignal=new Map(auxMappings.map(m=>[Number((String(m.externalSignal).match(/\d+/)||[])[0]),m]));
 for(const r of inventory.nonLatchingRelays){
-  if(r.packageSlot!==null)fail('unproven runtime-function -> physical Dn/K21-K22 package assignment was made: '+r.id);
+  const m=auxBySignal.get(Number(r.signal));
+  if(!m)fail('non-latching inventory signal has no proven package mapping: '+r.id);
+  if(r.packageSlot!==m.packageSlot)fail('non-latching inventory package differs from source join: '+r.id);
+  if(!/^D[1-6]:K(?:21|22)$/.test(r.packageSlot||''))fail('invalid non-latching inventory package slot: '+r.id);
+  if(r.packagePart!=='2004689-2')fail('non-latching inventory part is not 2004689-2: '+r.id);
+  if(r.packageSlotStatus!=='proven-source-join-2005954A-2005973-drive')fail('non-latching package status not proven: '+r.id);
+  req(topology,`packageSlot:'${r.packageSlot}'`,`runtime auxiliary package map ${r.id}`);
   if(!String(r.timingBasis||'').includes('not a measured 2004689'))fail('non-latching timing uncertainty missing: '+r.id);
   if(r.runtimeChannelOctal==='0o163'&&!String(r.runtimeChannelStatus||'').includes('fictitious'))
     fail('yaAGC channel 0163 was not identified as fictitious effective-hardware state: '+r.id);
 }
+if(new Set(inventory.nonLatchingRelays.map(r=>r.packageSlot)).size!==12)fail('documented non-latching package slots are not one-to-one');
 
 if(!/120\s+latching relays and 12 nonlatching relays/.test(evidence))fail('R-700 population evidence missing');
 req(evidence,'operate time: <= 3 ms','1006282 timing evidence');
@@ -132,6 +162,12 @@ req(evidence,'bank 00 is not emitted by Comanche055 RELTAB','bank-00 non-use bou
 req(evidence,'proven for all 120 latching packages','source-joined K1-K20 crosswalk evidence');
 req(evidence,'120 unique physical-package matches, 12 unpopulated logical positions','2005918 logical/physical join evidence');
 req(evidence,'zero ambiguous matches','2005918 zero-ambiguity evidence');
+req(evidence,'All 12 K21/K22 function drives are now source-joined','non-latching source-joined drive evidence');
+req(evidence,'2004689-2','production non-latching relay dash evidence');
+req(evidence,'positive voltage is applied on pin 1','production non-latching relay drive-pin evidence');
+req(evidence,'D1: K22 FLASH; K21 OPR ERROR.','D1 non-latching function mapping evidence');
+req(evidence,'D6: K22 CUTOFF; K21 CIRCUIT.','D6 non-latching function mapping evidence');
+req(evidence,'remaining dispute is K22 switched-contact wiring','K22 contact-vs-drive boundary evidence');
 
 console.log('relay specification fidelity smoke: PASS');
-console.log('  132 production packages + 120/12 split + 12 logical holes retained; all 120 Channel 010 latching identities now source-map one-to-one to D1-D6/K1-K20; only K21/K22 function joins remain unresolved');
+console.log('  132 production packages + 120/12 split + 12 logical holes retained; all 120 latching and all 12 non-latching function identities source-map one-to-one to D1-D6 package slots; exact production timing and the K22 switched-contact conflict remain bounded');
