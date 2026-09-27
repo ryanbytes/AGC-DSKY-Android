@@ -1,4 +1,4 @@
-name: Recover DSKY 2005954A scan frames
+name: Recover DSKY 2005918 signal-flow frames
 on:
   push:
     branches:
@@ -9,24 +9,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Fetch Internet Archive scan frames n174-n177
+      - name: Fetch Internet Archive signal-flow frames n371-n376
         shell: bash
         run: |
           set -euxo pipefail
-          ID='AgcApertureCardsBatch3Images'
+          ID='agc_handbook_jp2'
           mkdir -p out
-          for N in 174 175 176 177; do
-            OUT="out/2005954A-n${N}.jpg"
+          for N in 371 372 373 374 375 376; do
+            OUT="out/2005918-n${N}.jpg"
             curl -fL --connect-timeout 10 --max-time 60 --retry 2 --retry-all-errors               -A 'Mozilla/5.0'               -o "$OUT" "https://archive.org/download/$ID/page/n${N}_w2400.jpg"
             file "$OUT"
             python3 -c 'import sys; b=open(sys.argv[1],"rb").read(16); assert b.startswith(b"\xff\xd8\xff") or b.startswith(b"\x89PNG"), (sys.argv[1], b)' "$OUT"
           done
-          sha256sum out/2005954A-n*.jpg > out/SHA256SUMS.txt
+          sha256sum out/2005918-n*.jpg > out/SHA256SUMS.txt
           ls -lh out
       - name: Upload exact recovered frames
         uses: actions/upload-artifact@v4
         with:
-          name: DSKY-2005954A-frames-n174-n177
+          name: DSKY-2005918-frames-n371-n376
           path: out/
           if-no-files-found: error
           compression-level: 0
