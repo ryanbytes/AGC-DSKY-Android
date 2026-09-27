@@ -84,12 +84,11 @@
       if(stuck.length)fail('non-latching source route did not release '+stuck.join(','));
 
       const decode10=d.implementation('decodeChannel10');
-      decode10((3<<11)|0);
-      await sleep(80);
+      const resetFace=d.implementation('resetFace');
+      resetFace();
       decode10((3<<11)|0o2000);
-      await sleep(40);
       const holeWrite=h.snapshot().lastWrite;
-      if(!holeWrite||holeWrite.relay!==3||holeWrite.changed!==0)fail('unpopulated ROW-03:B produced physical armature motion');
+      if(!holeWrite||holeWrite.relay!==3||holeWrite.low11!==0o2000||holeWrite.changed!==0)fail('unpopulated ROW-03:B produced physical armature motion');
 
       state.mode=priorMode;
       bridge.qa('RLY02_PASS '+JSON.stringify({
