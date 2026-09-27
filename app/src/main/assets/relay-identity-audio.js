@@ -48,7 +48,7 @@
   }
   function manufacturingProfile(id,ordinal){
     const rnd=xorshift32(hash32(`${id}:manufacture`));
-    const positionPhase=((ordinal*73+17)%LATCHING_RELAY_COUNT)/Math.max(1,LATCHING_RELAY_COUNT-1);
+    const positionPhase=((ordinal*73+17)%PHYSICAL_RELAY_COUNT)/Math.max(1,PHYSICAL_RELAY_COUNT-1);
     const setTravelMs=clamp(SET_TRAVEL_MIN_MS+(SET_TRAVEL_MAX_MS-SET_TRAVEL_MIN_MS)*clamp(.58*positionPhase+.42*rnd(),0,1),SET_TRAVEL_MIN_MS,SET_TRAVEL_MAX_MS);
     const resetTravelMs=clamp(RESET_TRAVEL_MIN_MS+(RESET_TRAVEL_MAX_MS-RESET_TRAVEL_MIN_MS)*clamp(.52*(1-positionPhase)+.48*rnd(),0,1),RESET_TRAVEL_MIN_MS,RESET_TRAVEL_MAX_MS);
     const poleSkewUs=Math.round((rnd()*2-1)*185);
