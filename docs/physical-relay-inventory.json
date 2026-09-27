@@ -22,7 +22,7 @@
       ],
       "coveredIdentities": 132
     },
-    "packageSlotWiringConflict": "Production documentation conflicts on K22 wiring: relay-circuit assembly 2003910-021 calls schematic 2005973, while parent indicator-driver assembly 2003952-031 calls 2005940; surviving drawings differ only at K22, so K22 assignment remains unresolved pending reconciliation.",
+    "packageSlotWiringConflict": "K22 documentation is inconsistent, but provenance favors original drawing 2005973- as the production design basis: immediate relay-circuit assembly 2003910-021 and the DSKY 2003994 manual table call out 2005973, while parent 2003952-031 calls 2005940 and ND-1021042 figure 4-226 preserves older 2005940-style K22 wiring. Virtual AGC 2005973r is a reconstruction from predecessor/manual sources, not an independent original. Exact serial-number/as-flown K22 wiring and the Dn:K22 functional crosswalk remain unverified.",
     "productionRelayTimingStatus": "exact 2004688/2004689 unit timing specifications not recovered; model uses clearly labeled predecessor-spec upper-bound presentation references and invents no per-package timing variation",
     "logicalRelayWordRows": 12,
     "logicalRelayWordBankCodesOctal": "01 through 14 (octal), corresponding to decimal row ordinals 1 through 12",
@@ -60,7 +60,7 @@
     },
     {
       "document": "Production DSKY documentation and drawings 2005973 / 2005940",
-      "claim": "2003910-021 calls 2005973 while parent 2003952-031 calls 2005940; the surviving drawings differ at K22. K22 remains unresolved rather than selecting one wiring without proof."
+      "claim": "2003910-021 and the DSKY 2003994 system-manual table call 2005973; parent 2003952-031 calls 2005940 and the manual figure carries the older K22 wiring. The surviving original 2005973- is the best-supported production design basis; 2005973r is only a reconstruction. Exact as-flown K22 wiring remains unverified without unit-specific as-built or acceptance evidence."
     },
     {
       "document": "Apollo 11 Comanche055 T4RUPT_PROGRAM.agc RELTAB",
