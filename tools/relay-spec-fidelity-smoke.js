@@ -59,8 +59,11 @@ for(const r of inventory.nonLatchingRelays){
 if(!/120\s+latching relays and 12 nonlatching relays/.test(evidence))fail('R-700 population evidence missing');
 req(evidence,'operate time: <= 3 ms','1006282 timing evidence');
 req(evidence,'operate time: <= 5 ms','1010784 timing evidence');
-req(evidence,'K22 differs','K22 unresolved evidence');
+if(!/K22[\s\S]{0,160}(conflict|disagreement|differ)/i.test(evidence))fail('K22 unresolved evidence missing');
 req(evidence,'No pseudo-random per-relay operate/release time.','anti-fabrication rule');
+req(evidence,'Comanche055 flight software RELTAB emits relay-word codes 1 through 12','flight row-code evidence');
+req(evidence,'thirteen banks octal 00 through 14','1965 13-bank discrepancy evidence');
+req(evidence,'bank 00 is not emitted by Comanche055 RELTAB','bank-00 non-use boundary');
 
 console.log('relay specification fidelity smoke: PASS');
 console.log('  132 production packages + 120/12 split + 12 logical holes retained; per-relay timing/bounce/skew fabrication removed; later production timing and Dn/Kx crosswalk remain explicitly unresolved');
