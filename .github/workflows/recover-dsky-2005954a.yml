@@ -7,7 +7,7 @@ on:
 jobs:
   recover-frames:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 8
     steps:
       - name: Fetch Internet Archive scan frames n174-n177
         shell: bash
@@ -15,18 +15,9 @@ jobs:
           set -euxo pipefail
           ID='AgcApertureCardsBatch3Images'
           mkdir -p out
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o out/metadata.json "https://archive.org/metadata/$ID"
-          ZIPNAME="$(jq -r '.files[].name | select(test("_jp2\\.zip$"))' out/metadata.json | head -1)"
-          test -n "$ZIPNAME"
-          PREFIX="${ZIPNAME%_jp2.zip}"
-          echo "JP2 zip: $ZIPNAME"
           for N in 174 175 176 177; do
-            NUM="$(printf '%04d' "$N")"
-            INNER="${PREFIX}_jp2/${PREFIX}_${NUM}.jp2"
             OUT="out/2005954A-n${N}.jpg"
-            if ! curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0'               --get 'https://archive.org/BookReader/BookReaderImages.php'               --data-urlencode "zip=/2/items/$ID/$ZIPNAME"               --data-urlencode "file=$INNER"               --data-urlencode "id=$ID"               --data-urlencode 'scale=1'               --data-urlencode 'rotate=0'               -o "$OUT"; then
-              curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0'                 -o "$OUT" "https://archive.org/download/$ID/page/n${N}_w2400.jpg"
-            fi
+            curl -fL --connect-timeout 10 --max-time 60 --retry 2 --retry-all-errors               -A 'Mozilla/5.0'               -o "$OUT" "https://archive.org/download/$ID/page/n${N}_w2400.jpg"
             file "$OUT"
             python3 -c 'import sys; b=open(sys.argv[1],"rb").read(16); assert b.startswith(b"\xff\xd8\xff") or b.startswith(b"\x89PNG"), (sys.argv[1], b)' "$OUT"
           done
