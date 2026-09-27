@@ -5,7 +5,7 @@
   "evidenceStatus": {
     "K1_K20": "proven_by_join",
     "K21_K22": "not_promoted_to_functional_crosswalk",
-    "AGC_channel_010_address_mapping": "open"
+    "AGC_channel_010_address_mapping": "proven_by_2005918_join"
   },
   "provenance": {
     "interconnect2005954A": {
@@ -6507,8 +6507,13 @@
     }
   },
   "limitations": [
-    "This is a physical-package-to-DSKY-internal-signal crosswalk, not yet an AGC Channel 010 row/bit address crosswalk.",
+    "This file is the physical-package-to-DSKY-internal-signal layer. The downstream AGC Channel 010 row/bit -> physical D1-D6/K1-K20 join is now proven separately in docs/relay-logical-physical-crosswalk-2005918.json.",
     "It is design-document evidence, not an as-flown serial-number configuration claim.",
     "K21/K22 remain excluded from functional drive mapping until production 2004689 pinout/dash evidence is recovered or another primary source closes the gap."
-  ]
+  ],
+  "downstreamLogicalCrosswalk": {
+    "status": "proven_for_all_120_latching_packages",
+    "path": "docs/relay-logical-physical-crosswalk-2005918.json",
+    "evidence": "Original 2005918 relay-word/XDI/YDI signal flow joined to this D1-D6/K1-K20 package-signal crosswalk."
+  }
 }
