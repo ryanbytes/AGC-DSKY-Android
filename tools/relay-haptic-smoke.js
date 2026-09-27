@@ -71,23 +71,17 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
     continue;
   }
   setPatterns.push(set);resetPatterns.push(reset);
-  assert(set.pulses.length>=2&&set.pulses.length<=4,'set rebound pulse count escaped bounds');
-  assert(reset.pulses.length>=2&&reset.pulses.length<=3,'reset rebound pulse count escaped bounds');
+  assert(set.pulses.length===1,'set haptic must contain exactly one armature tick');
+  assert(reset.pulses.length===1,'reset haptic must contain exactly one armature tick');
   assert(set.pulses[0].kind==='armature'&&reset.pulses[0].kind==='armature','armature pulse missing');
-  assert(set.pulses[0].durationMs===1,'set armature escaped minimum pulse duration');
-  assert(set.pulses[0].amplitude===1,'set armature escaped absolute minimum amplitude');
-  assert(reset.pulses[0].durationMs===1,'reset armature escaped minimum pulse duration');
-  assert(reset.pulses[0].amplitude===1,'reset armature escaped absolute minimum amplitude');
-  assert(set.pulses.slice(1).every(p=>p.durationMs===1&&p.amplitude===1),'set rebound escaped absolute minimum haptic bounds');
-  assert(reset.pulses.slice(1).every(p=>p.durationMs===1&&p.amplitude===1),'reset rebound escaped absolute minimum haptic bounds');
-  assert(set.pulses.slice(1).every(p=>p.kind==='rebound'),'set rebound labeling changed');
-  assert(reset.pulses.slice(1).every(p=>p.kind==='rebound'),'reset rebound labeling changed');
+  assert(set.pulses[0].durationMs===1&&set.pulses[0].amplitude===1,'set armature tick must stay at 1 ms / 1 of 255');
+  assert(reset.pulses[0].durationMs===1&&reset.pulses[0].amplitude===1,'reset armature tick must stay at 1 ms / 1 of 255');
   assert(JSON.stringify(set)===JSON.stringify(model.hapticPatternFor(row,bit,true)),'set haptic pattern is not deterministic');
   assert(JSON.stringify(reset)===JSON.stringify(model.hapticPatternFor(row,bit,false)),'reset haptic pattern is not deterministic');
 }
 assert(setPatterns.length===120,'physical haptic inventory must contain exactly 120 latching relays');
-assert(new Set(setPatterns.map(p=>JSON.stringify(p.pulses))).size>=80,'set tactile identities collapsed');
-assert(new Set(resetPatterns.map(p=>JSON.stringify(p.pulses))).size>=70,'reset tactile identities collapsed');
+assert(setPatterns.every(p=>p.pulses.length===1),'set contact bounce leaked into haptics');
+assert(resetPatterns.every(p=>p.pulses.length===1),'reset contact bounce leaked into haptics');
 
 for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   const arm=model.contactHapticSignatureFor(row,bit,true,'armature');
@@ -99,9 +93,10 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
     continue;
   }
   assert(arm.durationMs===1&&arm.amplitude===1,'stretched armature tick escaped absolute minimum haptic bounds');
-  assert(bounce.durationMs===1&&bounce.amplitude===1,'stretched bounce tick escaped absolute minimum haptic bounds');
-  assert(settled.durationMs===1&&settled.amplitude===1,'stretched settled tick escaped absolute minimum haptic bounds');
-  assert(JSON.stringify(bounce)===JSON.stringify(model.contactHapticSignatureFor(row,bit,true,'bounce')),'contact tick identity is not deterministic');
+  assert(bounce===null,'contact bounce must not have a haptic signature');
+  assert(settled===null,'settled contact state must not have a haptic signature');
+  assert(model.playRelayContactHaptic(row,bit,true,'bounce')===false,'contact bounce dispatched a haptic');
+  assert(model.playRelayContactHaptic(row,bit,true,'settled')===false,'settled contact state dispatched a haptic');
 }
 
 const bankEvents=[
@@ -110,7 +105,7 @@ const bankEvents=[
   {row:4,bit:10,on:true,arrivalMs:14}
 ];
 const bank=model.relayBankHapticPatternFor(bankEvents);
-assert(bank.pulseCount>=6,'bank waveform lost relay rebound pulses');
+assert(bank.pulseCount===bankEvents.length,'bank waveform must contain one pulse per physical armature movement');
 assert(bank.timings.length===bank.amplitudes.length&&bank.timings.length>3,'bank waveform was not run-length composed');
 assert(bank.totalMs>15&&bank.totalMs<60,'bank micro-switch envelope escaped expected range');
 assert(bank.amplitudes.some(a=>a===0)&&bank.amplitudes.some(a=>a>0),'bank waveform needs active and quiet segments');
@@ -144,7 +139,7 @@ assert(impactCalls.length===1&&impactCalls[0].durationMs===contactExpected.durat
 
 waveformCalls.length=0;impactCalls.length=0;
 const aux=model.auxiliaryHapticPatternFor('comp',true);
-assert(aux.pulses.length>=2,'aux relay rebound pattern missing');
+assert(aux.pulses.length===1&&aux.pulses[0].kind==='armature','aux relay haptic must contain one armature tick only');
 assert(model.playAuxHaptic('comp',true)===true&&waveformCalls.length===1,'aux waveform dispatch failed');
 
 context.AGCDSKY_APP_STATE.relayHaptics=false;
