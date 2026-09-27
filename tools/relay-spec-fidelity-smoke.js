@@ -11,6 +11,7 @@ const no=(s,t,m)=>{if(s.includes(t))fail(m+': forbidden '+t)};
 const identity=read('app/src/main/assets/relay-identity-audio.js');
 const hardware=read('app/src/main/assets/hardware-fidelity.js');
 const widget=read('app/src/main/java/org/apollo/agcdsky/WidgetRelayModel.java');
+const visual=read('app/src/main/assets/relay-visual-coupling.js');
 const inventory=JSON.parse(read('docs/physical-relay-inventory.json'));
 const evidence=read('docs/relay-fidelity-evidence.md');
 
@@ -44,6 +45,15 @@ req(widget,'new double[0], new double[0], 0','widget fabricated bounce/skew supp
 no(widget,'XorShift32','widget synthetic timing RNG');
 no(widget,'bouncePattern(','widget synthetic bounce generator');
 no(widget,'SET_TRAVEL_MIN_MS','widget old synthetic timing range');
+
+req(visual,"RELAY VISUAL SOURCE-BOUNDED",'relay visual user-facing timing label');
+req(visual,'sourceBoundedTiming:true','relay visual source-bounded diagnostic');
+req(visual,'exactProductionRelayTiming:false','relay visual production timing uncertainty');
+req(visual,'authenticTiming:false','relay visual must not claim exact Apollo timing');
+req(visual,'contactBounceVisible:false','relay visual must not claim unmeasured bounce');
+no(visual,'Authentic manufactured per-relay travel/contact timing','old false relay timing claim');
+no(visual,"contactBounceVisible:true",'old false visible-bounce claim');
+no(visual,"authenticTiming:true",'old false exact-timing claim');
 
 for(const r of inventory.latchingRelays){
   if(r.packageSlot!==null)fail('unproven latching Dn/Kx crosswalk was assigned: '+r.id);
