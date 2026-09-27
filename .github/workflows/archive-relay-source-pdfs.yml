@@ -1,4 +1,4 @@
-name: Recover DSKY archival drawings
+name: Recover DSKY relay driver drawings
 on:
   push:
     branches:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Fetch candidate BookReader leaves
+      - name: Fetch relay-driver and continuation leaves
         shell: bash
         run: |
           set -euxo pipefail
@@ -18,7 +18,7 @@ jobs:
           cd recovered
           base='https://ia601408.us.archive.org/BookReader/BookReaderImages.php'
           zip='/9/items/apertureCardBox460NARASW_images/apertureCardBox460NARASW_jp2.zip'
-          for n in 0319 0320 0321 0322 0417 0418 0419 0420 0421; do
+          for n in 0376 0377 0378 0379 0422 0426 0427 0428 0429; do
             file="apertureCardBox460NARASW_jp2/apertureCardBox460NARASW_${n}.jp2"
             curl -fL --retry 3 --retry-all-errors --get "$base" \
               --data-urlencode "zip=$zip" \
@@ -28,13 +28,12 @@ jobs:
               --data-urlencode 'rotate=0' \
               -o "leaf-${n}.jpg"
             file "leaf-${n}.jpg"
-            identify "leaf-${n}.jpg" || true
           done
           sha256sum leaf-*.jpg > SHA256SUMS.txt
-      - name: Upload candidate scans
+      - name: Upload recovered scans
         uses: actions/upload-artifact@v4
         with:
-          name: DSKY-2005954-2005918-candidate-leaves
+          name: DSKY-relay-driver-original-scans
           path: recovered/
           if-no-files-found: error
           compression-level: 0
