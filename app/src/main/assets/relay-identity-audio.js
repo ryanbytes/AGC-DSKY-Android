@@ -24,6 +24,10 @@
   const LATCHING_RELAY_COUNT = topology.latchingRelayCount;
   const PHYSICAL_RELAY_COUNT = topology.physicalRelayCount;
   const DRIVE_ENVELOPE_MS = 20;
+  // Keep the public diagnostic boundary and the documented 20-ms bank envelope
+  // separate from the relay-unit presentation reference.
+  const CONTACT_GUARD_MS = 0;
+  const MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
   // NASA/MIT SCD 1006282 (predecessor magnetic-latching relay): operate/release
   // <=3 ms, transfer <=1 ms, contact bounce <=2 ms. Later production DSKY BOMs
   // use 2004688; its readable SCD has not been recovered, so 3 ms is retained
