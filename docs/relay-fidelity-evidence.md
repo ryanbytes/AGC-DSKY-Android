@@ -68,8 +68,8 @@ mechanical operate/release time.
 - No pseudo-random per-relay operate/release time.
 - No pseudo-random contact-bounce count or timing.
 - No pseudo-random pole-to-pole skew.
-- No claim that logical ROW/bit identity equals a specific physical D1-D6/Kx
-  package slot until the interconnect crosswalk is proven.
+- No K21/K22 runtime-function-to-package assignment until production 2004689
+  pin/dash evidence closes the non-latching crosswalk.
 - No claim of unique flown-unit acoustic fingerprints.
 - No claim that yaAGC channel 0163 physically existed in Apollo hardware.
 
@@ -79,36 +79,47 @@ haptic cue. Those are presentation aids, not historical measurements.
 ## Open documentation questions
 
 1. Recover readable production SCDs for relay 2004688 and 2004689.
-2. Complete the remaining AGC-logical-address and nonlatching-relay joins.
+2. Complete the remaining nonlatching-relay join.
 
-   **K1-K20 are no longer unresolved at the physical-package/DSKY-signal level.**
-   On 2026-09-27 the original **2005954A** interconnect scan was recovered as
-   four source frames (n174-n177) from `AgcApertureCardsBatch3Images`.
-   GitHub Actions run **36346538268**, artifact
-   `DSKY-2005954A-frames-n174-n177` (artifact 10940757164), has artifact
+   **The Channel 010 logical row/bit -> physical D1-D6/K1-K20 crosswalk is now
+   proven for all 120 latching packages.** The original **2005918** AGC DSKY
+   signal-flow drawing was recovered from `agc_handbook_jp2` as frames
+   n371-n376. GitHub Actions run **36347679319**, artifact
+   `DSKY-2005918-frames-n371-n376` (artifact 10940662597), has artifact
    SHA-256
-   `967c3d2115a2a072afb9e617646f4f6f7306ee34dc6bb8be9fe76ce07b2a610b`.
-   Frames n176/n177 expose the D1-D6 module-terminal signal labels needed for
-   the join.
+   `3edcc9d5fef949af986c3125b57949e681c4189002e34492d81153a4f39a19f9`.
 
-   Joining those labels by numeric module terminal to the original
-   **2005973-** K1-K20 topology resolves all **120 magnetic-latching relay
-   packages** (20 per D module) to their YDI/XDI drive-network signal labels,
-   with **zero unresolved K1-K20 drive endpoints**. The machine-readable result
-   is `docs/relay-package-functional-crosswalk-2005954A-2005973.json`.
+   Sheet 1 part 3 (n371) gives the relay-word-code -> relay-selection-line
+   table. The twelve nonzero relay-word codes select XDI00-XDI11 in this exact
+   code order: 0001->XDI00, 0010->XDI01, 0011->XDI02, 0100->XDI03,
+   0101->XDI04, 0110->XDI05, 0111->XDI09, 1000->XDI10, 1001->XDI06,
+   1010->XDI07, 1011->XDI08, 1100->XDI11. The same drawing's relay-column
+   table and source note establish the OUT0 state polarity: the 1-5 winding is
+   the logical-0/turn-off side and the 9-10 winding is the
+   logical-1/turn-on side. Sheet 1 parts 1-2 expose the YDI drive pairs:
+   bits 1-5 use YDI21-25 for 0 and YDI01-05 for 1; bits 6-10 use YDI26-30
+   for 0 and YDI06-10 for 1; bit 11 uses YDI31 for 0 and YDI11 for 1.
 
-   This closes the physical **D1-D6/K1-K20 -> YDI/XDI** package-signal
-   crosswalk. It does **not** by itself prove the downstream AGC Channel 010
-   relay-word row/bit -> physical package mapping. That logical-address join
-   remains open and must be traced through the signal-flow/logic documentation
-   rather than inferred from numbering.
+   Joining those XDI/YDI logical coordinates to
+   `docs/relay-package-functional-crosswalk-2005954A-2005973.json` produces
+   **120 unique physical-package matches, 12 unpopulated logical positions,
+   and zero ambiguous matches**. The twelve independently derived holes are
+   exactly the runtime's existing physical-population holes:
+   `3:10`, `8:5` through `8:10`, `9:10`, `10:10`, `11:10`,
+   `12:9`, and `12:10` (runtime bits are zero-based). No package is reused.
 
-   K21/K22 are also deliberately excluded from the newly proven functional
-   drive crosswalk. The readable predecessor SCD 1010784 contains multiple
-   pinout variants (schematic A coil terminals 3-7; schematic B coil terminals
-   1-5), while the exact production 2004689 pin/dash mapping has not yet been
-   recovered here. K22 additionally retains the 2005973-vs-2005940A contact
-   transcription conflict described below.
+   Apollo 11 Comanche055 independently corroborates the interpretation:
+   `T4RUPT_PROGRAM.agc` states that RELTAB packs the relay-word code in the
+   upper four bits and relay code in the lower five bits before writing OUT0;
+   `PINBALL_GAME__BUTTONS_AND_LIGHTS.agc` documents the relay-word binary
+   codes and the two five-bit digit fields. The complete machine-readable join
+   is `docs/relay-logical-physical-crosswalk-2005918.json`.
+
+   K21/K22 remain deliberately outside that proof. The readable predecessor
+   SCD 1010784 contains multiple pinout variants (schematic A coil terminals
+   3-7; schematic B coil terminals 1-5), while the exact production 2004689
+   pin/dash mapping has not yet been recovered here. K22 additionally retains
+   the 2005973-vs-2005940A contact transcription conflict described below.
 
 3. Preserve the K22 documentation conflict without treating all surviving evidence as equally authoritative.
 
