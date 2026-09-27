@@ -89,7 +89,7 @@
     if(traceEvent.state)state.contactWord|=motion.mask;else state.contactWord&=~motion.mask;
     const contactChanged=priorWord!==state.contactWord;
     if(state.renderContact)renderWord(motion.row,state.contactWord);
-    if(timingMode===MODE_STRETCHED&&contactChanged)audioModel.playRelayContactHaptic?.(motion.row,motion.bit,motion.on,traceEvent.kind);
+    if(timingMode===MODE_STRETCHED&&contactChanged&&traceEvent.kind==='armature')audioModel.playRelayContactHaptic?.(motion.row,motion.bit,motion.on,'armature');
     if(traceEvent.kind==='armature'){
       lastPresentationClick={row:motion.row,bit:motion.bit,engaging:motion.on};
       const soundStrength=Number.isFinite(motion.audioStrength)?motion.audioStrength:.66;
@@ -197,7 +197,7 @@
   hardware.registerSettledPaintPolicy('relay-visual-coupling',()=>timingMode!==MODE_STRETCHED);
 
   window.DSKY_RELAY_VISUAL=Object.freeze({
-    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,stretchedContactHapticLocked:true,hapticBankComposed:true,overlapAudioBoost:true,overlapHapticBoost:true,stretchedBounceAudio:true,
+    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,stretchedContactHapticLocked:true,hapticBankComposed:true,overlapAudioBoost:true,overlapHapticBoost:false,stretchedBounceAudio:true,
     stretchFirstBaseMs:STRETCH_FIRST_BASE_MS,stretchMinGapMs:STRETCH_MIN_GAP_MS,stretchMaxGapMs:STRETCH_MAX_GAP_MS,stretchReleaseHoldMs:STRETCH_RELEASE_HOLD_MS,relayAudioOverlapWindowMs:RELAY_AUDIO_OVERLAP_WINDOW_MS,relayAudioOverlapStep:RELAY_AUDIO_OVERLAP_STEP,relayAudioOverlapMaxMultiplier:RELAY_AUDIO_OVERLAP_MAX_MULTIPLIER,
     getTimingMode:()=>timingMode,setTimingMode,contactDelayMs,stretchedGapMs,stretchedScheduleFor:(row,prior,target)=>stretchedSchedule(collectMotions(row,prior,target)).map(item=>({...item})),presentationDurationMs,lastPresentationClick:()=>lastPresentationClick?{...lastPresentationClick}:null,
     renderWord,currentSettledWord,withSettledWordOverride,presentDrive,presentAux,subscribe,resetPresentation
