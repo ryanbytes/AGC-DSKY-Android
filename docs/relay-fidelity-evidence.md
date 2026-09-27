@@ -20,6 +20,10 @@ must remain explicitly uncertain.
 - yaAGC channel 0163 is a simulator-side effective-hardware-state channel. It is
   **not** a historical Apollo AGC output channel and must never be described as
   one.
+- The source-joined 2005918 + 2005954A + 2005973 latching crosswalk yields
+  **120 unique physical-package matches, 12 unpopulated logical positions,
+  and zero ambiguous matches**. The machine-readable join is
+  `docs/relay-logical-physical-crosswalk-2005918.json`.
 
 ## Timing evidence and limitation
 
