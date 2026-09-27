@@ -173,6 +173,10 @@ req(evidence,'120 unique physical-package matches, 12 unpopulated logical positi
 req(evidence,'zero ambiguous matches','2005918 zero-ambiguity evidence');
 req(evidence,'All 12 K21/K22 function drives are now source-joined','non-latching source-joined drive evidence');
 req(evidence,'2004689-2','production non-latching relay dash evidence');
+req(evidence,'Apollo 11 CM-107 / G&N System 210','Apollo 11 DSKY production-chain evidence');
+req(evidence,'2003994-051 S/N 53','Apollo 11 main DSKY pre-upgrade identity');
+req(evidence,'2003994-051 S/N 66','Apollo 11 navigation DSKY pre-upgrade identity');
+req(evidence,'updated to **2003994-121**','Apollo 11 KSC DSKY -121 upgrade evidence');
 req(evidence,'positive voltage is applied on pin 1','production non-latching relay drive-pin evidence');
 req(evidence,'D1: K22 FLASH; K21 OPR ERROR.','D1 non-latching function mapping evidence');
 req(evidence,'D6: K22 CUTOFF; K21 CIRCUIT.','D6 non-latching function mapping evidence');
