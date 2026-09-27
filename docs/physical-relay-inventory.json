@@ -6,7 +6,21 @@
     "nonLatchingRelayPackages": 12,
     "logicalChannel10Positions": 132,
     "unpopulatedLogicalChannel10Positions": 12,
-    "packageSlotCrosswalkStatus": "unresolved from presently decoded interconnect evidence; no Dn/Kx mapping is fabricated"
+    "packageSlotCrosswalkStatus": "unresolved from presently decoded interconnect evidence; no Dn/Kx mapping is fabricated",
+    "functionalIdentityCoverage": {
+      "requiredFields": [
+        "functionalEffect",
+        "functionalStatus",
+        "spareStatus",
+        "contactPath",
+        "timingModel",
+        "timingEvidence",
+        "soundCoupling",
+        "hapticCoupling",
+        "renderOrExternalEffect"
+      ],
+      "coveredIdentities": 132
+    }
   },
   "evidence": [
     {
@@ -98,7 +112,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 5 (index 4)"
     },
     {
       "ordinal": 1,
@@ -109,7 +134,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 5 (index 4)"
     },
     {
       "ordinal": 2,
@@ -120,7 +156,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 5 (index 4)"
     },
     {
       "ordinal": 3,
@@ -131,7 +178,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 5 (index 4)"
     },
     {
       "ordinal": 4,
@@ -142,7 +200,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 5 (index 4)"
     },
     {
       "ordinal": 5,
@@ -153,7 +222,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 4 (index 3)"
     },
     {
       "ordinal": 6,
@@ -164,7 +244,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 4 (index 3)"
     },
     {
       "ordinal": 7,
@@ -175,7 +266,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 4 (index 3)"
     },
     {
       "ordinal": 8,
@@ -186,7 +288,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 4 (index 3)"
     },
     {
       "ordinal": 9,
@@ -197,7 +310,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 4 (index 3)"
     },
     {
       "ordinal": 10,
@@ -208,7 +332,18 @@
       "logicalLabel": "B",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 MINUS sign",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "SIGN",
+      "contactRole": "B relay is projected as the register sign latch for this row.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 MINUS sign"
     },
     {
       "ordinal": 11,
@@ -219,7 +354,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 3 (index 2)"
     },
     {
       "ordinal": 12,
@@ -230,7 +376,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 3 (index 2)"
     },
     {
       "ordinal": 13,
@@ -241,7 +398,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 3 (index 2)"
     },
     {
       "ordinal": 14,
@@ -252,7 +420,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 3 (index 2)"
     },
     {
       "ordinal": 15,
@@ -263,7 +442,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 3 (index 2)"
     },
     {
       "ordinal": 16,
@@ -274,7 +464,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 2 (index 1)"
     },
     {
       "ordinal": 17,
@@ -285,7 +486,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 2 (index 1)"
     },
     {
       "ordinal": 18,
@@ -296,7 +508,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 2 (index 1)"
     },
     {
       "ordinal": 19,
@@ -307,7 +530,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 2 (index 1)"
     },
     {
       "ordinal": 20,
@@ -318,7 +552,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 2 (index 1)"
     },
     {
       "ordinal": 21,
@@ -329,7 +574,18 @@
       "logicalLabel": "B",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 PLUS sign",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "SIGN",
+      "contactRole": "B relay is projected as the register sign latch for this row.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 PLUS sign"
     },
     {
       "ordinal": 22,
@@ -340,7 +596,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 1 (index 0)"
     },
     {
       "ordinal": 23,
@@ -351,7 +618,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 1 (index 0)"
     },
     {
       "ordinal": 24,
@@ -362,7 +640,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 1 (index 0)"
     },
     {
       "ordinal": 25,
@@ -373,7 +662,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 1 (index 0)"
     },
     {
       "ordinal": 26,
@@ -384,7 +684,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R3 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R3 digit 1 (index 0)"
     },
     {
       "ordinal": 27,
@@ -395,7 +706,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 5 (index 4)"
     },
     {
       "ordinal": 28,
@@ -406,7 +728,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 5 (index 4)"
     },
     {
       "ordinal": 29,
@@ -417,7 +750,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 5 (index 4)"
     },
     {
       "ordinal": 30,
@@ -428,7 +772,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 5 (index 4)"
     },
     {
       "ordinal": 31,
@@ -439,7 +794,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 5 (index 4)"
     },
     {
       "ordinal": 32,
@@ -450,7 +816,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 4 (index 3)"
     },
     {
       "ordinal": 33,
@@ -461,7 +838,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 4 (index 3)"
     },
     {
       "ordinal": 34,
@@ -472,7 +860,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 4 (index 3)"
     },
     {
       "ordinal": 35,
@@ -483,7 +882,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 4 (index 3)"
     },
     {
       "ordinal": 36,
@@ -494,7 +904,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 4 (index 3)"
     },
     {
       "ordinal": 37,
@@ -505,7 +926,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 3 (index 2)"
     },
     {
       "ordinal": 38,
@@ -516,7 +948,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 3 (index 2)"
     },
     {
       "ordinal": 39,
@@ -527,7 +970,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 3 (index 2)"
     },
     {
       "ordinal": 40,
@@ -538,7 +992,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 3 (index 2)"
     },
     {
       "ordinal": 41,
@@ -549,7 +1014,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 3 (index 2)"
     },
     {
       "ordinal": 42,
@@ -560,7 +1036,18 @@
       "logicalLabel": "B",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 MINUS sign",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "SIGN",
+      "contactRole": "B relay is projected as the register sign latch for this row.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 MINUS sign"
     },
     {
       "ordinal": 43,
@@ -571,7 +1058,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 2 (index 1)"
     },
     {
       "ordinal": 44,
@@ -582,7 +1080,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 2 (index 1)"
     },
     {
       "ordinal": 45,
@@ -593,7 +1102,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 2 (index 1)"
     },
     {
       "ordinal": 46,
@@ -604,7 +1124,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 2 (index 1)"
     },
     {
       "ordinal": 47,
@@ -615,7 +1146,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 2 (index 1)"
     },
     {
       "ordinal": 48,
@@ -626,7 +1168,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 1 (index 0)"
     },
     {
       "ordinal": 49,
@@ -637,7 +1190,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 1 (index 0)"
     },
     {
       "ordinal": 50,
@@ -648,7 +1212,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 1 (index 0)"
     },
     {
       "ordinal": 51,
@@ -659,7 +1234,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 1 (index 0)"
     },
     {
       "ordinal": 52,
@@ -670,7 +1256,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 digit 1 (index 0)"
     },
     {
       "ordinal": 53,
@@ -681,7 +1278,18 @@
       "logicalLabel": "B",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R2 PLUS sign",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "SIGN",
+      "contactRole": "B relay is projected as the register sign latch for this row.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R2 PLUS sign"
     },
     {
       "ordinal": 54,
@@ -692,7 +1300,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 5 (index 4)"
     },
     {
       "ordinal": 55,
@@ -703,7 +1322,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 5 (index 4)"
     },
     {
       "ordinal": 56,
@@ -714,7 +1344,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 5 (index 4)"
     },
     {
       "ordinal": 57,
@@ -725,7 +1366,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 5 (index 4)"
     },
     {
       "ordinal": 58,
@@ -736,7 +1388,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 5 (index 4)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 5 (index 4)"
     },
     {
       "ordinal": 59,
@@ -747,7 +1410,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 4 (index 3)"
     },
     {
       "ordinal": 60,
@@ -758,7 +1432,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 4 (index 3)"
     },
     {
       "ordinal": 61,
@@ -769,7 +1454,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 4 (index 3)"
     },
     {
       "ordinal": 62,
@@ -780,7 +1476,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 4 (index 3)"
     },
     {
       "ordinal": 63,
@@ -791,7 +1498,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 4 (index 3)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 4 (index 3)"
     },
     {
       "ordinal": 64,
@@ -802,7 +1520,18 @@
       "logicalLabel": "B",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 MINUS sign",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "SIGN",
+      "contactRole": "B relay is projected as the register sign latch for this row.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 MINUS sign"
     },
     {
       "ordinal": 65,
@@ -813,7 +1542,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 3 (index 2)"
     },
     {
       "ordinal": 66,
@@ -824,7 +1564,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 3 (index 2)"
     },
     {
       "ordinal": 67,
@@ -835,7 +1586,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 3 (index 2)"
     },
     {
       "ordinal": 68,
@@ -846,7 +1608,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 3 (index 2)"
     },
     {
       "ordinal": 69,
@@ -857,7 +1630,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 3 (index 2)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 3 (index 2)"
     },
     {
       "ordinal": 70,
@@ -868,7 +1652,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 2 (index 1)"
     },
     {
       "ordinal": 71,
@@ -879,7 +1674,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 2 (index 1)"
     },
     {
       "ordinal": 72,
@@ -890,7 +1696,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 2 (index 1)"
     },
     {
       "ordinal": 73,
@@ -901,7 +1718,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 2 (index 1)"
     },
     {
       "ordinal": 74,
@@ -912,7 +1740,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 2 (index 1)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 2 (index 1)"
     },
     {
       "ordinal": 75,
@@ -923,7 +1762,18 @@
       "logicalLabel": "B",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 PLUS sign",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "SIGN",
+      "contactRole": "B relay is projected as the register sign latch for this row.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 PLUS sign"
     },
     {
       "ordinal": 76,
@@ -934,7 +1784,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 1 (index 0)"
     },
     {
       "ordinal": 77,
@@ -945,7 +1806,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 1 (index 0)"
     },
     {
       "ordinal": 78,
@@ -956,7 +1828,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 1 (index 0)"
     },
     {
       "ordinal": 79,
@@ -967,7 +1850,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 1 (index 0)"
     },
     {
       "ordinal": 80,
@@ -978,7 +1872,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "R1 digit 1 (index 0)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "R1 digit 1 (index 0)"
     },
     {
       "ordinal": 81,
@@ -989,7 +1894,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN right digit"
     },
     {
       "ordinal": 82,
@@ -1000,7 +1916,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN right digit"
     },
     {
       "ordinal": 83,
@@ -1011,7 +1938,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN right digit"
     },
     {
       "ordinal": 84,
@@ -1022,7 +1960,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN right digit"
     },
     {
       "ordinal": 85,
@@ -1033,7 +1982,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN right digit"
     },
     {
       "ordinal": 86,
@@ -1044,7 +2004,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN left digit"
     },
     {
       "ordinal": 87,
@@ -1055,7 +2026,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN left digit"
     },
     {
       "ordinal": 88,
@@ -1066,7 +2048,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN left digit"
     },
     {
       "ordinal": 89,
@@ -1077,7 +2070,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN left digit"
     },
     {
       "ordinal": 90,
@@ -1088,7 +2092,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NOUN left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NOUN left digit"
     },
     {
       "ordinal": 91,
@@ -1099,7 +2114,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB right digit"
     },
     {
       "ordinal": 92,
@@ -1110,7 +2136,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB right digit"
     },
     {
       "ordinal": 93,
@@ -1121,7 +2158,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB right digit"
     },
     {
       "ordinal": 94,
@@ -1132,7 +2180,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB right digit"
     },
     {
       "ordinal": 95,
@@ -1143,7 +2202,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB right digit"
     },
     {
       "ordinal": 96,
@@ -1154,7 +2224,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB left digit"
     },
     {
       "ordinal": 97,
@@ -1165,7 +2246,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB left digit"
     },
     {
       "ordinal": 98,
@@ -1176,7 +2268,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB left digit"
     },
     {
       "ordinal": 99,
@@ -1187,7 +2290,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB left digit"
     },
     {
       "ordinal": 100,
@@ -1198,7 +2312,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VERB left digit"
     },
     {
       "ordinal": 101,
@@ -1209,7 +2334,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG right digit"
     },
     {
       "ordinal": 102,
@@ -1220,7 +2356,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG right digit"
     },
     {
       "ordinal": 103,
@@ -1231,7 +2378,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG right digit"
     },
     {
       "ordinal": 104,
@@ -1242,7 +2400,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG right digit"
     },
     {
       "ordinal": 105,
@@ -1253,7 +2422,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG right digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG right digit"
     },
     {
       "ordinal": 106,
@@ -1264,7 +2444,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K1: directly controls H → segment b",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG left digit"
     },
     {
       "ordinal": 107,
@@ -1275,7 +2466,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG left digit"
     },
     {
       "ordinal": 108,
@@ -1286,7 +2488,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG left digit"
     },
     {
       "ordinal": 109,
@@ -1297,7 +2510,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG left digit"
     },
     {
       "ordinal": 110,
@@ -1308,7 +2532,18 @@
       "logicalLabel": "C-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG left digit",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "DIGIT",
+      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG left digit"
     },
     {
       "ordinal": 111,
@@ -1319,7 +2554,18 @@
       "logicalLabel": "D-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "Unrendered / reserved in current CM projection",
+      "functionalStatus": "physical-relay-current-visible-consumer-unresolved",
+      "spareStatus": "not-claimed-spare-without-interconnect-proof",
+      "logicalRoute": "MECH-ONLY",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "Unrendered / reserved in current CM projection"
     },
     {
       "ordinal": 112,
@@ -1330,7 +2576,18 @@
       "logicalLabel": "D-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "Unrendered / reserved in current CM projection",
+      "functionalStatus": "physical-relay-current-visible-consumer-unresolved",
+      "spareStatus": "not-claimed-spare-without-interconnect-proof",
+      "logicalRoute": "MECH-ONLY",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "Unrendered / reserved in current CM projection"
     },
     {
       "ordinal": 113,
@@ -1341,7 +2598,18 @@
       "logicalLabel": "D-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VEL condition lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "COND",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "VEL condition lamp"
     },
     {
       "ordinal": 114,
@@ -1352,7 +2620,18 @@
       "logicalLabel": "D-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "NO ATT condition lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "COND",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "NO ATT condition lamp"
     },
     {
       "ordinal": 115,
@@ -1363,7 +2642,18 @@
       "logicalLabel": "D-K5",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "ALT condition lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "COND",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "ALT condition lamp"
     },
     {
       "ordinal": 116,
@@ -1374,7 +2664,18 @@
       "logicalLabel": "C-K1",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "GIMBAL LOCK condition lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "COND",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "GIMBAL LOCK condition lamp"
     },
     {
       "ordinal": 117,
@@ -1385,7 +2686,18 @@
       "logicalLabel": "C-K2",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "Unrendered / reserved in current CM projection",
+      "functionalStatus": "physical-relay-current-visible-consumer-unresolved",
+      "spareStatus": "not-claimed-spare-without-interconnect-proof",
+      "logicalRoute": "MECH-ONLY",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "Unrendered / reserved in current CM projection"
     },
     {
       "ordinal": 118,
@@ -1396,7 +2708,18 @@
       "logicalLabel": "C-K3",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "TRACKER condition lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "COND",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "TRACKER condition lamp"
     },
     {
       "ordinal": 119,
@@ -1407,7 +2730,18 @@
       "logicalLabel": "C-K4",
       "packagePart": "2004688",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "PROG condition lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "COND",
+      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactPath": "AGC/clock Channel 010 word -> hardware-fidelity beginRelayDrive -> physical-population filter -> relay-visual-coupling contact trace -> settled logical display commit",
+      "timingModel": "20 ms bank-drive envelope; deterministic per-physical-identity set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in hardware-fidelity.js + relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "armature contact event -> DSKY_RELAY_AUDIO.playRelayImpact using the same physical identity",
+      "hapticCoupling": "authentic mode composes the same physical armature arrivals into one bank waveform; stretched mode uses contact-event micro-ticks",
+      "renderOrExternalEffect": "PROG condition lamp"
     }
   ],
   "nonLatchingRelays": [
@@ -1423,7 +2757,18 @@
       "sourceClass": "channel-command",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "External ISS WARNING indication",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-EXTERNAL",
+      "contactRole": "non-latching contact follows the real AGC output-command bit",
+      "contactPath": "0o011/0o00001 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "External ISS WARNING indication"
     },
     {
       "ordinal": 121,
@@ -1437,7 +2782,18 @@
       "sourceClass": "channel-command",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "COMP ACTY lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-LAMP",
+      "contactRole": "non-latching contact follows the real AGC output-command bit",
+      "contactPath": "0o011/0o00002 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "COMP ACTY lamp"
     },
     {
       "ordinal": 122,
@@ -1451,7 +2807,18 @@
       "sourceClass": "hardware-phase",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "STBY lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-LAMP",
+      "contactRole": "non-latching contact follows yaAGC hardware-phase state",
+      "contactPath": "0o163/0o00400 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "STBY lamp"
     },
     {
       "ordinal": 123,
@@ -1465,7 +2832,18 @@
       "sourceClass": "hardware-phase",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "RESTART lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-LAMP",
+      "contactRole": "non-latching contact follows yaAGC hardware-phase state",
+      "contactPath": "0o163/0o00200 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "RESTART lamp"
     },
     {
       "ordinal": 124,
@@ -1479,7 +2857,18 @@
       "sourceClass": "channel-command",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "External S-IVB INJ SEQ START / G HIGH indication (CM)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-EXTERNAL",
+      "contactRole": "non-latching contact follows the real AGC output-command bit",
+      "contactPath": "0o012/0o10000 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "External S-IVB INJ SEQ START / G HIGH indication (CM)"
     },
     {
       "ordinal": 125,
@@ -1493,7 +2882,18 @@
       "sourceClass": "channel-command",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "External S-IVB CUTOFF / G LOW indication (CM)",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-EXTERNAL",
+      "contactRole": "non-latching contact follows the real AGC output-command bit",
+      "contactPath": "0o012/0o20000 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "External S-IVB CUTOFF / G LOW indication (CM)"
     },
     {
       "ordinal": 126,
@@ -1507,7 +2907,18 @@
       "sourceClass": "channel-command",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "UPLINK ACTY lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-LAMP",
+      "contactRole": "non-latching contact follows the real AGC output-command bit",
+      "contactPath": "0o011/0o00004 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "UPLINK ACTY lamp"
     },
     {
       "ordinal": 127,
@@ -1521,7 +2932,18 @@
       "sourceClass": "hardware-phase",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "KEY REL lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-LAMP",
+      "contactRole": "non-latching contact follows yaAGC hardware-phase state",
+      "contactPath": "0o163/0o00020 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "KEY REL lamp"
     },
     {
       "ordinal": 128,
@@ -1535,7 +2957,18 @@
       "sourceClass": "hardware-phase",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "External CMC/LGC warning indication",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-EXTERNAL",
+      "contactRole": "non-latching contact follows yaAGC hardware-phase state",
+      "contactPath": "0o163/0o00001 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "External CMC/LGC warning indication"
     },
     {
       "ordinal": 129,
@@ -1549,7 +2982,18 @@
       "sourceClass": "hardware-phase",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "VERB/NOUN flash blanking contact",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-FLASH",
+      "contactRole": "non-latching contact follows yaAGC hardware-phase state",
+      "contactPath": "0o163/0o00040 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "VERB/NOUN flash blanking contact"
     },
     {
       "ordinal": 130,
@@ -1563,7 +3007,18 @@
       "sourceClass": "hardware-phase",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "OPR ERR lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-LAMP",
+      "contactRole": "non-latching contact follows yaAGC hardware-phase state",
+      "contactPath": "0o163/0o00100 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "OPR ERR lamp"
     },
     {
       "ordinal": 131,
@@ -1577,7 +3032,18 @@
       "sourceClass": "hardware-phase",
       "packagePart": "2004689",
       "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved"
+      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "functionalEffect": "TEMP lamp",
+      "functionalStatus": "functional",
+      "spareStatus": "not-spare",
+      "logicalRoute": "AUX-LAMP",
+      "contactRole": "non-latching contact follows yaAGC hardware-phase state",
+      "contactPath": "0o163/0o00010 -> hardware-fidelity setAuxRelays -> relay-visual-coupling presentAux -> contact commit",
+      "timingModel": "deterministic per-physical-identity non-latching set/reset travel, bounce, and stable-contact profile",
+      "timingEvidence": "Runtime model contract in relay-identity-audio.js; not claimed as a measured Apollo relay-unit timing calibration",
+      "soundCoupling": "auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxImpact",
+      "hapticCoupling": "same auxiliary armature event -> DSKY_RELAY_AUDIO.playAuxHaptic",
+      "renderOrExternalEffect": "TEMP lamp"
     }
   ],
   "packageSlots": [
