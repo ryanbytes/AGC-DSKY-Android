@@ -119,12 +119,46 @@ except Exception as e:
 PY
 
 INTERACTION=0
-if tap_label VERB; then
+ANR_DETECTED=0
+READY=0
+
+# Give startup time to settle. If Android raises an ANR, preserve evidence,
+# choose Wait from its UI-tree bounds, and continue testing the recovered app.
+for attempt in $(seq 1 20); do
+  dump_ui
+
+  if python3 "$OUT/tap_text.py" "$OUT/current.xml" "Wait" >/dev/null 2>&1; then
+    if [[ "$ANR_DETECTED" -eq 0 ]]; then
+      ANR_DETECTED=1
+      echo "ANR_DIALOG_DETECTED" | tee -a "$OUT/interaction.txt"
+      adb shell dumpsys activity lastanr > "$OUT/lastanr.txt" 2>&1 || true
+      adb shell dumpsys gfxinfo "$PKG" > "$OUT/gfxinfo-anr.txt" 2>&1 || true
+      adb shell dumpsys meminfo "$PKG" > "$OUT/meminfo-anr.txt" 2>&1 || true
+      adb exec-out screencap -p > "$OUT/02-anr.png"
+    fi
+    tap_from_dump "$OUT/current.xml" "Wait" || true
+    echo "ANR_WAIT_SELECTED" | tee -a "$OUT/interaction.txt"
+    sleep 2
+    continue
+  fi
+
+  if python3 "$OUT/tap_text.py" "$OUT/current.xml" "VERB" >/dev/null 2>&1; then
+    READY=1
+    echo "DSKY_KEYS_EXPOSED_AFTER_ATTEMPT:$attempt" | tee -a "$OUT/interaction.txt"
+    break
+  fi
+
+  sleep 1
+done
+
+if [[ "$READY" -eq 1 ]]; then
+  tap_label VERB || INTERACTION=1
   adb exec-out screencap -p > "$OUT/02-after-verb.png"
   tap_label 3 || INTERACTION=1
   tap_label 5 || INTERACTION=1
   tap_label ENTR || INTERACTION=1
 else
+  echo "DSKY_KEYS_NEVER_EXPOSED" | tee -a "$OUT/interaction.txt"
   INTERACTION=1
 fi
 
@@ -152,4 +186,12 @@ if [[ "$INTERACTION" -eq 0 ]]; then
   echo "V35_UI_SEQUENCE_EXECUTED" | tee -a "$OUT/result.txt"
 else
   echo "APP_LAUNCHED_BUT_DSKY_KEYS_NOT_EXPOSED_TO_UIAUTOMATOR" | tee -a "$OUT/result.txt"
+fi
+
+adb shell dumpsys gfxinfo "$PKG" > "$OUT/gfxinfo-final.txt" 2>&1 || true
+adb shell dumpsys meminfo "$PKG" > "$OUT/meminfo-final.txt" 2>&1 || true
+
+if [[ "$ANR_DETECTED" -eq 1 ]]; then
+  echo "STARTUP_ANR_DETECTED" | tee -a "$OUT/result.txt"
+  exit 12
 fi
