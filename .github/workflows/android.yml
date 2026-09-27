@@ -200,7 +200,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
-            set -euxo pipefail
+            set -eu
             OUT="$RUNNER_TEMP/dsky-emulator-qa"
             mkdir -p "$OUT"
             APK="$RUNNER_TEMP/AGC-DSKY-emulator-qa.apk"
