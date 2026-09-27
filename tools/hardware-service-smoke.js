@@ -106,7 +106,7 @@ assert(commits.some(item=>item.relay===3&&item.word===0o2000),'logical ROW-03:B 
 const removePolicy=hardware.registerSettledPaintPolicy('test',()=>false);
 display.implementation('decodeChannel10')((9<<11)|0o456);
 runNext();
-assert(commits.length===2&&commits[1].relay===9&&commits[1].word===0o456&&commits[1].render===false,'settled-paint policy must suppress paint without suppressing relay commit');
+assert(commits.length===3&&commits[2].relay===9&&commits[2].word===0o456&&commits[2].render===false,'settled-paint policy must suppress paint without suppressing relay commit');
 removePolicy();
 hardware.registerSnapshotExtension('test',snapshot=>({...snapshot,testExtension:true}));
 const diagnostic=hardware.snapshot();
