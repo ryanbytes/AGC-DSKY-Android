@@ -3145,9 +3145,9 @@
       "runtimeMaskOctal": "0o00001",
       "destination": "External ISS WARNING indication",
       "sourceClass": "channel-command",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D4:K21",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "External ISS WARNING indication",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3160,7 +3160,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "External ISS WARNING indication",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping"
+      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K21 contact topology agrees between 2005973 and 2005940A"
     },
     {
       "ordinal": 121,
@@ -3172,9 +3174,9 @@
       "runtimeMaskOctal": "0o00002",
       "destination": "COMP ACTY lamp",
       "sourceClass": "channel-command",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D4:K22",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "COMP ACTY lamp",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3187,7 +3189,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "COMP ACTY lamp",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping"
+      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
     },
     {
       "ordinal": 122,
@@ -3199,9 +3203,9 @@
       "runtimeMaskOctal": "0o00400",
       "destination": "STBY lamp",
       "sourceClass": "hardware-phase",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D5:K21",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "STBY lamp",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3214,7 +3218,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "STBY lamp",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel"
+      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K21 contact topology agrees between 2005973 and 2005940A"
     },
     {
       "ordinal": 123,
@@ -3226,9 +3232,9 @@
       "runtimeMaskOctal": "0o00200",
       "destination": "RESTART lamp",
       "sourceClass": "hardware-phase",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D3:K21",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "RESTART lamp",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3241,7 +3247,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "RESTART lamp",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel"
+      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K21 contact topology agrees between 2005973 and 2005940A"
     },
     {
       "ordinal": 124,
@@ -3253,9 +3261,9 @@
       "runtimeMaskOctal": "0o10000",
       "destination": "External S-IVB INJ SEQ START / G HIGH indication (CM)",
       "sourceClass": "channel-command",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D5:K22",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "External S-IVB INJ SEQ START / G HIGH indication (CM)",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3268,7 +3276,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "External S-IVB INJ SEQ START / G HIGH indication (CM)",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping"
+      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
     },
     {
       "ordinal": 125,
@@ -3280,9 +3290,9 @@
       "runtimeMaskOctal": "0o20000",
       "destination": "External S-IVB CUTOFF / G LOW indication (CM)",
       "sourceClass": "channel-command",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D6:K22",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "External S-IVB CUTOFF / G LOW indication (CM)",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3295,7 +3305,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "External S-IVB CUTOFF / G LOW indication (CM)",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping"
+      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
     },
     {
       "ordinal": 126,
@@ -3307,9 +3319,9 @@
       "runtimeMaskOctal": "0o00004",
       "destination": "UPLINK ACTY lamp",
       "sourceClass": "channel-command",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D3:K22",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "UPLINK ACTY lamp",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3322,7 +3334,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "UPLINK ACTY lamp",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping"
+      "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
     },
     {
       "ordinal": 127,
@@ -3334,9 +3348,9 @@
       "runtimeMaskOctal": "0o00020",
       "destination": "KEY REL lamp",
       "sourceClass": "hardware-phase",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D2:K22",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "KEY REL lamp",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3349,7 +3363,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "KEY REL lamp",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel"
+      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
     },
     {
       "ordinal": 128,
@@ -3361,9 +3377,9 @@
       "runtimeMaskOctal": "0o00001",
       "destination": "External CMC/LGC warning indication",
       "sourceClass": "hardware-phase",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D6:K21",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "External CMC/LGC warning indication",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3376,7 +3392,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "External CMC/LGC warning indication",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel"
+      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K21 contact topology agrees between 2005973 and 2005940A"
     },
     {
       "ordinal": 129,
@@ -3388,9 +3406,9 @@
       "runtimeMaskOctal": "0o00040",
       "destination": "VERB/NOUN flash blanking contact",
       "sourceClass": "hardware-phase",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D1:K22",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "VERB/NOUN flash blanking contact",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3403,7 +3421,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "VERB/NOUN flash blanking contact",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel"
+      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
     },
     {
       "ordinal": 130,
@@ -3415,9 +3435,9 @@
       "runtimeMaskOctal": "0o00100",
       "destination": "OPR ERR lamp",
       "sourceClass": "hardware-phase",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D1:K21",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "OPR ERR lamp",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3430,7 +3450,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "OPR ERR lamp",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel"
+      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K21 contact topology agrees between 2005973 and 2005940A"
     },
     {
       "ordinal": 131,
@@ -3442,9 +3464,9 @@
       "runtimeMaskOctal": "0o00010",
       "destination": "TEMP lamp",
       "sourceClass": "hardware-phase",
-      "packagePart": "2004689",
-      "packageSlot": null,
-      "packageSlotStatus": "interconnect-crosswalk-unresolved",
+      "packagePart": "2004689-2",
+      "packageSlot": "D2:K21",
+      "packageSlotStatus": "proven-source-join-2005954A-2005973-drive",
       "functionalEffect": "TEMP lamp",
       "functionalStatus": "functional",
       "spareStatus": "not-spare",
@@ -3457,7 +3479,9 @@
       "hapticCoupling": "one 1 ms / 1-of-255 handset tick per physical armature event; explicitly non-historical phone presentation",
       "renderOrExternalEffect": "TEMP lamp",
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
-      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel"
+      "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
+      "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
+      "contactTopologyStatus": "drive mapping proven; K21 contact topology agrees between 2005973 and 2005940A"
     }
   ],
   "packageSlots": [
@@ -3606,14 +3630,14 @@
       "module": "D1",
       "k": 21,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D1:K22",
       "module": "D1",
       "k": 22,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D2:K1",
@@ -3760,14 +3784,14 @@
       "module": "D2",
       "k": 21,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D2:K22",
       "module": "D2",
       "k": 22,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D3:K1",
@@ -3914,14 +3938,14 @@
       "module": "D3",
       "k": 21,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D3:K22",
       "module": "D3",
       "k": 22,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D4:K1",
@@ -4068,14 +4092,14 @@
       "module": "D4",
       "k": 21,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D4:K22",
       "module": "D4",
       "k": 22,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D5:K1",
@@ -4222,14 +4246,14 @@
       "module": "D5",
       "k": 21,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D5:K22",
       "module": "D5",
       "k": 22,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D6:K1",
@@ -4376,14 +4400,14 @@
       "module": "D6",
       "k": 21,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     },
     {
       "id": "D6:K22",
       "module": "D6",
       "k": 22,
       "type": "non-latching",
-      "packagePart": "2004689"
+      "packagePart": "2004689-2"
     }
   ]
 }
