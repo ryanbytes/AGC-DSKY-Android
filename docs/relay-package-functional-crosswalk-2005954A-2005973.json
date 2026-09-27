@@ -1,0 +1,6514 @@
+{
+  "schemaVersion": 1,
+  "generatedDate": "2026-09-27",
+  "scope": "Physical D1-D6 indicator-driver relay-package drive-network crosswalk. This maps K1-K20 to external YDI/XDI signal labels; it does not by itself assign AGC Channel 010 logical row/bit addresses.",
+  "evidenceStatus": {
+    "K1_K20": "proven_by_join",
+    "K21_K22": "not_promoted_to_functional_crosswalk",
+    "AGC_channel_010_address_mapping": "open"
+  },
+  "provenance": {
+    "interconnect2005954A": {
+      "description": "Original 2005954A AGC DSKY interconnecting-diagram scan frames recovered from Internet Archive aperture-card images.",
+      "githubActionsRun": 36346538268,
+      "artifactId": 10940757164,
+      "artifactName": "DSKY-2005954A-frames-n174-n177",
+      "artifactSha256": "967c3d2115a2a072afb9e617646f4f6f7306ee34dc6bb8be9fe76ce07b2a610b",
+      "frames": [
+        "n174",
+        "n175",
+        "n176",
+        "n177"
+      ],
+      "usedForThisJoin": [
+        "n176",
+        "n177"
+      ],
+      "normalization": "The drawing's slashed-zero glyph is normalized to ASCII 0 in signal names."
+    },
+    "schematic2005973": {
+      "description": "Virtual AGC KiCad/netlist transcription of drawing 2005973, used for generic K1-K22 internal package-to-module-terminal topology.",
+      "sourceRepository": "virtualagc/virtualagc",
+      "sourcePath": "Schematics/2005973-/module.net",
+      "sourceBlobSha": "8081cb37794d6912bbf7424a173cbac5620610f8",
+      "projectDerivedTopology": "docs/relay-package-connector-topology-2005973.json"
+    },
+    "relayPinMeaning": {
+      "magneticLatchingPredecessor": "NASA/MIT SCD 1006282 shows the two magnetic-latching drive windings on relay terminals 1-5 and 9-10. It is used only to interpret the 2005973 symbol/pad drive topology, not as proof of production 2004688 timing.",
+      "nonLatchingPredecessor": "NASA/MIT SCD 1010784 contains multiple dash/pinout variants (schematic A coil 3-7; schematic B coil 1-5). Because the readable source does not establish the exact production 2004689 pin mapping here, K21/K22 are not assigned a functional drive crosswalk from this evidence alone."
+    }
+  },
+  "joinMethod": [
+    "Read D1-D6 external module-terminal signal labels from 2005954A.",
+    "Join the same numeric module terminals to K1-K20 relay pads in 2005973.",
+    "Preserve steering-diode traversal explicitly instead of treating it as a direct net.",
+    "Require all four drive pads (1,5,9,10) for all 20 latching relays in every D module to resolve."
+  ],
+  "validation": {
+    "modules": 6,
+    "latchingRelaysPerModule": 20,
+    "latchingPackagesResolved": 120,
+    "unresolvedK1K20Endpoints": 0
+  },
+  "modules": {
+    "D1": {
+      "status": "proven_K1_through_K20",
+      "latchingRelayCount": 20,
+      "sourceTerminalSignalLabels": {
+        "14": "YDI01",
+        "19": "YDI02",
+        "23": "YDI21",
+        "28": "YDI22",
+        "33": "YDI01",
+        "35": "YDI02",
+        "44": "YDI22",
+        "47": "XDI09",
+        "48": "YDI21",
+        "51": "YDI03",
+        "52": "YDI03",
+        "59": "YDI23",
+        "61": "YDI04",
+        "62": "YDI23",
+        "65": "YDI24",
+        "66": "XDI01",
+        "67": "XDI02",
+        "69": "XDI09",
+        "71": "XDI00",
+        "72": "YDI04",
+        "73": "YDI05",
+        "75": "YDI24",
+        "77": "YDI25",
+        "80": "YDI11",
+        "81": "YDI31",
+        "88": "XDI00"
+      },
+      "relays": {
+        "K1": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR1"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR2"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K2": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR3"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR4"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K3": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR5"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR6"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K4": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR7"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR8"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K5": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR9"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR10"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K6": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR11"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR12"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K7": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR13"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR14"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K8": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR15"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR16"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K9": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR17"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR18"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K10": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR19"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR20"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K11": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR21"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR22"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K12": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR23"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR24"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K13": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR25"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR26"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K14": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR27"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR28"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K15": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR29"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR30"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K16": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 28,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR31"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR32"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 19,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K17": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 48,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR33"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR34"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 33,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K18": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 59,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR35"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR36"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 52,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K19": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 75,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 69,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR37"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 69,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR38"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 72,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K20": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 81,
+                "signal": "YDI31",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 88,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR39"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 88,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR40"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 80,
+                "signal": "YDI11",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI31",
+            "YDI11"
+          ],
+          "steeredXdiSignal": "XDI00"
+        }
+      }
+    },
+    "D2": {
+      "status": "proven_K1_through_K20",
+      "latchingRelayCount": 20,
+      "sourceTerminalSignalLabels": {
+        "14": "YDI06",
+        "19": "YDI07",
+        "23": "YDI26",
+        "28": "YDI27",
+        "33": "YDI06",
+        "35": "YDI07",
+        "44": "YDI27",
+        "47": "XDI09",
+        "48": "YDI26",
+        "51": "YDI08",
+        "52": "YDI08",
+        "59": "YDI28",
+        "61": "YDI09",
+        "62": "YDI28",
+        "65": "YDI29",
+        "66": "XDI07",
+        "67": "XDI08",
+        "69": "XDI09",
+        "71": "XDI06",
+        "72": "YDI09",
+        "73": "YDI10",
+        "75": "YDI29",
+        "77": "YDI30",
+        "80": "YDI11",
+        "81": "YDI31",
+        "88": "XDI01"
+      },
+      "relays": {
+        "K1": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR1"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR2"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K2": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR3"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR4"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K3": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR5"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR6"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K4": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR7"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR8"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K5": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR9"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR10"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K6": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR11"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR12"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K7": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR13"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR14"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K8": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR15"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR16"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K9": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR17"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR18"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K10": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR19"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR20"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K11": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR21"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR22"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K12": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR23"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR24"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K13": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR25"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR26"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K14": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR27"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR28"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K15": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR29"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR30"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K16": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 28,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR31"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR32"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 19,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K17": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 48,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR33"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR34"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 33,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K18": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 59,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR35"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR36"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 52,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K19": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 75,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 69,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR37"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 69,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR38"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 72,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K20": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 81,
+                "signal": "YDI31",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 88,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR39"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 88,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR40"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 80,
+                "signal": "YDI11",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI31",
+            "YDI11"
+          ],
+          "steeredXdiSignal": "XDI01"
+        }
+      }
+    },
+    "D3": {
+      "status": "proven_K1_through_K20",
+      "latchingRelayCount": 20,
+      "sourceTerminalSignalLabels": {
+        "14": "YDI01",
+        "19": "YDI05",
+        "23": "YDI21",
+        "28": "YDI25",
+        "33": "YDI04",
+        "35": "YDI02",
+        "44": "YDI22",
+        "47": "XDI11",
+        "48": "YDI24",
+        "51": "YDI03",
+        "52": "YDI09",
+        "59": "YDI29",
+        "61": "YDI04",
+        "62": "YDI23",
+        "65": "YDI24",
+        "66": "XDI07",
+        "67": "XDI08",
+        "69": "XDI09",
+        "71": "XDI06",
+        "72": "YDI05",
+        "73": "YDI05",
+        "75": "YDI25",
+        "77": "YDI25",
+        "80": "YDI11",
+        "81": "YDI31",
+        "88": "XDI03"
+      },
+      "relays": {
+        "K1": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR1"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR2"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K2": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR3"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR4"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K3": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR5"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR6"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K4": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR7"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR8"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K5": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR9"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI06",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR10"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI06"
+        },
+        "K6": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR11"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR12"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K7": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR13"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR14"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K8": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR15"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR16"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K9": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR17"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR18"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K10": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR19"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI07",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR20"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI07"
+        },
+        "K11": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR21"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR22"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K12": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR23"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR24"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K13": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR25"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR26"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K14": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR27"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR28"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K15": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR29"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI08",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR30"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI08"
+        },
+        "K16": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 28,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR31"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR32"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 19,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K17": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 48,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR33"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR34"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 33,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K18": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 59,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR35"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR36"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 52,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K19": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 75,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 69,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR37"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 69,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR38"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 72,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K20": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 81,
+                "signal": "YDI31",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 88,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR39"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 88,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR40"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 80,
+                "signal": "YDI11",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI31",
+            "YDI11"
+          ],
+          "steeredXdiSignal": "XDI03"
+        }
+      }
+    },
+    "D4": {
+      "status": "proven_K1_through_K20",
+      "latchingRelayCount": 20,
+      "sourceTerminalSignalLabels": {
+        "14": "YDI06",
+        "19": "YDI02",
+        "23": "YDI26",
+        "28": "YDI22",
+        "33": "YDI01",
+        "35": "YDI07",
+        "44": "YDI27",
+        "47": "XDI10",
+        "48": "YDI21",
+        "51": "YDI08",
+        "52": "YDI03",
+        "59": "YDI23",
+        "61": "YDI09",
+        "62": "YDI28",
+        "65": "YDI29",
+        "66": "XDI01",
+        "67": "XDI02",
+        "69": "XDI10",
+        "71": "XDI00",
+        "72": "YDI04",
+        "73": "YDI10",
+        "75": "YDI24",
+        "77": "YDI30",
+        "80": "YDI11",
+        "81": "YDI31",
+        "88": "XDI04"
+      },
+      "relays": {
+        "K1": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR1"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR2"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K2": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR3"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR4"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K3": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR5"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR6"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K4": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR7"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR8"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K5": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR9"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI00",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR10"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI00"
+        },
+        "K6": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR11"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR12"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K7": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR13"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR14"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K8": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR15"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR16"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K9": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR17"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR18"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K10": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR19"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI01",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR20"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI01"
+        },
+        "K11": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR21"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR22"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K12": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR23"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR24"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K13": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR25"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR26"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K14": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR27"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR28"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K15": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR29"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI02",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR30"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI02"
+        },
+        "K16": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 28,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR31"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR32"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 19,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI10"
+        },
+        "K17": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 48,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR33"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR34"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 33,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI10"
+        },
+        "K18": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 59,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR35"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR36"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 52,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI10"
+        },
+        "K19": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 75,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 69,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR37"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 69,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR38"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 72,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI10"
+        },
+        "K20": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 81,
+                "signal": "YDI31",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 88,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR39"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 88,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR40"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 80,
+                "signal": "YDI11",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI31",
+            "YDI11"
+          ],
+          "steeredXdiSignal": "XDI04"
+        }
+      }
+    },
+    "D5": {
+      "status": "proven_K1_through_K20",
+      "latchingRelayCount": 20,
+      "sourceTerminalSignalLabels": {
+        "14": "YDI06",
+        "19": "YDI07",
+        "23": "YDI26",
+        "28": "YDI27",
+        "33": "YDI06",
+        "35": "YDI07",
+        "44": "YDI27",
+        "47": "XDI11",
+        "48": "YDI26",
+        "51": "YDI08",
+        "52": "YDI08",
+        "59": "YDI28",
+        "61": "YDI09",
+        "62": "YDI28",
+        "65": "YDI29",
+        "66": "XDI04",
+        "67": "XDI05",
+        "69": "XDI09",
+        "71": "XDI03",
+        "72": "YDI10",
+        "73": "YDI10",
+        "75": "YDI30",
+        "77": "YDI30",
+        "80": "YDI11",
+        "81": "YDI31",
+        "88": "XDI05"
+      },
+      "relays": {
+        "K1": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR1"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR2"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K2": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR3"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR4"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K3": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR5"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR6"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K4": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR7"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR8"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K5": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR9"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR10"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K6": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR11"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR12"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K7": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR13"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR14"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K8": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR15"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR16"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K9": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR17"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR18"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K10": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR19"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR20"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K11": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR21"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR22"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K12": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR23"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR24"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K13": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR25"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR26"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K14": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI29",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR27"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR28"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI09",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI29",
+            "YDI09"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K15": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR29"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR30"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K16": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 28,
+                "signal": "YDI27",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR31"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR32"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 19,
+                "signal": "YDI07",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI27",
+            "YDI07"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K17": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 48,
+                "signal": "YDI26",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR33"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR34"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 33,
+                "signal": "YDI06",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI26",
+            "YDI06"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K18": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 59,
+                "signal": "YDI28",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR35"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR36"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 52,
+                "signal": "YDI08",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI28",
+            "YDI08"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K19": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 75,
+                "signal": "YDI30",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 69,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR37"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 69,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR38"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 72,
+                "signal": "YDI10",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI30",
+            "YDI10"
+          ],
+          "steeredXdiSignal": "XDI09"
+        },
+        "K20": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 81,
+                "signal": "YDI31",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 88,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR39"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 88,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR40"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 80,
+                "signal": "YDI11",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI31",
+            "YDI11"
+          ],
+          "steeredXdiSignal": "XDI05"
+        }
+      }
+    },
+    "D6": {
+      "status": "proven_K1_through_K20",
+      "latchingRelayCount": 20,
+      "sourceTerminalSignalLabels": {
+        "14": "YDI01",
+        "19": "YDI02",
+        "23": "YDI21",
+        "28": "YDI22",
+        "33": "YDI01",
+        "35": "YDI02",
+        "44": "YDI22",
+        "47": "XDI11",
+        "48": "YDI21",
+        "51": "YDI03",
+        "52": "YDI03",
+        "59": "YDI23",
+        "61": "YDI04",
+        "62": "YDI23",
+        "65": "YDI24",
+        "66": "XDI04",
+        "67": "XDI05",
+        "69": "XDI10",
+        "71": "XDI03",
+        "72": "YDI05",
+        "73": "YDI05",
+        "75": "YDI25",
+        "77": "YDI25",
+        "80": "YDI11",
+        "81": "YDI31",
+        "88": "XDI09"
+      },
+      "relays": {
+        "K1": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR1"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR2"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K2": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR3"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR4"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K3": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR5"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR6"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K4": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR7"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR8"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K5": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR9"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 71,
+                "signal": "XDI03",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR10"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI03"
+        },
+        "K6": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR11"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR12"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K7": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR13"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR14"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K8": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR15"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR16"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K9": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR17"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR18"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K10": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR19"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 66,
+                "signal": "XDI04",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR20"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI04"
+        },
+        "K11": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 23,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR21"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR22"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 14,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K12": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 44,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR23"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR24"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 35,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K13": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 62,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR25"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR26"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 51,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K14": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 65,
+                "signal": "YDI24",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR27"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR28"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 61,
+                "signal": "YDI04",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI24",
+            "YDI04"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K15": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 77,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR29"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 67,
+                "signal": "XDI05",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR30"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 73,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI05"
+        },
+        "K16": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 28,
+                "signal": "YDI22",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR31"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR32"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 19,
+                "signal": "YDI02",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI22",
+            "YDI02"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K17": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 48,
+                "signal": "YDI21",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR33"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR34"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 33,
+                "signal": "YDI01",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI21",
+            "YDI01"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K18": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 59,
+                "signal": "YDI23",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR35"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 47,
+                "signal": "XDI11",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR36"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 52,
+                "signal": "YDI03",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI23",
+            "YDI03"
+          ],
+          "steeredXdiSignal": "XDI11"
+        },
+        "K19": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 75,
+                "signal": "YDI25",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 69,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR37"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 69,
+                "signal": "XDI10",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR38"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 72,
+                "signal": "YDI05",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI25",
+            "YDI05"
+          ],
+          "steeredXdiSignal": "XDI10"
+        },
+        "K20": {
+          "status": "proven_from_2005954A_plus_2005973",
+          "relayClass": "magnetic_latching",
+          "internalSymbol": "Relay-1006282",
+          "coilA": {
+            "relayPads": [
+              1,
+              5
+            ],
+            "externalPath": [
+              {
+                "relayPad": 1,
+                "moduleTerminal": 81,
+                "signal": "YDI31",
+                "connection": "direct"
+              },
+              {
+                "relayPad": 5,
+                "moduleTerminal": 88,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR39"
+              }
+            ]
+          },
+          "coilB": {
+            "relayPads": [
+              9,
+              10
+            ],
+            "externalPath": [
+              {
+                "relayPad": 9,
+                "moduleTerminal": 88,
+                "signal": "XDI09",
+                "connection": "via_steering_diode",
+                "steeringDiode": "CR40"
+              },
+              {
+                "relayPad": 10,
+                "moduleTerminal": 80,
+                "signal": "YDI11",
+                "connection": "direct"
+              }
+            ]
+          },
+          "directYdiSignals": [
+            "YDI31",
+            "YDI11"
+          ],
+          "steeredXdiSignal": "XDI09"
+        }
+      }
+    }
+  },
+  "nonLatchingRelays": {
+    "K21": {
+      "status": "topology_only_function_not_promoted",
+      "note": "2005973 and 2005940A transcriptions agree on K21 topology, but exact production 2004689 coil-pin interpretation is not established by the currently readable production source."
+    },
+    "K22": {
+      "status": "conflicting_transcriptions",
+      "note": "2005973 connects pads 2/6 to terminal 5, 3/7 to terminal 3, and 4/8 to terminal 6. 2005940A instead leaves K22 pads 2, 3, and 8 unconnected while retaining pad 6->5, pad 7->3, pad 4->6. Do not invent a functional assignment."
+    }
+  },
+  "limitations": [
+    "This is a physical-package-to-DSKY-internal-signal crosswalk, not yet an AGC Channel 010 row/bit address crosswalk.",
+    "It is design-document evidence, not an as-flown serial-number configuration claim.",
+    "K21/K22 remain excluded from functional drive mapping until production 2004689 pinout/dash evidence is recovered or another primary source closes the gap."
+  ]
+}
