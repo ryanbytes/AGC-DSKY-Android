@@ -1,10 +1,14 @@
 'use strict';
 
 /*
- * Stable per-relay mechanical fingerprints for the Block II DSKY.
- * hardware-fidelity.js owns the 20-ms bank-drive/settle model; this service
- * supplies deterministic per-relay set/reset travel, pole skew, contact bounce,
- * and acoustic response without changing latch/display state.
+ * Block II DSKY relay presentation.
+ * hardware-fidelity.js owns the documented 20-ms bank-drive/settle envelope.
+ * Surviving production documentation proves the physical relay population but
+ * does not provide measured unit-by-unit timing for 2004688/2004689. Therefore
+ * this service must not invent per-relay mechanical travel, bounce, pole skew,
+ * or "manufacturing fingerprints". The contact timing below is an explicitly
+ * documented predecessor-spec upper-bound reference, not a measured production
+ * 2004688/2004689 calibration.
  */
 (() => {
   const audio=window.AGCDSKY_AUDIO;
@@ -20,9 +24,15 @@
   const LATCHING_RELAY_COUNT = topology.latchingRelayCount;
   const PHYSICAL_RELAY_COUNT = topology.physicalRelayCount;
   const DRIVE_ENVELOPE_MS = 20;
-  const CONTACT_GUARD_MS = 0.35;
-  const MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
-  const SET_TRAVEL_MIN_MS=5.1,SET_TRAVEL_MAX_MS=13.6,RESET_TRAVEL_MIN_MS=4.7,RESET_TRAVEL_MAX_MS=12.8;
+  // NASA/MIT SCD 1006282 (predecessor magnetic-latching relay): operate/release
+  // <=3 ms, transfer <=1 ms, contact bounce <=2 ms. Later production DSKY BOMs
+  // use 2004688; its readable SCD has not been recovered, so 3 ms is retained
+  // only as a conservative predecessor-spec presentation reference.
+  const LATCHING_PRESENTATION_REFERENCE_MS = 3;
+  // NASA/MIT SCD 1010784 (predecessor general-purpose relay): operate/release
+  // <=5 ms and contact bounce <=2 ms. Production DSKYs use 2004689; 5 ms is a
+  // predecessor-spec presentation reference, not a claimed 2004689 measurement.
+  const NON_LATCHING_PRESENTATION_REFERENCE_MS = 5;
   const AUX_ORDER=topology.nonLatchingNames;
   const AUX_LABEL=Object.freeze(Object.fromEntries(topology.nonLatchingRelays.map(item=>[item.name,item.id.replace(/^AUX:/,'')])));
 
@@ -41,24 +51,22 @@
   function relayOrdinal(row,bit){return topology.latchingOrdinal(row,bit)}
   function auxOrdinal(name){return topology.nonLatchingOrdinal(name)}
 
-  function bouncePattern(rnd,count,windowMs){
-    if(count<=0||windowMs<=0)return Object.freeze([]);const out=[],slot=windowMs/(count+1);
-    for(let i=1;i<=count;i++){const jitter=(rnd()*2-1)*slot*.24;out.push(clamp(i*slot+jitter,.05,windowMs-.03))}
-    out.sort((a,b)=>a-b);return Object.freeze(out);
-  }
-  function manufacturingProfile(id,ordinal){
-    const rnd=xorshift32(hash32(`${id}:manufacture`));
-    const positionPhase=((ordinal*73+17)%PHYSICAL_RELAY_COUNT)/Math.max(1,PHYSICAL_RELAY_COUNT-1);
-    const setTravelMs=clamp(SET_TRAVEL_MIN_MS+(SET_TRAVEL_MAX_MS-SET_TRAVEL_MIN_MS)*clamp(.58*positionPhase+.42*rnd(),0,1),SET_TRAVEL_MIN_MS,SET_TRAVEL_MAX_MS);
-    const resetTravelMs=clamp(RESET_TRAVEL_MIN_MS+(RESET_TRAVEL_MAX_MS-RESET_TRAVEL_MIN_MS)*clamp(.52*(1-positionPhase)+.48*rnd(),0,1),RESET_TRAVEL_MIN_MS,RESET_TRAVEL_MAX_MS);
-    const poleSkewUs=Math.round((rnd()*2-1)*185);
-    const setBounceCount=2+Math.floor(rnd()*5),resetBounceCount=1+Math.floor(rnd()*4);
-    const setBounceWindowMs=.55+rnd()*2.35,resetBounceWindowMs=.35+rnd()*1.85;
-    const setBounceTimesMs=bouncePattern(rnd,setBounceCount,setBounceWindowMs),resetBounceTimesMs=bouncePattern(rnd,resetBounceCount,resetBounceWindowMs);
-    const setTailMs=.12+rnd()*.34,resetTailMs=.10+rnd()*.28;
-    const setLastBounce=setBounceTimesMs.length?setBounceTimesMs[setBounceTimesMs.length-1]:0,resetLastBounce=resetBounceTimesMs.length?resetBounceTimesMs[resetBounceTimesMs.length-1]:0;
-    const setStableMs=Math.min(MAX_CONTACT_STABLE_MS,setTravelMs+setLastBounce+setTailMs),resetStableMs=Math.min(MAX_CONTACT_STABLE_MS,resetTravelMs+resetLastBounce+resetTailMs);
-    return Object.freeze({setTravelMs,resetTravelMs,setStableMs,resetStableMs,setBounceCount,resetBounceCount,setBounceTimesMs,resetBounceTimesMs,setBounceWindowMs,resetBounceWindowMs,poleSkewUs});
+  function sourceBoundTimingProfile(id){
+    const auxiliary=String(id).startsWith('AUX:');
+    const travelMs=auxiliary?NON_LATCHING_PRESENTATION_REFERENCE_MS:LATCHING_PRESENTATION_REFERENCE_MS;
+    const timingBasis=auxiliary
+      ?'predecessor-1010784-upper-bound-reference; production-2004689-exact-timing-unresolved'
+      :'predecessor-1006282-upper-bound-reference; production-2004688-exact-timing-unresolved';
+    // Do not fabricate bounce timing or pole-to-pole skew. The predecessor SCDs
+    // specify maxima but do not provide an individual unit trace, and the later
+    // production relay SCDs are not presently readable in the recovered archive.
+    return Object.freeze({
+      setTravelMs:travelMs,resetTravelMs:travelMs,
+      setStableMs:travelMs,resetStableMs:travelMs,
+      setBounceCount:0,resetBounceCount:0,
+      setBounceTimesMs:Object.freeze([]),resetBounceTimesMs:Object.freeze([]),
+      setBounceWindowMs:0,resetBounceWindowMs:0,poleSkewUs:0,timingBasis
+    });
   }
   function contactTraceFromProfile(p,engaging){
     const travelMs=engaging?p.setTravelMs:p.resetTravelMs,stableMs=engaging?p.setStableMs:p.resetStableMs,bounceTimes=engaging?p.setBounceTimesMs:p.resetBounceTimesMs,finalState=!!engaging;
@@ -66,18 +74,28 @@
     for(const offset of bounceTimes){state=!state;events.push({atMs:travelMs+offset,state,kind:'bounce'})}events.push({atMs:stableMs,state:finalState,kind:'settled'});return events;
   }
   function profile(id,ordinal){
-    const m=manufacturingProfile(id,ordinal),rnd=xorshift32(hash32(`${id}:acoustic`)),centered=()=>rnd()*2-1,serialOffset=(ordinal-(PHYSICAL_RELAY_COUNT-1)/2)*.00034,bodyScale=1+serialOffset+centered()*.0035;
-    return Object.freeze({id,ordinal,...m,settleMs:Math.max(m.setStableMs,m.resetStableMs),f1:5600*bodyScale*(1+centered()*.0040),f2:8300*bodyScale*(1+centered()*.0045),f3:11600*bodyScale*(1+centered()*.0050),f4:14200*bodyScale*(1+centered()*.0055),d1:.00155*(1+centered()*.09),d2:.00185*(1+centered()*.09),d3:.00135*(1+centered()*.10),d4:.00095*(1+centered()*.11),strikeDecay:.00033*(1+centered()*.12),strikeMix:.14*(1+centered()*.10),ringMix:1+centered()*.045,level:1+centered()*.050,phaseSeed:hash32(`${id}:phase`),contactSeed:hash32(`${id}:contact`)});
+    const m=sourceBoundTimingProfile(id),auxiliary=String(id).startsWith('AUX:');
+    // Audio is a generic perceptual click for the relay class. No per-package
+    // acoustic individuality is claimed because no flown-unit acoustic data or
+    // physical D1-D6/K-slot crosswalk has been recovered.
+    const bodyScale=auxiliary?.985:1;
+    return Object.freeze({
+      id,ordinal,...m,settleMs:Math.max(m.setStableMs,m.resetStableMs),
+      acousticBasis:'generic-perceptual-relay-class-cue; not measured Apollo audio',
+      f1:5600*bodyScale,f2:8300*bodyScale,f3:11600*bodyScale,f4:14200*bodyScale,
+      d1:.00155,d2:.00185,d3:.00135,d4:.00095,
+      strikeDecay:.00033,strikeMix:.14,ringMix:1,level:1,
+      phaseSeed:hash32(auxiliary?'AUX:generic:phase':'LATCHING:generic:phase'),
+      contactSeed:hash32(auxiliary?'AUX:generic:contact':'LATCHING:generic:contact')
+    });
   }
   const profileCache=new Map();
   function profileFor(id,ordinal){if(!id||!Number.isInteger(ordinal)||ordinal<0)return null;const key=`${id}|${ordinal}`;if(!profileCache.has(key))profileCache.set(key,profile(id,ordinal));return profileCache.get(key)}
   function relayProfile(row,bit){if(!topology.isLatchingRelay(row,bit))return null;return profileFor(relayIdentity(row,bit),relayOrdinal(row,bit))}
 
-  // Perceptual haptic identity follows the same deterministic mechanical profile
-  // as relay travel/bounce/audio. With bank-level waveform composition preventing
-  // overwrite, the tactile mapping can stay intentionally small and crisp instead
-  // of notification-like. This is not a claim that surviving Apollo documentation
-  // specifies handset vibration force.
+  // Haptics are an explicitly non-historical handset presentation cue tied only
+  // to the modeled physical armature event. Apollo documentation does not specify
+  // phone vibration force or per-relay tactile individuality.
   function hapticSignatureFromProfile(p,engaging){
     const on=!!engaging;
     // Absolute minimum non-zero Android relay pulse: 1 ms at 1/255.
@@ -232,7 +250,7 @@
   const RELAY_SETTLE_MS=Object.freeze(Array.from({length:12},(_,rowIndex)=>Object.freeze(Array.from({length:11},(_,bit)=>{if(!topology.isLatchingRelay(rowIndex+1,bit))return null;const p=relayProfile(rowIndex+1,bit);return Math.max(p.setStableMs,p.resetStableMs)}))));
   const allStable=RELAY_SETTLE_MS.flat().filter(Number.isFinite);
   hardware.registerSnapshotExtension('relay-identity-audio',state=>{
-    const next={...state};next.relaySettleMs=RELAY_SETTLE_MS.map(row=>row.slice());next.relaySettleMinMs=Math.min(...allStable);next.relaySettleMaxMs=Math.max(...allStable);next.relayManufacturingModel='deterministic-per-relay-set-reset-bounce-v1';return next;
+    const next={...state};next.relaySettleMs=RELAY_SETTLE_MS.map(row=>row.slice());next.relaySettleMinMs=Math.min(...allStable);next.relaySettleMaxMs=Math.max(...allStable);next.relayManufacturingModel='source-bounded-topology-with-unresolved-production-relay-unit-timing-v2';return next;
   });
 
   window.DSKY_RELAY_AUDIO=Object.freeze({
