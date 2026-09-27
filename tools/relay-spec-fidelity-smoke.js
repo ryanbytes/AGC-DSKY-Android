@@ -17,6 +17,8 @@ const inventory=JSON.parse(read('docs/physical-relay-inventory.json'));
 const crosswalk=JSON.parse(read('docs/relay-package-functional-crosswalk-2005954A-2005973.json'));
 const logicalCrosswalk=JSON.parse(read('docs/relay-logical-physical-crosswalk-2005918.json'));
 const evidence=read('docs/relay-fidelity-evidence.md');
+const physicalAudit=read('docs/PHYSICAL_RELAY_AUDIT.md');
+const progress=read('docs/PROGRESS.md');
 
 if(inventory.scope.physicalRelayPackages!==132)fail('physical package total is not 132');
 if(inventory.scope.latchingRelayPackages!==120)fail('latching package total is not 120');
@@ -25,6 +27,13 @@ if(inventory.scope.unpopulatedLogicalChannel10Positions!==12)fail('logical holes
 if(inventory.latchingRelays.length!==120)fail('latching inventory length is not 120');
 if(inventory.nonLatchingRelays.length!==12)fail('non-latching inventory length is not 12');
 if(inventory.packageSlots.length!==132)fail('package-slot inventory length is not 132');
+if(!String(inventory.scope.packageSlotCrosswalkStatus||'').startsWith('RESOLVED AT PRODUCTION DESIGN-BASIS LEVEL'))fail('inventory summary still reports unresolved full package crosswalk');
+if(!String(inventory.scope.nonLatchingPackageSlotCrosswalkStatus||'').startsWith('resolved: 12/12'))fail('inventory summary still reports unresolved K21/K22 function crosswalk');
+no(JSON.stringify(inventory.scope),'Dn:K22 functional crosswalk remain unverified','stale inventory K22 drive-mapping claim');
+no(topology,'function-to-package assignment remains deliberately unresolved','stale runtime-topology auxiliary mapping claim');
+no(physicalAudit,'do not yet establish a complete one-to-one crosswalk','stale physical-audit crosswalk claim');
+no(progress,'complete logical/function -> D1-D6/K1-K22 physical package crosswalk remains unproven','stale progress crosswalk claim');
+no(progress,'[ ] recovered a complete authoritative D1-D6/Kx logical/function crosswalk','stale progress checklist claim');
 
 if(crosswalk.validation.modules!==6)fail('crosswalk module count is not 6');
 if(crosswalk.validation.latchingRelaysPerModule!==20)fail('crosswalk latching relays/module is not 20');
