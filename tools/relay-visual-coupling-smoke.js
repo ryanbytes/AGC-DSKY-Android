@@ -9,7 +9,7 @@ function fail(message){throw new Error(`RELAY VISUAL COUPLING FAIL: ${message}`)
 function assert(condition,message){if(!condition)fail(message)}
 function req(source,token,label){if(!source.includes(token))fail(`${label} missing: ${token}`)}
 
-const source=read('relay-visual-coupling.js'),stabilitySource=read('relay-stretch-stability.js'),html=read('index.html');
+const source=read('relay-visual-coupling.js'),topologySource=read('dsky-relay-topology.js'),stabilitySource=read('relay-stretch-stability.js'),html=read('index.html');
 new vm.Script(source,{filename:'relay-visual-coupling.js'});new vm.Script(stabilitySource,{filename:'relay-stretch-stability.js'});
 const identityAt=html.indexOf('<script src="relay-identity-audio.js"></script>'),visualAt=html.indexOf('<script src="relay-visual-coupling.js"></script>'),stabilityAt=html.indexOf('<script src="relay-stretch-stability.js"></script>');
 assert(identityAt>=0&&visualAt>identityAt&&stabilityAt>visualAt,'relay identity/visual/stability parser order changed');
@@ -28,6 +28,7 @@ const context={console,window:null,globalThis:null,Object,Map,Set,Number,String,
 };
 context.window=context;context.globalThis=context;vm.createContext(context);
 const registry=installServiceRegistry(context);
+new vm.Script(topologySource,{filename:'dsky-relay-topology.js'}).runInContext(context);
 context.AGCDSKY_APP_STATE=Object.seal({tickSound:true});
 context.AGCDSKY_SHELL={store:{get:key=>storage.has(key)?storage.get(key):null,set(key,value){storage.set(key,String(value));return true}},showControls(){}};
 const hardwareState={latches:{10:0},activeDrive:10,auxRelays:{flash:false}};let paintPolicy=null;
@@ -100,6 +101,13 @@ assert(events.some(e=>e.type==='relay-contact'&&e.bit===0&&e.phase==='bounce'&&e
 assert(renders.some(x=>x.word===0&&x.at===5.5),'DSKY projection did not follow contact bounce');
 runAllTimers();
 assert(renders[renders.length-1].word===33,'authentic transition did not settle to target contact word');
+
+// A logical bit with no installed relay package must not emit a physical event.
+events.length=0;renders.length=0;impacts.length=0;bankHaptics.length=0;contactHaptics.length=0;timers.length=0;now+=10;
+visual.presentDrive(3,0,1<<10,{renderContact:true});
+runAllTimers();
+assert(events.filter(e=>e.type==='relay-drive'||e.type==='relay-contact').length===0,'unpopulated ROW-03:B emitted a physical relay event');
+assert(impacts.length===0&&bankHaptics.length===0&&contactHaptics.length===0,'unpopulated ROW-03:B emitted sound/haptic activity');
 
 // PHONE CLOCK drives the same physical relays for sound/haptic fidelity, but its
 // display is owned by clockDigits at the 20-ms settle boundary. Intermediate
