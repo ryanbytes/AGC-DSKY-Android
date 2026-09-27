@@ -35,7 +35,7 @@
     },
     "relayPinMeaning": {
       "magneticLatchingPredecessor": "NASA/MIT SCD 1006282 shows the two magnetic-latching drive windings on relay terminals 1-5 and 9-10. It is used only to interpret the 2005973 symbol/pad drive topology, not as proof of production 2004688 timing.",
-      "nonLatchingPredecessor": "NASA/MIT SCD 1010784 contains multiple dash/pinout variants (schematic A coil 3-7; schematic B coil 1-5). Because the readable source does not establish the exact production 2004689 pin mapping here, K21/K22 are not assigned a functional drive crosswalk from this evidence alone."
+      "nonLatchingPredecessor": "NASA/MIT SCD 1010784 contains multiple predecessor dash/pinout variants (schematic A coil 3-7; schematic B coil 1-5), so 1010784 alone is not used to infer the production 2004689-2 drive pin. The production proof instead comes from 2003910-021 plus drawing 2005973, which identifies K21/K22 as 2004689-2 and explicitly states that positive voltage on pin 1 switches the relay circuit."
     },
     "productionNonLatchingRelay": {
       "description": "Production relay-circuit assembly 2003910-021 calls out two 2004689-2 relays per D1-D6 module. Drawing 2005973 identifies K21 & K22 as 2004689-2 and states that the K21/K22 relay circuit switches from the shown position when positive voltage is applied on relay pin 1.",
