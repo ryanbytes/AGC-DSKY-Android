@@ -56,7 +56,7 @@ for(const r of inventory.nonLatchingRelays){
     fail('yaAGC channel 0163 was not identified as fictitious effective-hardware state: '+r.id);
 }
 
-req(evidence,'120 latching relays and 12 nonlatching relays','R-700 population evidence');
+if(!/120\s+latching relays and 12 nonlatching relays/.test(evidence))fail('R-700 population evidence missing');
 req(evidence,'operate time: <= 3 ms','1006282 timing evidence');
 req(evidence,'operate time: <= 5 ms','1010784 timing evidence');
 req(evidence,'K22 differs','K22 unresolved evidence');
