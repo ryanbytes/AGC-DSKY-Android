@@ -50,9 +50,12 @@ for(const marker of [
 for(const token of [
   'const DRIVE_ENVELOPE_MS = 20;','MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS',
   'setTravelMs','resetTravelMs','setStableMs','resetStableMs','setBounceTimesMs','resetBounceTimesMs',
-  'poleSkewUs','contactTraceFor','deterministic-per-relay-set-reset-bounce-v1'
-]) assert(relayAudio.includes(token),'relay manufacturing model missing '+token);
-assert(!relayAudio.includes('Math.random('),'relay manufacturing fingerprints must remain deterministic');
+  'contactTraceFor','source-bounded-topology-with-unresolved-production-relay-unit-timing-v2',
+  'production-2004688-exact-timing-unresolved','production-2004689-exact-timing-unresolved'
+]) assert(relayAudio.includes(token),'source-bounded relay model missing '+token);
+assert(!relayAudio.includes('manufacturingProfile('),'synthetic relay manufacturing timing must remain removed');
+assert(!relayAudio.includes('positionPhase'),'synthetic per-relay timing phase must remain removed');
+assert(!relayAudio.includes('Math.random('),'per-operation relay timing randomness must remain absent');
 
 const clockIndex=html.indexOf('<script src="phone-clock-runtime.js"></script>');
 const apiIndex=html.indexOf('<script src="agc-api-runtime.js"></script>');
