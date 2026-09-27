@@ -10,10 +10,12 @@ import java.util.Locale;
  * nevertheless keeps the native widget electrically honest: decimal glyphs are
  * generated from the real K1..K5 contact matrix.  The logical Channel-010
  * field remains 12 x 11, but only the 120 physically populated latching
- * positions receive manufacturing fingerprints, travel, pole skew and bounce.
- * Callers can sample those physical contacts at any instant inside the documented
- * 20-ms drive/settle envelope.  The widget face publishes the settled result; it
- * never invents a partially settled state.
+ * positions receive physical contact models. Exact production 2004688 unit
+ * timing is unresolved, so the widget uses only the explicitly documented
+ * predecessor-spec presentation reference and does not invent unit-to-unit
+ * travel, bounce, or pole-skew fingerprints. Callers can sample those contacts
+ * inside the separate documented 20-ms drive/settle envelope. The widget face
+ * publishes the settled result; it never invents a partially settled state.
  */
 final class WidgetRelayModel {
     static final int BANKS = 12;
@@ -21,6 +23,7 @@ final class WidgetRelayModel {
     static final int CHARACTER_RELAYS = 5;
     static final int PHYSICAL_LATCHING_RELAYS = 120;
     static final double DRIVE_ENVELOPE_MS = 20.0;
+    static final double MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS;
     // Predecessor magnetic-latching SCD 1006282 specifies operate/release
     // <=3 ms. Production 2004688 exact unit timing is unresolved, so this is a
     // conservative presentation reference, not a measured production value.
@@ -99,6 +102,16 @@ final class WidgetRelayModel {
         if (row < 1 || row > BANKS || bit < 0 || bit >= RELAYS_PER_BANK) {
             throw new IllegalArgumentException("relay out of range: row=" + row + " bit=" + bit);
         }
+    }
+
+    private static String bitName(int bit) {
+        if (bit == 10) return "B";
+        if (bit >= 5) return "C-K" + (bit - 4);
+        return "D-K" + (bit + 1);
+    }
+
+    private static double clamp(double value, double low, double high) {
+        return Math.max(low, Math.min(high, value));
     }
 
     static int relayCodeForDigit(char ch) {
