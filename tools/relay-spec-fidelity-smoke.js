@@ -159,7 +159,7 @@ req(evidence,'No pseudo-random per-relay operate/release time.','anti-fabricatio
 req(evidence,'Comanche055 flight software RELTAB emits relay-word codes 1 through 12','flight row-code evidence');
 req(evidence,'thirteen banks octal 00 through 14','1965 13-bank discrepancy evidence');
 req(evidence,'bank 00 is not emitted by Comanche055 RELTAB','bank-00 non-use boundary');
-req(evidence,'proven for all 120 latching packages','source-joined K1-K20 crosswalk evidence');
+req(evidence,'120 installed latching positions','source-joined K1-K20 population evidence');
 req(evidence,'120 unique physical-package matches, 12 unpopulated logical positions','2005918 logical/physical join evidence');
 req(evidence,'zero ambiguous matches','2005918 zero-ambiguity evidence');
 req(evidence,'All 12 K21/K22 function drives are now source-joined','non-latching source-joined drive evidence');
