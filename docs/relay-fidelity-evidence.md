@@ -23,18 +23,25 @@ must remain explicitly uncertain.
 
 ## Timing evidence and limitation
 
-The later production BOM names relay parts 2004688 and 2004689, but this audit
-has not recovered readable specification-control drawings for those two part
-numbers. Therefore the simulation must not claim measured 2004688/2004689
+The production relay-circuit assembly identifies relay parts 2004688-1/-2 and
+2004689-2, and production-design schematic 2005973 explicitly identifies K21
+and K22 as 2004689-2 and states that their relay circuit switches from the
+shown position when positive voltage is applied on relay pin 1. That closes the
+non-latching drive-pin/dash question used for the function-to-package join.
+
+This audit still has not recovered readable specification-control drawings for
+production relay 2004688 or 2004689-2 that establish exact mechanical timing.
+Therefore the simulation must not claim measured 2004688/2004689-2
 unit-by-unit travel, bounce, pole skew, or acoustic individuality.
 
 A 2026-09-27 follow-up search checked the public Apollo/Virtual AGC material and
 GitHub code indexing for `2004688`, `2004688-1`, `2004688-2`,
-`2004689`, and `2004689-2`. The surviving production assembly listings
-confirm only the installed relay part numbers and quantities; no readable
-production relay SCD was recovered. This is a negative evidence checkpoint,
-not proof that the drawings never existed. Repeating the same indexed-source
-search must not be treated as new evidence unless a new scan/catalog record is
+`2004689`, and `2004689-2`. The production assembly and schematic evidence
+now establish the installed 2004689-2 dash number and its K21/K22 drive
+instruction, but no readable production relay SCD was recovered for exact
+mechanical timing. This remains a negative timing-evidence checkpoint, not
+proof that the SCD never existed. Repeating the same indexed-source search must
+not be treated as new timing evidence unless a new scan/catalog record is
 found.
 
 The readable predecessor magnetic-latching relay SCD 1006282 specifies:
@@ -68,8 +75,9 @@ mechanical operate/release time.
 - No pseudo-random per-relay operate/release time.
 - No pseudo-random contact-bounce count or timing.
 - No pseudo-random pole-to-pole skew.
-- No K21/K22 runtime-function-to-package assignment until production 2004689
-  pin/dash evidence closes the non-latching crosswalk.
+- No claim that the proven K21/K22 drive-function mapping also resolves exact
+  2004689-2 mechanical timing or the disputed K22 switched-contact wiring of a
+  particular flown DSKY.
 - No claim of unique flown-unit acoustic fingerprints.
 - No claim that yaAGC channel 0163 physically existed in Apollo hardware.
 
@@ -79,47 +87,36 @@ haptic cue. Those are presentation aids, not historical measurements.
 ## Open documentation questions
 
 1. Recover readable production SCDs for relay 2004688 and 2004689.
-2. Complete the remaining nonlatching-relay join.
+2. Preserve the now-proven non-latching function-to-package drive join.
 
-   **The Channel 010 logical row/bit -> physical D1-D6/K1-K20 crosswalk is now
-   proven for all 120 latching packages.** The original **2005918** AGC DSKY
-   signal-flow drawing was recovered from `agc_handbook_jp2` as frames
-   n371-n376. GitHub Actions run **36347679319**, artifact
-   `DSKY-2005918-frames-n371-n376` (artifact 10940662597), has artifact
-   SHA-256
-   `3edcc9d5fef949af986c3125b57949e681c4189002e34492d81153a4f39a19f9`.
+   **All 12 K21/K22 function drives are now source-joined at the production
+   design-document level.** Original 2005954A routes the external annunciator
+   controls to module terminals 85/86. Drawing 2005973 routes terminal 85
+   through R22/C6/Q12 to terminal 87; 2005954A loops 87 to terminal 4, and
+   2005973 connects terminal 4 to K22 pin 1. Terminal 86 similarly routes
+   through R24/C7/Q13 to terminal 95; 2005954A loops 95 to terminal 7, and
+   2005973 connects terminal 7 to K21 pin 1. K21/K22 pin 5 returns through
+   module terminal 26. Drawing 2005973 explicitly calls K21/K22
+   **2004689-2** and states that the relay circuit switches from the shown
+   position when positive voltage is applied on pin 1.
 
-   Sheet 1 part 3 (n371) gives the relay-word-code -> relay-selection-line
-   table. The twelve nonzero relay-word codes select XDI00-XDI11 in this exact
-   code order: 0001->XDI00, 0010->XDI01, 0011->XDI02, 0100->XDI03,
-   0101->XDI04, 0110->XDI05, 0111->XDI09, 1000->XDI10, 1001->XDI06,
-   1010->XDI07, 1011->XDI08, 1100->XDI11. The same drawing's relay-column
-   table and source note establish the OUT0 state polarity: the 1-5 winding is
-   the logical-0/turn-off side and the 9-10 winding is the
-   logical-1/turn-on side. Sheet 1 parts 1-2 expose the YDI drive pairs:
-   bits 1-5 use YDI21-25 for 0 and YDI01-05 for 1; bits 6-10 use YDI26-30
-   for 0 and YDI06-10 for 1; bit 11 uses YDI31 for 0 and YDI11 for 1.
+   The resulting mapping is:
+   - D1: K22 FLASH; K21 OPR ERROR.
+   - D2: K22 KEY REL; K21 TEMP CAUTION.
+   - D3: K22 UPLINK ACTY; K21 RESTART.
+   - D4: K22 COMP ACTY; K21 ISS WARNING.
+   - D5: K22 INJ SEQ START; K21 STBY.
+   - D6: K22 CUTOFF; K21 CIRCUIT.
 
-   Joining those XDI/YDI logical coordinates to
-   `docs/relay-package-functional-crosswalk-2005954A-2005973.json` produces
-   **120 unique physical-package matches, 12 unpopulated logical positions,
-   and zero ambiguous matches**. The twelve independently derived holes are
-   exactly the runtime's existing physical-population holes:
-   `3:10`, `8:5` through `8:10`, `9:10`, `10:10`, `11:10`,
-   `12:9`, and `12:10` (runtime bits are zero-based). No package is reused.
+   This is independently robust to the 2005973-vs-2005940A disagreement:
+   both schematic transcriptions use the same K21/K22 pin-1 drive and pin-5
+   common topology. Their difference is in **K22 switched contacts**, not the
+   drive coil. The machine-readable proof is
+   `docs/relay-package-functional-crosswalk-2005954A-2005973.json`.
 
-   Apollo 11 Comanche055 independently corroborates the interpretation:
-   `T4RUPT_PROGRAM.agc` states that RELTAB packs the relay-word code in the
-   upper four bits and relay code in the lower five bits before writing OUT0;
-   `PINBALL_GAME__BUTTONS_AND_LIGHTS.agc` documents the relay-word binary
-   codes and the two five-bit digit fields. The complete machine-readable join
-   is `docs/relay-logical-physical-crosswalk-2005918.json`.
-
-   K21/K22 remain deliberately outside that proof. The readable predecessor
-   SCD 1010784 contains multiple pinout variants (schematic A coil terminals
-   3-7; schematic B coil terminals 1-5), while the exact production 2004689
-   pin/dash mapping has not yet been recovered here. K22 additionally retains
-   the 2005973-vs-2005940A contact transcription conflict described below.
+   This closes the function-to-package drive crosswalk only. Exact
+   2004689-2 operate/release/bounce timing remains unknown, and the K22
+   contact-wiring conflict remains bounded below rather than silently resolved.
 
 3. Preserve the K22 documentation conflict without treating all surviving evidence as equally authoritative.
 
@@ -132,5 +129,5 @@ haptic cue. Those are presentation aids, not historical measurements.
 
    The production-design evidence favors 2005973-: the immediate relay-circuit assembly 2003910-021 (the assembly containing the 20 x 2004688 and 2 x 2004689 relays) calls out 2005973; ND-1021042/ND-1021043 table 8-II calls out 2005973 for DSKY 2003994; and original 2005973- has later drawing/TDRR and approval chronology than 2005940A. The parent indicator-driver assembly 2003952-031 still calls out 2005940, and ND-1021042 figure 4-226 carries the older 2005940-style K22 wiring.
 
-   Audit conclusion: use original 2005973- as the best-supported **production design basis** for K22. Do not promote that to a serial-number/as-flown claim: no unit-specific as-built or acceptance-test record has yet been recovered that independently proves the K22 contact wiring of a particular flown DSKY. The runtime still must not invent a Dn:K22 functional crosswalk until the full package/function mapping is proven.
+   Audit conclusion: use original 2005973- as the best-supported **production design basis** for K22. Do not promote that to a serial-number/as-flown claim: no unit-specific as-built or acceptance-test record has yet been recovered that independently proves the K22 contact wiring of a particular flown DSKY. The K22 function-to-package **drive** mapping is now proven as described above; the remaining dispute is K22 switched-contact wiring, not which external function actuates the package.
 4. Preserve and explain the 1965 Information Series 13-bank (00..14) statement versus the Apollo 11 flight-software/final-report 12-row (01..14) configuration; do not collapse them into one undocumented model.
