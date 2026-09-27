@@ -20,6 +20,11 @@ test -f "$APK"
 sha256sum "$APK" | tee qa/apk-sha256.txt
 adb install -r "$APK" | tee qa/install.txt
 adb logcat -c
+# Suppress Android's one-time immersive-mode tutorial so screenshots show only the app.
+adb shell settings put secure immersive_mode_confirmations confirmed || true
+# Clear any launcher state before starting the DSKY directly.
+adb shell am force-stop com.google.android.apps.nexuslauncher || true
+adb shell am force-stop com.android.launcher3 || true
 adb shell am force-stop "$PKG" || true
 
 COMPONENT="$(adb shell cmd package resolve-activity --brief "$PKG" | tail -n 1 | tr -d '\r')"
