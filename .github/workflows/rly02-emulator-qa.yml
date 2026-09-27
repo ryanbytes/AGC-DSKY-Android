@@ -1,0 +1,44 @@
+name: RLY-02 emulator QA
+
+on:
+  push:
+    branches:
+      - 'audit/rly-02-physical-relays'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install build SDK
+        run: sdkmanager 'platforms;android-37' 'build-tools;36.0.0' 'platform-tools'
+
+      - name: Build regular debug APK from RLY-02 head
+        run: bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:assembleRegularDebug
+
+      - name: Install CDP client
+        run: python3 -m pip install --quiet websocket-client
+
+      - name: Run packaged WebView RLY-02 runtime gate
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash tools/rly02-emulator-qa.sh
