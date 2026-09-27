@@ -79,26 +79,37 @@ haptic cue. Those are presentation aids, not historical measurements.
 ## Open documentation questions
 
 1. Recover readable production SCDs for relay 2004688 and 2004689.
-2. Complete the exact logical/function-to-D1-D6/K1-K22 package crosswalk.
+2. Complete the remaining AGC-logical-address and nonlatching-relay joins.
 
-   New 2026-09-27 evidence narrows this from an unknown-document problem to a
-   transcription/trace problem. Original interconnect drawing **2005954A**
-   survives in NARA aperture-card box 460 and is directly readable at Internet
-   Archive frames n419-n422. Frame n422 explicitly lays out **D1 through D6** as
-   six separate 2003952 indicator-driver-module assemblies with their connector
-   pin signal names. The original **2005973-** module schematic/netlist exposes
-   the internal K1-K22-to-connector-pin topology. Therefore the crosswalk is
-   recoverable by joining 2005954A external Dn pin labels to 2005973- internal
-   Kx pin connectivity; it is not appropriate to invent a mapping, but it is
-   also no longer accurate to describe the necessary interconnect source as
-   unrecovered.
+   **K1-K20 are no longer unresolved at the physical-package/DSKY-signal level.**
+   On 2026-09-27 the original **2005954A** interconnect scan was recovered as
+   four source frames (n174-n177) from `AgcApertureCardsBatch3Images`.
+   GitHub Actions run **36346538268**, artifact
+   `DSKY-2005954A-frames-n174-n177` (artifact 10940757164), has artifact
+   SHA-256
+   `967c3d2115a2a072afb9e617646f4f6f7306ee34dc6bb8be9fe76ce07b2a610b`.
+   Frames n176/n177 expose the D1-D6 module-terminal signal labels needed for
+   the join.
 
-   Direct scan references:
-   - 2005954A interconnect, NARA box 460 frame n419:
-     https://archive.org/stream/apertureCardBox460NARASW_images/apertureCardBox460NARASW#page/n419/mode/1up
-   - continuation frames n420-n422, with D1-D6 module rows visible on n422.
-   - Virtual AGC original-drawing transcription:
-     https://github.com/virtualagc/virtualagc/tree/schematics/Schematics/2005973-
+   Joining those labels by numeric module terminal to the original
+   **2005973-** K1-K20 topology resolves all **120 magnetic-latching relay
+   packages** (20 per D module) to their YDI/XDI drive-network signal labels,
+   with **zero unresolved K1-K20 drive endpoints**. The machine-readable result
+   is `docs/relay-package-functional-crosswalk-2005954A-2005973.json`.
+
+   This closes the physical **D1-D6/K1-K20 -> YDI/XDI** package-signal
+   crosswalk. It does **not** by itself prove the downstream AGC Channel 010
+   relay-word row/bit -> physical package mapping. That logical-address join
+   remains open and must be traced through the signal-flow/logic documentation
+   rather than inferred from numbering.
+
+   K21/K22 are also deliberately excluded from the newly proven functional
+   drive crosswalk. The readable predecessor SCD 1010784 contains multiple
+   pinout variants (schematic A coil terminals 3-7; schematic B coil terminals
+   1-5), while the exact production 2004689 pin/dash mapping has not yet been
+   recovered here. K22 additionally retains the 2005973-vs-2005940A contact
+   transcription conflict described below.
+
 3. Preserve the K22 documentation conflict without treating all surviving evidence as equally authoritative.
 
    Exact K22 delta checked against the Virtual AGC netlists:
