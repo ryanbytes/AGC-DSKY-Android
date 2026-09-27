@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "generatedDate": "2026-09-27",
-  "scope": "Physical D1-D6 indicator-driver relay-package drive-network crosswalk. This maps K1-K20 to external YDI/XDI signal labels; it does not by itself assign AGC Channel 010 logical row/bit addresses.",
+  "scope": "Physical D1-D6 indicator-driver relay-package crosswalk. K1-K20 map the latching relay drive network; K21/K22 map the non-latching function drive paths. AGC Channel 010 logical row/bit addresses remain a separate joined layer.",
   "evidenceStatus": {
     "K1_K20": "proven_by_join",
-    "K21_K22": "not_promoted_to_functional_crosswalk",
+    "K21_K22": "proven_drive_function_mapping_design_basis",
     "AGC_channel_010_address_mapping": "proven_by_2005918_join"
   },
   "provenance": {
@@ -36,19 +36,45 @@
     "relayPinMeaning": {
       "magneticLatchingPredecessor": "NASA/MIT SCD 1006282 shows the two magnetic-latching drive windings on relay terminals 1-5 and 9-10. It is used only to interpret the 2005973 symbol/pad drive topology, not as proof of production 2004688 timing.",
       "nonLatchingPredecessor": "NASA/MIT SCD 1010784 contains multiple dash/pinout variants (schematic A coil 3-7; schematic B coil 1-5). Because the readable source does not establish the exact production 2004689 pin mapping here, K21/K22 are not assigned a functional drive crosswalk from this evidence alone."
+    },
+    "productionNonLatchingRelay": {
+      "description": "Production relay-circuit assembly 2003910-021 calls out two 2004689-2 relays per D1-D6 module. Drawing 2005973 identifies K21 & K22 as 2004689-2 and states that the K21/K22 relay circuit switches from the shown position when positive voltage is applied on relay pin 1.",
+      "installedPart": "2004689-2",
+      "quantityPerModule": 2,
+      "drawing2005973Path": "Schematics/2005973-/2005973--p1of1.kicad_sch",
+      "drawing2005973BlobSha": "c5c5f902f805f4015fd160296710a6c3afac32f5",
+      "driveInstruction": "RELAY CKT FOR K21 & K22 TO SWITCH FROM POSITION SHOWN, APPLY PLUS VOLTAGE ON PIN 1",
+      "sourceBoundary": "This proves the production design-basis drive pin/dash assignment used for the function-to-package join. It does not prove exact 2004689-2 operate/release timing or the K22 switched-contact configuration of a particular flown serial-number unit."
+    },
+    "alternateSchematic2005940A": {
+      "description": "Virtual AGC transcription of original drawing 2005940A, checked specifically to determine whether the documented K22 disagreement affects the drive-function join.",
+      "sourcePath": "Schematics/2005940A/module.net",
+      "sourceBlobSha": "5dab31c0c7ad378d34a67049722fc91810ff32f5",
+      "result": "K21 and K22 use the same relay drive pins/networks as 2005973 (pin 1 driven, pin 5 common). The disagreement is limited to K22 switched-contact wiring, so it does not change the function-to-package mapping."
+    },
+    "nonLatchingDriveJoin": {
+      "description": "2005954A routes the 12 external annunciator-control signals to D1-D6 module terminals 85/86. In 2005973, terminal 85 feeds R22/C6/Q12 and returns on terminal 87; 2005954A loops 87 to module terminal 4, which 2005973 connects to K22 pin 1. Terminal 86 feeds R24/C7/Q13 and returns on terminal 95; 2005954A loops 95 to terminal 7, which 2005973 connects to K21 pin 1. Both K21/K22 pin 5 returns use module terminal 26.",
+      "terminal85Path": "85 -> R22/C6/Q12 -> 87 -> 2005954A jumper -> 4 -> K22 pin 1",
+      "terminal86Path": "86 -> R24/C7/Q13 -> 95 -> 2005954A jumper -> 7 -> K21 pin 1",
+      "commonReturn": "K21/K22 pin 5 -> module terminal 26"
     }
   },
   "joinMethod": [
     "Read D1-D6 external module-terminal signal labels from 2005954A.",
     "Join the same numeric module terminals to K1-K20 relay pads in 2005973.",
     "Preserve steering-diode traversal explicitly instead of treating it as a direct net.",
-    "Require all four drive pads (1,5,9,10) for all 20 latching relays in every D module to resolve."
+    "Require all four drive pads (1,5,9,10) for all 20 latching relays in every D module to resolve.",
+    "Join the 12 external non-latching control signals on D1-D6 terminals 85/86 through the 2005973 Q12/Q13 drive paths and the 2005954A 87->4 / 95->7 internal jumpers to K22/K21 pin 1.",
+    "Cross-check 2005940A to ensure its K22 disagreement does not alter K21/K22 drive pins; preserve the remaining contact-wiring conflict separately."
   ],
   "validation": {
     "modules": 6,
     "latchingRelaysPerModule": 20,
     "latchingPackagesResolved": 120,
-    "unresolvedK1K20Endpoints": 0
+    "unresolvedK1K20Endpoints": 0,
+    "nonLatchingPackagesResolved": 12,
+    "unresolvedK21K22DriveFunctions": 0,
+    "uniqueNonLatchingFunctions": 12
   },
   "modules": {
     "D1": {
@@ -6498,22 +6524,305 @@
   },
   "nonLatchingRelays": {
     "K21": {
-      "status": "topology_only_function_not_promoted",
-      "note": "2005973 and 2005940A transcriptions agree on K21 topology, but exact production 2004689 coil-pin interpretation is not established by the currently readable production source."
+      "status": "functional_drive_mapping_proven",
+      "installedRelayPart": "2004689-2",
+      "relayDrivePins": [
+        1,
+        5
+      ],
+      "mappingRule": "module input terminal 86 -> Q13 -> terminal 95 -> terminal 7 -> K21 pin 1; K21 pin 5 -> terminal 26",
+      "contactTopologyStatus": "2005973_and_2005940A_agree",
+      "exactProductionTimingStatus": "unresolved",
+      "note": "Function-to-package drive mapping is source-joined for all D1-D6 K21 packages. This does not establish exact 2004689-2 mechanical timing."
     },
     "K22": {
-      "status": "conflicting_transcriptions",
-      "note": "2005973 connects pads 2/6 to terminal 5, 3/7 to terminal 3, and 4/8 to terminal 6. 2005940A instead leaves K22 pads 2, 3, and 8 unconnected while retaining pad 6->5, pad 7->3, pad 4->6. Do not invent a functional assignment."
+      "status": "functional_drive_mapping_proven_contact_conflict_preserved",
+      "installedRelayPart": "2004689-2",
+      "relayDrivePins": [
+        1,
+        5
+      ],
+      "mappingRule": "module input terminal 85 -> Q12 -> terminal 87 -> terminal 4 -> K22 pin 1; K22 pin 5 -> terminal 26",
+      "contactTopologyStatus": "conflicting_2005973_vs_2005940A",
+      "exactProductionTimingStatus": "unresolved",
+      "note": "Function-to-package drive mapping is source-joined for all D1-D6 K22 packages because both candidate schematics agree on the drive pins. The switched-contact wiring conflict remains: 2005973 connects K22 pads 2/3/8 where 2005940A leaves them unconnected."
     }
   },
   "limitations": [
     "This file is the physical-package-to-DSKY-internal-signal layer. The downstream AGC Channel 010 row/bit -> physical D1-D6/K1-K20 join is now proven separately in docs/relay-logical-physical-crosswalk-2005918.json.",
     "It is design-document evidence, not an as-flown serial-number configuration claim.",
-    "K21/K22 remain excluded from functional drive mapping until production 2004689 pinout/dash evidence is recovered or another primary source closes the gap."
+    "K21/K22 function-to-package drive mapping is proven at the production design-document level, but exact 2004689-2 mechanical timing remains unrecovered.",
+    "The 2005973-vs-2005940A K22 switched-contact conflict remains unresolved for any specific flown serial-number DSKY; it does not affect the K22 drive-function assignment because both drawings agree on pins 1/5 and the upstream drive path."
   ],
   "downstreamLogicalCrosswalk": {
     "status": "proven_for_all_120_latching_packages",
     "path": "docs/relay-logical-physical-crosswalk-2005918.json",
     "evidence": "Original 2005918 relay-word/XDI/YDI signal flow joined to this D1-D6/K1-K20 package-signal crosswalk."
-  }
+  },
+  "nonLatchingFunctionalMappings": [
+    {
+      "module": "D1",
+      "packageSlot": "K22",
+      "function": "FLASH",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB238",
+      "externalJ9Pin": 70,
+      "moduleInputTerminal": 85,
+      "driverTransistor": "Q12",
+      "moduleReturnTerminal": 87,
+      "internalJumper": "87->4",
+      "relayDriveTerminal": 4,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D1",
+      "packageSlot": "K21",
+      "function": "OPR ERROR",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB244",
+      "externalJ9Pin": 72,
+      "moduleInputTerminal": 86,
+      "driverTransistor": "Q13",
+      "moduleReturnTerminal": 95,
+      "internalJumper": "95->7",
+      "relayDriveTerminal": 7,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "2005973_and_2005940A_agree",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D2",
+      "packageSlot": "K22",
+      "function": "KEY REL",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB236",
+      "externalJ9Pin": 46,
+      "moduleInputTerminal": 85,
+      "driverTransistor": "Q12",
+      "moduleReturnTerminal": 87,
+      "internalJumper": "87->4",
+      "relayDriveTerminal": 4,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D2",
+      "packageSlot": "K21",
+      "function": "TEMP CAUTION",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB258",
+      "externalJ9Pin": 71,
+      "moduleInputTerminal": 86,
+      "driverTransistor": "Q13",
+      "moduleReturnTerminal": 95,
+      "internalJumper": "95->7",
+      "relayDriveTerminal": 7,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "2005973_and_2005940A_agree",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D3",
+      "packageSlot": "K22",
+      "function": "UPLINK ACTY",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB235",
+      "externalJ9Pin": 47,
+      "moduleInputTerminal": 85,
+      "driverTransistor": "Q12",
+      "moduleReturnTerminal": 87,
+      "internalJumper": "87->4",
+      "relayDriveTerminal": 4,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D3",
+      "packageSlot": "K21",
+      "function": "RESTART",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "C-232",
+      "externalJ9Pin": 44,
+      "moduleInputTerminal": 86,
+      "driverTransistor": "Q13",
+      "moduleReturnTerminal": 95,
+      "internalJumper": "95->7",
+      "relayDriveTerminal": 7,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "2005973_and_2005940A_agree",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D4",
+      "packageSlot": "K22",
+      "function": "COMP ACTY",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB230",
+      "externalJ9Pin": 26,
+      "moduleInputTerminal": 85,
+      "driverTransistor": "Q12",
+      "moduleReturnTerminal": 87,
+      "internalJumper": "87->4",
+      "relayDriveTerminal": 4,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D4",
+      "packageSlot": "K21",
+      "function": "ISS WARNING",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB229",
+      "externalJ9Pin": 27,
+      "moduleInputTerminal": 86,
+      "driverTransistor": "Q13",
+      "moduleReturnTerminal": 95,
+      "internalJumper": "95->7",
+      "relayDriveTerminal": 7,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "2005973_and_2005940A_agree",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D5",
+      "packageSlot": "K22",
+      "function": "INJ SEQ START",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB233",
+      "externalJ9Pin": 69,
+      "moduleInputTerminal": 85,
+      "driverTransistor": "Q12",
+      "moduleReturnTerminal": 87,
+      "internalJumper": "87->4",
+      "relayDriveTerminal": 4,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D5",
+      "packageSlot": "K21",
+      "function": "STBY",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB231",
+      "externalJ9Pin": 25,
+      "moduleInputTerminal": 86,
+      "driverTransistor": "Q13",
+      "moduleReturnTerminal": 95,
+      "internalJumper": "95->7",
+      "relayDriveTerminal": 7,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "2005973_and_2005940A_agree",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D6",
+      "packageSlot": "K22",
+      "function": "CUTOFF",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "CB234",
+      "externalJ9Pin": 18,
+      "moduleInputTerminal": 85,
+      "driverTransistor": "Q12",
+      "moduleReturnTerminal": 87,
+      "internalJumper": "87->4",
+      "relayDriveTerminal": 4,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "exactProductionTimingStatus": "unresolved"
+    },
+    {
+      "module": "D6",
+      "packageSlot": "K21",
+      "function": "CIRCUIT",
+      "relayClass": "non_latching",
+      "installedRelayPart": "2004689-2",
+      "status": "proven_design_basis_drive_join",
+      "externalSignal": "C-237",
+      "externalJ9Pin": 45,
+      "moduleInputTerminal": 86,
+      "driverTransistor": "Q13",
+      "moduleReturnTerminal": 95,
+      "internalJumper": "95->7",
+      "relayDriveTerminal": 7,
+      "relayCoilPins": [
+        1,
+        5
+      ],
+      "relayCommonTerminal": 26,
+      "contactConfigurationStatus": "2005973_and_2005940A_agree",
+      "exactProductionTimingStatus": "unresolved"
+    }
+  ]
 }
