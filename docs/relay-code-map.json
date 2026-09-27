@@ -1,13 +1,14 @@
 {
-  "generatedFrom": {
-    "repo": "ryanbytes/AGC-DSKY-Android",
-    "commit": "fdbf2ddbea7b90e25775395f5134693d36131ddc"
-  },
+  "generatedFrom": "RLY-02 physical topology audit",
   "scope": {
-    "modeledLatchingIdentities": 132,
-    "modeledAuxiliaryIdentities": 8,
-    "totalModeledIdentities": 140,
-    "historicalCaveat": "Software identity count is not a claim of 140 physical Apollo DSKY relays."
+    "logicalChannel10Identities": 132,
+    "modeledNonLatchingFunctions": 12,
+    "totalLogicalAndFunctionIdentities": 144,
+    "physicalLatchingIdentities": 120,
+    "physicalNonLatchingIdentities": 12,
+    "totalPhysicalRelayIdentities": 132,
+    "unpopulatedLogicalChannel10Positions": 12,
+    "historicalCaveat": "Channel 010 retains 132 logical row/bit positions, but only 120 are populated by physical latching relay packages. Physical fidelity is defined by docs/physical-relay-inventory.json."
   },
   "routeDefinitions": {
     "DIGIT": "`hardware-fidelity.beginRelayDrive` → `relay-visual-coupling.presentDrive/applyRelayContact` → `AGCDSKY_DISPLAY.renderRelayWord` → `agc-display-runtime.projectRelayWord(case row)` → `dsky-relay-matrix.segmentsForRelayCode` → `dsky-geometry.paintApolloDigitSlot`.",
@@ -15,7 +16,9 @@
     "COND": "`hardware-fidelity.beginRelayDrive` → relay presentation → `agc-display-runtime.projectRelayWord(case 12)` → `displayRenderer.setLamp(...)`.",
     "MECH-ONLY": "Identity/timing/audio/haptic still run through `relay-identity-audio.js` + `relay-visual-coupling.js`; `projectRelayWord` intentionally has no visible consumer for this bit/bank.",
     "AUX-LAMP": "Channel decoder in `hardware-fidelity.js` → `setAuxRelays` → `relay-visual-coupling.presentAux` → `commitAuxRelays` → `displayRenderer.setLamp(...)`.",
-    "AUX-FLASH": "Channel 0163 decoder → `setAuxRelays({flash})` → `relay-visual-coupling.presentAux` → `commitAuxRelays` → `document.body.classList.toggle('vn-flash-off', ...)`."
+    "AUX-FLASH": "Channel 0163 decoder → `setAuxRelays({flash})` → `relay-visual-coupling.presentAux` → `commitAuxRelays` → `document.body.classList.toggle('vn-flash-off', ...)`.",
+    "NO-PHYSICAL-RELAY": "Logical Channel 010 state only. No physical relay/contact event, manufacturing profile, click, or haptic.",
+    "AUX-EXTERNAL": "Real non-latching relay sourced from AGC command or yaAGC hardware-phase state; contact affects an external spacecraft indication rather than a DSKY face lamp."
   },
   "latchingRelays": [
     {
@@ -30,7 +33,10 @@
       "destination": "R3 digit 5 (index 4)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 0,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 1,
@@ -44,7 +50,10 @@
       "destination": "R3 digit 5 (index 4)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 1,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 2,
@@ -58,7 +67,10 @@
       "destination": "R3 digit 5 (index 4)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 2,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 3,
@@ -72,7 +84,10 @@
       "destination": "R3 digit 5 (index 4)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 3,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 4,
@@ -86,7 +101,10 @@
       "destination": "R3 digit 5 (index 4)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 4,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 5,
@@ -100,7 +118,10 @@
       "destination": "R3 digit 4 (index 3)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 5,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 6,
@@ -114,7 +135,10 @@
       "destination": "R3 digit 4 (index 3)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 6,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 7,
@@ -128,7 +152,10 @@
       "destination": "R3 digit 4 (index 3)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 7,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 8,
@@ -142,7 +169,10 @@
       "destination": "R3 digit 4 (index 3)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 8,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 9,
@@ -156,7 +186,10 @@
       "destination": "R3 digit 4 (index 3)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 9,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 10,
@@ -170,7 +203,10 @@
       "destination": "R3 MINUS sign",
       "contactRole": "B relay is projected as the register sign latch for this row.",
       "route": "SIGN",
-      "clock": "R3 seconds pair: digits 4–5; B held 0"
+      "clock": "R3 seconds pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 10,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 11,
@@ -184,7 +220,10 @@
       "destination": "R3 digit 3 (index 2)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 11,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 12,
@@ -198,7 +237,10 @@
       "destination": "R3 digit 3 (index 2)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 12,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 13,
@@ -212,7 +254,10 @@
       "destination": "R3 digit 3 (index 2)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 13,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 14,
@@ -226,7 +271,10 @@
       "destination": "R3 digit 3 (index 2)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 14,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 15,
@@ -240,7 +288,10 @@
       "destination": "R3 digit 3 (index 2)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 15,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 16,
@@ -254,7 +305,10 @@
       "destination": "R3 digit 2 (index 1)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 16,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 17,
@@ -268,7 +322,10 @@
       "destination": "R3 digit 2 (index 1)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 17,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 18,
@@ -282,7 +339,10 @@
       "destination": "R3 digit 2 (index 1)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 18,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 19,
@@ -296,7 +356,10 @@
       "destination": "R3 digit 2 (index 1)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 19,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 20,
@@ -310,7 +373,10 @@
       "destination": "R3 digit 2 (index 1)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 20,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 21,
@@ -324,7 +390,10 @@
       "destination": "R3 PLUS sign",
       "contactRole": "B relay is projected as the register sign latch for this row.",
       "route": "SIGN",
-      "clock": "R3 seconds pair: digits 2–3; B held 1"
+      "clock": "R3 seconds pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 21,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 22,
@@ -338,7 +407,10 @@
       "destination": "R3 digit 1 (index 0)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 22,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 23,
@@ -352,7 +424,10 @@
       "destination": "R3 digit 1 (index 0)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 23,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 24,
@@ -366,7 +441,10 @@
       "destination": "R3 digit 1 (index 0)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 24,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 25,
@@ -380,7 +458,10 @@
       "destination": "R3 digit 1 (index 0)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 25,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 26,
@@ -394,7 +475,10 @@
       "destination": "R3 digit 1 (index 0)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 26,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 27,
@@ -408,7 +492,10 @@
       "destination": "R2 digit 5 (index 4)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 27,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 28,
@@ -422,7 +509,10 @@
       "destination": "R2 digit 5 (index 4)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 28,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 29,
@@ -436,7 +526,10 @@
       "destination": "R2 digit 5 (index 4)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 29,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 30,
@@ -450,7 +543,10 @@
       "destination": "R2 digit 5 (index 4)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 30,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 31,
@@ -464,7 +560,10 @@
       "destination": "R2 digit 5 (index 4)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 31,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 32,
@@ -476,9 +575,12 @@
       "bank": "B",
       "k": null,
       "destination": "Unrendered / mechanically modeled",
-      "contactRole": "B relay is mechanically modeled but this row's display projection ignores it.",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0"
+      "clock": "Minute/seconds bridge: R2 digit 5 + R3 digit 1; B held 0",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 33,
@@ -492,7 +594,10 @@
       "destination": "R2 digit 4 (index 3)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 32,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 34,
@@ -506,7 +611,10 @@
       "destination": "R2 digit 4 (index 3)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 33,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 35,
@@ -520,7 +628,10 @@
       "destination": "R2 digit 4 (index 3)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 34,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 36,
@@ -534,7 +645,10 @@
       "destination": "R2 digit 4 (index 3)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 35,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 37,
@@ -548,7 +662,10 @@
       "destination": "R2 digit 4 (index 3)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 36,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 38,
@@ -562,7 +679,10 @@
       "destination": "R2 digit 3 (index 2)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 37,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 39,
@@ -576,7 +696,10 @@
       "destination": "R2 digit 3 (index 2)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 38,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 40,
@@ -590,7 +713,10 @@
       "destination": "R2 digit 3 (index 2)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 39,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 41,
@@ -604,7 +730,10 @@
       "destination": "R2 digit 3 (index 2)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 40,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 42,
@@ -618,7 +747,10 @@
       "destination": "R2 digit 3 (index 2)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 41,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 43,
@@ -632,7 +764,10 @@
       "destination": "R2 MINUS sign",
       "contactRole": "B relay is projected as the register sign latch for this row.",
       "route": "SIGN",
-      "clock": "R2 minutes pair: digits 3–4; B held 0"
+      "clock": "R2 minutes pair: digits 3–4; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 42,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 44,
@@ -646,7 +781,10 @@
       "destination": "R2 digit 2 (index 1)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 43,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 45,
@@ -660,7 +798,10 @@
       "destination": "R2 digit 2 (index 1)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 44,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 46,
@@ -674,7 +815,10 @@
       "destination": "R2 digit 2 (index 1)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 45,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 47,
@@ -688,7 +832,10 @@
       "destination": "R2 digit 2 (index 1)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 46,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 48,
@@ -702,7 +849,10 @@
       "destination": "R2 digit 2 (index 1)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 47,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 49,
@@ -716,7 +866,10 @@
       "destination": "R2 digit 1 (index 0)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 48,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 50,
@@ -730,7 +883,10 @@
       "destination": "R2 digit 1 (index 0)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 49,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 51,
@@ -744,7 +900,10 @@
       "destination": "R2 digit 1 (index 0)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 50,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 52,
@@ -758,7 +917,10 @@
       "destination": "R2 digit 1 (index 0)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 51,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 53,
@@ -772,7 +934,10 @@
       "destination": "R2 digit 1 (index 0)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 52,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 54,
@@ -786,7 +951,10 @@
       "destination": "R2 PLUS sign",
       "contactRole": "B relay is projected as the register sign latch for this row.",
       "route": "SIGN",
-      "clock": "R2 minutes pair: digits 1–2; B held 1"
+      "clock": "R2 minutes pair: digits 1–2; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 53,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 55,
@@ -800,7 +968,10 @@
       "destination": "R1 digit 5 (index 4)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 54,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 56,
@@ -814,7 +985,10 @@
       "destination": "R1 digit 5 (index 4)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 55,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 57,
@@ -828,7 +1002,10 @@
       "destination": "R1 digit 5 (index 4)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 56,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 58,
@@ -842,7 +1019,10 @@
       "destination": "R1 digit 5 (index 4)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 57,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 59,
@@ -856,7 +1036,10 @@
       "destination": "R1 digit 5 (index 4)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 58,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 60,
@@ -870,7 +1053,10 @@
       "destination": "R1 digit 4 (index 3)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 59,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 61,
@@ -884,7 +1070,10 @@
       "destination": "R1 digit 4 (index 3)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 60,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 62,
@@ -898,7 +1087,10 @@
       "destination": "R1 digit 4 (index 3)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 61,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 63,
@@ -912,7 +1104,10 @@
       "destination": "R1 digit 4 (index 3)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 62,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 64,
@@ -926,7 +1121,10 @@
       "destination": "R1 digit 4 (index 3)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 63,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 65,
@@ -940,7 +1138,10 @@
       "destination": "R1 MINUS sign",
       "contactRole": "B relay is projected as the register sign latch for this row.",
       "route": "SIGN",
-      "clock": "R1 hours pair: digits 4–5; B held 0"
+      "clock": "R1 hours pair: digits 4–5; B held 0",
+      "physicalPopulation": true,
+      "physicalOrdinal": 64,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 66,
@@ -954,7 +1155,10 @@
       "destination": "R1 digit 3 (index 2)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 65,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 67,
@@ -968,7 +1172,10 @@
       "destination": "R1 digit 3 (index 2)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 66,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 68,
@@ -982,7 +1189,10 @@
       "destination": "R1 digit 3 (index 2)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 67,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 69,
@@ -996,7 +1206,10 @@
       "destination": "R1 digit 3 (index 2)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 68,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 70,
@@ -1010,7 +1223,10 @@
       "destination": "R1 digit 3 (index 2)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 69,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 71,
@@ -1024,7 +1240,10 @@
       "destination": "R1 digit 2 (index 1)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 70,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 72,
@@ -1038,7 +1257,10 @@
       "destination": "R1 digit 2 (index 1)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 71,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 73,
@@ -1052,7 +1274,10 @@
       "destination": "R1 digit 2 (index 1)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 72,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 74,
@@ -1066,7 +1291,10 @@
       "destination": "R1 digit 2 (index 1)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 73,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 75,
@@ -1080,7 +1308,10 @@
       "destination": "R1 digit 2 (index 1)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 74,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 76,
@@ -1094,7 +1325,10 @@
       "destination": "R1 PLUS sign",
       "contactRole": "B relay is projected as the register sign latch for this row.",
       "route": "SIGN",
-      "clock": "R1 hours pair: digits 2–3; B held 1"
+      "clock": "R1 hours pair: digits 2–3; B held 1",
+      "physicalPopulation": true,
+      "physicalOrdinal": 75,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 77,
@@ -1108,7 +1342,10 @@
       "destination": "R1 digit 1 (index 0)",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": true,
+      "physicalOrdinal": 76,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 78,
@@ -1122,7 +1359,10 @@
       "destination": "R1 digit 1 (index 0)",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": true,
+      "physicalOrdinal": 77,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 79,
@@ -1136,7 +1376,10 @@
       "destination": "R1 digit 1 (index 0)",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": true,
+      "physicalOrdinal": 78,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 80,
@@ -1150,7 +1393,10 @@
       "destination": "R1 digit 1 (index 0)",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": true,
+      "physicalOrdinal": 79,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 81,
@@ -1164,7 +1410,10 @@
       "destination": "R1 digit 1 (index 0)",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": true,
+      "physicalOrdinal": 80,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 82,
@@ -1176,9 +1425,12 @@
       "bank": "C",
       "k": 1,
       "destination": "Visually unconnected C digit bank",
-      "contactRole": "K1: directly controls H → segment b",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 83,
@@ -1190,9 +1442,12 @@
       "bank": "C",
       "k": 2,
       "destination": "Visually unconnected C digit bank",
-      "contactRole": "K2: contact logic selects K/e and M/c paths",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 84,
@@ -1204,9 +1459,12 @@
       "bank": "C",
       "k": 3,
       "destination": "Visually unconnected C digit bank",
-      "contactRole": "K3: drives F → f and participates in N/d logic",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 85,
@@ -1218,9 +1476,12 @@
       "bank": "C",
       "k": 4,
       "destination": "Visually unconnected C digit bank",
-      "contactRole": "K4: drives J → g and participates in N/d logic",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 86,
@@ -1232,9 +1493,12 @@
       "bank": "C",
       "k": 5,
       "destination": "Visually unconnected C digit bank",
-      "contactRole": "K5: drives E → a and gates K/e + N/d paths",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 87,
@@ -1246,9 +1510,12 @@
       "bank": "B",
       "k": null,
       "destination": "Unrendered / mechanically modeled",
-      "contactRole": "B relay is mechanically modeled but this row's display projection ignores it.",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically"
+      "clock": "R1 hour leading digit uses D bank only; C bank still modeled physically",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 88,
@@ -1262,7 +1529,10 @@
       "destination": "NOUN right digit",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 81,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 89,
@@ -1276,7 +1546,10 @@
       "destination": "NOUN right digit",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 82,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 90,
@@ -1290,7 +1563,10 @@
       "destination": "NOUN right digit",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 83,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 91,
@@ -1304,7 +1580,10 @@
       "destination": "NOUN right digit",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 84,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 92,
@@ -1318,7 +1597,10 @@
       "destination": "NOUN right digit",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 85,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 93,
@@ -1332,7 +1614,10 @@
       "destination": "NOUN left digit",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 86,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 94,
@@ -1346,7 +1631,10 @@
       "destination": "NOUN left digit",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 87,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 95,
@@ -1360,7 +1648,10 @@
       "destination": "NOUN left digit",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 88,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 96,
@@ -1374,7 +1665,10 @@
       "destination": "NOUN left digit",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 89,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 97,
@@ -1388,7 +1682,10 @@
       "destination": "NOUN left digit",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 90,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 98,
@@ -1400,9 +1697,12 @@
       "bank": "B",
       "k": null,
       "destination": "Unrendered / mechanically modeled",
-      "contactRole": "B relay is mechanically modeled but this row's display projection ignores it.",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps NOUN at seeded/held state",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 99,
@@ -1416,7 +1716,10 @@
       "destination": "VERB right digit",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 91,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 100,
@@ -1430,7 +1733,10 @@
       "destination": "VERB right digit",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 92,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 101,
@@ -1444,7 +1750,10 @@
       "destination": "VERB right digit",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 93,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 102,
@@ -1458,7 +1767,10 @@
       "destination": "VERB right digit",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 94,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 103,
@@ -1472,7 +1784,10 @@
       "destination": "VERB right digit",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 95,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 104,
@@ -1486,7 +1801,10 @@
       "destination": "VERB left digit",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 96,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 105,
@@ -1500,7 +1818,10 @@
       "destination": "VERB left digit",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 97,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 106,
@@ -1514,7 +1835,10 @@
       "destination": "VERB left digit",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 98,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 107,
@@ -1528,7 +1852,10 @@
       "destination": "VERB left digit",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 99,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 108,
@@ -1542,7 +1869,10 @@
       "destination": "VERB left digit",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 100,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 109,
@@ -1554,9 +1884,12 @@
       "bank": "B",
       "k": null,
       "destination": "Unrendered / mechanically modeled",
-      "contactRole": "B relay is mechanically modeled but this row's display projection ignores it.",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps VERB at seeded/held state",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 110,
@@ -1570,7 +1903,10 @@
       "destination": "PROG right digit",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 101,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 111,
@@ -1584,7 +1920,10 @@
       "destination": "PROG right digit",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 102,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 112,
@@ -1598,7 +1937,10 @@
       "destination": "PROG right digit",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 103,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 113,
@@ -1612,7 +1954,10 @@
       "destination": "PROG right digit",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 104,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 114,
@@ -1626,7 +1971,10 @@
       "destination": "PROG right digit",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 105,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 115,
@@ -1640,7 +1988,10 @@
       "destination": "PROG left digit",
       "contactRole": "K1: directly controls H → segment b",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 106,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 116,
@@ -1654,7 +2005,10 @@
       "destination": "PROG left digit",
       "contactRole": "K2: contact logic selects K/e and M/c paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 107,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 117,
@@ -1668,7 +2022,10 @@
       "destination": "PROG left digit",
       "contactRole": "K3: drives F → f and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 108,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 118,
@@ -1682,7 +2039,10 @@
       "destination": "PROG left digit",
       "contactRole": "K4: drives J → g and participates in N/d logic",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 109,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 119,
@@ -1696,7 +2056,10 @@
       "destination": "PROG left digit",
       "contactRole": "K5: drives E → a and gates K/e + N/d paths",
       "route": "DIGIT",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": true,
+      "physicalOrdinal": 110,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 120,
@@ -1708,9 +2071,12 @@
       "bank": "B",
       "k": null,
       "destination": "Unrendered / mechanically modeled",
-      "contactRole": "B relay is mechanically modeled but this row's display projection ignores it.",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state"
+      "clock": "Not in CLOCK_GROUPS; clock face keeps PROG at seeded/held state",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 121,
@@ -1724,7 +2090,10 @@
       "destination": "Unrendered / reserved in current CM projection",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "MECH-ONLY",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 111,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 122,
@@ -1738,7 +2107,10 @@
       "destination": "Unrendered / reserved in current CM projection",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "MECH-ONLY",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 112,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 123,
@@ -1752,7 +2124,10 @@
       "destination": "VEL condition lamp",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "COND",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 113,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 124,
@@ -1766,7 +2141,10 @@
       "destination": "NO ATT condition lamp",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "COND",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 114,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 125,
@@ -1780,7 +2158,10 @@
       "destination": "ALT condition lamp",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "COND",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 115,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 126,
@@ -1794,7 +2175,10 @@
       "destination": "GIMBAL LOCK condition lamp",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "COND",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 116,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 127,
@@ -1808,7 +2192,10 @@
       "destination": "Unrendered / reserved in current CM projection",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "MECH-ONLY",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 117,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 128,
@@ -1822,7 +2209,10 @@
       "destination": "TRACKER condition lamp",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "COND",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 118,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 129,
@@ -1836,7 +2226,10 @@
       "destination": "PROG condition lamp",
       "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
       "route": "COND",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": true,
+      "physicalOrdinal": 119,
+      "physicalRoute": "LATCHING-PACKAGE"
     },
     {
       "ordinal": 130,
@@ -1848,9 +2241,12 @@
       "bank": "C",
       "k": 5,
       "destination": "Unrendered / reserved in current CM projection",
-      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     },
     {
       "ordinal": 131,
@@ -1862,83 +2258,182 @@
       "bank": "B",
       "k": null,
       "destination": "Unrendered / reserved in current CM projection",
-      "contactRole": "Row 12 is projected as direct condition/discrete bits; generic C/D/B identity label is only the software identity convention.",
+      "contactRole": "Logical Channel 010 position is unpopulated in the physical Block II DSKY; no armature/contact/audio/haptic event.",
       "route": "MECH-ONLY",
-      "clock": "Row 12 is not in CLOCK_GROUPS."
+      "clock": "Row 12 is not in CLOCK_GROUPS.",
+      "physicalPopulation": false,
+      "physicalOrdinal": null,
+      "physicalRoute": "NO-PHYSICAL-RELAY"
     }
   ],
   "auxiliaryRelays": [
     {
       "ordinal": 132,
+      "physicalOrdinal": 120,
+      "name": "isswar",
+      "id": "AUX:ISS-WARNING",
+      "channelOctal": "0o011",
+      "maskOctal": "0o00001",
+      "signal": 229,
+      "control": "ISSWAR",
+      "destination": "External ISS WARNING indication",
+      "sourceClass": "channel-command",
+      "route": "AUX-EXTERNAL",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 133,
+      "physicalOrdinal": 121,
       "name": "comp",
       "id": "AUX:COMP-ACTY",
       "channelOctal": "0o011",
       "maskOctal": "0o00002",
+      "signal": 230,
+      "control": "COMACT",
       "destination": "COMP ACTY lamp",
-      "route": "AUX-LAMP"
-    },
-    {
-      "ordinal": 133,
-      "name": "uplink",
-      "id": "AUX:UPLINK-ACTY",
-      "channelOctal": "0o011",
-      "maskOctal": "0o00004",
-      "destination": "UPLINK ACTY lamp",
-      "route": "AUX-LAMP"
+      "sourceClass": "channel-command",
+      "route": "AUX-LAMP",
+      "physicalPopulation": true
     },
     {
       "ordinal": 134,
-      "name": "temp",
-      "id": "AUX:TEMP",
-      "channelOctal": "0o163",
-      "maskOctal": "0o00010",
-      "destination": "TEMP lamp",
-      "route": "AUX-LAMP"
-    },
-    {
-      "ordinal": 135,
-      "name": "keyrel",
-      "id": "AUX:KEY-REL",
-      "channelOctal": "0o163",
-      "maskOctal": "0o00020",
-      "destination": "KEY REL lamp",
-      "route": "AUX-LAMP"
-    },
-    {
-      "ordinal": 136,
-      "name": "oprerr",
-      "id": "AUX:OPR-ERR",
-      "channelOctal": "0o163",
-      "maskOctal": "0o00100",
-      "destination": "OPR ERR lamp",
-      "route": "AUX-LAMP"
-    },
-    {
-      "ordinal": 137,
-      "name": "flash",
-      "id": "AUX:FLASH",
-      "channelOctal": "0o163",
-      "maskOctal": "0o00040",
-      "destination": "VERB/NOUN flash blanking contact (`vn-flash-off`)",
-      "route": "AUX-FLASH"
-    },
-    {
-      "ordinal": 138,
-      "name": "restart",
-      "id": "AUX:RESTART",
-      "channelOctal": "0o163",
-      "maskOctal": "0o00200",
-      "destination": "RESTART lamp",
-      "route": "AUX-LAMP"
-    },
-    {
-      "ordinal": 139,
+      "physicalOrdinal": 122,
       "name": "stby",
       "id": "AUX:STBY",
       "channelOctal": "0o163",
       "maskOctal": "0o00400",
+      "signal": 231,
+      "control": "SBYLIT/STBY",
       "destination": "STBY lamp",
-      "route": "AUX-LAMP"
+      "sourceClass": "hardware-phase",
+      "route": "AUX-LAMP",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 135,
+      "physicalOrdinal": 123,
+      "name": "restart",
+      "id": "AUX:RESTART",
+      "channelOctal": "0o163",
+      "maskOctal": "0o00200",
+      "signal": 232,
+      "control": "RESTRT",
+      "destination": "RESTART lamp",
+      "sourceClass": "hardware-phase",
+      "route": "AUX-LAMP",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 136,
+      "physicalOrdinal": 124,
+      "name": "injseq",
+      "id": "AUX:INJ-SEQ-START",
+      "channelOctal": "0o012",
+      "maskOctal": "0o10000",
+      "signal": 233,
+      "control": "S4BSEQ",
+      "destination": "External S-IVB INJ SEQ START / G HIGH indication (CM)",
+      "sourceClass": "channel-command",
+      "route": "AUX-EXTERNAL",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 137,
+      "physicalOrdinal": 125,
+      "name": "cutoff",
+      "id": "AUX:CUTOFF",
+      "channelOctal": "0o012",
+      "maskOctal": "0o20000",
+      "signal": 234,
+      "control": "S4BOFF",
+      "destination": "External S-IVB CUTOFF / G LOW indication (CM)",
+      "sourceClass": "channel-command",
+      "route": "AUX-EXTERNAL",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 138,
+      "physicalOrdinal": 126,
+      "name": "uplink",
+      "id": "AUX:UPLINK-ACTY",
+      "channelOctal": "0o011",
+      "maskOctal": "0o00004",
+      "signal": 235,
+      "control": "UPLACT",
+      "destination": "UPLINK ACTY lamp",
+      "sourceClass": "channel-command",
+      "route": "AUX-LAMP",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 139,
+      "physicalOrdinal": 127,
+      "name": "keyrel",
+      "id": "AUX:KEY-REL",
+      "channelOctal": "0o163",
+      "maskOctal": "0o00020",
+      "signal": 236,
+      "control": "KYRLS",
+      "destination": "KEY REL lamp",
+      "sourceClass": "hardware-phase",
+      "route": "AUX-LAMP",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 140,
+      "physicalOrdinal": 128,
+      "name": "circuit",
+      "id": "AUX:CIRCUIT-WARNING",
+      "channelOctal": "0o163",
+      "maskOctal": "0o00001",
+      "signal": 237,
+      "control": "CMCWAR/LGCWAR",
+      "destination": "External CMC/LGC warning indication",
+      "sourceClass": "hardware-phase",
+      "route": "AUX-EXTERNAL",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 141,
+      "physicalOrdinal": 129,
+      "name": "flash",
+      "id": "AUX:FLASH",
+      "channelOctal": "0o163",
+      "maskOctal": "0o00040",
+      "signal": 238,
+      "control": "FLASH",
+      "destination": "VERB/NOUN flash blanking contact",
+      "sourceClass": "hardware-phase",
+      "route": "AUX-FLASH",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 142,
+      "physicalOrdinal": 130,
+      "name": "oprerr",
+      "id": "AUX:OPR-ERR",
+      "channelOctal": "0o163",
+      "maskOctal": "0o00100",
+      "signal": 244,
+      "control": "OPRERR",
+      "destination": "OPR ERR lamp",
+      "sourceClass": "hardware-phase",
+      "route": "AUX-LAMP",
+      "physicalPopulation": true
+    },
+    {
+      "ordinal": 143,
+      "physicalOrdinal": 131,
+      "name": "temp",
+      "id": "AUX:TEMP",
+      "channelOctal": "0o163",
+      "maskOctal": "0o00010",
+      "signal": 258,
+      "control": "TMPCAU",
+      "destination": "TEMP lamp",
+      "sourceClass": "hardware-phase",
+      "route": "AUX-LAMP",
+      "physicalPopulation": true
     }
   ]
 }
