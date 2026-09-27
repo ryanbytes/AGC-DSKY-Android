@@ -16,6 +16,7 @@ for(const marker of [
   'auxiliaryHapticPatternFor:',"typeof native.relayWaveform==='function'"
 ])assert(identity.includes(marker),'relay identity haptic path missing: '+marker);
 assert(identity.includes('const PHYSICAL_RELAY_COUNT = topology.physicalRelayCount;'),'relay identity must derive total physical relay count from topology');
+assert(identity.includes('((ordinal*73+17)%PHYSICAL_RELAY_COUNT)/Math.max(1,PHYSICAL_RELAY_COUNT-1)'),'manufacturing phase must cover all 132 physical relay ordinals');
 assert(identity.includes('serialOffset=(ordinal-(PHYSICAL_RELAY_COUNT-1)/2)*.00034'),'relay acoustic serial offset must center on the physical inventory');
 assert(!identity.includes('ordinal-69.5'),'stale 140-relay acoustic midpoint returned');
 
