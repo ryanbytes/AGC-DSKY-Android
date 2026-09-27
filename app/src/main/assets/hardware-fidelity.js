@@ -3,11 +3,15 @@
 /*
  * Apollo Block II DSKY hardware-fidelity service.
  *
- * Timing model follows the Apollo AGC display timing model:
+ * Timing model separates the Apollo AGC command cadence from relay mechanics:
  *   - normal display service is phase-locked to the 120 ms T4RUPT cadence;
- *   - a selected relay row is driven for 20 ms so its latching relays settle;
- *   - the drive is then removed for 20 ms;
+ *   - Comanche holds a selected Channel-010 relay command for 20 ms before
+ *     clearing OUT0; this is a software row-command hold, not measured relay
+ *     armature/settle time;
  *   - the next dirty row can therefore begin 40 ms after the previous row.
+ * PS 2016009 separately specifies nominal 15 ms indicator-driver output pulses
+ * and microsecond-scale driver propagation delays. Exact production 2004688
+ * mechanical timing remains unresolved.
  *
  * V35 is never synthesized here. The real mission program, yaAGC I/O, and
  * DSKY hardware-state output are authoritative for V35 and all AGC operations.
@@ -32,7 +36,7 @@
   const desiredClockDigits=()=>clock.desiredDigits();
   const clockWord=(group,want)=>clock.relayWord(group,want);
   const T4_MS=120;
-  const RELAY_DRIVE_MS=20;
+  const RELAY_ROW_HOLD_MS=20;
   const DIRTY_ROW_START_MS=40;
   const CLOCK_RELAY_ORDER=Object.freeze([12,11,10,9,8,7,6,5,4,3,2,1]);
   const t4Epoch=performance.now();
@@ -63,7 +67,8 @@
   // production 2004688 has not been recovered. 3 ms is the documented maximum
   // operate/release time of predecessor magnetic-latching SCD 1006282 and is
   // used only as a conservative presentation reference inside the separate
-  // documented 20-ms bank-drive envelope. Do not assign per-bit timing here.
+  // 20-ms Comanche/T4 row-command hold. It bounds command bookkeeping but is
+  // not a measured 2004688 relay-settle time. Do not assign per-bit timing here.
   const LATCHING_PRESENTATION_REFERENCE_MS=3;
   const ARMATURE_SETTLE_MS=Object.freeze(Array(11).fill(LATCHING_PRESENTATION_REFERENCE_MS));
   function relayArmatureClack(_relay,_bit,_turningOn,delayMs){
@@ -126,7 +131,7 @@
       const paint=!!render&&settledPaintAllowed(relay,low11);
       display.commitRelayWord(relay,low11,{render:paint});
       if(hw.activeDrive===relay)hw.activeDrive=0;
-    },RELAY_DRIVE_MS);
+    },RELAY_ROW_HOLD_MS);
   }
 
   function hardwareDecodeChannel10(value){
@@ -179,14 +184,14 @@
       const relay=relayOfJob(job),low11=job.newWord&0o3777,relayWords=getClockRelayWords();
       const prior=Object.prototype.hasOwnProperty.call(hw.latches,relay)?hw.latches[relay]:(relayWords[relay]??0);hw.latches[relay]=prior&0o3777;
       // Normal PHONE CLOCK rendering is owned by clockDigits at the common
-      // 20-ms settle boundary; do not transiently paint the AGC projection.
+      // 20-ms software row-hold boundary; do not transiently paint the AGC projection.
       beginRelayDrive(relay,low11,false);relayWords[relay]=low11;
       later(()=>{
         if(token!==hw.clockToken||fidelityState.mode!=='clock'||getLampTestActive())return;
         const digits=getClockDigits(),touched=new Set();
         for(const [name,index] of cellsOfJob(job)){digits[name][index]=job.want[name][index];touched.add(name)}
         touched.forEach(name=>clock.renderReg(name));
-      },RELAY_DRIVE_MS);
+      },RELAY_ROW_HOLD_MS);
       later(step,DIRTY_ROW_START_MS);
     };
     later(step,startDelay);
@@ -220,7 +225,7 @@
   setInterval(()=>{try{if(fidelityState.mode==='clock'&&!getLampTestActive()&&!getRelayBusy())clock.tick()}catch(_){}},20);
 
   function baseSnapshot(){return{
-    t4Ms:T4_MS,relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,physicalRelayCount:topology.physicalRelayCount,latchingRelayCount:topology.latchingRelayCount,nonLatchingRelayCount:topology.nonLatchingRelayCount,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
+    t4Ms:T4_MS,relayDriveMs:RELAY_ROW_HOLD_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,physicalRelayCount:topology.physicalRelayCount,latchingRelayCount:topology.latchingRelayCount,nonLatchingRelayCount:topology.nonLatchingRelayCount,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
   }}
   function snapshot(){
     let state=baseSnapshot();
@@ -232,5 +237,5 @@
   function registerSnapshotExtension(name,extension){if(typeof name!=='string'||!name||typeof extension!=='function')throw new TypeError('Hardware snapshot extension requires name/function');snapshotExtensions.set(name,extension);return()=>snapshotExtensions.delete(name)}
   function registerSettledPaintPolicy(name,policy){if(typeof name!=='string'||!name||typeof policy!=='function')throw new TypeError('Settled-paint policy requires name/function');settledPaintPolicies.set(name,policy);return()=>settledPaintPolicies.delete(name)}
 
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE',Object.freeze({snapshot,baseSnapshot,registerSnapshotExtension,registerSettledPaintPolicy,beginRelayDrive:(relay,word,render=true,present=true)=>beginRelayDrive(relay,word,render,present),relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS}),'hardware-fidelity publication');
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE',Object.freeze({snapshot,baseSnapshot,registerSnapshotExtension,registerSettledPaintPolicy,beginRelayDrive:(relay,word,render=true,present=true)=>beginRelayDrive(relay,word,render,present),relayDriveMs:RELAY_ROW_HOLD_MS,dirtyRowStartMs:DIRTY_ROW_START_MS}),'hardware-fidelity publication');
 })();
