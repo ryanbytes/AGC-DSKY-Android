@@ -14,8 +14,9 @@ import java.util.Locale;
  * timing is unresolved, so the widget uses only the explicitly documented
  * predecessor-spec presentation reference and does not invent unit-to-unit
  * travel, bounce, or pole-skew fingerprints. Callers can sample those contacts
- * inside the separate documented 20-ms drive/settle envelope. The widget face
- * publishes the settled result; it never invents a partially settled state.
+ * inside the separate 20-ms Comanche/T4 row-command hold. That software interval
+ * is not a measured relay-settle time. The widget face publishes the settled
+ * result; it never invents a partially settled state.
  */
 final class WidgetRelayModel {
     static final int BANKS = 12;
