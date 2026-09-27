@@ -1,4 +1,4 @@
-name: Archive Apollo relay source PDFs
+name: Recover DSKY archival drawings
 on:
   push:
     branches:
@@ -6,40 +6,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  fetch-sources:
+  recover:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Fetch primary source files
+      - name: Inspect Internet Archive item and recover target pages
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p apollo-relay-source-pdfs
-          cd apollo-relay-source-pdfs
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o R-700.pdf 'https://www.ibiblio.org/apollo/Documents/R-700.pdf'
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o scd_1006282-.pdf 'https://www.ibiblio.org/apollo/SCDs/scd_1006282-.pdf'
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o scd_1010784c.pdf 'https://www.ibiblio.org/apollo/SCDs/scd_1010784c.pdf'
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o agcis_30_block_ii_agc.pdf 'https://www.ibiblio.org/apollo/Documents/agcis_30_block_ii_agc.pdf'
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o agcis_30_blk2_appendix_a.pdf 'https://www.ibiblio.org/apollo/Documents/agcis_30_blk2_appendix_a.pdf'
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o agcis_30_blk2_appendix_b.pdf 'https://www.ibiblio.org/apollo/Documents/agcis_30_blk2_appendix_b.pdf'
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o agcis_30_errata.pdf 'https://www.ibiblio.org/apollo/Documents/agcis_30_errata.pdf'
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o blk2_interconnect_diagram.pdf 'https://www.ibiblio.org/apollo/Documents/blk2_interconnect_diagram.pdf'
-          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0' -o 2003994-121.html 'https://www.ibiblio.org/apollo/2003994-121.html'
-          file *
-          sha256sum * > SHA256SUMS.txt
-          ls -lh
+          mkdir -p recovered
+          cd recovered
+          curl -fL --retry 4 --retry-all-errors -o metadata.json 'https://archive.org/metadata/apertureCardBox460NARASW_images'
           python3 - <<'PY'
-          from pathlib import Path
-          for p in Path('.').glob('*.pdf'):
-              b=p.read_bytes()[:5]
-              if b != b'%PDF-':
-                  raise SystemExit(f'{p} is not a PDF: {b!r}')
-          print('All PDF magic headers verified.')
+          import json
+          m=json.load(open('metadata.json'))
+          print('identifier=',m.get('metadata',{}).get('identifier'))
+          for f in m.get('files',[]):
+              n=f.get('name','')
+              if any(x in n.lower() for x in ('pdf','jp2','zip','scandata','djvu','text','xml')):
+                  print(n, f.get('size',''))
           PY
-      - name: Upload exact source binaries
+          # Preserve metadata even if page recovery needs a second pass.
+      - name: Upload inspection result
         uses: actions/upload-artifact@v4
         with:
-          name: Apollo-relay-source-originals-2026-09-27
-          path: apollo-relay-source-pdfs/
+          name: apertureCardBox460-metadata
+          path: recovered/metadata.json
           if-no-files-found: error
-          compression-level: 0
