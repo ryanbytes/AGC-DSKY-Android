@@ -13,7 +13,7 @@ Verified/retained:
 - Each D1-D6 relay-circuit assembly 2003910-021 contains 20 x 2004688-1/-2 and 2 x 2004689-2.
 - Exact production 2004688/2004689 unit timing remains unrecovered; the app must not invent per-package travel, bounce, pole skew, or acoustic manufacturing fingerprints.
 - The 3 ms / 5 ms values remain explicitly predecessor-SCD presentation bounds only.
-- The complete logical/function -> D1-D6/K1-K22 physical package crosswalk remains unproven and is not fabricated.
+- The complete production design-basis logical/function -> D1-D6/K1-K22 package crosswalk is now source-joined: 120/120 latching identities through 2005918 + 2005954A + 2005973, and 12/12 non-latching function drives through 2005954A + 2005973. The K22 switched-contact conflict and exact production relay timing remain explicitly unresolved.
 
 K22 provenance was tightened after checking the actual Virtual AGC schematic sources:
 
@@ -36,9 +36,9 @@ Verification performed for this audit:
 - [x] updated relay evidence/inventory documentation to distinguish design basis from as-flown proof;
 - [ ] recovered/read a production SCD for 2004688;
 - [ ] recovered/read a production SCD for 2004689;
-- [ ] recovered a complete authoritative D1-D6/Kx logical/function crosswalk;
+- [x] recovered and machine-gated the complete production design-basis D1-D6/Kx logical/function crosswalk (120 latching + 12 non-latching drive mappings);
 - [ ] recovered unit-specific as-built/acceptance evidence resolving K22 on a particular flown DSKY;
-- [ ] canonical local build/device gates run for the final PR #156 source revision.
+- [x] exact final PR #156 head 970828493f1998ca23b2f75180747071dce6d9dd passed Android 36352669981, PWA 36352669967, and Apple 36352669972; the accepted minimal 1 ms / amplitude 1 handset relay haptic was retained rather than retuned.
 
 
 ## 2026-09-25 production web register glyph-stability repair
