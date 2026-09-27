@@ -26,16 +26,19 @@ req(model,'requireLogicalPosition(row, 0);','widget row samplers validate logica
 req(model,'if (!isPhysicalRelay(row, bit)) continue;','profile creation skips unpopulated logical positions');
 req(model,'if ((diff & (1 << bit)) == 0 || !isPhysicalRelay(row, bit)) continue;','settle timing skips unpopulated logical positions');
 req(model,'if (!isPhysicalRelay(row, bit)) {','logical transition bypasses physical model for unpopulated positions');
-req(model,'physicalOrdinal * 73 + 17) % PHYSICAL_LATCHING_RELAYS','manufacturing phase uses physical population');
+req(model,'physicalOrdinal < 0 || physicalOrdinal >= PHYSICAL_LATCHING_RELAYS','physical ordinal is validation-only');
+no(model,'physicalOrdinal * 73 + 17','synthetic manufacturing phase');
 no(model,'every one of the 12 x 11','stale 132-latching-relay claim');
 req(model,'static final double DRIVE_ENVELOPE_MS = 20.0;','20-ms drive envelope');
-req(model,'MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS','settle guard');
+req(model,'static final double LATCHING_PRESENTATION_REFERENCE_MS = 3.0;','source-bounded latching timing reference');
 req(model,'private static final int[] DIGIT_RELAY = {21, 3, 25, 27, 15, 30, 28, 19, 29, 31};','Comanche decimal relay codes');
-req(model,'final double setTravelMs;','set travel fingerprint');
-req(model,'final double resetTravelMs;','reset travel fingerprint');
-req(model,'final double[] setBounceTimesMs;','set contact bounce');
-req(model,'final double[] resetBounceTimesMs;','reset contact bounce');
-req(model,'final int poleSkewUs;','DPST pole skew');
+req(model,'final double setTravelMs;','set travel field');
+req(model,'final double resetTravelMs;','reset travel field');
+req(model,'final double[] setBounceTimesMs;','set contact trace field');
+req(model,'final double[] resetBounceTimesMs;','reset contact trace field');
+req(model,'final int poleSkewUs;','pole skew field');
+no(model,'XorShift32','synthetic relay variation generator');
+no(model,'bouncePattern(','synthetic contact bounce generator');
 req(model,'static int low11At(','bank transition sampler');
 req(model,'static String segmentsDuringDigitTransition(','character transition sampler');
 req(model,'return matrixSegments(k1, k2, k2, k3, k3, k4, k5, k5);','settled relay contact matrix');
@@ -69,13 +72,13 @@ const codes=[21,3,25,27,15,30,28,19,29,31];
 const expected=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
 for(let i=0;i<10;i++) if(matrix(codes[i])!==expected[i]) fail(`relay code ${codes[i]} does not decode as digit ${i}: ${matrix(codes[i])}`);
 
-// Ensure the declared set/reset ranges plus modeled bounce can never publish a
-// contact as stable beyond the documented 20-ms drive boundary.
+// The widget must retain the 20-ms bank boundary while using only the
+// explicitly labeled predecessor-spec timing reference. No pseudo-random
+// mechanical fingerprint may return.
 const envelope=Number((model.match(/DRIVE_ENVELOPE_MS = ([0-9.]+);/)||[])[1]);
-const guard=Number((model.match(/CONTACT_GUARD_MS = ([0-9.]+);/)||[])[1]);
-const setMax=Number((model.match(/SET_TRAVEL_MAX_MS = ([0-9.]+);/)||[])[1]);
-const resetMax=Number((model.match(/RESET_TRAVEL_MAX_MS = ([0-9.]+);/)||[])[1]);
-if(!(envelope===20&&guard>0&&setMax<envelope&&resetMax<envelope)) fail('relay timing bounds escaped 20-ms envelope');
+const reference=Number((model.match(/LATCHING_PRESENTATION_REFERENCE_MS = ([0-9.]+);/)||[])[1]);
+if(!(envelope===20&&reference===3&&reference<envelope)) fail('source-bounded relay timing reference changed');
+if(!model.includes('new double[0], new double[0], 0')) fail('widget profile must suppress fabricated bounce and pole skew');
 
 console.log('Widget relay model smoke: PASS');
-console.log('  120 populated latching positions in the 12x11 logical field, Comanche digit codes, K1..K5 contact matrix, persistent set/reset travel, DPST skew, bounce, and 20-ms settled boundary verified');
+console.log('  120 populated latching positions, Comanche digit codes, K1..K5 contact matrix, source-bounded 3-ms presentation reference, no fabricated per-relay mechanics, and 20-ms settled boundary verified');
