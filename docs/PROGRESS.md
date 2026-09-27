@@ -1,6 +1,44 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-25
+Last updated: 2026-09-27
+
+
+## 2026-09-27 RLY-02 source/provenance re-audit
+
+The relay-fidelity audit now separates **production design authority** from **serial-number/as-flown proof**.
+
+Verified/retained:
+
+- Block II DSKY physical population remains 132 relay packages: 120 latching + 12 non-latching.
+- Each D1-D6 relay-circuit assembly 2003910-021 contains 20 x 2004688-1/-2 and 2 x 2004689-2.
+- Exact production 2004688/2004689 unit timing remains unrecovered; the app must not invent per-package travel, bounce, pole skew, or acoustic manufacturing fingerprints.
+- The 3 ms / 5 ms values remain explicitly predecessor-SCD presentation bounds only.
+- The complete logical/function -> D1-D6/K1-K22 physical package crosswalk remains unproven and is not fabricated.
+
+K22 provenance was tightened after checking the actual Virtual AGC schematic sources:
+
+- original-drawing transcription `2005973-`: K22 pins 2/3/8 connect to J1-5/J1-3/J1-6;
+- original-drawing transcription `2005940A`: K22 pins 2/3/8 are unconnected;
+- K22 pins 1/4/5/6/7 agree, and K21 is not the differing relay;
+- `2005973r` is explicitly a 2018 **reconstruction** from predecessor 2005952- plus ND-1021042 figure 4-226, not another surviving production drawing;
+- immediate relay-circuit assembly 2003910-021 and the DSKY 2003994 system-manual table call out 2005973; parent assembly 2003952-031 calls out 2005940 and the manual figure preserves older 2005940-style K22 wiring;
+- a NARA aperture-card scan of original drawing 2005973- survives and was the basis for the later direct transcription.
+
+Current conclusion: **2005973- is the best-supported production-design basis for K22.** That is not promoted to an exact flown-unit claim because no unit-specific as-built/acceptance record has yet been recovered that independently proves K22 wiring for a particular flight DSKY.
+
+This re-audit supersedes the 2026-09-25 relay-rack section's claims of measured-looking per-relay manufacturing profiles, contact bounce, pole skew, and unique package acoustic identity. Those were simulation inventions rather than recovered Apollo measurements and are being removed in PR #156.
+
+Verification performed for this audit:
+
+- [x] compared K22 pin connectivity in the `2005973-`, `2005940A`, and reconstructed `2005973r` Virtual AGC netlists;
+- [x] checked provenance notes embedded in the original-drawing and reconstructed CAD files;
+- [x] checked the production assembly hierarchy and DSKY system-manual drawing table;
+- [x] updated relay evidence/inventory documentation to distinguish design basis from as-flown proof;
+- [ ] recovered/read a production SCD for 2004688;
+- [ ] recovered/read a production SCD for 2004689;
+- [ ] recovered a complete authoritative D1-D6/Kx logical/function crosswalk;
+- [ ] recovered unit-specific as-built/acceptance evidence resolving K22 on a particular flown DSKY;
+- [ ] canonical local build/device gates run for the final PR #156 source revision.
 
 
 ## 2026-09-25 production web register glyph-stability repair

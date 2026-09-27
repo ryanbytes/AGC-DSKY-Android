@@ -59,7 +59,13 @@
   function phaseDelay(period,epoch){const elapsed=Math.max(0,performance.now()-epoch),phase=elapsed%period;return phase<0.25?0:period-phase}
   function nextT4Delay(){return phaseDelay(T4_MS,t4Epoch)}
 
-  const ARMATURE_SETTLE_MS=Object.freeze([6.2,11.7,8.4,13.6,7.1,15.0,9.5,12.5,5.6,14.3,10.5]);
+  // Physical population is production-source-backed; exact unit timing for
+  // production 2004688 has not been recovered. 3 ms is the documented maximum
+  // operate/release time of predecessor magnetic-latching SCD 1006282 and is
+  // used only as a conservative presentation reference inside the separate
+  // documented 20-ms bank-drive envelope. Do not assign per-bit timing here.
+  const LATCHING_PRESENTATION_REFERENCE_MS=3;
+  const ARMATURE_SETTLE_MS=Object.freeze(Array(11).fill(LATCHING_PRESENTATION_REFERENCE_MS));
   function relayArmatureClack(_relay,_bit,_turningOn,delayMs){
     if(!fidelityState.tickSound)return;
     later(()=>{

@@ -3,16 +3,19 @@
 /*
  * One presentation authority for every modeled DSKY relay transition.
  *
- * A single per-relay contact event drives all crew-facing consequences:
- *   1. the relay-rack armature/contact visualization,
- *   2. that exact relay's deterministic manufactured click/bounce identity,
- *   3. that relay's subtle deterministic haptic identity where supported,
+ * A single modeled relay-contact event drives all crew-facing consequences:
+ *   1. relay-rack armature/contact visualization,
+ *   2. a generic presentation click for the documented relay class,
+ *   3. the accepted minimal handset haptic where supported,
  *   4. the DSKY EL/annunciator contact projection.
  *
- * AUTHENTIC mode follows the deterministic per-relay set/reset travel and
- * contact trace inside the unchanged 20-ms bank envelope. STRETCHED mode only
- * separates armature arrivals for human visibility; AGC/latch timing remains
- * authentic and sound + relay rack + DSKY projection stay frame-coupled.
+ * The production 2004688/2004689 unit timing and unit-to-unit mechanical
+ * variation are unresolved. The mode historically named AUTHENTIC is retained
+ * as a compatibility identifier only: it uses source-bounded predecessor-spec
+ * presentation references inside the documented 20-ms bank-drive envelope and
+ * must not be interpreted as measured production relay timing. STRETCHED mode
+ * separates those presentation events for human visibility; AGC/latch timing
+ * remains governed by the documented bank envelope.
  */
 (() => {
   const display=window.AGCDSKY_DISPLAY;
@@ -185,7 +188,7 @@
   function presentationDurationMs(row,prior,target){if(timingMode!==MODE_STRETCHED)return FINAL_SETTLE_MS;const schedule=stretchedSchedule(collectMotions(row,prior,target));return schedule.length?schedule[schedule.length-1].stretchedMs+STRETCH_RELEASE_HOLD_MS:0}
 
   const button=document.getElementById('relay-timing');
-  function updateButton(){if(!button)return;const stretched=timingMode===MODE_STRETCHED;button.textContent=stretched?'RELAY VISUAL STRETCHED':'RELAY VISUAL AUTHENTIC';button.setAttribute('aria-pressed',stretched?'true':'false');button.title=stretched?'Frame-coupled relay motion, sound and DSKY contacts; AGC timing remains authentic':'Authentic manufactured per-relay travel/contact timing'}
+  function updateButton(){if(!button)return;const stretched=timingMode===MODE_STRETCHED;button.textContent=stretched?'RELAY VISUAL STRETCHED':'RELAY VISUAL SOURCE-BOUNDED';button.setAttribute('aria-pressed',stretched?'true':'false');button.title=stretched?'Frame-coupled presentation relay motion, sound and DSKY contacts; AGC bank timing remains documented':'Source-bounded relay presentation using predecessor timing references; exact production 2004688/2004689 unit timing is unresolved'}
   if(button)button.addEventListener('click',()=>{setTimingMode(timingMode===MODE_AUTHENTIC?MODE_STRETCHED:MODE_AUTHENTIC,true);shell.showControls()});updateButton();
 
   function relayContactVisualDecode(value){
@@ -197,7 +200,7 @@
   hardware.registerSettledPaintPolicy('relay-visual-coupling',()=>timingMode!==MODE_STRETCHED);
 
   window.DSKY_RELAY_VISUAL=Object.freeze({
-    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:true,authenticTiming:true,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,stretchedContactHapticLocked:true,hapticBankComposed:true,overlapAudioBoost:true,overlapHapticBoost:true,stretchedBounceAudio:true,
+    mode:'single-event-relay-contact-coupled',finalSettleMs:FINAL_SETTLE_MS,contactBounceVisible:false,authenticTiming:false,sourceBoundedTiming:true,exactProductionRelayTiming:false,stretchedVisualOnly:true,stretchedAudioFrameLocked:true,stretchedHapticFrameLocked:true,stretchedContactHapticLocked:true,hapticBankComposed:true,overlapAudioBoost:true,overlapHapticBoost:true,stretchedBounceAudio:false,
     stretchFirstBaseMs:STRETCH_FIRST_BASE_MS,stretchMinGapMs:STRETCH_MIN_GAP_MS,stretchMaxGapMs:STRETCH_MAX_GAP_MS,stretchReleaseHoldMs:STRETCH_RELEASE_HOLD_MS,relayAudioOverlapWindowMs:RELAY_AUDIO_OVERLAP_WINDOW_MS,relayAudioOverlapStep:RELAY_AUDIO_OVERLAP_STEP,relayAudioOverlapMaxMultiplier:RELAY_AUDIO_OVERLAP_MAX_MULTIPLIER,
     getTimingMode:()=>timingMode,setTimingMode,contactDelayMs,stretchedGapMs,stretchedScheduleFor:(row,prior,target)=>stretchedSchedule(collectMotions(row,prior,target)).map(item=>({...item})),presentationDurationMs,lastPresentationClick:()=>lastPresentationClick?{...lastPresentationClick}:null,
     renderWord,currentSettledWord,withSettledWordOverride,presentDrive,presentAux,subscribe,resetPresentation

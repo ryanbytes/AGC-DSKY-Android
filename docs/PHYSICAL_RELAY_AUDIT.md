@@ -40,6 +40,8 @@ The file `docs/physical-relay-inventory.json` enumerates every actual package sl
 
 The surviving/digitized sources used in this audit do not yet establish a complete one-to-one crosswalk from every logical/function identity to a specific D1-D6/K-number package. The model therefore does **not** invent that mapping. Runtime fidelity is keyed to the proven logical/function identity and physical-population mask.
 
+For the K22 schematic discrepancy, source provenance now supports a narrower conclusion than a simple tie: the immediate relay-circuit assembly 2003910-021 calls out original drawing **2005973-**, and the system manual's DSKY 2003994 table likewise calls out 2005973. The separate Virtual AGC `2005973r` is explicitly a reconstruction from predecessor drawing 2005952- and ND-1021042 figure 4-226; it is not a second surviving original. Original 2005973- is therefore the best-supported **production design basis**. Parent assembly 2003952-031 still calls out 2005940 and the manual figure preserves the older 2005940-style K22 wiring, so an exact serial-number/as-flown K22 claim remains unverified.
+
 ## Runtime fidelity rule
 
 A logical Channel 010 bit can still participate in AGC word semantics even when no relay package occupies that logical intersection. Such a bit may be stored in the logical word, but it must **not** generate a physical relay armature/contact event, manufacturing fingerprint, click, or haptic.

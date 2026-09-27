@@ -10,10 +10,12 @@ import java.util.Locale;
  * nevertheless keeps the native widget electrically honest: decimal glyphs are
  * generated from the real K1..K5 contact matrix.  The logical Channel-010
  * field remains 12 x 11, but only the 120 physically populated latching
- * positions receive manufacturing fingerprints, travel, pole skew and bounce.
- * Callers can sample those physical contacts at any instant inside the documented
- * 20-ms drive/settle envelope.  The widget face publishes the settled result; it
- * never invents a partially settled state.
+ * positions receive physical contact models. Exact production 2004688 unit
+ * timing is unresolved, so the widget uses only the explicitly documented
+ * predecessor-spec presentation reference and does not invent unit-to-unit
+ * travel, bounce, or pole-skew fingerprints. Callers can sample those contacts
+ * inside the separate documented 20-ms drive/settle envelope. The widget face
+ * publishes the settled result; it never invents a partially settled state.
  */
 final class WidgetRelayModel {
     static final int BANKS = 12;
@@ -21,13 +23,11 @@ final class WidgetRelayModel {
     static final int CHARACTER_RELAYS = 5;
     static final int PHYSICAL_LATCHING_RELAYS = 120;
     static final double DRIVE_ENVELOPE_MS = 20.0;
-    static final double CONTACT_GUARD_MS = 0.35;
-    static final double MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
-
-    private static final double SET_TRAVEL_MIN_MS = 5.1;
-    private static final double SET_TRAVEL_MAX_MS = 13.6;
-    private static final double RESET_TRAVEL_MIN_MS = 4.7;
-    private static final double RESET_TRAVEL_MAX_MS = 12.8;
+    static final double MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS;
+    // Predecessor magnetic-latching SCD 1006282 specifies operate/release
+    // <=3 ms. Production 2004688 exact unit timing is unresolved, so this is a
+    // conservative presentation reference, not a measured production value.
+    static final double LATCHING_PRESENTATION_REFERENCE_MS = 3.0;
 
     // Comanche RELTAB low-five-bit codes for decimal 0..9.
     private static final int[] DIGIT_RELAY = {21, 3, 25, 27, 15, 30, 28, 19, 29, 31};
@@ -104,6 +104,12 @@ final class WidgetRelayModel {
         }
     }
 
+    private static String bitName(int bit) {
+        if (bit == 10) return "B";
+        if (bit >= 5) return "C-K" + (bit - 4);
+        return "D-K" + (bit + 1);
+    }
+
     static int relayCodeForDigit(char ch) {
         if (ch < '0' || ch > '9') return 0;
         return DIGIT_RELAY[ch - '0'];
@@ -125,10 +131,10 @@ final class WidgetRelayModel {
     }
 
     /**
-     * Sample one complete 11-relay row while it is changing.  Bits which do not
-     * change remain latched.  Changed contacts follow their relay's fixed
-     * set/reset travel and bounce trace and are forced to the commanded state at
-     * the 20-ms settled boundary.
+     * Sample one complete 11-relay row while it is changing. Bits which do not
+     * change remain latched. Changed contacts use the single source-bounded
+     * predecessor timing reference; no production-unit bounce or pole-skew trace
+     * is claimed. The commanded word is authoritative at the 20-ms boundary.
      */
     static int low11At(int row, int priorLow11, int targetLow11, double elapsedMs) {
         requireLogicalPosition(row, 0);
@@ -182,10 +188,9 @@ final class WidgetRelayModel {
             pole[k][0] = before == after ? before : contactState(p, before, after, elapsedMs, 0);
             pole[k][1] = before == after ? before : contactState(p, before, after, elapsedMs, 1);
         }
-        // K1 and K4 only need one contact in this matrix. K2/K3/K5 use their
-        // two mechanically linked poles separately, so manufacturing pole skew
-        // can affect the sub-20-ms intermediate pattern without affecting the
-        // settled decimal result.
+        // K1 and K4 only need one contact in this matrix. K2/K3/K5 retain the
+        // two-pole structure for electrical topology, but production pole-skew
+        // measurements are unresolved and the source-bounded profile uses zero skew.
         return matrixSegments(
             pole[0][0],
             pole[1][0], pole[1][1],
@@ -266,84 +271,18 @@ final class WidgetRelayModel {
 
     private static Profile makeProfile(int row, int bit, int physicalOrdinal) {
         String id = String.format(Locale.US, "ROW-%02d:%s", row, bitName(bit));
-        XorShift32 rnd = new XorShift32(hash32(id + ":manufacture"));
-        double positionPhase = ((physicalOrdinal * 73 + 17) % PHYSICAL_LATCHING_RELAYS) /
-                (double)(PHYSICAL_LATCHING_RELAYS - 1);
-
-        double setTravel = clamp(
-            SET_TRAVEL_MIN_MS + (SET_TRAVEL_MAX_MS - SET_TRAVEL_MIN_MS) *
-                clamp(0.58 * positionPhase + 0.42 * rnd.next(), 0, 1),
-            SET_TRAVEL_MIN_MS, SET_TRAVEL_MAX_MS);
-        double resetTravel = clamp(
-            RESET_TRAVEL_MIN_MS + (RESET_TRAVEL_MAX_MS - RESET_TRAVEL_MIN_MS) *
-                clamp(0.52 * (1 - positionPhase) + 0.48 * rnd.next(), 0, 1),
-            RESET_TRAVEL_MIN_MS, RESET_TRAVEL_MAX_MS);
-
-        int poleSkewUs = (int)Math.round((rnd.next() * 2 - 1) * 185.0);
-        int setBounceCount = 2 + (int)Math.floor(rnd.next() * 5.0);
-        int resetBounceCount = 1 + (int)Math.floor(rnd.next() * 4.0);
-        double setBounceWindow = 0.55 + rnd.next() * 2.35;
-        double resetBounceWindow = 0.35 + rnd.next() * 1.85;
-        double[] setBounce = bouncePattern(rnd, setBounceCount, setBounceWindow);
-        double[] resetBounce = bouncePattern(rnd, resetBounceCount, resetBounceWindow);
-        double setTail = 0.12 + rnd.next() * 0.34;
-        double resetTail = 0.10 + rnd.next() * 0.28;
-
-        double setLast = setBounce.length == 0 ? 0 : setBounce[setBounce.length - 1];
-        double resetLast = resetBounce.length == 0 ? 0 : resetBounce[resetBounce.length - 1];
-        double setStable = Math.min(MAX_CONTACT_STABLE_MS, setTravel + setLast + setTail);
-        double resetStable = Math.min(MAX_CONTACT_STABLE_MS, resetTravel + resetLast + resetTail);
-
-        return new Profile(id, row, bit, setTravel, resetTravel,
-                setStable, resetStable, setBounce, resetBounce, poleSkewUs);
-    }
-
-    private static double[] bouncePattern(XorShift32 rnd, int count, double windowMs) {
-        if (count <= 0 || windowMs <= 0) return new double[0];
-        double[] out = new double[count];
-        double slot = windowMs / (count + 1.0);
-        for (int i = 1; i <= count; i++) {
-            double jitter = (rnd.next() * 2 - 1) * slot * 0.24;
-            out[i - 1] = clamp(i * slot + jitter, 0.05, windowMs - 0.03);
+        // physicalOrdinal is retained only to prove all 120 installed positions
+        // receive a profile. It must not be used to invent mechanical variation.
+        if (physicalOrdinal < 0 || physicalOrdinal >= PHYSICAL_LATCHING_RELAYS) {
+            throw new IllegalArgumentException("invalid physical relay ordinal " + physicalOrdinal);
         }
-        java.util.Arrays.sort(out);
-        return out;
-    }
-
-    private static String bitName(int bit) {
-        if (bit == 10) return "B";
-        if (bit >= 5) return "C-K" + (bit - 4);
-        return "D-K" + (bit + 1);
-    }
-
-    private static long hash32(String text) {
-        int h = 0x811c9dc5;
-        for (int i = 0; i < text.length(); i++) {
-            h ^= text.charAt(i);
-            h *= 0x01000193;
-        }
-        h ^= h >>> 16;
-        h *= 0x7feb352d;
-        h ^= h >>> 15;
-        h *= 0x846ca68b;
-        h ^= h >>> 16;
-        return Integer.toUnsignedLong(h);
+        double travel = LATCHING_PRESENTATION_REFERENCE_MS;
+        return new Profile(id, row, bit, travel, travel,
+                travel, travel, new double[0], new double[0], 0);
     }
 
     private static double clamp(double value, double low, double high) {
         return Math.max(low, Math.min(high, value));
     }
 
-    private static final class XorShift32 {
-        private int state;
-        XorShift32(long seed) { state = (int)(seed == 0 ? 1 : seed); }
-        double next() {
-            int x = state;
-            x ^= x << 13;
-            x ^= x >>> 17;
-            x ^= x << 5;
-            state = x;
-            return Integer.toUnsignedLong(x) / 4294967296.0;
-        }
-    }
 }

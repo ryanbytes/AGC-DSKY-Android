@@ -66,7 +66,8 @@ context.AGCDSKY_DISPLAY={
 new vm.Script(source,{filename:'relay-visual-coupling.js'}).runInContext(context);
 const visual=context.DSKY_RELAY_VISUAL;
 assert(visual&&Object.isFrozen(visual),'visual API missing/mutable');
-assert(visual.contactBounceVisible===true&&visual.stretchedAudioFrameLocked===true&&visual.stretchedBounceAudio===true,'coupled contact/bounce flags changed');
+assert(visual.contactBounceVisible===false&&visual.stretchedAudioFrameLocked===true&&visual.stretchedBounceAudio===false,'source-bounded contact/bounce flags changed');
+assert(visual.sourceBoundedTiming===true&&visual.exactProductionRelayTiming===false&&visual.authenticTiming===false,'relay timing uncertainty flags changed');
 visual.subscribe(event=>events.push({...event,at:now}));
 assert(typeof paintPolicy==='function'&&paintPolicy()===true,'authentic paint policy changed');
 
@@ -82,22 +83,22 @@ const command=(10<<11)|(1<<5)|1;
 decodeImpl(command);
 assert(baseDecode.length===1&&baseDecode[0].value===command,'wrapper bypassed hardware decoder');
 const drives=events.filter(e=>e.type==='relay-drive');
-assert(drives.length===2&&drives.some(e=>e.bit===0&&e.durationMs===5)&&drives.some(e=>e.bit===5&&e.durationMs===11),'manufactured drive durations not published');
+assert(drives.length===2&&drives.some(e=>e.bit===0&&e.durationMs===5)&&drives.some(e=>e.bit===5&&e.durationMs===11),'fixture drive durations not published');
 assert(drives.every(e=>e.audioOverlapCount===2),'real overlapping acoustic windows were not detected');
 assert(drives.every(e=>e.audioStrength>.66&&e.audioStrength<.75),'overlapping relay sound did not receive the small capped gain');
 assert(bankHaptics.length===1&&bankHaptics[0].entries.length===2,'authentic drive did not compose one bank haptic');
-assert(bankHaptics[0].entries.some(e=>e.bit===0&&e.arrivalMs===5)&&bankHaptics[0].entries.some(e=>e.bit===5&&e.arrivalMs===11),'bank haptic schedule does not match manufactured armature arrivals');
+assert(bankHaptics[0].entries.some(e=>e.bit===0&&e.arrivalMs===5)&&bankHaptics[0].entries.some(e=>e.bit===5&&e.arrivalMs===11),'bank haptic schedule does not match fixture armature arrivals');
 
 runNextTimer();
 const armature0=events.find(e=>e.type==='relay-contact'&&e.bit===0&&e.phase==='armature');
-assert(armature0&&armature0.at===5,'first contact event did not occur at manufactured 5 ms travel');
+assert(armature0&&armature0.at===5,'first contact event did not occur at fixture 5 ms travel');
 assert(impacts.some(x=>x.bit===0&&x.at===5),'relay sound was not emitted by the same 5 ms contact event');
 assert(impacts.find(x=>x.bit===0&&x.at===5).strength>.66,'overlapping relay sound did not use boosted gain');
 assert(renders.some(x=>x.word===1&&x.at===5),'DSKY contact projection was not emitted by the same 5 ms event');
 assert(contactHaptics.length===0,'authentic mode must retain composed-bank haptics rather than per-contact one-shots');
 
 runNextTimer();
-assert(events.some(e=>e.type==='relay-contact'&&e.bit===0&&e.phase==='bounce'&&e.state===false&&e.at===5.5),'manufacturing bounce event missing');
+assert(events.some(e=>e.type==='relay-contact'&&e.bit===0&&e.phase==='bounce'&&e.state===false&&e.at===5.5),'fixture bounce event missing');
 assert(renders.some(x=>x.word===0&&x.at===5.5),'DSKY projection did not follow contact bounce');
 runAllTimers();
 assert(renders[renders.length-1].word===33,'authentic transition did not settle to target contact word');
@@ -126,10 +127,10 @@ const flashStart=now;
 visual.presentAux({flash:true},{render:true,commit:(name,on,render)=>{
   hardwareState.auxRelays[name]=!!on;auxCommits.push({name,on:!!on,render:!!render,at:now});
 }});
-assert(auxCommits.length===0&&auxImpacts.length===0&&auxHaptics.length===0,'FLASH cue fired before manufactured contact travel');
+assert(auxCommits.length===0&&auxImpacts.length===0&&auxHaptics.length===0,'FLASH cue fired before fixture contact travel');
 runNextTimer();
 const flashContact=events.find(e=>e.type==='aux-contact'&&e.name==='flash'&&e.phase==='armature');
-assert(flashContact&&flashContact.at===flashStart+7&&flashContact.state===true,'FLASH armature contact did not occur at manufactured travel');
+assert(flashContact&&flashContact.at===flashStart+7&&flashContact.state===true,'FLASH armature contact did not occur at fixture travel');
 assert(auxCommits.some(x=>x.name==='flash'&&x.on===true&&x.at===flashContact.at),'FLASH visible contact commit was not emitted on the armature event');
 assert(auxImpacts.some(x=>x.name==='flash'&&x.on===true&&x.at===flashContact.at),'FLASH relay sound was not emitted on the visible contact event');
 assert(auxHaptics.some(x=>x.name==='flash'&&x.on===true&&x.at===flashContact.at),'FLASH relay haptic was not emitted on the visible contact event');

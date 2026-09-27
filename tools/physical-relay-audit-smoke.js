@@ -19,6 +19,8 @@ assert(topo.packageSlots.length===132,'package-slot list must contain 132');
 assert(new Set(topo.packageSlots.map(x=>x.id)).size===132,'package slots must be unique');
 assert(topo.packageSlots.filter(x=>x.type==='latching').length===120,'package slots must contain 120 latching K1-K20 positions');
 assert(topo.packageSlots.filter(x=>x.type==='non-latching').length===12,'package slots must contain 12 non-latching K21-K22 positions');
+assert(topo.latchingRelays.every(x=>/^D[1-6]:K(?:[1-9]|1[0-9]|20)$/.test(x.packageSlot||'')),'every latching logical identity must have a physical Dn/K1-K20 slot');
+assert(new Set(topo.latchingRelays.map(x=>x.packageSlot)).size===120,'runtime latching package slots must be one-to-one');
 
 const absent=['3:10','8:5','8:6','8:7','8:8','8:9','8:10','9:10','10:10','11:10','12:9','12:10'];
 assert(topo.absentLogicalPositions.length===12,'exactly 12 logical channel-010 positions must be unpopulated');
@@ -26,7 +28,14 @@ for(const key of absent){const [row,bit]=key.split(':').map(Number);assert(!topo
 for(let row=1;row<=12;row++)for(let bit=0;bit<=10;bit++){
   const shouldExist=!absent.includes(row+':'+bit);
   assert(topo.isLatchingRelay(row,bit)===shouldExist,`physical population mismatch row ${row} bit ${bit}`);
+  const relay=topo.latchingRelay(row,bit);
+  if(relay){
+    assert(relay.bankCode===row,`bank code mismatch row ${row} bit ${bit}`);
+    assert(relay.bankCodeOctal==='0o'+row.toString(8).padStart(2,'0'),`octal bank code mismatch row ${row} bit ${bit}`);
+  }
 }
+assert(topo.latchingRelays.every(x=>x.bankCode>=1&&x.bankCode<=12),'flight topology must use relay-word codes 1..12 only');
+assert(!topo.latchingRelays.some(x=>x.bankCode===0),'bank 00 must not appear in Apollo 11 flight topology');
 
 const expectedAux={
   isswar:['AUX:ISS-WARNING','0o011','0o00001'],
@@ -49,9 +58,28 @@ for(const [name,[id,ch,mask]] of Object.entries(expectedAux)){
 }
 
 const json=JSON.parse(fs.readFileSync(path.join(ROOT,'docs/physical-relay-inventory.json'),'utf8'));
+const logicalCrosswalk=JSON.parse(fs.readFileSync(path.join(ROOT,'docs/relay-logical-physical-crosswalk-2005918.json'),'utf8'));
+const sourceMap=new Map(logicalCrosswalk.mappings.map(x=>[x.row+':'+x.runtimeBit,x.packageSlot]));
+assert(sourceMap.size===120,'2005918 logical/physical source map must contain 120 unique logical positions');
+assert(logicalCrosswalk.validation.ambiguousMatches===0,'2005918 logical/physical source map must contain zero ambiguous joins');
 assert(json.packageSlots.length===132,'documented package-slot inventory must contain 132');
 assert(json.latchingRelays.length===120,'documented latching inventory must contain 120');
 assert(json.nonLatchingRelays.length===12,'documented non-latching inventory must contain 12');
+assert(json.scope.logicalRelayWordRows===12,'documented flight relay-word row count must be 12');
+assert(json.scope.logicalRelayWordBankCodesOctal==='01 through 14 (octal), corresponding to decimal row ordinals 1 through 12','documented flight bank-code range changed');
+assert(json.latchingRelays.every(x=>x.bankCode===x.row&&x.bankCodeOctal==='0o'+x.row.toString(8).padStart(2,'0')),'documented latching bank-code identities must match flight row ordinals');
+for(const relay of topo.latchingRelays){
+  const expected=sourceMap.get(relay.row+':'+relay.bit);
+  assert(expected,'runtime relay has no 2005918 source mapping: '+relay.id);
+  assert(relay.packageSlot===expected,'runtime package slot differs from 2005918 source mapping: '+relay.id);
+  assert(relay.packageSlotStatus==='proven-source-join-2005918-2005954A-2005973','runtime package slot status is not proven: '+relay.id);
+}
+for(const relay of json.latchingRelays){
+  const expected=sourceMap.get(relay.row+':'+relay.bit);
+  assert(expected&&relay.packageSlot===expected,'documented package slot differs from 2005918 source mapping: '+relay.id);
+  const runtime=topo.latchingRelay(relay.row,relay.bit);
+  assert(runtime&&runtime.packageSlot===relay.packageSlot,'runtime/documented package slot mismatch: '+relay.id);
+}
 assert(new Set([...json.latchingRelays,...json.nonLatchingRelays].map(x=>x.id)).size===132,'documented modeled physical identities must be unique');
 const requiredCoverage=['functionalEffect','functionalStatus','spareStatus','contactPath','timingModel','timingEvidence','soundCoupling','hapticCoupling','renderOrExternalEffect'];
 for(const relay of [...json.latchingRelays,...json.nonLatchingRelays]){
@@ -79,4 +107,4 @@ assert(display.includes('function registerChannelHandler('),'display output rout
 assert(index.includes('<script src="dsky-relay-topology.js"></script>'),'topology asset not loaded');
 
 console.log('physical relay audit smoke: PASS');
-console.log('  120 populated latching + 12 real non-latching functions = 132 physical identities; 12 nonexistent logical positions suppressed');
+console.log('  120 populated latching identities map one-to-one to D1-D6/K1-K20 + 12 real non-latching functions = 132 physical identities; 12 nonexistent logical positions suppressed');
