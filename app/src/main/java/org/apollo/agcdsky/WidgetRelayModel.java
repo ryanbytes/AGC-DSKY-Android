@@ -11,8 +11,9 @@ import java.util.Locale;
  * generated from the real K1..K5 contact matrix.  The logical Channel-010
  * field remains 12 x 11, but only the 120 physically populated latching
  * positions receive manufacturing fingerprints, travel, pole skew and bounce.
- * instant inside the documented 20-ms drive/settle envelope.  The widget face
- * publishes the settled result; it never invents a partially settled state.
+ * Callers can sample those physical contacts at any instant inside the documented
+ * 20-ms drive/settle envelope.  The widget face publishes the settled result; it
+ * never invents a partially settled state.
  */
 final class WidgetRelayModel {
     static final int BANKS = 12;
@@ -130,6 +131,7 @@ final class WidgetRelayModel {
      * the 20-ms settled boundary.
      */
     static int low11At(int row, int priorLow11, int targetLow11, double elapsedMs) {
+        requireLogicalPosition(row, 0);
         int prior = priorLow11 & 0x7ff;
         int target = targetLow11 & 0x7ff;
         if (elapsedMs >= DRIVE_ENVELOPE_MS) return target;
@@ -161,6 +163,7 @@ final class WidgetRelayModel {
     static String segmentsDuringDigitTransition(int row, int bitOffset,
                                                 int priorCode, int targetCode,
                                                 double elapsedMs) {
+        requireLogicalPosition(row, 0);
         if (bitOffset != 0 && bitOffset != 5) {
             throw new IllegalArgumentException("digit relay offset must be 0 or 5");
         }
@@ -193,6 +196,7 @@ final class WidgetRelayModel {
     }
 
     static double maxStableMsForRow(int row, int priorLow11, int targetLow11) {
+        requireLogicalPosition(row, 0);
         int diff = (priorLow11 ^ targetLow11) & 0x7ff;
         double max = 0;
         for (int bit = 0; bit < RELAYS_PER_BANK; bit++) {
