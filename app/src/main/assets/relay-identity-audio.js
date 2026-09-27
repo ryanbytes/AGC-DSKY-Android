@@ -18,6 +18,7 @@
   const bufferCache=new Map(),contactBufferCache=new Map();
 
   const LATCHING_RELAY_COUNT = topology.latchingRelayCount;
+  const PHYSICAL_RELAY_COUNT = topology.physicalRelayCount;
   const DRIVE_ENVELOPE_MS = 20;
   const CONTACT_GUARD_MS = 0.35;
   const MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
@@ -65,7 +66,7 @@
     for(const offset of bounceTimes){state=!state;events.push({atMs:travelMs+offset,state,kind:'bounce'})}events.push({atMs:stableMs,state:finalState,kind:'settled'});return events;
   }
   function profile(id,ordinal){
-    const m=manufacturingProfile(id,ordinal),rnd=xorshift32(hash32(`${id}:acoustic`)),centered=()=>rnd()*2-1,serialOffset=(ordinal-69.5)*.00034,bodyScale=1+serialOffset+centered()*.0035;
+    const m=manufacturingProfile(id,ordinal),rnd=xorshift32(hash32(`${id}:acoustic`)),centered=()=>rnd()*2-1,serialOffset=(ordinal-(PHYSICAL_RELAY_COUNT-1)/2)*.00034,bodyScale=1+serialOffset+centered()*.0035;
     return Object.freeze({id,ordinal,...m,settleMs:Math.max(m.setStableMs,m.resetStableMs),f1:5600*bodyScale*(1+centered()*.0040),f2:8300*bodyScale*(1+centered()*.0045),f3:11600*bodyScale*(1+centered()*.0050),f4:14200*bodyScale*(1+centered()*.0055),d1:.00155*(1+centered()*.09),d2:.00185*(1+centered()*.09),d3:.00135*(1+centered()*.10),d4:.00095*(1+centered()*.11),strikeDecay:.00033*(1+centered()*.12),strikeMix:.14*(1+centered()*.10),ringMix:1+centered()*.045,level:1+centered()*.050,phaseSeed:hash32(`${id}:phase`),contactSeed:hash32(`${id}:contact`)});
   }
   const profileCache=new Map();
