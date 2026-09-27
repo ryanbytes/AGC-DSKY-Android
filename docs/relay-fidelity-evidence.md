@@ -79,8 +79,26 @@ haptic cue. Those are presentation aids, not historical measurements.
 ## Open documentation questions
 
 1. Recover readable production SCDs for relay 2004688 and 2004689.
-2. Resolve the exact logical/function-to-D1-D6/K1-K22 package crosswalk from
-   the production interconnect documentation.
+2. Complete the exact logical/function-to-D1-D6/K1-K22 package crosswalk.
+
+   New 2026-09-27 evidence narrows this from an unknown-document problem to a
+   transcription/trace problem. Original interconnect drawing **2005954A**
+   survives in NARA aperture-card box 460 and is directly readable at Internet
+   Archive frames n419-n422. Frame n422 explicitly lays out **D1 through D6** as
+   six separate 2003952 indicator-driver-module assemblies with their connector
+   pin signal names. The original **2005973-** module schematic/netlist exposes
+   the internal K1-K22-to-connector-pin topology. Therefore the crosswalk is
+   recoverable by joining 2005954A external Dn pin labels to 2005973- internal
+   Kx pin connectivity; it is not appropriate to invent a mapping, but it is
+   also no longer accurate to describe the necessary interconnect source as
+   unrecovered.
+
+   Direct scan references:
+   - 2005954A interconnect, NARA box 460 frame n419:
+     https://archive.org/stream/apertureCardBox460NARASW_images/apertureCardBox460NARASW#page/n419/mode/1up
+   - continuation frames n420-n422, with D1-D6 module rows visible on n422.
+   - Virtual AGC original-drawing transcription:
+     https://github.com/virtualagc/virtualagc/tree/schematics/Schematics/2005973-
 3. Preserve the K22 documentation conflict without treating all surviving evidence as equally authoritative.
 
    Exact K22 delta checked against the Virtual AGC netlists:
