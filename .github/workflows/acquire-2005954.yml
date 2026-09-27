@@ -1,4 +1,4 @@
-name: Acquire DSKY 2005954 aperture frames
+name: Acquire DSKY signal-flow aperture frames
 
 on:
   push:
@@ -9,37 +9,37 @@ on:
 jobs:
   acquire:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Install PDF tools
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq poppler-utils
-      - name: Fetch Batch 3 aperture-card PDF
+      - name: Fetch AGC handbook drawing PDF
         run: |
           set -euxo pipefail
           mkdir -p out
-          curl --fail --location --retry 3 --output out/AgcApertureCardsBatch3.pdf \
-            https://archive.org/download/AgcApertureCardsBatch3Images/AgcApertureCardsBatch3.pdf
-          sha256sum out/AgcApertureCardsBatch3.pdf | tee out/SHA256SUM.txt
-          pdfinfo out/AgcApertureCardsBatch3.pdf | tee out/PDFINFO.txt
-      - name: Extract target page neighborhood
+          curl --fail --location --retry 3 --output out/agc_handbook_jp2.pdf \
+            https://archive.org/download/agc_handbook_jp2/agc_handbook_jp2.pdf
+          sha256sum out/agc_handbook_jp2.pdf | tee out/SHA256SUM.txt
+          pdfinfo out/agc_handbook_jp2.pdf | tee out/PDFINFO.txt
+      - name: Extract 2005918 page neighborhood
         run: |
           set -euxo pipefail
-          pdftotext -f 165 -l 190 -layout out/AgcApertureCardsBatch3.pdf out/pages-165-190.txt || true
-          grep -n -C 8 -E '2005954|2005957|INTERCONNECT|SIGNAL PIN' out/pages-165-190.txt > out/target-grep.txt || true
+          pdftotext -f 368 -l 381 -layout out/agc_handbook_jp2.pdf out/pages-368-381.txt || true
+          grep -n -C 10 -E '2005918|SIGNAL FLOW|DSKY|CHANNEL|RELAY' out/pages-368-381.txt > out/target-grep.txt || true
           mkdir -p out/render
-          pdftoppm -f 170 -l 185 -r 180 -jpeg -jpegopt quality=90 \
-            out/AgcApertureCardsBatch3.pdf out/render/page
+          pdftoppm -f 369 -l 380 -r 180 -jpeg -jpegopt quality=90 \
+            out/agc_handbook_jp2.pdf out/render/page
           ls -lh out/render | tee out/render-list.txt
-      - name: Upload aperture evidence
+      - name: Upload 2005918 evidence
         uses: actions/upload-artifact@v4
         with:
-          name: DSKY-2005954-aperture-pages
+          name: DSKY-2005918-signal-flow-pages
           path: |
             out/SHA256SUM.txt
             out/PDFINFO.txt
-            out/pages-165-190.txt
+            out/pages-368-381.txt
             out/target-grep.txt
             out/render/*.jpg
             out/render-list.txt
