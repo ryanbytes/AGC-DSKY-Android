@@ -131,10 +131,10 @@ final class WidgetRelayModel {
     }
 
     /**
-     * Sample one complete 11-relay row while it is changing.  Bits which do not
-     * change remain latched.  Changed contacts follow their relay's fixed
-     * set/reset travel and bounce trace and are forced to the commanded state at
-     * the 20-ms settled boundary.
+     * Sample one complete 11-relay row while it is changing. Bits which do not
+     * change remain latched. Changed contacts use the single source-bounded
+     * predecessor timing reference; no production-unit bounce or pole-skew trace
+     * is claimed. The commanded word is authoritative at the 20-ms boundary.
      */
     static int low11At(int row, int priorLow11, int targetLow11, double elapsedMs) {
         requireLogicalPosition(row, 0);
@@ -188,10 +188,9 @@ final class WidgetRelayModel {
             pole[k][0] = before == after ? before : contactState(p, before, after, elapsedMs, 0);
             pole[k][1] = before == after ? before : contactState(p, before, after, elapsedMs, 1);
         }
-        // K1 and K4 only need one contact in this matrix. K2/K3/K5 use their
-        // two mechanically linked poles separately, so manufacturing pole skew
-        // can affect the sub-20-ms intermediate pattern without affecting the
-        // settled decimal result.
+        // K1 and K4 only need one contact in this matrix. K2/K3/K5 retain the
+        // two-pole structure for electrical topology, but production pole-skew
+        // measurements are unresolved and the source-bounded profile uses zero skew.
         return matrixSegments(
             pole[0][0],
             pole[1][0], pole[1][1],
