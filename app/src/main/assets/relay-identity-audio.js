@@ -79,9 +79,9 @@
   }
   function profile(id,ordinal){
     const m=sourceBoundTimingProfile(id),auxiliary=String(id).startsWith('AUX:');
-    // Audio is a generic perceptual click for the relay class. No per-package
-    // acoustic individuality is claimed because no flown-unit acoustic data or
-    // physical D1-D6/K-slot crosswalk has been recovered.
+    // Audio is a generic perceptual click for the relay class. The D1-D6/K1-K20
+    // crosswalk is now source-proven, but no flown-unit acoustic data supports
+    // per-package acoustic individuality.
     const bodyScale=auxiliary?.985:1;
     return Object.freeze({
       id,ordinal,...m,settleMs:Math.max(m.setStableMs,m.resetStableMs),
