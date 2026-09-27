@@ -154,14 +154,15 @@ assert(contactHaptics.some(x=>x.bit===0&&x.phase==='armature'&&x.at===frameAt),'
 runNextTimer();
 const bounceAt=now;
 assert(renders.some(x=>x.word===0&&x.at===bounceAt),'stretched contact bounce was not visibly rendered');
-assert(contactHaptics.some(x=>x.bit===0&&x.phase==='bounce'&&x.at===bounceAt),'stretched contact bounce had no same-event tactile tick');
+assert(!contactHaptics.some(x=>x.bit===0&&x.phase==='bounce'),'stretched contact bounce leaked into handset haptics');
 runNextTimer();
 const settleAt=now;
 assert(renders.some(x=>x.word===1&&x.at===settleAt),'stretched contact settle was not visibly rendered');
-assert(contactHaptics.some(x=>x.bit===0&&x.phase==='settled'&&x.at===settleAt),'stretched contact settle had no same-event tactile tick');
+assert(!contactHaptics.some(x=>x.bit===0&&x.phase==='settled'),'stretched settled contact leaked into handset haptics');
+assert(contactHaptics.filter(x=>x.bit===0).length===1,'stretched relay must emit exactly one tactile armature tick');
 assert(visual.stretchedContactHapticLocked===true,'stretched contact/haptic lock flag missing');
 assert(visual.overlapAudioBoost===true&&visual.overlapHapticBoost===true,'overlap-only boost diagnostics missing');
 assert(visual.lastPresentationClick()&&visual.lastPresentationClick().bit===0,'last presentation click diagnostic changed');
 
 console.log('relay visual coupling smoke: PASS');
-console.log('  authentic mode keeps one composed bank waveform; stretched mode emits a tiny tactile tick on the exact event that visibly changes the DSKY contact projection');
+console.log('  authentic mode keeps one composed bank waveform; stretched mode emits one tiny tactile tick on armature movement while contact bounce remains visual/audio only');
