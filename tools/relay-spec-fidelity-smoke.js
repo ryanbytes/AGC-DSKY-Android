@@ -168,6 +168,15 @@ req(evidence,'No pseudo-random per-relay operate/release time.','anti-fabricatio
 req(evidence,'Comanche055 flight software RELTAB emits relay-word codes 1 through 12','flight row-code evidence');
 req(evidence,'thirteen banks octal 00 through 14','1965 13-bank discrepancy evidence');
 req(evidence,'bank 00 is not emitted by Comanche055 RELTAB','bank-00 non-use boundary');
+req(evidence,'flight-software row-command hold interval','20-ms software-hold boundary');
+req(evidence,'15 ±10 ms','PS 2016009 driver pulse evidence');
+req(evidence,'15.0 +0.0 / -1.5 ms','PS 2016009 relay-contact acceptance pulse');
+req(hardware,'const RELAY_ROW_HOLD_MS=20;','hardware software row-hold constant');
+req(identity,'const SOFTWARE_ROW_HOLD_MS = 20;','relay presentation software row-hold constant');
+req(identity,'softwareRowHoldMs:SOFTWARE_ROW_HOLD_MS','relay diagnostic software-hold boundary');
+req(visual,'softwareRowHoldMs:SOFTWARE_ROW_HOLD_MS','visual software-hold boundary');
+no(hardware,'driven for 20 ms so its latching relays settle','false 20-ms relay-settle claim');
+no(identity,'documented 20-ms bank-drive/settle envelope','false relay-audio 20-ms settle claim');
 req(evidence,'120 installed latching positions','source-joined K1-K20 population evidence');
 req(evidence,'120 unique physical-package matches, 12 unpopulated logical positions','2005918 logical/physical join evidence');
 req(evidence,'zero ambiguous matches','2005918 zero-ambiguity evidence');
