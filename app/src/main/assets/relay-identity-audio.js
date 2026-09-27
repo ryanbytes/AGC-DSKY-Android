@@ -103,7 +103,8 @@
   function hapticSignatureFromProfile(p,engaging){
     const on=!!engaging;
     // Absolute minimum non-zero Android relay pulse: 1 ms at 1/255.
-    // Relay individuality is preserved only by deterministic arrival/bounce timing.
+    // No per-package tactile individuality is claimed: production unit-to-unit
+    // mechanical variation is unresolved. The handset cue is intentionally uniform.
     return Object.freeze({id:p.id,engaging:on,durationMs:1,amplitude:1});
   }
   function hapticPatternFromProfile(p,engaging,atMs=0){
