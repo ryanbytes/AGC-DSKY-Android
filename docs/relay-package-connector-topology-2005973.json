@@ -1,0 +1,1730 @@
+{
+  "schema": "agc-dsky-2005973-relay-connector-topology-v1",
+  "generatedFrom": {
+    "drawing": "2005973-",
+    "repository": "virtualagc/virtualagc",
+    "ref": "schematics",
+    "path": "Schematics/2005973-/module.net",
+    "blobSha": "8081cb37794d6912bbf7424a173cbac5620610f8"
+  },
+  "purpose": "Auditable intermediate trace for the D1-D6/K1-K22 crosswalk. It records only internal physical K-slot-to-module-connector wiring proven by 2005973-; it does not assign logical/runtime identities to Dn:Kx slots.",
+  "notes": [
+    "K1-K20 use the Relay-1006282 symbol; K21-K22 use Relay-1010784 in this source.",
+    "connectorPins are same-net J1/J2 endpoints. viaDiodes records connector endpoints reached across a diode from a relay pad net; it is a wiring trace, not an assertion that the diode is electrically transparent.",
+    "The remaining crosswalk step is to transcribe the D1-D6 connector signal labels from 2005954A and join them to these connector endpoints.",
+    "K22 is disputed between surviving 2005973- and 2005940A documentation. This artifact records 2005973- only and must not be promoted to a serial-number/as-flown claim."
+  ],
+  "relayCount": 22,
+  "relays": [
+    {
+      "slot": "K1",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad23)",
+          "connectorPins": [
+            "J1:23"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "unconnected-(K1-Pad4)",
+          "unconnected": true
+        },
+        "5": {
+          "net": "Net-(CR1-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR1",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "unconnected-(K1-Pad6)",
+          "unconnected": true
+        },
+        "7": {
+          "net": "unconnected-(K1-Pad7)",
+          "unconnected": true
+        },
+        "8": {
+          "net": "Net-(J1-Pad22)",
+          "connectorPins": [
+            "J1:22"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR2-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR2",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad14)",
+          "connectorPins": [
+            "J1:14"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K2",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad44)",
+          "connectorPins": [
+            "J1:44"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad55)",
+          "connectorPins": [
+            "J1:55"
+          ]
+        },
+        "4": {
+          "net": "Net-(J1-Pad41)",
+          "connectorPins": [
+            "J1:41"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR3-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR3",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad30)",
+          "connectorPins": [
+            "J1:30"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad39)",
+          "connectorPins": [
+            "J1:39"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR4-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR4",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad35)",
+          "connectorPins": [
+            "J1:35"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K3",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad62)",
+          "connectorPins": [
+            "J1:62"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "Net-(K3-Pad4)"
+        },
+        "5": {
+          "net": "Net-(CR5-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR5",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad56)",
+          "connectorPins": [
+            "J1:56"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad55)",
+          "connectorPins": [
+            "J1:55"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR6-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR6",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad51)",
+          "connectorPins": [
+            "J1:51"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K4",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J2-Pad65)",
+          "connectorPins": [
+            "J2:65"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "unconnected-(K4-Pad4)",
+          "unconnected": true
+        },
+        "5": {
+          "net": "Net-(CR7-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR7",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "unconnected-(K4-Pad6)",
+          "unconnected": true
+        },
+        "7": {
+          "net": "unconnected-(K4-Pad7)",
+          "unconnected": true
+        },
+        "8": {
+          "net": "Net-(J1-Pad56)",
+          "connectorPins": [
+            "J1:56"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR8-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR8",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad61)",
+          "connectorPins": [
+            "J1:61"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K5",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J2-Pad77)",
+          "connectorPins": [
+            "J2:77"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "Net-(J2-Pad83)",
+          "connectorPins": [
+            "J2:83"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR9-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR9",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(K3-Pad4)"
+        },
+        "7": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad30)",
+          "connectorPins": [
+            "J1:30"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR10-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR10",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:71"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J2-Pad73)",
+          "connectorPins": [
+            "J2:73"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K6",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad23)",
+          "connectorPins": [
+            "J1:23"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "unconnected-(K6-Pad4)",
+          "unconnected": true
+        },
+        "5": {
+          "net": "Net-(CR11-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR11",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "unconnected-(K6-Pad6)",
+          "unconnected": true
+        },
+        "7": {
+          "net": "unconnected-(K6-Pad7)",
+          "unconnected": true
+        },
+        "8": {
+          "net": "Net-(J1-Pad24)",
+          "connectorPins": [
+            "J1:24"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR12-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR12",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad14)",
+          "connectorPins": [
+            "J1:14"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K7",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad44)",
+          "connectorPins": [
+            "J1:44"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad54)",
+          "connectorPins": [
+            "J1:54"
+          ]
+        },
+        "4": {
+          "net": "Net-(J1-Pad42)",
+          "connectorPins": [
+            "J1:42"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR13-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR13",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad36)",
+          "connectorPins": [
+            "J1:36"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad40)",
+          "connectorPins": [
+            "J1:40"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR14-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR14",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad35)",
+          "connectorPins": [
+            "J1:35"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K8",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad62)",
+          "connectorPins": [
+            "J1:62"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "Net-(K10-Pad6)"
+        },
+        "5": {
+          "net": "Net-(CR15-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR15",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad49)",
+          "connectorPins": [
+            "J1:49"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad54)",
+          "connectorPins": [
+            "J1:54"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR16-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR16",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad51)",
+          "connectorPins": [
+            "J1:51"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K9",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J2-Pad65)",
+          "connectorPins": [
+            "J2:65"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "unconnected-(K9-Pad4)",
+          "unconnected": true
+        },
+        "5": {
+          "net": "Net-(CR17-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR17",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "unconnected-(K9-Pad6)",
+          "unconnected": true
+        },
+        "7": {
+          "net": "unconnected-(K9-Pad7)",
+          "unconnected": true
+        },
+        "8": {
+          "net": "Net-(J1-Pad49)",
+          "connectorPins": [
+            "J1:49"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR18-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR18",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad61)",
+          "connectorPins": [
+            "J1:61"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K10",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J2-Pad77)",
+          "connectorPins": [
+            "J2:77"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad16)",
+          "connectorPins": [
+            "J1:16"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "Net-(J2-Pad84)",
+          "connectorPins": [
+            "J2:84"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR19-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR19",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(K10-Pad6)"
+        },
+        "7": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad36)",
+          "connectorPins": [
+            "J1:36"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR20-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR20",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:66"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J2-Pad73)",
+          "connectorPins": [
+            "J2:73"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K11",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad23)",
+          "connectorPins": [
+            "J1:23"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "unconnected-(K11-Pad4)",
+          "unconnected": true
+        },
+        "5": {
+          "net": "Net-(CR21-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR21",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "unconnected-(K11-Pad6)",
+          "unconnected": true
+        },
+        "7": {
+          "net": "unconnected-(K11-Pad7)",
+          "unconnected": true
+        },
+        "8": {
+          "net": "Net-(J1-Pad17)",
+          "connectorPins": [
+            "J1:17"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR22-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR22",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad14)",
+          "connectorPins": [
+            "J1:14"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K12",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad44)",
+          "connectorPins": [
+            "J1:44"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad53)",
+          "connectorPins": [
+            "J1:53"
+          ]
+        },
+        "4": {
+          "net": "Net-(J1-Pad43)",
+          "connectorPins": [
+            "J1:43"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR23-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR23",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad29)",
+          "connectorPins": [
+            "J1:29"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad34)",
+          "connectorPins": [
+            "J1:34"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR24-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR24",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad35)",
+          "connectorPins": [
+            "J1:35"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K13",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad62)",
+          "connectorPins": [
+            "J1:62"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "Net-(K13-Pad4)"
+        },
+        "5": {
+          "net": "Net-(CR25-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR25",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad50)",
+          "connectorPins": [
+            "J1:50"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad53)",
+          "connectorPins": [
+            "J1:53"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR26-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR26",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad51)",
+          "connectorPins": [
+            "J1:51"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K14",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J2-Pad65)",
+          "connectorPins": [
+            "J2:65"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "unconnected-(K14-Pad4)",
+          "unconnected": true
+        },
+        "5": {
+          "net": "Net-(CR27-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR27",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "unconnected-(K14-Pad6)",
+          "unconnected": true
+        },
+        "7": {
+          "net": "unconnected-(K14-Pad7)",
+          "unconnected": true
+        },
+        "8": {
+          "net": "Net-(J1-Pad50)",
+          "connectorPins": [
+            "J1:50"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR28-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR28",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad61)",
+          "connectorPins": [
+            "J1:61"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K15",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J2-Pad77)",
+          "connectorPins": [
+            "J2:77"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "Net-(J2-Pad78)",
+          "connectorPins": [
+            "J2:78"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR29-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR29",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(K13-Pad4)"
+        },
+        "7": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad29)",
+          "connectorPins": [
+            "J1:29"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR30-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR30",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:67"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J2-Pad73)",
+          "connectorPins": [
+            "J2:73"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K16",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad28)",
+          "connectorPins": [
+            "J1:28"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad9)",
+          "connectorPins": [
+            "J1:9"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad27)",
+          "connectorPins": [
+            "J1:27"
+          ]
+        },
+        "4": {
+          "net": "Net-(J1-Pad21)",
+          "connectorPins": [
+            "J1:21"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR31-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR31",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:47"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad20)",
+          "connectorPins": [
+            "J1:20"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad15)",
+          "connectorPins": [
+            "J1:15"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad18)",
+          "connectorPins": [
+            "J1:18"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR32-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR32",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:47"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad19)",
+          "connectorPins": [
+            "J1:19"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K17",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad48)",
+          "connectorPins": [
+            "J1:48"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad9)",
+          "connectorPins": [
+            "J1:9"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad57)",
+          "connectorPins": [
+            "J1:57"
+          ]
+        },
+        "4": {
+          "net": "Net-(J1-Pad37)",
+          "connectorPins": [
+            "J1:37"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR33-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR33",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:47"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad31)",
+          "connectorPins": [
+            "J1:31"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad25)",
+          "connectorPins": [
+            "J1:25"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad38)",
+          "connectorPins": [
+            "J1:38"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR34-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR34",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:47"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad33)",
+          "connectorPins": [
+            "J1:33"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K18",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J1-Pad59)",
+          "connectorPins": [
+            "J1:59"
+          ]
+        },
+        "2": {
+          "net": "Net-(J2-Pad64)",
+          "connectorPins": [
+            "J2:64"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad57)",
+          "connectorPins": [
+            "J1:57"
+          ]
+        },
+        "4": {
+          "net": "Net-(J1-Pad58)",
+          "connectorPins": [
+            "J1:58"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR35-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR35",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:47"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad45)",
+          "connectorPins": [
+            "J1:45"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad46)",
+          "connectorPins": [
+            "J1:46"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad60)",
+          "connectorPins": [
+            "J1:60"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR36-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR36",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:47"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J1-Pad52)",
+          "connectorPins": [
+            "J1:52"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K19",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J2-Pad75)",
+          "connectorPins": [
+            "J2:75"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "Net-(J2-Pad76)",
+          "connectorPins": [
+            "J2:76"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR37-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR37",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:69"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J2-Pad63)",
+          "connectorPins": [
+            "J2:63"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "8": {
+          "net": "Net-(J2-Pad70)",
+          "connectorPins": [
+            "J2:70"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR38-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR38",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:69"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J2-Pad72)",
+          "connectorPins": [
+            "J2:72"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K20",
+      "relaySymbol": "Relay-1006282",
+      "pads": {
+        "1": {
+          "net": "Net-(J2-Pad81)",
+          "connectorPins": [
+            "J2:81"
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad32)",
+          "connectorPins": [
+            "J1:32"
+          ]
+        },
+        "4": {
+          "net": "Net-(J2-Pad82)",
+          "connectorPins": [
+            "J2:82"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR39-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR39",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:88"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad13)",
+          "connectorPins": [
+            "J1:13"
+          ]
+        },
+        "7": {
+          "net": "Net-(J2-Pad74)",
+          "connectorPins": [
+            "J2:74"
+          ]
+        },
+        "8": {
+          "net": "Net-(J2-Pad79)",
+          "connectorPins": [
+            "J2:79"
+          ]
+        },
+        "9": {
+          "net": "Net-(CR40-Pad2)",
+          "viaDiodes": [
+            {
+              "diode": "CR40",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J2:88"
+              ]
+            }
+          ]
+        },
+        "10": {
+          "net": "Net-(J2-Pad80)",
+          "connectorPins": [
+            "J2:80"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K21",
+      "relaySymbol": "1010784",
+      "pads": {
+        "1": {
+          "net": "Net-(CR41-Pad1)",
+          "connectorPins": [
+            "J1:7"
+          ],
+          "viaDiodes": [
+            {
+              "diode": "CR41",
+              "throughPad": 1,
+              "otherPad": 2,
+              "connectorPins": [
+                "J1:26"
+              ]
+            }
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad2)",
+          "connectorPins": [
+            "J1:2"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad10)",
+          "connectorPins": [
+            "J1:10"
+          ]
+        },
+        "4": {
+          "net": "Net-(J1-Pad11)",
+          "connectorPins": [
+            "J1:11"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR41-Pad2)",
+          "connectorPins": [
+            "J1:26"
+          ],
+          "viaDiodes": [
+            {
+              "diode": "CR42",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:4"
+              ]
+            },
+            {
+              "diode": "CR41",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:7"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad12)",
+          "connectorPins": [
+            "J1:12"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad1)",
+          "connectorPins": [
+            "J1:1"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad8)",
+          "connectorPins": [
+            "J1:8"
+          ]
+        }
+      }
+    },
+    {
+      "slot": "K22",
+      "relaySymbol": "1010784",
+      "pads": {
+        "1": {
+          "net": "Net-(CR42-Pad1)",
+          "connectorPins": [
+            "J1:4"
+          ],
+          "viaDiodes": [
+            {
+              "diode": "CR42",
+              "throughPad": 1,
+              "otherPad": 2,
+              "connectorPins": [
+                "J1:26"
+              ]
+            }
+          ]
+        },
+        "2": {
+          "net": "Net-(J1-Pad5)",
+          "connectorPins": [
+            "J1:5"
+          ]
+        },
+        "3": {
+          "net": "Net-(J1-Pad3)",
+          "connectorPins": [
+            "J1:3"
+          ]
+        },
+        "4": {
+          "net": "Net-(J1-Pad6)",
+          "connectorPins": [
+            "J1:6"
+          ]
+        },
+        "5": {
+          "net": "Net-(CR41-Pad2)",
+          "connectorPins": [
+            "J1:26"
+          ],
+          "viaDiodes": [
+            {
+              "diode": "CR42",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:4"
+              ]
+            },
+            {
+              "diode": "CR41",
+              "throughPad": 2,
+              "otherPad": 1,
+              "connectorPins": [
+                "J1:7"
+              ]
+            }
+          ]
+        },
+        "6": {
+          "net": "Net-(J1-Pad5)",
+          "connectorPins": [
+            "J1:5"
+          ]
+        },
+        "7": {
+          "net": "Net-(J1-Pad3)",
+          "connectorPins": [
+            "J1:3"
+          ]
+        },
+        "8": {
+          "net": "Net-(J1-Pad6)",
+          "connectorPins": [
+            "J1:6"
+          ]
+        }
+      }
+    }
+  ]
+}
