@@ -9,11 +9,13 @@ const req=(s,t,m)=>{if(!s.includes(t))fail(m+': missing '+t)};
 const no=(s,t,m)=>{if(s.includes(t))fail(m+': forbidden '+t)};
 
 const identity=read('app/src/main/assets/relay-identity-audio.js');
+const topology=read('app/src/main/assets/dsky-relay-topology.js');
 const hardware=read('app/src/main/assets/hardware-fidelity.js');
 const widget=read('app/src/main/java/org/apollo/agcdsky/WidgetRelayModel.java');
 const visual=read('app/src/main/assets/relay-visual-coupling.js');
 const inventory=JSON.parse(read('docs/physical-relay-inventory.json'));
 const crosswalk=JSON.parse(read('docs/relay-package-functional-crosswalk-2005954A-2005973.json'));
+const logicalCrosswalk=JSON.parse(read('docs/relay-logical-physical-crosswalk-2005918.json'));
 const evidence=read('docs/relay-fidelity-evidence.md');
 
 if(inventory.scope.physicalRelayPackages!==132)fail('physical package total is not 132');
@@ -29,7 +31,7 @@ if(crosswalk.validation.latchingRelaysPerModule!==20)fail('crosswalk latching re
 if(crosswalk.validation.latchingPackagesResolved!==120)fail('crosswalk does not resolve all 120 latching packages');
 if(crosswalk.validation.unresolvedK1K20Endpoints!==0)fail('crosswalk has unresolved K1-K20 drive endpoints');
 if(crosswalk.evidenceStatus.K1_K20!=='proven_by_join')fail('K1-K20 crosswalk is not marked source-joined/proven');
-if(crosswalk.evidenceStatus.AGC_channel_010_address_mapping!=='open')fail('AGC logical-address join was incorrectly promoted to proven');
+if(crosswalk.evidenceStatus.AGC_channel_010_address_mapping!=='proven_by_2005918_join')fail('AGC logical-address join is not linked to the 2005918 proof');
 let crosswalkCount=0;
 for(let d=1;d<=6;d++){
   const module=crosswalk.modules['D'+d];
@@ -55,6 +57,22 @@ for(let d=1;d<=6;d++){
 if(crosswalkCount!==120)fail('crosswalk enumeration did not total 120 packages');
 if(crosswalk.nonLatchingRelays.K21.status!=='topology_only_function_not_promoted')fail('K21 uncertainty boundary changed');
 if(crosswalk.nonLatchingRelays.K22.status!=='conflicting_transcriptions')fail('K22 conflict boundary changed');
+
+if(logicalCrosswalk.status!=='proven_for_all_120_latching_packages')fail('logical/physical crosswalk is not marked proven');
+if(logicalCrosswalk.validation.logicalPositions!==132)fail('logical/physical crosswalk does not cover 132 row/bit positions');
+if(logicalCrosswalk.validation.mappedPhysicalPackages!==120)fail('logical/physical crosswalk does not map exactly 120 packages');
+if(logicalCrosswalk.validation.unpopulatedPositions!==12)fail('logical/physical crosswalk does not preserve exactly 12 holes');
+if(logicalCrosswalk.validation.ambiguousMatches!==0)fail('logical/physical crosswalk has ambiguous matches');
+if(logicalCrosswalk.validation.uniqueMappedPackageSlots!==120)fail('logical/physical crosswalk reuses a physical package');
+const expectedHoles=['3:10','8:5','8:6','8:7','8:8','8:9','8:10','9:10','10:10','11:10','12:9','12:10'];
+const sourceHoles=logicalCrosswalk.unpopulatedPositions.map(x=>x.row+':'+x.runtimeBit);
+if(JSON.stringify([...sourceHoles].sort())!==JSON.stringify([...expectedHoles].sort()))fail('2005918-derived holes differ from runtime physical-population holes');
+const logicalMap=new Map(logicalCrosswalk.mappings.map(x=>[x.row+':'+x.runtimeBit,x]));
+if(logicalMap.size!==120)fail('logical/physical crosswalk mapping keys are not unique');
+for(const m of logicalCrosswalk.mappings){
+  if(!/^D[1-6]:K(?:[1-9]|1[0-9]|20)$/.test(m.packageSlot||''))fail('invalid latching package slot '+m.packageSlot);
+  req(topology,`'${m.row}:${m.runtimeBit}':'${m.packageSlot}'`,`runtime package map ${m.row}:${m.runtimeBit}`);
+}
 
 req(identity,'const LATCHING_PRESENTATION_REFERENCE_MS = 3;','web latching timing reference');
 req(identity,'const NON_LATCHING_PRESENTATION_REFERENCE_MS = 5;','web non-latching timing reference');
@@ -89,9 +107,13 @@ no(visual,"contactBounceVisible:true",'old false visible-bounce claim');
 no(visual,"authenticTiming:true",'old false exact-timing claim');
 
 for(const r of inventory.latchingRelays){
-  if(r.packageSlot!==null)fail('unproven AGC logical-row/bit -> physical Dn/Kx package assignment was made: '+r.id);
+  const m=logicalMap.get(r.row+':'+r.bit);
+  if(!m)fail('documented latching identity lacks proven logical/physical mapping: '+r.id);
+  if(r.packageSlot!==m.packageSlot)fail('documented package slot differs from 2005918 source join: '+r.id);
+  if(r.packageSlotStatus!=='proven-source-join-2005918-2005954A-2005973')fail('documented package slot status not proven: '+r.id);
   if(!String(r.timingBasis||'').includes('not a measured 2004688'))fail('latching timing uncertainty missing: '+r.id);
 }
+if(new Set(inventory.latchingRelays.map(r=>r.packageSlot)).size!==120)fail('documented latching package slots are not one-to-one');
 for(const r of inventory.nonLatchingRelays){
   if(r.packageSlot!==null)fail('unproven runtime-function -> physical Dn/K21-K22 package assignment was made: '+r.id);
   if(!String(r.timingBasis||'').includes('not a measured 2004689'))fail('non-latching timing uncertainty missing: '+r.id);
@@ -108,6 +130,8 @@ req(evidence,'Comanche055 flight software RELTAB emits relay-word codes 1 throug
 req(evidence,'thirteen banks octal 00 through 14','1965 13-bank discrepancy evidence');
 req(evidence,'bank 00 is not emitted by Comanche055 RELTAB','bank-00 non-use boundary');
 req(evidence,'zero unresolved K1-K20 drive endpoints','source-joined K1-K20 crosswalk evidence');
+req(evidence,'120 unique physical-package matches, 12 unpopulated logical positions','2005918 logical/physical join evidence');
+req(evidence,'zero ambiguous matches','2005918 zero-ambiguity evidence');
 
 console.log('relay specification fidelity smoke: PASS');
-console.log('  132 production packages + 120/12 split + 12 logical holes retained; K1-K20 D1-D6/YDI-XDI join resolves 120 latching packages; AGC row/bit -> package and K21/K22 function joins remain explicitly unresolved');
+console.log('  132 production packages + 120/12 split + 12 logical holes retained; all 120 Channel 010 latching identities now source-map one-to-one to D1-D6/K1-K20; only K21/K22 function joins remain unresolved');
