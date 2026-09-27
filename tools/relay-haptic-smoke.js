@@ -4,6 +4,7 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
+const topologySource=read('app/src/main/assets/dsky-relay-topology.js');
 const identity=read('app/src/main/assets/relay-identity-audio.js');
 const coupling=read('app/src/main/assets/relay-visual-coupling.js');
 const bridge=read('app/src/main/java/org/apollo/agcdsky/KeyHapticBridge.java');
@@ -50,13 +51,21 @@ const context={
   }
 };
 context.window=context;vm.createContext(context);
+vm.runInContext(topologySource,context,{filename:'dsky-relay-topology.js'});
+const topology=context.DSKY_RELAY_TOPOLOGY;
 vm.runInContext(identity,context,{filename:'relay-identity-audio.js'});
 const model=context.DSKY_RELAY_AUDIO;
 assert(model&&typeof model.hapticPatternFor==='function'&&typeof model.playRelayBankHaptic==='function','relay haptic waveform API missing');
 
 const setPatterns=[],resetPatterns=[];
 for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
+  const physical=topology.isLatchingRelay(row,bit);
   const set=model.hapticPatternFor(row,bit,true),reset=model.hapticPatternFor(row,bit,false);
+  if(!physical){
+    assert(set===null&&reset===null,`unpopulated relay row ${row} bit ${bit} received a haptic profile`);
+    assert(model.playRelayHaptic(row,bit,true)===false,`unpopulated relay row ${row} bit ${bit} dispatched a haptic`);
+    continue;
+  }
   setPatterns.push(set);resetPatterns.push(reset);
   assert(set.pulses.length>=2&&set.pulses.length<=4,'set rebound pulse count escaped bounds');
   assert(reset.pulses.length>=2&&reset.pulses.length<=3,'reset rebound pulse count escaped bounds');
@@ -72,6 +81,7 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   assert(JSON.stringify(set)===JSON.stringify(model.hapticPatternFor(row,bit,true)),'set haptic pattern is not deterministic');
   assert(JSON.stringify(reset)===JSON.stringify(model.hapticPatternFor(row,bit,false)),'reset haptic pattern is not deterministic');
 }
+assert(setPatterns.length===120,'physical haptic inventory must contain exactly 120 latching relays');
 assert(new Set(setPatterns.map(p=>JSON.stringify(p.pulses))).size>=80,'set tactile identities collapsed');
 assert(new Set(resetPatterns.map(p=>JSON.stringify(p.pulses))).size>=70,'reset tactile identities collapsed');
 
@@ -79,6 +89,11 @@ for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){
   const arm=model.contactHapticSignatureFor(row,bit,true,'armature');
   const bounce=model.contactHapticSignatureFor(row,bit,true,'bounce');
   const settled=model.contactHapticSignatureFor(row,bit,true,'settled');
+  if(!topology.isLatchingRelay(row,bit)){
+    assert(arm===null&&bounce===null&&settled===null,`unpopulated relay row ${row} bit ${bit} received contact haptic identity`);
+    assert(model.playRelayContactHaptic(row,bit,true,'armature')===false,`unpopulated relay row ${row} bit ${bit} dispatched contact haptic`);
+    continue;
+  }
   assert(arm.durationMs===1&&arm.amplitude===1,'stretched armature tick escaped absolute minimum haptic bounds');
   assert(bounce.durationMs===1&&bounce.amplitude===1,'stretched bounce tick escaped absolute minimum haptic bounds');
   assert(settled.durationMs===1&&settled.amplitude===1,'stretched settled tick escaped absolute minimum haptic bounds');
