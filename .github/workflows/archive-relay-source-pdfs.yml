@@ -10,26 +10,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Inspect Internet Archive item and recover target pages
+      - name: Fetch candidate BookReader leaves
         shell: bash
         run: |
           set -euxo pipefail
           mkdir -p recovered
           cd recovered
-          curl -fL --retry 4 --retry-all-errors -o metadata.json 'https://archive.org/metadata/apertureCardBox460NARASW_images'
-          python3 - <<'PY'
-          import json
-          m=json.load(open('metadata.json'))
-          print('identifier=',m.get('metadata',{}).get('identifier'))
-          for f in m.get('files',[]):
-              n=f.get('name','')
-              if any(x in n.lower() for x in ('pdf','jp2','zip','scandata','djvu','text','xml')):
-                  print(n, f.get('size',''))
-          PY
-          # Preserve metadata even if page recovery needs a second pass.
-      - name: Upload inspection result
+          base='https://ia601408.us.archive.org/BookReader/BookReaderImages.php'
+          zip='/9/items/apertureCardBox460NARASW_images/apertureCardBox460NARASW_jp2.zip'
+          for n in 0319 0320 0321 0322 0417 0418 0419 0420 0421; do
+            file="apertureCardBox460NARASW_jp2/apertureCardBox460NARASW_${n}.jp2"
+            curl -fL --retry 3 --retry-all-errors --get "$base" \
+              --data-urlencode "zip=$zip" \
+              --data-urlencode "file=$file" \
+              --data-urlencode 'id=apertureCardBox460NARASW_images' \
+              --data-urlencode 'scale=2' \
+              --data-urlencode 'rotate=0' \
+              -o "leaf-${n}.jpg"
+            file "leaf-${n}.jpg"
+            identify "leaf-${n}.jpg" || true
+          done
+          sha256sum leaf-*.jpg > SHA256SUMS.txt
+      - name: Upload candidate scans
         uses: actions/upload-artifact@v4
         with:
-          name: apertureCardBox460-metadata
-          path: recovered/metadata.json
+          name: DSKY-2005954-2005918-candidate-leaves
+          path: recovered/
           if-no-files-found: error
+          compression-level: 0
