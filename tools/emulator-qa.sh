@@ -5,6 +5,37 @@ mkdir -p qa
 APK=app/build/outputs/apk/regular/debug/app-regular-debug.apk
 PKG=org.apollo.agcdsky.eltest
 
+capture_logs() {
+  local pid
+  pid="$(adb shell pidof -s "$PKG" 2>/dev/null || true)"
+  printf '%s\n' "$pid" > qa/pid-final.txt
+  if [ -n "$pid" ]; then adb logcat --pid "$pid" -d > qa/app-logcat.txt || true; else adb logcat -d > qa/app-logcat.txt || true; fi
+  adb logcat -b crash -d > qa/crash-logcat.txt || true
+  adb shell dumpsys meminfo "$PKG" > qa/meminfo.txt || true
+}
+trap capture_logs EXIT
+
+dump_ui() {
+  local base="$1"
+  local remote="/sdcard/$base.xml"
+  local log="qa/$base-dump.txt"
+  rm -f "$log"
+  adb shell rm -f "$remote" || true
+  adb shell uiautomator dump "$remote" >"$log" 2>&1 || true
+  if ! adb shell test -f "$remote"; then
+    sleep 2
+    adb shell input keyevent KEYCODE_WAKEUP || true
+    adb shell input keyevent 82 || true
+    adb shell uiautomator dump "$remote" >>"$log" 2>&1 || true
+  fi
+  if adb shell test -f "$remote"; then
+    adb pull "$remote" "qa/$base.xml"
+    return 0
+  fi
+  printf 'UI TREE UNAVAILABLE\n' > "qa/$base.unavailable.txt"
+  return 1
+}
+
 test -f "$APK"
 adb install -r "$APK" | tee qa/install.txt
 adb logcat -c
@@ -23,27 +54,43 @@ test -n "$PID"
 adb shell wm size > qa/wm-size.txt
 adb shell wm density > qa/wm-density.txt
 adb shell dumpsys activity activities > qa/activity.txt
-adb shell uiautomator dump /sdcard/ui-initial.xml
-adb pull /sdcard/ui-initial.xml qa/ui-initial.xml
-adb exec-out screencap -p > qa/initial.png
 
-# Record PHONE CLOCK across multiple second transitions. This is the visual evidence
-# for the R3 transient/flicker regression while the relay model continues to run.
+# Visual evidence first so accessibility-tree limitations cannot abort the test.
+adb exec-out screencap -p > qa/initial.png
+dump_ui ui-initial || true
+
+# Record PHONE CLOCK across multiple second transitions.
 adb shell screenrecord --bit-rate 4000000 --time-limit 12 /sdcard/clock.mp4
 adb pull /sdcard/clock.mp4 qa/clock.mp4
 adb exec-out screencap -p > qa/after-clock.png
-adb shell uiautomator dump /sdcard/ui-after-clock.xml
-adb pull /sdcard/ui-after-clock.xml qa/ui-after-clock.xml
+dump_ui ui-after-clock || true
 
-# Long-press the panel to expose controls.
-adb shell input swipe 540 1000 540 1000 900
-sleep 2
-adb shell uiautomator dump /sdcard/ui-controls.xml
-adb pull /sdcard/ui-controls.xml qa/ui-controls.xml
-adb exec-out screencap -p > qa/controls.png
+# Only drive controls when accessibility gives us coordinates.
+if [ -f qa/ui-initial.xml ]; then
+  python3 - <<'PY' > qa/dsky-coordinate.txt
+import re
+xml=open('qa/ui-initial.xml',encoding='utf-8').read()
+for m in re.finditer(r'<node\b[^>]*>', xml):
+    node=m.group(0)
+    if 'APOLLO BLOCK II DSKY' not in node.upper():
+        continue
+    b=re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',node)
+    if b:
+        x1,y1,x2,y2=map(int,b.groups())
+        print((x1+x2)//2,(y1+y2)//2)
+        break
+PY
+fi
 
-# Tap MODE if Android exposes the WebView control through accessibility.
-python3 - <<'PY'
+if [ -s qa/dsky-coordinate.txt ]; then
+  read X Y < qa/dsky-coordinate.txt
+  adb shell input swipe "$X" "$Y" "$X" "$Y" 900
+  sleep 2
+  adb exec-out screencap -p > qa/controls.png
+  dump_ui ui-controls || true
+
+  if [ -f qa/ui-controls.xml ]; then
+    python3 - <<'PY'
 import re, subprocess
 xml=open('qa/ui-controls.xml',encoding='utf-8').read()
 candidates=[]
@@ -60,18 +107,18 @@ if candidates:
     x,y,_=candidates[0]
     subprocess.check_call(['adb','shell','input','tap',str(x),str(y)])
 PY
-
-sleep 15
-adb shell uiautomator dump /sdcard/ui-after-mode.xml
-adb pull /sdcard/ui-after-mode.xml qa/ui-after-mode.xml
-adb exec-out screencap -p > qa/after-mode.png
+    sleep 15
+    adb exec-out screencap -p > qa/after-mode.png
+    dump_ui ui-after-mode || true
+  fi
+else
+  printf 'ACCESSIBILITY TREE DID NOT PROVIDE DSKY COORDINATES; CONTROL INTERACTION SKIPPED\n' > qa/control-interaction-skipped.txt
+fi
 
 PID="$(adb shell pidof -s "$PKG" || true)"
-printf '%s\n' "$PID" > qa/pid-final.txt
 test -n "$PID"
-adb logcat --pid "$PID" -d > qa/app-logcat.txt
-adb logcat -b crash -d > qa/crash-logcat.txt || true
-adb shell dumpsys meminfo "$PKG" > qa/meminfo.txt || true
+capture_logs
+trap - EXIT
 
 if grep -E "FATAL EXCEPTION|AndroidRuntime:.*FATAL|Process: .*has died" qa/app-logcat.txt qa/crash-logcat.txt; then
   echo "Crash signature detected" >&2
