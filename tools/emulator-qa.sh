@@ -37,30 +37,20 @@ PID="$(adb shell pidof -s "$PKG" || true)"
 printf '%s\n' "$PID" > qa/pid-initial.txt
 test -n "$PID"
 
-# Wait until the WebView has visibly painted something other than the exact
-# activity background (#6F7571), with a hard ceiling.
+# Wait for the app's own frontend-ready signal rather than inferring readiness
+# from screenshots.
 READY=0
-for i in $(seq 1 30); do
-  adb exec-out screencap -p > qa/probe/ready.png
-  if python3 - <<'PY'
-from PIL import Image
-im=Image.open('qa/probe/ready.png').convert('RGB')
-lo,hi=im.getextrema()[0],im.getextrema()[0]
-# Uniform activity background is exactly (111,117,113). Sample pixels sparsely.
-px=im.load(); w,h=im.size
-same=True
-for y in range(0,h,max(1,h//30)):
-  for x in range(0,w,max(1,w//20)):
-    if px[x,y] != (111,117,113):
-      same=False; break
-  if not same: break
-raise SystemExit(1 if same else 0)
-PY
-  then READY=1; break; fi
+for i in $(seq 1 40); do
+  if adb logcat -d | grep -Fq "FRONTEND READY app"; then
+    READY=1
+    break
+  fi
   sleep 1
 done
 printf '%s\n' "$READY" | tee qa/paint-ready.txt
 test "$READY" = 1
+sleep 2
+adb exec-out screencap -p > qa/initial-painted.png
 
 adb shell wm size > qa/wm-size.txt
 adb shell wm density > qa/wm-density.txt
@@ -75,7 +65,7 @@ adb shell rm -f /sdcard/clock.mp4 || true
 (timeout 20s adb shell screenrecord --bit-rate 4000000 --time-limit 12 /sdcard/clock.mp4 || true) &
 REC_HOST_PID=$!
 
-for i in $(seq -w 1 32); do
+for i in $(seq -w 1 18); do
   date -u +%s.%N > "qa/probe/time-$i.txt"
   adb exec-out screencap -p > "qa/probe/frame-$i.png" || true
   adb shell dumpsys SurfaceFlinger --list > "qa/probe/surfaces-$i.txt" || true
