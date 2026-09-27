@@ -110,10 +110,6 @@ final class WidgetRelayModel {
         return "D-K" + (bit + 1);
     }
 
-    private static double clamp(double value, double low, double high) {
-        return Math.max(low, Math.min(high, value));
-    }
-
     static int relayCodeForDigit(char ch) {
         if (ch < '0' || ch > '9') return 0;
         return DIGIT_RELAY[ch - '0'];
