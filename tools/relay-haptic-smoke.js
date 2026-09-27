@@ -16,9 +16,13 @@ for(const marker of [
   'auxiliaryHapticPatternFor:',"typeof native.relayWaveform==='function'"
 ])assert(identity.includes(marker),'relay identity haptic path missing: '+marker);
 assert(identity.includes('const PHYSICAL_RELAY_COUNT = topology.physicalRelayCount;'),'relay identity must derive total physical relay count from topology');
-assert(identity.includes('((ordinal*73+17)%PHYSICAL_RELAY_COUNT)/Math.max(1,PHYSICAL_RELAY_COUNT-1)'),'manufacturing phase must cover all 132 physical relay ordinals');
-assert(identity.includes('serialOffset=(ordinal-(PHYSICAL_RELAY_COUNT-1)/2)*.00034'),'relay acoustic serial offset must center on the physical inventory');
-assert(!identity.includes('ordinal-69.5'),'stale 140-relay acoustic midpoint returned');
+assert(identity.includes('const LATCHING_PRESENTATION_REFERENCE_MS = 3;'),'latching timing must use the source-bounded 3-ms predecessor reference');
+assert(identity.includes('const NON_LATCHING_PRESENTATION_REFERENCE_MS = 5;'),'non-latching timing must use the source-bounded 5-ms predecessor reference');
+assert(identity.includes('production-2004688-exact-timing-unresolved'),'production 2004688 timing uncertainty must be explicit');
+assert(identity.includes('production-2004689-exact-timing-unresolved'),'production 2004689 timing uncertainty must be explicit');
+assert(!identity.includes('manufacturingProfile('),'synthetic relay manufacturing timing returned');
+assert(!identity.includes('positionPhase'),'synthetic per-ordinal timing phase returned');
+assert(!identity.includes('serialOffset='),'synthetic per-relay acoustic serial offset returned');
 
 for(const marker of [
   'audioModel.playRelayBankHaptic?.(','audioModel.playAuxHaptic?.(name,on)',
