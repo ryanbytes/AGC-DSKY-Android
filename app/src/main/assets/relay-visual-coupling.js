@@ -20,7 +20,8 @@
   const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   const audioModel=window.DSKY_RELAY_AUDIO;
   const relayMatrix=window.DSKY_RELAY_MATRIX;
-  if(!display||!shell||!hardware||!audioModel||!relayMatrix)throw new Error('Relay visual service dependencies unavailable');
+  const topology=window.DSKY_RELAY_TOPOLOGY;
+  if(!display||!shell||!hardware||!audioModel||!relayMatrix||!topology)throw new Error('Relay visual service dependencies unavailable');
   const baseDecodeChannel10=display.implementation('decodeChannel10');
   if(typeof baseDecodeChannel10!=='function')throw new Error('Relay visual implementation hook unavailable');
 
@@ -62,6 +63,7 @@
   function collectMotions(row,prior,target){
     const motions=[],diff=(prior^target)&0o3777;
     for(let bit=0;bit<11;bit++){
+      if(!topology.isLatchingRelay(row,bit))continue;
       const mask=1<<bit;if(!(diff&mask))continue;const on=!!(target&mask),profile=profileFor(row,bit),physicalMs=contactDelayMs(row,bit,on),trace=contactTrace(row,bit,on),stableEvent=trace[trace.length-1],stableMs=Number(stableEvent&&stableEvent.atMs)||physicalMs,bounceCount=trace.filter(item=>item.kind==='bounce').length,poleSkewUs=profile&&Number.isFinite(profile.poleSkewUs)?profile.poleSkewUs:0;
       motions.push({row,bit,mask,on,physicalMs,stableMs,bounceCount,poleSkewUs,profile,trace});
     }
@@ -87,7 +89,7 @@
     if(traceEvent.state)state.contactWord|=motion.mask;else state.contactWord&=~motion.mask;
     const contactChanged=priorWord!==state.contactWord;
     if(state.renderContact)renderWord(motion.row,state.contactWord);
-    if(timingMode===MODE_STRETCHED&&contactChanged)audioModel.playRelayContactHaptic?.(motion.row,motion.bit,motion.on,traceEvent.kind);
+    if(timingMode===MODE_STRETCHED&&contactChanged&&traceEvent.kind==='armature')audioModel.playRelayContactHaptic?.(motion.row,motion.bit,motion.on,'armature');
     if(traceEvent.kind==='armature'){
       lastPresentationClick={row:motion.row,bit:motion.bit,engaging:motion.on};
       const soundStrength=Number.isFinite(motion.audioStrength)?motion.audioStrength:.66;

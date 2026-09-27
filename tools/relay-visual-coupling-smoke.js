@@ -9,7 +9,7 @@ function fail(message){throw new Error(`RELAY VISUAL COUPLING FAIL: ${message}`)
 function assert(condition,message){if(!condition)fail(message)}
 function req(source,token,label){if(!source.includes(token))fail(`${label} missing: ${token}`)}
 
-const source=read('relay-visual-coupling.js'),stabilitySource=read('relay-stretch-stability.js'),html=read('index.html');
+const source=read('relay-visual-coupling.js'),topologySource=read('dsky-relay-topology.js'),stabilitySource=read('relay-stretch-stability.js'),html=read('index.html');
 new vm.Script(source,{filename:'relay-visual-coupling.js'});new vm.Script(stabilitySource,{filename:'relay-stretch-stability.js'});
 const identityAt=html.indexOf('<script src="relay-identity-audio.js"></script>'),visualAt=html.indexOf('<script src="relay-visual-coupling.js"></script>'),stabilityAt=html.indexOf('<script src="relay-stretch-stability.js"></script>');
 assert(identityAt>=0&&visualAt>identityAt&&stabilityAt>visualAt,'relay identity/visual/stability parser order changed');
@@ -28,6 +28,7 @@ const context={console,window:null,globalThis:null,Object,Map,Set,Number,String,
 };
 context.window=context;context.globalThis=context;vm.createContext(context);
 const registry=installServiceRegistry(context);
+new vm.Script(topologySource,{filename:'dsky-relay-topology.js'}).runInContext(context);
 context.AGCDSKY_APP_STATE=Object.seal({tickSound:true});
 context.AGCDSKY_SHELL={store:{get:key=>storage.has(key)?storage.get(key):null,set(key,value){storage.set(key,String(value));return true}},showControls(){}};
 const hardwareState={latches:{10:0},activeDrive:10,auxRelays:{flash:false}};let paintPolicy=null;
@@ -101,6 +102,13 @@ assert(renders.some(x=>x.word===0&&x.at===5.5),'DSKY projection did not follow c
 runAllTimers();
 assert(renders[renders.length-1].word===33,'authentic transition did not settle to target contact word');
 
+// A logical bit with no installed relay package must not emit a physical event.
+events.length=0;renders.length=0;impacts.length=0;bankHaptics.length=0;contactHaptics.length=0;timers.length=0;now+=10;
+visual.presentDrive(3,0,1<<10,{renderContact:true});
+runAllTimers();
+assert(events.filter(e=>e.type==='relay-drive'||e.type==='relay-contact').length===0,'unpopulated ROW-03:B emitted a physical relay event');
+assert(impacts.length===0&&bankHaptics.length===0&&contactHaptics.length===0,'unpopulated ROW-03:B emitted sound/haptic activity');
+
 // PHONE CLOCK drives the same physical relays for sound/haptic fidelity, but its
 // display is owned by clockDigits at the 20-ms settle boundary. Intermediate
 // contact words must therefore never paint R3 (or any other clock register).
@@ -146,14 +154,15 @@ assert(contactHaptics.some(x=>x.bit===0&&x.phase==='armature'&&x.at===frameAt),'
 runNextTimer();
 const bounceAt=now;
 assert(renders.some(x=>x.word===0&&x.at===bounceAt),'stretched contact bounce was not visibly rendered');
-assert(contactHaptics.some(x=>x.bit===0&&x.phase==='bounce'&&x.at===bounceAt),'stretched contact bounce had no same-event tactile tick');
+assert(!contactHaptics.some(x=>x.bit===0&&x.phase==='bounce'),'stretched contact bounce leaked into handset haptics');
 runNextTimer();
 const settleAt=now;
 assert(renders.some(x=>x.word===1&&x.at===settleAt),'stretched contact settle was not visibly rendered');
-assert(contactHaptics.some(x=>x.bit===0&&x.phase==='settled'&&x.at===settleAt),'stretched contact settle had no same-event tactile tick');
+assert(!contactHaptics.some(x=>x.bit===0&&x.phase==='settled'),'stretched settled contact leaked into handset haptics');
+assert(contactHaptics.filter(x=>x.bit===0).length===1,'stretched relay must emit exactly one tactile armature tick');
 assert(visual.stretchedContactHapticLocked===true,'stretched contact/haptic lock flag missing');
 assert(visual.overlapAudioBoost===true&&visual.overlapHapticBoost===true,'overlap-only boost diagnostics missing');
 assert(visual.lastPresentationClick()&&visual.lastPresentationClick().bit===0,'last presentation click diagnostic changed');
 
 console.log('relay visual coupling smoke: PASS');
-console.log('  authentic mode keeps one composed bank waveform; stretched mode emits a tiny tactile tick on the exact event that visibly changes the DSKY contact projection');
+console.log('  authentic mode keeps one composed bank waveform; stretched mode emits one tiny tactile tick on armature movement while contact bounce remains visual/audio only');

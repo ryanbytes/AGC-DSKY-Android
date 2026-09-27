@@ -8,16 +8,18 @@ import java.util.Locale;
  * The widget is hosted by the launcher, so Android does not provide a reliable
  * way to repaint RemoteViews at the DSKY's sub-20-ms contact times.  This model
  * nevertheless keeps the native widget electrically honest: decimal glyphs are
- * generated from the real K1..K5 contact matrix, every one of the 12 x 11
- * latching relays has a stable manufacturing fingerprint, and callers can
- * sample the modeled set/reset travel, DPST pole skew and contact bounce at any
- * instant inside the documented 20-ms drive/settle envelope.  The widget face
- * publishes the settled result; it never invents a partially settled state.
+ * generated from the real K1..K5 contact matrix.  The logical Channel-010
+ * field remains 12 x 11, but only the 120 physically populated latching
+ * positions receive manufacturing fingerprints, travel, pole skew and bounce.
+ * Callers can sample those physical contacts at any instant inside the documented
+ * 20-ms drive/settle envelope.  The widget face publishes the settled result; it
+ * never invents a partially settled state.
  */
 final class WidgetRelayModel {
     static final int BANKS = 12;
     static final int RELAYS_PER_BANK = 11;
     static final int CHARACTER_RELAYS = 5;
+    static final int PHYSICAL_LATCHING_RELAYS = 120;
     static final double DRIVE_ENVELOPE_MS = 20.0;
     static final double CONTACT_GUARD_MS = 0.35;
     static final double MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
@@ -33,10 +35,16 @@ final class WidgetRelayModel {
     private static final Profile[][] PROFILES = new Profile[BANKS + 1][RELAYS_PER_BANK];
 
     static {
+        int physicalOrdinal = 0;
         for (int row = 1; row <= BANKS; row++) {
             for (int bit = 0; bit < RELAYS_PER_BANK; bit++) {
-                PROFILES[row][bit] = makeProfile(row, bit);
+                if (!isPhysicalRelay(row, bit)) continue;
+                PROFILES[row][bit] = makeProfile(row, bit, physicalOrdinal++);
             }
+        }
+        if (physicalOrdinal != PHYSICAL_LATCHING_RELAYS) {
+            throw new IllegalStateException("expected " + PHYSICAL_LATCHING_RELAYS
+                    + " physical latching relays, got " + physicalOrdinal);
         }
     }
 
@@ -73,10 +81,27 @@ final class WidgetRelayModel {
     }
 
     static Profile profile(int row, int bit) {
+        requireLogicalPosition(row, bit);
+        if (!isPhysicalRelay(row, bit)) {
+            throw new IllegalArgumentException("relay position is not physically populated: row="
+                    + row + " bit=" + bit);
+        }
+        return PROFILES[row][bit];
+    }
+
+    static boolean isPhysicalRelay(int row, int bit) {
+        if (row < 1 || row > BANKS || bit < 0 || bit >= RELAYS_PER_BANK) return false;
+        if (row == 3 && bit == 10) return false;
+        if (row == 8 && bit >= 5) return false;
+        if ((row == 9 || row == 10 || row == 11) && bit == 10) return false;
+        if (row == 12 && (bit == 9 || bit == 10)) return false;
+        return true;
+    }
+
+    private static void requireLogicalPosition(int row, int bit) {
         if (row < 1 || row > BANKS || bit < 0 || bit >= RELAYS_PER_BANK) {
             throw new IllegalArgumentException("relay out of range: row=" + row + " bit=" + bit);
         }
-        return PROFILES[row][bit];
     }
 
     static int relayCodeForDigit(char ch) {
@@ -106,6 +131,7 @@ final class WidgetRelayModel {
      * the 20-ms settled boundary.
      */
     static int low11At(int row, int priorLow11, int targetLow11, double elapsedMs) {
+        requireLogicalPosition(row, 0);
         int prior = priorLow11 & 0x7ff;
         int target = targetLow11 & 0x7ff;
         if (elapsedMs >= DRIVE_ENVELOPE_MS) return target;
@@ -117,6 +143,13 @@ final class WidgetRelayModel {
             boolean before = (prior & mask) != 0;
             boolean after = (target & mask) != 0;
             if (before == after) continue;
+            if (!isPhysicalRelay(row, bit)) {
+                // Logical Channel-010 positions without a relay package have no
+                // armature/contact delay. Keep the logical word coherent while
+                // explicitly skipping the physical travel/bounce model.
+                if (after) out |= mask; else out &= ~mask;
+                continue;
+            }
             boolean state = contactState(profile(row, bit), before, after, elapsedMs, -1);
             if (state) out |= mask; else out &= ~mask;
         }
@@ -130,6 +163,7 @@ final class WidgetRelayModel {
     static String segmentsDuringDigitTransition(int row, int bitOffset,
                                                 int priorCode, int targetCode,
                                                 double elapsedMs) {
+        requireLogicalPosition(row, 0);
         if (bitOffset != 0 && bitOffset != 5) {
             throw new IllegalArgumentException("digit relay offset must be 0 or 5");
         }
@@ -139,7 +173,12 @@ final class WidgetRelayModel {
         for (int k = 0; k < CHARACTER_RELAYS; k++) {
             boolean before = (prior & (1 << k)) != 0;
             boolean after = (target & (1 << k)) != 0;
-            Profile p = profile(row, bitOffset + k);
+            int bit = bitOffset + k;
+            if (!isPhysicalRelay(row, bit)) {
+                throw new IllegalArgumentException("digit transition requested unpopulated relay: row="
+                        + row + " bit=" + bit);
+            }
+            Profile p = profile(row, bit);
             pole[k][0] = before == after ? before : contactState(p, before, after, elapsedMs, 0);
             pole[k][1] = before == after ? before : contactState(p, before, after, elapsedMs, 1);
         }
@@ -157,10 +196,11 @@ final class WidgetRelayModel {
     }
 
     static double maxStableMsForRow(int row, int priorLow11, int targetLow11) {
+        requireLogicalPosition(row, 0);
         int diff = (priorLow11 ^ targetLow11) & 0x7ff;
         double max = 0;
         for (int bit = 0; bit < RELAYS_PER_BANK; bit++) {
-            if ((diff & (1 << bit)) == 0) continue;
+            if ((diff & (1 << bit)) == 0 || !isPhysicalRelay(row, bit)) continue;
             boolean engaging = (targetLow11 & (1 << bit)) != 0;
             Profile p = profile(row, bit);
             max = Math.max(max, engaging ? p.setStableMs : p.resetStableMs);
@@ -224,12 +264,11 @@ final class WidgetRelayModel {
         return out.toString();
     }
 
-    private static Profile makeProfile(int row, int bit) {
+    private static Profile makeProfile(int row, int bit, int physicalOrdinal) {
         String id = String.format(Locale.US, "ROW-%02d:%s", row, bitName(bit));
-        int ordinal = (row - 1) * RELAYS_PER_BANK + bit;
         XorShift32 rnd = new XorShift32(hash32(id + ":manufacture"));
-        double positionPhase = ((ordinal * 73 + 17) % (BANKS * RELAYS_PER_BANK)) /
-                (double)(BANKS * RELAYS_PER_BANK - 1);
+        double positionPhase = ((physicalOrdinal * 73 + 17) % PHYSICAL_LATCHING_RELAYS) /
+                (double)(PHYSICAL_LATCHING_RELAYS - 1);
 
         double setTravel = clamp(
             SET_TRAVEL_MIN_MS + (SET_TRAVEL_MAX_MS - SET_TRAVEL_MIN_MS) *

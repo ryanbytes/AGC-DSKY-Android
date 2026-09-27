@@ -25,7 +25,8 @@
   const clock=window.AGCDSKY_CLOCK;
   const display=window.AGCDSKY_DISPLAY;
   const shell=window.AGCDSKY_SHELL;
-  if(!fidelityState||!renderer||!audio||!clock||!display||!shell)throw new Error('Hardware fidelity service dependencies unavailable');
+  const topology=window.DSKY_RELAY_TOPOLOGY;
+  if(!fidelityState||!renderer||!audio||!clock||!display||!shell||!topology)throw new Error('Hardware fidelity service dependencies unavailable');
 
   const CLOCK_GROUPS=clock.relayGroups();
   const desiredClockDigits=()=>clock.desiredDigits();
@@ -40,7 +41,7 @@
   const hw={
     latches:Object.create(null),relayGeneration:Object.create(null),activeDrive:0,
     timers:new Set(),clockToken:0,lastWrite:null,
-    auxRelays:Object.assign(Object.create(null),{comp:false,uplink:false,temp:false,keyrel:false,oprerr:false,flash:false,restart:false,stby:false})
+    auxRelays:Object.assign(Object.create(null),Object.fromEntries(topology.nonLatchingNames.map(name=>[name,false])))
   };
   const snapshotExtensions=new Map();
   const settledPaintPolicies=new Map();
@@ -66,9 +67,9 @@
       audio.playBurst(1);
     },Math.max(1,delayMs));
   }
-  function changedArmatures(prior,target){
+  function changedArmatures(relay,prior,target){
     const out=[],diff=(prior^target)&0o3777;
-    for(let bit=0;bit<11;bit++){const mask=1<<bit;if(diff&mask)out.push({bit,mask,on:!!(target&mask),delay:ARMATURE_SETTLE_MS[bit]})}
+    for(let bit=0;bit<11;bit++){if(!topology.isLatchingRelay(relay,bit))continue;const mask=1<<bit;if(diff&mask)out.push({bit,mask,on:!!(target&mask),delay:ARMATURE_SETTLE_MS[bit]})}
     out.sort((a,b)=>a.delay-b.delay||a.bit-b.bit);return out;
   }
 
@@ -107,7 +108,7 @@
   function beginRelayDrive(relay,low11,render=true,present=true){
     low11&=0o3777;
     const prior=Object.prototype.hasOwnProperty.call(hw.latches,relay)?hw.latches[relay]:0;
-    const motions=changedArmatures(prior,low11),generation=(hw.relayGeneration[relay]||0)+1;
+    const motions=changedArmatures(relay,prior,low11),generation=(hw.relayGeneration[relay]||0)+1;
     hw.relayGeneration[relay]=generation;hw.activeDrive=relay;hw.lastWrite={relay,low11,changed:motions.length,at:performance.now()};
     if(present){
       const visual=window.DSKY_RELAY_VISUAL;
@@ -135,14 +136,20 @@
     // Channel 011 bit 040 is the AGC command requesting VERB/NOUN flash.
     // yaAGC's channel 0163 bit 040 is the hardware-phase output that actually
     // changes the DSKY face, so FLASH relay presentation belongs to 0163.
-    setAuxRelays({comp:!!(word&0o00002),uplink:!!(word&0o00004)},true);return true;
+    setAuxRelays({isswar:!!(word&0o00001),comp:!!(word&0o00002),uplink:!!(word&0o00004)},true);return true;
   }
   display.installImplementation('decodeChannel11',hardwareDecodeChannel11,'hardware auxiliary relays');
+
+  function hardwareDecodeChannel12(value){
+    const word=Number(value)&0o77777;
+    setAuxRelays({injseq:!!(word&0o10000),cutoff:!!(word&0o20000)},true);return true;
+  }
+  display.registerChannelHandler(0o12,hardwareDecodeChannel12,'hardware non-latching relays');
 
   function hardwareDecodeChannel163(value){
     const word=Number(value)&0o77777;display.setChannelState(0o163,word,{render:false});
     document.body.classList.toggle('el-off',!!(word&0o01000));
-    setAuxRelays({temp:!!(word&0o00010),keyrel:!!(word&0o00020),flash:!!(word&0o00040),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);return true;
+    setAuxRelays({circuit:!!(word&0o00001),temp:!!(word&0o00010),keyrel:!!(word&0o00020),flash:!!(word&0o00040),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);return true;
   }
   display.installImplementation('decodeChannel163',hardwareDecodeChannel163,'hardware pulse-modulated auxiliaries');
 
@@ -207,7 +214,7 @@
   setInterval(()=>{try{if(fidelityState.mode==='clock'&&!getLampTestActive()&&!getRelayBusy())clock.tick()}catch(_){}},20);
 
   function baseSnapshot(){return{
-    t4Ms:T4_MS,relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
+    t4Ms:T4_MS,relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,physicalRelayCount:topology.physicalRelayCount,latchingRelayCount:topology.latchingRelayCount,nonLatchingRelayCount:topology.nonLatchingRelayCount,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
   }}
   function snapshot(){
     let state=baseSnapshot();

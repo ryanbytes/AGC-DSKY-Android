@@ -30,7 +30,7 @@
     let state;try{state=hardware.snapshot()}catch(_){return null}if(!state)return null;
     const row=Number(state.activeDrive)||0,settle=Array.isArray(state.armatureSettleMs)?state.armatureSettleMs:[];if(row<1||row>12||settle.length!==11)return null;
     const deltaMs=Math.max(0,(when-ctx.currentTime)*1000),bit=closestBit(deltaMs,settle);if(bit<0)return null;
-    const target=state.lastWrite?Number(state.lastWrite.low11)&0o3777:0,engaging=!!(target&(1<<bit)),p=audioModel.profileFor(row,bit);return{row,bit,engaging,p};
+    const target=state.lastWrite?Number(state.lastWrite.low11)&0o3777:0,engaging=!!(target&(1<<bit)),p=audioModel.profileFor(row,bit);if(!p)return null;return{row,bit,engaging,p};
   }
   function buildBuffer(ctx,identity){
     const{row,bit,engaging,p}=identity,seedText=`${unitSeed()}|${row}|${bit}|${engaging?'set':'reset'}`,key=`${ctx.sampleRate}|${seedText}`;if(buffers.has(key))return buffers.get(key);

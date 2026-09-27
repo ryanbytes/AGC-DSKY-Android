@@ -11,18 +11,20 @@
   const environment=window.AGCDSKY_ENVIRONMENT;
   const hardware=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE');
   const identityState=window.AGCDSKY_APP_STATE;
-  if(!audio||!environment||!hardware||!identityState)throw new Error('Relay identity service dependencies unavailable');
+  const topology=window.DSKY_RELAY_TOPOLOGY;
+  if(!audio||!environment||!hardware||!identityState||!topology)throw new Error('Relay identity service dependencies unavailable');
   const fallbackEmitTick=audio.implementation('emitTick');
   if(typeof fallbackEmitTick!=='function')throw new Error('Relay audio implementation unavailable');
   const bufferCache=new Map(),contactBufferCache=new Map();
 
-  const LATCHING_RELAY_COUNT = 132;
+  const LATCHING_RELAY_COUNT = topology.latchingRelayCount;
+  const PHYSICAL_RELAY_COUNT = topology.physicalRelayCount;
   const DRIVE_ENVELOPE_MS = 20;
   const CONTACT_GUARD_MS = 0.35;
   const MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
   const SET_TRAVEL_MIN_MS=5.1,SET_TRAVEL_MAX_MS=13.6,RESET_TRAVEL_MIN_MS=4.7,RESET_TRAVEL_MAX_MS=12.8;
-  const AUX_ORDER=Object.freeze(['comp','uplink','temp','keyrel','oprerr','flash','restart','stby']);
-  const AUX_LABEL=Object.freeze({comp:'COMP-ACTY',uplink:'UPLINK-ACTY',temp:'TEMP',keyrel:'KEY-REL',oprerr:'OPR-ERR',flash:'FLASH',restart:'RESTART',stby:'STBY'});
+  const AUX_ORDER=topology.nonLatchingNames;
+  const AUX_LABEL=Object.freeze(Object.fromEntries(topology.nonLatchingRelays.map(item=>[item.name,item.id.replace(/^AUX:/,'')])));
 
   function snapshot(){try{return hardware.snapshot()}catch(_){return null}}
   const firstSnapshot=snapshot();
@@ -35,10 +37,9 @@
   function hash32(text){let h=0x811c9dc5;for(const ch of String(text)){h^=ch.charCodeAt(0);h=Math.imul(h,0x01000193)}h^=h>>>16;h=Math.imul(h,0x7feb352d);h^=h>>>15;h=Math.imul(h,0x846ca68b);h^=h>>>16;return h>>>0}
   function xorshift32(seed){let state=(seed>>>0)||1;return()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return(state>>>0)/4294967296}}
   function clamp(value,low,high){return Math.max(low,Math.min(high,value))}
-  function bitName(bit){if(bit===10)return'B';if(bit>=5)return`C-K${bit-4}`;return`D-K${bit+1}`}
-  function relayIdentity(row,bit){return`ROW-${String(row).padStart(2,'0')}:${bitName(bit)}`}
-  function relayOrdinal(row,bit){return(row-1)*11+bit}
-  function auxOrdinal(name){const i=AUX_ORDER.indexOf(name);return LATCHING_RELAY_COUNT+Math.max(0,i)}
+  function relayIdentity(row,bit){return topology.relayIdentity(row,bit)}
+  function relayOrdinal(row,bit){return topology.latchingOrdinal(row,bit)}
+  function auxOrdinal(name){return topology.nonLatchingOrdinal(name)}
 
   function bouncePattern(rnd,count,windowMs){
     if(count<=0||windowMs<=0)return Object.freeze([]);const out=[],slot=windowMs/(count+1);
@@ -47,7 +48,7 @@
   }
   function manufacturingProfile(id,ordinal){
     const rnd=xorshift32(hash32(`${id}:manufacture`));
-    const positionPhase=((ordinal*73+17)%LATCHING_RELAY_COUNT)/Math.max(1,LATCHING_RELAY_COUNT-1);
+    const positionPhase=((ordinal*73+17)%PHYSICAL_RELAY_COUNT)/Math.max(1,PHYSICAL_RELAY_COUNT-1);
     const setTravelMs=clamp(SET_TRAVEL_MIN_MS+(SET_TRAVEL_MAX_MS-SET_TRAVEL_MIN_MS)*clamp(.58*positionPhase+.42*rnd(),0,1),SET_TRAVEL_MIN_MS,SET_TRAVEL_MAX_MS);
     const resetTravelMs=clamp(RESET_TRAVEL_MIN_MS+(RESET_TRAVEL_MAX_MS-RESET_TRAVEL_MIN_MS)*clamp(.52*(1-positionPhase)+.48*rnd(),0,1),RESET_TRAVEL_MIN_MS,RESET_TRAVEL_MAX_MS);
     const poleSkewUs=Math.round((rnd()*2-1)*185);
@@ -65,11 +66,12 @@
     for(const offset of bounceTimes){state=!state;events.push({atMs:travelMs+offset,state,kind:'bounce'})}events.push({atMs:stableMs,state:finalState,kind:'settled'});return events;
   }
   function profile(id,ordinal){
-    const m=manufacturingProfile(id,ordinal),rnd=xorshift32(hash32(`${id}:acoustic`)),centered=()=>rnd()*2-1,serialOffset=(ordinal-69.5)*.00034,bodyScale=1+serialOffset+centered()*.0035;
+    const m=manufacturingProfile(id,ordinal),rnd=xorshift32(hash32(`${id}:acoustic`)),centered=()=>rnd()*2-1,serialOffset=(ordinal-(PHYSICAL_RELAY_COUNT-1)/2)*.00034,bodyScale=1+serialOffset+centered()*.0035;
     return Object.freeze({id,ordinal,...m,settleMs:Math.max(m.setStableMs,m.resetStableMs),f1:5600*bodyScale*(1+centered()*.0040),f2:8300*bodyScale*(1+centered()*.0045),f3:11600*bodyScale*(1+centered()*.0050),f4:14200*bodyScale*(1+centered()*.0055),d1:.00155*(1+centered()*.09),d2:.00185*(1+centered()*.09),d3:.00135*(1+centered()*.10),d4:.00095*(1+centered()*.11),strikeDecay:.00033*(1+centered()*.12),strikeMix:.14*(1+centered()*.10),ringMix:1+centered()*.045,level:1+centered()*.050,phaseSeed:hash32(`${id}:phase`),contactSeed:hash32(`${id}:contact`)});
   }
   const profileCache=new Map();
-  function profileFor(id,ordinal){const key=`${id}|${ordinal}`;if(!profileCache.has(key))profileCache.set(key,profile(id,ordinal));return profileCache.get(key)}
+  function profileFor(id,ordinal){if(!id||!Number.isInteger(ordinal)||ordinal<0)return null;const key=`${id}|${ordinal}`;if(!profileCache.has(key))profileCache.set(key,profile(id,ordinal));return profileCache.get(key)}
+  function relayProfile(row,bit){if(!topology.isLatchingRelay(row,bit))return null;return profileFor(relayIdentity(row,bit),relayOrdinal(row,bit))}
 
   // Perceptual haptic identity follows the same deterministic mechanical profile
   // as relay travel/bounce/audio. With bank-level waveform composition preventing
@@ -83,21 +85,12 @@
     return Object.freeze({id:p.id,engaging:on,durationMs:1,amplitude:1});
   }
   function hapticPatternFromProfile(p,engaging,atMs=0){
-    const on=!!engaging,signature=hapticSignatureFromProfile(p,on),source=on?p.setBounceTimesMs:p.resetBounceTimesMs,windowMs=on?p.setBounceWindowMs:p.resetBounceWindowMs,pulses=[];
-    const baseAt=Math.max(0,Number(atMs)||0);
-    pulses.push(Object.freeze({atMs:baseAt,durationMs:signature.durationMs,amplitude:signature.amplitude,kind:'armature'}));
-    if(source&&source.length){
-      const reboundCount=Math.min(on?3:2,Math.max(1,Math.ceil(source.length/2)));
-      for(let i=0;i<reboundCount;i++){
-        const index=reboundCount===1?source.length-1:Math.round(i*(source.length-1)/(reboundCount-1));
-        const physicalOffset=Math.max(0,Number(source[index])||0),normalized=clamp(physicalOffset/Math.max(.01,windowMs),0,1);
-        const gapMs=(on?3:3)+Math.round(normalized*(on?7:5))+i;
-        const durationMs=1;
-        const amplitude=1;
-        pulses.push(Object.freeze({atMs:baseAt+signature.durationMs+gapMs,durationMs,amplitude,kind:'rebound',sourceBounceIndex:index,physicalOffsetMs:physicalOffset}));
-      }
-    }
-    return Object.freeze({id:p.id,engaging:on,pulses:Object.freeze(pulses)});
+    const on=!!engaging,signature=hapticSignatureFromProfile(p,on),baseAt=Math.max(0,Number(atMs)||0);
+    // One tactile indication per physical armature movement. Contact bounce remains
+    // modeled in sound/visual contact behavior, but is intentionally not sent to
+    // the handset vibrator.
+    const pulses=Object.freeze([Object.freeze({atMs:baseAt,durationMs:signature.durationMs,amplitude:signature.amplitude,kind:'armature'})]);
+    return Object.freeze({id:p.id,engaging:on,pulses});
   }
   function waveformFromPatterns(patterns){
     const pulses=[];for(const pattern of patterns||[])for(const pulse of pattern&&pattern.pulses||[])pulses.push(pulse);
@@ -144,25 +137,23 @@
   function relayBankHapticPattern(events){
     const patterns=[];
     for(const event of events||[]){
-      const row=Number(event.row),bit=Number(event.bit);if(row<1||row>12||bit<0||bit>10)continue;
-      patterns.push(hapticPatternFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!event.on,Math.max(0,Number(event.arrivalMs)||0)));
+      const row=Number(event.row),bit=Number(event.bit);if(row<1||row>12||bit<0||bit>10||!topology.isLatchingRelay(row,bit))continue;
+      patterns.push(hapticPatternFromProfile(relayProfile(row,bit),!!event.on,Math.max(0,Number(event.arrivalMs)||0)));
     }
     return waveformFromPatterns(patterns);
   }
   function contactHapticSignatureFromProfile(p,engaging,phase){
-    const base=hapticSignatureFromProfile(p,engaging),kind=String(phase||'armature');
-    if(kind==='armature')return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude:base.amplitude});
-    if(kind==='bounce'){
-      const amplitude=1;
-      return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
-    }
-    const amplitude=1;
-    return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
+    const kind=String(phase||'armature');
+    if(kind!=='armature')return null;
+    const base=hapticSignatureFromProfile(p,engaging);
+    return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:base.durationMs,amplitude:base.amplitude});
   }
   function playRelayContactHaptic(row,bit,engaging,phase){
     if(!identityState.relayHaptics)return false;
-    row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
-    const p=profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),signature=contactHapticSignatureFromProfile(p,!!engaging,phase),native=nativeHapticBridge();
+    row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10||!topology.isLatchingRelay(row,bit))return false;
+    const p=relayProfile(row,bit),signature=contactHapticSignatureFromProfile(p,!!engaging,phase);
+    if(!signature)return false;
+    const native=nativeHapticBridge();
     if(native){try{return native.relayImpact(signature.durationMs,signature.amplitude)!==false}catch(_){}}
     try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')return navigator.vibrate(signature.durationMs)!==false}catch(_){}
     return false;
@@ -199,7 +190,7 @@
     source.buffer=buildRelayBuffer(ctx,p,engaging);gain.gain.setValueAtTime(.0001,start);gain.gain.linearRampToValueAtTime(.43*level*strength*p.level*setReset,start+.00008);gain.gain.exponentialRampToValueAtTime(.0001,start+(engaging?.0062:.0055));source.connect(gain);gain.connect(ctx.destination);source.start(start);source.stop(start+.0115);playContactBounce(ctx,start,strength,p,engaging);
   }
   function changedAux(current){const changes=[],next=current&&current.auxRelays||{};for(const name of AUX_ORDER){const before=!!lastAux[name],after=!!next[name];if(before!==after)changes.push({name,on:after})}lastAux=Object.assign({},next);return changes}
-  function closestBit(deltaMs,settle){let best=-1,error=Infinity;for(let bit=0;bit<settle.length;bit++){const e=Math.abs(deltaMs-Number(settle[bit]));if(e<error){error=e;best=bit}}return error<=1.2?best:-1}
+  function closestBit(deltaMs,settle,row=0){let best=-1,error=Infinity;for(let bit=0;bit<settle.length;bit++){if(row&&!topology.isLatchingRelay(row,bit))continue;const e=Math.abs(deltaMs-Number(settle[bit]));if(e<error){error=e;best=bit}}return error<=1.2?best:-1}
 
   function individualDskyRelayClick(ctx,when=ctx.currentTime,strength=1){
     const state=snapshot();if(!state)return fallbackEmitTick(ctx,when,strength);
@@ -207,14 +198,15 @@
     if(auxChanges.length){auxChanges.forEach((change,i)=>{const id=`AUX:${AUX_LABEL[change.name]||change.name.toUpperCase()}`,ordinal=auxOrdinal(change.name),p=profileFor(id,ordinal),individualStrength=change.on?.66:.58,travelMs=change.on?p.setTravelMs:p.resetTravelMs;playIdentity(ctx,when+travelMs/1000+i*.00008,individualStrength,id,ordinal,change.on)});return}
     const row=Number(state.activeDrive)||0,baseSettle=Array.isArray(state.armatureSettleMs)?state.armatureSettleMs:[];
     if(row>=1&&row<=12&&baseSettle.length===11){
-      const deltaMs=Math.max(0,(when-ctx.currentTime)*1000),bit=closestBit(deltaMs,baseSettle);
-      if(bit>=0){const target=state.lastWrite?Number(state.lastWrite.low11)&0o3777:0,engaging=!!(target&(1<<bit)),id=relayIdentity(row,bit),ordinal=relayOrdinal(row,bit),p=profileFor(id,ordinal),travelMs=engaging?p.setTravelMs:p.resetTravelMs;playIdentity(ctx,ctx.currentTime+travelMs/1000,strength,id,ordinal,engaging);return}
+      const deltaMs=Math.max(0,(when-ctx.currentTime)*1000),bit=closestBit(deltaMs,baseSettle,row);
+      if(bit>=0&&topology.isLatchingRelay(row,bit)){const target=state.lastWrite?Number(state.lastWrite.low11)&0o3777:0,engaging=!!(target&(1<<bit)),id=relayIdentity(row,bit),ordinal=relayOrdinal(row,bit),p=relayProfile(row,bit),travelMs=engaging?p.setTravelMs:p.resetTravelMs;playIdentity(ctx,ctx.currentTime+travelMs/1000,strength,id,ordinal,engaging);return}
     }
     fallbackEmitTick(ctx,when,strength);
   }
   function playRelayHaptic(row,bit,engaging){
     row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
-    return playHapticProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging);
+    if(!topology.isLatchingRelay(row,bit))return false;
+    return playHapticProfile(relayProfile(row,bit),!!engaging);
   }
   function playAuxHaptic(name,engaging){
     if(!AUX_ORDER.includes(name))return false;
@@ -223,6 +215,7 @@
   function playRelayImpact(row,bit,engaging,strength=.66){
     if(!identityState.tickSound)return false;
     row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10)return false;
+    if(!topology.isLatchingRelay(row,bit))return false;
     const ctx=audio.ensure();if(!ctx)return false;const id=relayIdentity(row,bit),ordinal=relayOrdinal(row,bit),on=!!engaging;
     const play=()=>playIdentity(ctx,ctx.currentTime+.00005,Number(strength)||.66,id,ordinal,on);
     if(ctx.state==='running')play();else ctx.resume().then(play).catch(()=>{});return true;
@@ -236,20 +229,20 @@
 
   audio.installImplementation('emitTick',individualDskyRelayClick,'individual relay identity audio');
 
-  const RELAY_SETTLE_MS=Object.freeze(Array.from({length:12},(_,rowIndex)=>Object.freeze(Array.from({length:11},(_,bit)=>{const p=profileFor(relayIdentity(rowIndex+1,bit),relayOrdinal(rowIndex+1,bit));return Math.max(p.setStableMs,p.resetStableMs)}))));
-  const allStable=RELAY_SETTLE_MS.flat();
+  const RELAY_SETTLE_MS=Object.freeze(Array.from({length:12},(_,rowIndex)=>Object.freeze(Array.from({length:11},(_,bit)=>{if(!topology.isLatchingRelay(rowIndex+1,bit))return null;const p=relayProfile(rowIndex+1,bit);return Math.max(p.setStableMs,p.resetStableMs)}))));
+  const allStable=RELAY_SETTLE_MS.flat().filter(Number.isFinite);
   hardware.registerSnapshotExtension('relay-identity-audio',state=>{
     const next={...state};next.relaySettleMs=RELAY_SETTLE_MS.map(row=>row.slice());next.relaySettleMinMs=Math.min(...allStable);next.relaySettleMaxMs=Math.max(...allStable);next.relayManufacturingModel='deterministic-per-relay-set-reset-bounce-v1';return next;
   });
 
   window.DSKY_RELAY_AUDIO=Object.freeze({
     latchingRelayCount:LATCHING_RELAY_COUNT,auxiliaryRelayCount:AUX_ORDER.length,totalIndividualRelays:LATCHING_RELAY_COUNT+AUX_ORDER.length,driveEnvelopeMs:DRIVE_ENVELOPE_MS,maxContactStableMs:MAX_CONTACT_STABLE_MS,relayIdentity,
-    settleMsFor:(row,bit)=>{const p=profileFor(relayIdentity(row,bit),relayOrdinal(row,bit));return Math.max(p.setStableMs,p.resetStableMs)},
-    profileFor:(row,bit)=>profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),
-    contactTraceFor:(row,bit,engaging)=>contactTraceFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
-    hapticSignatureFor:(row,bit,engaging)=>hapticSignatureFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging),
-    hapticPatternFor:(row,bit,engaging)=>hapticPatternFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging,0),
-    contactHapticSignatureFor:(row,bit,engaging,phase)=>contactHapticSignatureFromProfile(profileFor(relayIdentity(row,bit),relayOrdinal(row,bit)),!!engaging,phase),
+    settleMsFor:(row,bit)=>{const p=relayProfile(row,bit);return p?Math.max(p.setStableMs,p.resetStableMs):null},
+    profileFor:(row,bit)=>relayProfile(row,bit),
+    contactTraceFor:(row,bit,engaging)=>{const p=relayProfile(row,bit);return p?contactTraceFromProfile(p,!!engaging):[]},
+    hapticSignatureFor:(row,bit,engaging)=>{const p=relayProfile(row,bit);return p?hapticSignatureFromProfile(p,!!engaging):null},
+    hapticPatternFor:(row,bit,engaging)=>{const p=relayProfile(row,bit);return p?hapticPatternFromProfile(p,!!engaging,0):null},
+    contactHapticSignatureFor:(row,bit,engaging,phase)=>{const p=relayProfile(row,bit);return p?contactHapticSignatureFromProfile(p,!!engaging,phase):null},
     relayBankHapticPatternFor:events=>relayBankHapticPattern(events),
     hapticsEnabled:()=>!!identityState.relayHaptics,
     playRelayImpact,playRelayHaptic,playRelayContactHaptic,playRelayBankHaptic,
