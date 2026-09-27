@@ -13,6 +13,20 @@ must remain explicitly uncertain.
   indicator-driver modules, independently corroborating 6 x 22 = **132 relay
   packages**.
   Source: https://www.ibiblio.org/apollo/2003994-121.html
+- Apollo 11 CM-107 / G&N System 210 is now tied to that exact DSKY
+  production branch rather than by generic mission association alone. MIT/IL
+  E-1142 Rev. 60 records the CM-107 main DSKY as 2003994-051 S/N 53 and
+  navigation DSKY as 2003994-051 S/N 66 on 1 January 1969. E-1142 Rev. 61
+  records the same serial numbers at KSC on 1 April 1969 after both units had
+  been updated to **2003994-121**. The 2003994-121 assembly tree contains six
+  2003952-031 indicator-driver modules, whose 2003910-021 relay circuit
+  assemblies contain the 20 x 2004688-1/-2 plus 2 x 2004689-2 population and
+  call out schematic 2005973. This strengthens the Apollo 11 production-design
+  provenance for the relay inventory without resolving unit-specific K22
+  switched-contact wiring or exact production relay timing.
+  Sources: https://www.ibiblio.org/apollo/Documents/E1142-60.pdf ;
+  https://www.ibiblio.org/apollo/Documents/E1142-61.pdf ;
+  https://www.ibiblio.org/apollo/2003994-121.html
 - The production/flight Channel 010 mapping uses 12 selected relay-word rows with up to 11 relay-bit positions. MIT/IL R-700 describes selection of "1 row out of 12", and Apollo 11 Comanche055 flight software RELTAB emits relay-word codes 1 through 12 (octal 01 through 14). The documented row population contains 120 installed latching positions; the remaining logical positions are not physical relay packages.
 - AGC Information Series Issue 30 (changed 10 Dec 1965) describes an earlier/document-era matrix as thirteen banks octal 00 through 14. That statement is preserved as a configuration-history discrepancy rather than silently merged into the Apollo 11 production model. In the flight mapping used here, logical row ordinals 1..12 correspond directly to relay-word bank codes octal 01..14; bank 00 is not emitted by Comanche055 RELTAB.
 - The production DSKY references interconnect drawing 2005954, signal-flow
