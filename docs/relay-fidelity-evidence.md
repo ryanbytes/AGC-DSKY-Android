@@ -13,10 +13,8 @@ must remain explicitly uncertain.
   indicator-driver modules, independently corroborating 6 x 22 = **132 relay
   packages**.
   Source: https://www.ibiblio.org/apollo/2003994-121.html
-- The Channel 010 logical field has 12 selected physical rows with up to 11
-  relay-bit positions. The documented row population contains 120 installed
-  latching positions; the remaining logical positions are not physical relay
-  packages.
+- The production/flight Channel 010 mapping uses 12 selected relay-word rows with up to 11 relay-bit positions. MIT/IL R-700 describes selection of "1 row out of 12", and Apollo 11 Comanche055 flight software RELTAB emits relay-word codes 1 through 12 (octal 01 through 14). The documented row population contains 120 installed latching positions; the remaining logical positions are not physical relay packages.
+- AGC Information Series Issue 30 (changed 10 Dec 1965) describes an earlier/document-era matrix as thirteen banks octal 00 through 14. That statement is preserved as a configuration-history discrepancy rather than silently merged into the Apollo 11 production model. In the flight mapping used here, logical row ordinals 1..12 correspond directly to relay-word bank codes octal 01..14; bank 00 is not emitted by Comanche055 RELTAB.
 - The production DSKY references interconnect drawing 2005954, signal-flow
   drawing 2005918, and connector assignment 2005957.
 - yaAGC channel 0163 is a simulator-side effective-hardware-state channel. It is
@@ -74,5 +72,5 @@ haptic cue. Those are presentation aids, not historical measurements.
 1. Recover readable production SCDs for relay 2004688 and 2004689.
 2. Resolve the exact logical/function-to-D1-D6/K1-K22 package crosswalk from
    the production interconnect documentation.
-3. Reconcile the surviving K22 wiring disagreement between 2005973 and 2005940
-   transcriptions before assigning that package to a specific function.
+3. Reconcile the surviving K22 wiring conflict between production drawings 2005973 and 2005940 before assigning K22 to a specific function. The assembly documentation itself calls out both drawings in different places; this is not merely a transcription discrepancy.
+4. Preserve and explain the 1965 Information Series 13-bank (00..14) statement versus the Apollo 11 flight-software/final-report 12-row (01..14) configuration; do not collapse them into one undocumented model.
