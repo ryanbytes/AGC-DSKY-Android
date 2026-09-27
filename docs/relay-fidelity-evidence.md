@@ -84,9 +84,24 @@ These values are retained only as conservative **predecessor-spec presentation
 references**. They are not relabeled as exact production 2004688/2004689
 measurements.
 
-The AGC's roughly 20 ms DSKY relay-drive interval is a separate system-level
-drive/settle allowance. It must not be confused with an individual relay's
-mechanical operate/release time.
+The **20 ms** interval in Apollo 11 Comanche 055 is now source-bounded more
+precisely: T4RUPT writes Channel 010, branches through `HANG20`, loads
+`20MRUPT` into TIME4, and the later `NODSPOUT` path clears `OUT0`. It is
+therefore a **flight-software row-command hold interval**, not evidence that a
+production relay takes 20 ms to move or settle.
+
+Recovered indicator-driver acceptance specification **PS 2016009** independently
+separates the hardware-driver layer. Its Rev B sheets 8-9 specify nominal
+alarm-driver and Y-line-driver output pulse widths of **15 ±10 ms**, with driver
+delay characteristics in the tens of microseconds. Its unchanged relay-contact
+acceptance clauses on Rev A sheets 5-6 require the specified contact closures
+under **17.5 ±0.1 VDC** input pulses of **15.0 +0.0 / -1.5 ms**. These are
+module/driver acceptance requirements; they still do not establish the exact
+mechanical operate/release trace of production 2004688 or 2004689-2.
+
+See `docs/relay-drive-timing-evidence-2016009.md` for scan provenance,
+revision mapping, hashes, and the explicit separation of software hold,
+driver-electronics timing, and relay-mechanical timing.
 
 ## Things we deliberately do not fabricate
 
