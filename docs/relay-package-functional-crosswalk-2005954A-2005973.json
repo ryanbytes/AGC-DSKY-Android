@@ -6562,7 +6562,7 @@
   "nonLatchingFunctionalMappings": [
     {
       "module": "D1",
-      "packageSlot": "K22",
+      "packageSlot": "D1:K22",
       "function": "FLASH",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6584,7 +6584,7 @@
     },
     {
       "module": "D1",
-      "packageSlot": "K21",
+      "packageSlot": "D1:K21",
       "function": "OPR ERROR",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6606,7 +6606,7 @@
     },
     {
       "module": "D2",
-      "packageSlot": "K22",
+      "packageSlot": "D2:K22",
       "function": "KEY REL",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6628,7 +6628,7 @@
     },
     {
       "module": "D2",
-      "packageSlot": "K21",
+      "packageSlot": "D2:K21",
       "function": "TEMP CAUTION",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6650,7 +6650,7 @@
     },
     {
       "module": "D3",
-      "packageSlot": "K22",
+      "packageSlot": "D3:K22",
       "function": "UPLINK ACTY",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6672,7 +6672,7 @@
     },
     {
       "module": "D3",
-      "packageSlot": "K21",
+      "packageSlot": "D3:K21",
       "function": "RESTART",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6694,7 +6694,7 @@
     },
     {
       "module": "D4",
-      "packageSlot": "K22",
+      "packageSlot": "D4:K22",
       "function": "COMP ACTY",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6716,7 +6716,7 @@
     },
     {
       "module": "D4",
-      "packageSlot": "K21",
+      "packageSlot": "D4:K21",
       "function": "ISS WARNING",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6738,7 +6738,7 @@
     },
     {
       "module": "D5",
-      "packageSlot": "K22",
+      "packageSlot": "D5:K22",
       "function": "INJ SEQ START",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6760,7 +6760,7 @@
     },
     {
       "module": "D5",
-      "packageSlot": "K21",
+      "packageSlot": "D5:K21",
       "function": "STBY",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6782,7 +6782,7 @@
     },
     {
       "module": "D6",
-      "packageSlot": "K22",
+      "packageSlot": "D6:K22",
       "function": "CUTOFF",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
@@ -6804,7 +6804,7 @@
     },
     {
       "module": "D6",
-      "packageSlot": "K21",
+      "packageSlot": "D6:K21",
       "function": "CIRCUIT",
       "relayClass": "non_latching",
       "installedRelayPart": "2004689-2",
