@@ -133,9 +133,11 @@ assert(model.playRelayHaptic(4,7,true)===true,'single relay waveform dispatch fa
 assert(waveformCalls.length===1&&impactCalls.length===0,'single relay did not use native waveform path');
 
 waveformCalls.length=0;impactCalls.length=0;
-const contactExpected=model.contactHapticSignatureFor(4,7,true,'bounce');
-assert(model.playRelayContactHaptic(4,7,true,'bounce')===true,'exact contact-event haptic dispatch failed');
-assert(impactCalls.length===1&&impactCalls[0].durationMs===contactExpected.durationMs&&impactCalls[0].amplitude===contactExpected.amplitude,'exact contact-event haptic did not use deterministic signature');
+const contactExpected=model.contactHapticSignatureFor(4,7,true,'armature');
+assert(model.playRelayContactHaptic(4,7,true,'armature')===true,'exact armature haptic dispatch failed');
+assert(impactCalls.length===1&&impactCalls[0].durationMs===contactExpected.durationMs&&impactCalls[0].amplitude===contactExpected.amplitude,'exact armature haptic did not use deterministic signature');
+assert(model.playRelayContactHaptic(4,7,true,'bounce')===false,'contact bounce haptic unexpectedly dispatched');
+assert(impactCalls.length===1,'contact bounce added a second native tactile event');
 
 waveformCalls.length=0;impactCalls.length=0;
 const aux=model.auxiliaryHapticPatternFor('comp',true);
@@ -154,4 +156,4 @@ context.AGCDSKY_APP_STATE.relayHaptics=true;
 assert(model.hapticsEnabled()===true,'relay haptic enabled state did not restore ON');
 
 console.log('relay haptic smoke: PASS');
-console.log('  authentic mode uses one non-overwriting bank waveform; stretched mode can emit deterministic micro-switch ticks on the exact rendered contact transition');
+console.log('  authentic mode uses one non-overwriting bank waveform; each physical relay contributes one 1 ms / 1-of-255 armature tick and contact bounce stays non-haptic');
