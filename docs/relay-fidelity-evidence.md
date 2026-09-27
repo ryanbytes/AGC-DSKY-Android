@@ -73,4 +73,11 @@ haptic cue. Those are presentation aids, not historical measurements.
 2. Resolve the exact logical/function-to-D1-D6/K1-K22 package crosswalk from
    the production interconnect documentation.
 3. Reconcile the surviving K22 wiring conflict between production drawings 2005973 and 2005940 before assigning K22 to a specific function. The assembly documentation itself calls out both drawings in different places; this is not merely a transcription discrepancy.
+
+   Exact transcribed K22 delta checked against the Virtual AGC netlists:
+   - 2005973: K22 pin 2 -> J1-5, pin 3 -> J1-3, pin 8 -> J1-6.
+   - 2005940A: K22 pins 2, 3, and 8 are explicitly unconnected.
+   - K22 pins 1, 4, 5, 6, and 7 agree between the two transcriptions; K21 is not the differing relay.
+
+   The 2003994-021 archive note gives circumstantial reasons to prefer 2005973 (later drawing/TDRR, later approval signature, and ND-1021042 table 8-II calling out 2005973), but ND-1021042 figure 4-226 shows K22 wiring matching 2005940. Therefore the surviving record remains contradictory and this audit does not choose a flown K22 function.
 4. Preserve and explain the 1965 Information Series 13-bank (00..14) statement versus the Apollo 11 flight-software/final-report 12-row (01..14) configuration; do not collapse them into one undocumented model.
