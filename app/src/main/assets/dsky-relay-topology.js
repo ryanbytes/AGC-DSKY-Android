@@ -8,8 +8,13 @@
  *   - K1-K20 in each module are latching relay packages (120 total);
  *   - K21-K22 in each module are non-latching relay packages (12 total).
  *
- * Channel 010 remains an 11-bit logical relay-control word.  Not every logical
- * row/bit intersection has a physical latching relay installed.  This service
+ * Channel 010 remains an 11-bit logical relay-control word. Runtime row
+ * ordinals 1..12 map to the Apollo 11 relay-word bank codes octal 01..14
+ * respectively (row 8 -> bank 10, row 12 -> bank 14). Comanche055 RELTAB
+ * emits these 12 codes; bank 00 from the 1965 Information Series description
+ * is not emitted by the Apollo 11 flight table.
+ *
+ * Not every logical row/bit intersection has a physical latching relay installed.  This service
  * is the authority for deciding whether a logical channel-010 transition has
  * a physical armature/contact event and therefore may produce relay sound or
  * haptic presentation.
@@ -45,6 +50,8 @@
         ordinal:latching.length,
         id:`ROW-${String(row).padStart(2,'0')}:${bitName(bit)}`,
         row,bit,
+        bankCode:row,
+        bankCodeOctal:'0o'+row.toString(8).padStart(2,'0'),
         mask:1<<bit,
         maskOctal:'0o'+(1<<bit).toString(8).padStart(4,'0'),
         logicalLabel:bitName(bit),
