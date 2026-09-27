@@ -53,6 +53,12 @@ assert(json.packageSlots.length===132,'documented package-slot inventory must co
 assert(json.latchingRelays.length===120,'documented latching inventory must contain 120');
 assert(json.nonLatchingRelays.length===12,'documented non-latching inventory must contain 12');
 assert(new Set([...json.latchingRelays,...json.nonLatchingRelays].map(x=>x.id)).size===132,'documented modeled physical identities must be unique');
+const requiredCoverage=['functionalEffect','functionalStatus','spareStatus','contactPath','timingModel','timingEvidence','soundCoupling','hapticCoupling','renderOrExternalEffect'];
+for(const relay of [...json.latchingRelays,...json.nonLatchingRelays]){
+  for(const field of requiredCoverage)assert(typeof relay[field]==='string'&&relay[field].trim().length>0,`physical identity ${relay.id} missing audit coverage field ${field}`);
+}
+assert(json.scope.functionalIdentityCoverage.coveredIdentities===132,'all 132 physical functional identities must have complete fidelity coverage');
+assert(json.latchingRelays.filter(x=>x.spareStatus==='not-claimed-spare-without-interconnect-proof').length===3,'three populated bank-14 relays with unresolved current visible consumers must not be falsely labeled spare');
 
 const hardware=read('hardware-fidelity.js'),visual=read('relay-visual-coupling.js'),identity=read('relay-identity-audio.js'),display=read('agc-display-runtime.js'),index=read('index.html');
 for(const token of [
