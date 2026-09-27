@@ -28,6 +28,15 @@ has not recovered readable specification-control drawings for those two part
 numbers. Therefore the simulation must not claim measured 2004688/2004689
 unit-by-unit travel, bounce, pole skew, or acoustic individuality.
 
+A 2026-09-27 follow-up search checked the public Apollo/Virtual AGC material and
+GitHub code indexing for `2004688`, `2004688-1`, `2004688-2`,
+`2004689`, and `2004689-2`. The surviving production assembly listings
+confirm only the installed relay part numbers and quantities; no readable
+production relay SCD was recovered. This is a negative evidence checkpoint,
+not proof that the drawings never existed. Repeating the same indexed-source
+search must not be treated as new evidence unless a new scan/catalog record is
+found.
+
 The readable predecessor magnetic-latching relay SCD 1006282 specifies:
 
 - operate time: <= 3 ms
