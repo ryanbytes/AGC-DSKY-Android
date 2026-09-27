@@ -1,0 +1,29 @@
+name: Relay archive F fast path
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  fetch-revision-f:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch 2016009 revision F sheets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          base="https://archive.org/download/apertureCardBox466Part1NARASW_images/page"
+          for n in 208 209; do
+            curl --fail --location --retry 3 --retry-delay 2               "${base}/n${n}.jpg?scale=2&rotate=0"               --output "out/n${n}.jpg"
+            test -s "out/n${n}.jpg"
+            file "out/n${n}.jpg"
+          done
+          sha256sum out/*.jpg > out/SHA256SUMS.txt
+      - name: Upload revision F
+        uses: actions/upload-artifact@v4
+        with:
+          name: indicator-driver-2016009-revF
+          path: out
+          if-no-files-found: error
+          retention-days: 1
