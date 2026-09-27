@@ -27,8 +27,8 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install build SDK
-        run: sdkmanager 'platforms;android-37' 'build-tools;36.0.0' 'platform-tools'
+      - name: Install Android build tools
+        run: sdkmanager 'build-tools;36.0.0' 'platform-tools'
 
       - name: Build regular debug APK from RLY-02 head
         run: bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:assembleRegularDebug
