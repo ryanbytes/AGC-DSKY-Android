@@ -191,25 +191,24 @@
   }
 
   const NON_LATCHING_DEFS=[
-    {name:'isswar',id:'AUX:ISS-WARNING',signal:229,control:'ISSWAR',runtimeChannel:0o011,runtimeMask:0o00001,destination:'External ISS WARNING indication',sourceClass:'channel-command'},
-    {name:'comp',id:'AUX:COMP-ACTY',signal:230,control:'COMACT',runtimeChannel:0o011,runtimeMask:0o00002,destination:'COMP ACTY lamp',sourceClass:'channel-command'},
-    {name:'stby',id:'AUX:STBY',signal:231,control:'SBYLIT/STBY',runtimeChannel:0o163,runtimeMask:0o00400,destination:'STBY lamp',sourceClass:'hardware-phase'},
-    {name:'restart',id:'AUX:RESTART',signal:232,control:'RESTRT',runtimeChannel:0o163,runtimeMask:0o00200,destination:'RESTART lamp',sourceClass:'hardware-phase'},
-    {name:'injseq',id:'AUX:INJ-SEQ-START',signal:233,control:'S4BSEQ',runtimeChannel:0o012,runtimeMask:0o10000,destination:'External S-IVB INJ SEQ START / G HIGH indication (CM)',sourceClass:'channel-command'},
-    {name:'cutoff',id:'AUX:CUTOFF',signal:234,control:'S4BOFF',runtimeChannel:0o012,runtimeMask:0o20000,destination:'External S-IVB CUTOFF / G LOW indication (CM)',sourceClass:'channel-command'},
-    {name:'uplink',id:'AUX:UPLINK-ACTY',signal:235,control:'UPLACT',runtimeChannel:0o011,runtimeMask:0o00004,destination:'UPLINK ACTY lamp',sourceClass:'channel-command'},
-    {name:'keyrel',id:'AUX:KEY-REL',signal:236,control:'KYRLS',runtimeChannel:0o163,runtimeMask:0o00020,destination:'KEY REL lamp',sourceClass:'hardware-phase'},
-    {name:'circuit',id:'AUX:CIRCUIT-WARNING',signal:237,control:'CMCWAR/LGCWAR',runtimeChannel:0o163,runtimeMask:0o00001,destination:'External CMC/LGC warning indication',sourceClass:'hardware-phase'},
-    {name:'flash',id:'AUX:FLASH',signal:238,control:'FLASH',runtimeChannel:0o163,runtimeMask:0o00040,destination:'VERB/NOUN flash blanking contact',sourceClass:'hardware-phase'},
-    {name:'oprerr',id:'AUX:OPR-ERR',signal:244,control:'OPRERR',runtimeChannel:0o163,runtimeMask:0o00100,destination:'OPR ERR lamp',sourceClass:'hardware-phase'},
-    {name:'temp',id:'AUX:TEMP',signal:258,control:'TMPCAU',runtimeChannel:0o163,runtimeMask:0o00010,destination:'TEMP lamp',sourceClass:'hardware-phase'}
+    {name:'isswar',packageSlot:'D4:K21',id:'AUX:ISS-WARNING',signal:229,control:'ISSWAR',runtimeChannel:0o011,runtimeMask:0o00001,destination:'External ISS WARNING indication',sourceClass:'channel-command'},
+    {name:'comp',packageSlot:'D4:K22',id:'AUX:COMP-ACTY',signal:230,control:'COMACT',runtimeChannel:0o011,runtimeMask:0o00002,destination:'COMP ACTY lamp',sourceClass:'channel-command'},
+    {name:'stby',packageSlot:'D5:K21',id:'AUX:STBY',signal:231,control:'SBYLIT/STBY',runtimeChannel:0o163,runtimeMask:0o00400,destination:'STBY lamp',sourceClass:'hardware-phase'},
+    {name:'restart',packageSlot:'D3:K21',id:'AUX:RESTART',signal:232,control:'RESTRT',runtimeChannel:0o163,runtimeMask:0o00200,destination:'RESTART lamp',sourceClass:'hardware-phase'},
+    {name:'injseq',packageSlot:'D5:K22',id:'AUX:INJ-SEQ-START',signal:233,control:'S4BSEQ',runtimeChannel:0o012,runtimeMask:0o10000,destination:'External S-IVB INJ SEQ START / G HIGH indication (CM)',sourceClass:'channel-command'},
+    {name:'cutoff',packageSlot:'D6:K22',id:'AUX:CUTOFF',signal:234,control:'S4BOFF',runtimeChannel:0o012,runtimeMask:0o20000,destination:'External S-IVB CUTOFF / G LOW indication (CM)',sourceClass:'channel-command'},
+    {name:'uplink',packageSlot:'D3:K22',id:'AUX:UPLINK-ACTY',signal:235,control:'UPLACT',runtimeChannel:0o011,runtimeMask:0o00004,destination:'UPLINK ACTY lamp',sourceClass:'channel-command'},
+    {name:'keyrel',packageSlot:'D2:K22',id:'AUX:KEY-REL',signal:236,control:'KYRLS',runtimeChannel:0o163,runtimeMask:0o00020,destination:'KEY REL lamp',sourceClass:'hardware-phase'},
+    {name:'circuit',packageSlot:'D6:K21',id:'AUX:CIRCUIT-WARNING',signal:237,control:'CMCWAR/LGCWAR',runtimeChannel:0o163,runtimeMask:0o00001,destination:'External CMC/LGC warning indication',sourceClass:'hardware-phase'},
+    {name:'flash',packageSlot:'D1:K22',id:'AUX:FLASH',signal:238,control:'FLASH',runtimeChannel:0o163,runtimeMask:0o00040,destination:'VERB/NOUN flash blanking contact',sourceClass:'hardware-phase'},
+    {name:'oprerr',packageSlot:'D1:K21',id:'AUX:OPR-ERR',signal:244,control:'OPRERR',runtimeChannel:0o163,runtimeMask:0o00100,destination:'OPR ERR lamp',sourceClass:'hardware-phase'},
+    {name:'temp',packageSlot:'D2:K21',id:'AUX:TEMP',signal:258,control:'TMPCAU',runtimeChannel:0o163,runtimeMask:0o00010,destination:'TEMP lamp',sourceClass:'hardware-phase'}
   ];
   const nonLatching=NON_LATCHING_DEFS.map((item,index)=>Object.freeze({
     type:'non-latching',
     ordinal:latching.length+index,
-    packagePart:'2004689',
-    packageSlot:null,
-    packageSlotStatus:'interconnect-crosswalk-unresolved',
+    packagePart:'2004689-2',
+    packageSlotStatus:'proven-source-join-2005954A-2005973-drive',
     ...item,
     runtimeChannelOctal:'0o'+item.runtimeChannel.toString(8).padStart(3,'0'),
     runtimeMaskOctal:'0o'+item.runtimeMask.toString(8).padStart(5,'0')
@@ -223,7 +222,7 @@
         module:`D${module}`,
         k,
         type:k<=20?'latching':'non-latching',
-        packagePart:k<=20?'2004688':'2004689'
+        packagePart:k<=20?'2004688':'2004689-2'
       }));
     }
   }
@@ -233,6 +232,8 @@
   if(packageSlots.length!==132)throw new Error(`Physical DSKY package-slot inventory must contain 132 positions; got ${packageSlots.length}`);
   if(latching.some(item=>!/^D[1-6]:K(?:[1-9]|1[0-9]|20)$/.test(item.packageSlot||'')))throw new Error('Every latching logical identity must have a proven D1-D6/K1-K20 package slot');
   if(new Set(latching.map(item=>item.packageSlot)).size!==120)throw new Error('Latching logical-to-physical package crosswalk must be one-to-one across 120 slots');
+  if(nonLatching.some(item=>!/^D[1-6]:K(?:21|22)$/.test(item.packageSlot||'')))throw new Error('Every non-latching identity must have a proven D1-D6/K21-K22 package slot');
+  if(new Set(nonLatching.map(item=>item.packageSlot)).size!==12)throw new Error('Non-latching function-to-package drive crosswalk must be one-to-one across 12 slots');
 
   const latchingByKey=new Map(latching.map(item=>[key(item.row,item.bit),item]));
   const nonLatchingByNameMap=new Map(nonLatching.map(item=>[item.name,item]));
