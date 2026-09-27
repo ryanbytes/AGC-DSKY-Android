@@ -85,21 +85,12 @@
     return Object.freeze({id:p.id,engaging:on,durationMs:1,amplitude:1});
   }
   function hapticPatternFromProfile(p,engaging,atMs=0){
-    const on=!!engaging,signature=hapticSignatureFromProfile(p,on),source=on?p.setBounceTimesMs:p.resetBounceTimesMs,windowMs=on?p.setBounceWindowMs:p.resetBounceWindowMs,pulses=[];
-    const baseAt=Math.max(0,Number(atMs)||0);
-    pulses.push(Object.freeze({atMs:baseAt,durationMs:signature.durationMs,amplitude:signature.amplitude,kind:'armature'}));
-    if(source&&source.length){
-      const reboundCount=Math.min(on?3:2,Math.max(1,Math.ceil(source.length/2)));
-      for(let i=0;i<reboundCount;i++){
-        const index=reboundCount===1?source.length-1:Math.round(i*(source.length-1)/(reboundCount-1));
-        const physicalOffset=Math.max(0,Number(source[index])||0),normalized=clamp(physicalOffset/Math.max(.01,windowMs),0,1);
-        const gapMs=(on?3:3)+Math.round(normalized*(on?7:5))+i;
-        const durationMs=1;
-        const amplitude=1;
-        pulses.push(Object.freeze({atMs:baseAt+signature.durationMs+gapMs,durationMs,amplitude,kind:'rebound',sourceBounceIndex:index,physicalOffsetMs:physicalOffset}));
-      }
-    }
-    return Object.freeze({id:p.id,engaging:on,pulses:Object.freeze(pulses)});
+    const on=!!engaging,signature=hapticSignatureFromProfile(p,on),baseAt=Math.max(0,Number(atMs)||0);
+    // One tactile indication per physical armature movement. Contact bounce remains
+    // modeled in sound/visual contact behavior, but is intentionally not sent to
+    // the handset vibrator.
+    const pulses=Object.freeze([Object.freeze({atMs:baseAt,durationMs:signature.durationMs,amplitude:signature.amplitude,kind:'armature'})]);
+    return Object.freeze({id:p.id,engaging:on,pulses});
   }
   function waveformFromPatterns(patterns){
     const pulses=[];for(const pattern of patterns||[])for(const pulse of pattern&&pattern.pulses||[])pulses.push(pulse);
@@ -152,19 +143,17 @@
     return waveformFromPatterns(patterns);
   }
   function contactHapticSignatureFromProfile(p,engaging,phase){
-    const base=hapticSignatureFromProfile(p,engaging),kind=String(phase||'armature');
-    if(kind==='armature')return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude:base.amplitude});
-    if(kind==='bounce'){
-      const amplitude=1;
-      return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
-    }
-    const amplitude=1;
-    return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:1,amplitude});
+    const kind=String(phase||'armature');
+    if(kind!=='armature')return null;
+    const base=hapticSignatureFromProfile(p,engaging);
+    return Object.freeze({id:p.id,engaging:!!engaging,phase:kind,durationMs:base.durationMs,amplitude:base.amplitude});
   }
   function playRelayContactHaptic(row,bit,engaging,phase){
     if(!identityState.relayHaptics)return false;
     row=Number(row);bit=Number(bit);if(row<1||row>12||bit<0||bit>10||!topology.isLatchingRelay(row,bit))return false;
-    const p=relayProfile(row,bit),signature=contactHapticSignatureFromProfile(p,!!engaging,phase),native=nativeHapticBridge();
+    const p=relayProfile(row,bit),signature=contactHapticSignatureFromProfile(p,!!engaging,phase);
+    if(!signature)return false;
+    const native=nativeHapticBridge();
     if(native){try{return native.relayImpact(signature.durationMs,signature.amplitude)!==false}catch(_){}}
     try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')return navigator.vibrate(signature.durationMs)!==false}catch(_){}
     return false;
