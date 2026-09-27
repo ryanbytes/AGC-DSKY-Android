@@ -26,7 +26,14 @@ for(const key of absent){const [row,bit]=key.split(':').map(Number);assert(!topo
 for(let row=1;row<=12;row++)for(let bit=0;bit<=10;bit++){
   const shouldExist=!absent.includes(row+':'+bit);
   assert(topo.isLatchingRelay(row,bit)===shouldExist,`physical population mismatch row ${row} bit ${bit}`);
+  const relay=topo.latchingRelay(row,bit);
+  if(relay){
+    assert(relay.bankCode===row,`bank code mismatch row ${row} bit ${bit}`);
+    assert(relay.bankCodeOctal==='0o'+row.toString(8).padStart(2,'0'),`octal bank code mismatch row ${row} bit ${bit}`);
+  }
 }
+assert(topo.latchingRelays.every(x=>x.bankCode>=1&&x.bankCode<=12),'flight topology must use relay-word codes 1..12 only');
+assert(!topo.latchingRelays.some(x=>x.bankCode===0),'bank 00 must not appear in Apollo 11 flight topology');
 
 const expectedAux={
   isswar:['AUX:ISS-WARNING','0o011','0o00001'],
@@ -52,6 +59,9 @@ const json=JSON.parse(fs.readFileSync(path.join(ROOT,'docs/physical-relay-invent
 assert(json.packageSlots.length===132,'documented package-slot inventory must contain 132');
 assert(json.latchingRelays.length===120,'documented latching inventory must contain 120');
 assert(json.nonLatchingRelays.length===12,'documented non-latching inventory must contain 12');
+assert(json.scope.logicalRelayWordRows===12,'documented flight relay-word row count must be 12');
+assert(json.scope.logicalRelayWordBankCodesOctal==='01 through 14 (octal), corresponding to decimal row ordinals 1 through 12','documented flight bank-code range changed');
+assert(json.latchingRelays.every(x=>x.bankCode===x.row&&x.bankCodeOctal==='0o'+x.row.toString(8).padStart(2,'0')),'documented latching bank-code identities must match flight row ordinals');
 assert(new Set([...json.latchingRelays,...json.nonLatchingRelays].map(x=>x.id)).size===132,'documented modeled physical identities must be unique');
 const requiredCoverage=['functionalEffect','functionalStatus','spareStatus','contactPath','timingModel','timingEvidence','soundCoupling','hapticCoupling','renderOrExternalEffect'];
 for(const relay of [...json.latchingRelays,...json.nonLatchingRelays]){
