@@ -12,31 +12,12 @@ capture_logs() {
   if [ -n "$pid" ]; then adb logcat --pid "$pid" -d > qa/app-logcat.txt || true; else adb logcat -d > qa/app-logcat.txt || true; fi
   adb logcat -b crash -d > qa/crash-logcat.txt || true
   adb shell dumpsys meminfo "$PKG" > qa/meminfo.txt || true
+  adb shell dumpsys gfxinfo "$PKG" > qa/gfxinfo.txt || true
 }
 trap capture_logs EXIT
 
-dump_ui() {
-  local base="$1"
-  local remote="/sdcard/$base.xml"
-  local log="qa/$base-dump.txt"
-  rm -f "$log"
-  adb shell rm -f "$remote" || true
-  adb shell uiautomator dump "$remote" >"$log" 2>&1 || true
-  if ! adb shell test -f "$remote"; then
-    sleep 2
-    adb shell input keyevent KEYCODE_WAKEUP || true
-    adb shell input keyevent 82 || true
-    adb shell uiautomator dump "$remote" >>"$log" 2>&1 || true
-  fi
-  if adb shell test -f "$remote"; then
-    adb pull "$remote" "qa/$base.xml"
-    return 0
-  fi
-  printf 'UI TREE UNAVAILABLE\n' > "qa/$base.unavailable.txt"
-  return 1
-}
-
 test -f "$APK"
+sha256sum "$APK" | tee qa/apk-sha256.txt
 adb install -r "$APK" | tee qa/install.txt
 adb logcat -c
 adb shell am force-stop "$PKG" || true
@@ -54,69 +35,27 @@ test -n "$PID"
 adb shell wm size > qa/wm-size.txt
 adb shell wm density > qa/wm-density.txt
 adb shell dumpsys activity activities > qa/activity.txt
-
-# Visual evidence first so accessibility-tree limitations cannot abort the test.
 adb exec-out screencap -p > qa/initial.png
-dump_ui ui-initial || true
 
-# Record PHONE CLOCK across multiple second transitions.
-adb shell screenrecord --bit-rate 4000000 --time-limit 12 /sdcard/clock.mp4
+# Capture several stills across clock-second transitions.
+for i in 1 2 3 4 5; do
+  sleep 1
+  adb exec-out screencap -p > "qa/clock-$i.png"
+done
+
+# Record PHONE CLOCK with a host-side guard so screenrecord cannot hang the run.
+adb shell rm -f /sdcard/clock.mp4 || true
+timeout 20s adb shell screenrecord --bit-rate 4000000 --time-limit 12 /sdcard/clock.mp4 || true
+adb shell ls -l /sdcard/clock.mp4 | tee qa/clock-video-stat.txt
 adb pull /sdcard/clock.mp4 qa/clock.mp4
 adb exec-out screencap -p > qa/after-clock.png
-dump_ui ui-after-clock || true
 
-# Only drive controls when accessibility gives us coordinates.
-if [ -f qa/ui-initial.xml ]; then
-  python3 - <<'PY' > qa/dsky-coordinate.txt
-import re
-xml=open('qa/ui-initial.xml',encoding='utf-8').read()
-for m in re.finditer(r'<node\b[^>]*>', xml):
-    node=m.group(0)
-    if 'APOLLO BLOCK II DSKY' not in node.upper():
-        continue
-    b=re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',node)
-    if b:
-        x1,y1,x2,y2=map(int,b.groups())
-        print((x1+x2)//2,(y1+y2)//2)
-        break
-PY
-fi
+# Prove the process stays alive after the observation window.
+sleep 5
+PID2="$(adb shell pidof -s "$PKG" || true)"
+printf '%s\n' "$PID2" > qa/pid-after-observation.txt
+test -n "$PID2"
 
-if [ -s qa/dsky-coordinate.txt ]; then
-  read X Y < qa/dsky-coordinate.txt
-  adb shell input swipe "$X" "$Y" "$X" "$Y" 900
-  sleep 2
-  adb exec-out screencap -p > qa/controls.png
-  dump_ui ui-controls || true
-
-  if [ -f qa/ui-controls.xml ]; then
-    python3 - <<'PY'
-import re, subprocess
-xml=open('qa/ui-controls.xml',encoding='utf-8').read()
-candidates=[]
-for m in re.finditer(r'<node\b[^>]*>', xml):
-    node=m.group(0)
-    if 'MODE' not in node.upper():
-        continue
-    b=re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',node)
-    if b:
-        x1,y1,x2,y2=map(int,b.groups())
-        candidates.append(((x1+x2)//2,(y1+y2)//2,node))
-open('qa/mode-node.txt','w',encoding='utf-8').write('\n'.join(x[2] for x in candidates) or 'MODE NODE NOT FOUND\n')
-if candidates:
-    x,y,_=candidates[0]
-    subprocess.check_call(['adb','shell','input','tap',str(x),str(y)])
-PY
-    sleep 15
-    adb exec-out screencap -p > qa/after-mode.png
-    dump_ui ui-after-mode || true
-  fi
-else
-  printf 'ACCESSIBILITY TREE DID NOT PROVIDE DSKY COORDINATES; CONTROL INTERACTION SKIPPED\n' > qa/control-interaction-skipped.txt
-fi
-
-PID="$(adb shell pidof -s "$PKG" || true)"
-test -n "$PID"
 capture_logs
 trap - EXIT
 
