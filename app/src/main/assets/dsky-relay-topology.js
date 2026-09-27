@@ -25,10 +25,10 @@
  *   - MIT/IL R-700 Block II AGC final report
  *   - yaAGC fake hardware channel 0163 definitions for hardware-origin states
  *
- * Exact D1-D6/K-number wiring for each logical/function identity is not
- * invented here.  packageSlots() enumerates all 132 real package positions;
- * logical/function identities are kept separately until the interconnect
- * drawing establishes a specific package-slot crosswalk.
+ * Original 2005918 signal-flow plus the source-joined 2005954A/2005973
+ * package wiring now proves the complete Channel 010 logical row/bit ->
+ * D1-D6/K1-K20 crosswalk for all 120 latching packages.  K21/K22 auxiliary
+ * function-to-package assignment remains deliberately unresolved.
  */
 (() => {
   const ABSENT_KEYS=new Set([
@@ -37,6 +37,134 @@
     '9:10','10:10','11:10',
     '12:9','12:10'
   ]);
+
+  // Proven source join:
+  //   Channel 010 relay-word code -> 2005918 XDI selection line
+  //   OUT0 data bit logical 0/1 -> 2005918 YDI drive pair
+  //   XDI/YDI pair -> 2005954A + 2005973 Dn/K package
+  // See docs/relay-logical-physical-crosswalk-2005918.json.
+  const PACKAGE_SLOT_BY_KEY=Object.freeze({
+    '1:0':'D1:K1',
+    '1:1':'D1:K2',
+    '1:2':'D1:K3',
+    '1:3':'D1:K4',
+    '1:4':'D1:K5',
+    '1:5':'D4:K1',
+    '1:6':'D4:K2',
+    '1:7':'D4:K3',
+    '1:8':'D4:K4',
+    '1:9':'D4:K5',
+    '1:10':'D1:K20',
+    '2:0':'D1:K6',
+    '2:1':'D1:K7',
+    '2:2':'D1:K8',
+    '2:3':'D1:K9',
+    '2:4':'D1:K10',
+    '2:5':'D4:K6',
+    '2:6':'D4:K7',
+    '2:7':'D4:K8',
+    '2:8':'D4:K9',
+    '2:9':'D4:K10',
+    '2:10':'D2:K20',
+    '3:0':'D1:K11',
+    '3:1':'D1:K12',
+    '3:2':'D1:K13',
+    '3:3':'D1:K14',
+    '3:4':'D1:K15',
+    '3:5':'D4:K11',
+    '3:6':'D4:K12',
+    '3:7':'D4:K13',
+    '3:8':'D4:K14',
+    '3:9':'D4:K15',
+    '4:0':'D6:K1',
+    '4:1':'D6:K2',
+    '4:2':'D6:K3',
+    '4:3':'D6:K4',
+    '4:4':'D6:K5',
+    '4:5':'D5:K1',
+    '4:6':'D5:K2',
+    '4:7':'D5:K3',
+    '4:8':'D5:K4',
+    '4:9':'D5:K5',
+    '4:10':'D3:K20',
+    '5:0':'D6:K6',
+    '5:1':'D6:K7',
+    '5:2':'D6:K8',
+    '5:3':'D6:K9',
+    '5:4':'D6:K10',
+    '5:5':'D5:K6',
+    '5:6':'D5:K7',
+    '5:7':'D5:K8',
+    '5:8':'D5:K9',
+    '5:9':'D5:K10',
+    '5:10':'D4:K20',
+    '6:0':'D6:K11',
+    '6:1':'D6:K12',
+    '6:2':'D6:K13',
+    '6:3':'D6:K14',
+    '6:4':'D6:K15',
+    '6:5':'D5:K11',
+    '6:6':'D5:K12',
+    '6:7':'D5:K13',
+    '6:8':'D5:K14',
+    '6:9':'D5:K15',
+    '6:10':'D5:K20',
+    '7:0':'D1:K17',
+    '7:1':'D1:K16',
+    '7:2':'D1:K18',
+    '7:3':'D1:K19',
+    '7:4':'D3:K19',
+    '7:5':'D2:K17',
+    '7:6':'D2:K16',
+    '7:7':'D2:K18',
+    '7:8':'D2:K19',
+    '7:9':'D5:K19',
+    '7:10':'D6:K20',
+    '8:0':'D4:K17',
+    '8:1':'D4:K16',
+    '8:2':'D4:K18',
+    '8:3':'D4:K19',
+    '8:4':'D6:K19',
+    '9:0':'D3:K1',
+    '9:1':'D3:K2',
+    '9:2':'D3:K3',
+    '9:3':'D3:K4',
+    '9:4':'D3:K5',
+    '9:5':'D2:K1',
+    '9:6':'D2:K2',
+    '9:7':'D2:K3',
+    '9:8':'D2:K4',
+    '9:9':'D2:K5',
+    '10:0':'D3:K6',
+    '10:1':'D3:K7',
+    '10:2':'D3:K8',
+    '10:3':'D3:K9',
+    '10:4':'D3:K10',
+    '10:5':'D2:K6',
+    '10:6':'D2:K7',
+    '10:7':'D2:K8',
+    '10:8':'D2:K9',
+    '10:9':'D2:K10',
+    '11:0':'D3:K11',
+    '11:1':'D3:K12',
+    '11:2':'D3:K13',
+    '11:3':'D3:K14',
+    '11:4':'D3:K15',
+    '11:5':'D2:K11',
+    '11:6':'D2:K12',
+    '11:7':'D2:K13',
+    '11:8':'D2:K14',
+    '11:9':'D2:K15',
+    '12:0':'D6:K17',
+    '12:1':'D6:K16',
+    '12:2':'D6:K18',
+    '12:3':'D3:K17',
+    '12:4':'D3:K16',
+    '12:5':'D5:K17',
+    '12:6':'D5:K16',
+    '12:7':'D5:K18',
+    '12:8':'D3:K18'
+  });
 
   function bitName(bit){if(bit===10)return'B';if(bit>=5)return`C-K${bit-4}`;return`D-K${bit+1}`}
   function key(row,bit){return `${Number(row)}:${Number(bit)}`}
@@ -56,8 +184,8 @@
         maskOctal:'0o'+(1<<bit).toString(8).padStart(4,'0'),
         logicalLabel:bitName(bit),
         packagePart:'2004688',
-        packageSlot:null,
-        packageSlotStatus:'interconnect-crosswalk-unresolved'
+        packageSlot:PACKAGE_SLOT_BY_KEY[key(row,bit)]||null,
+        packageSlotStatus:'proven-source-join-2005918-2005954A-2005973'
       }));
     }
   }
@@ -103,6 +231,8 @@
   if(latching.length!==120)throw new Error(`Physical DSKY latching relay topology must contain 120 packages; got ${latching.length}`);
   if(nonLatching.length!==12)throw new Error(`Physical DSKY non-latching relay topology must contain 12 packages; got ${nonLatching.length}`);
   if(packageSlots.length!==132)throw new Error(`Physical DSKY package-slot inventory must contain 132 positions; got ${packageSlots.length}`);
+  if(latching.some(item=>!/^D[1-6]:K(?:[1-9]|1[0-9]|20)$/.test(item.packageSlot||'')))throw new Error('Every latching logical identity must have a proven D1-D6/K1-K20 package slot');
+  if(new Set(latching.map(item=>item.packageSlot)).size!==120)throw new Error('Latching logical-to-physical package crosswalk must be one-to-one across 120 slots');
 
   const latchingByKey=new Map(latching.map(item=>[key(item.row,item.bit),item]));
   const nonLatchingByNameMap=new Map(nonLatching.map(item=>[item.name,item]));
