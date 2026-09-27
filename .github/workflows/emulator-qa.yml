@@ -12,6 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: qa/emulator-20260927
           submodules: recursive
           fetch-depth: 1
 
