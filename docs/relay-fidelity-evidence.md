@@ -81,11 +81,14 @@ mechanical operate/release time.
 - No pseudo-random pole-to-pole skew.
 - No claim that the proven K21/K22 drive-function mapping or the Rev E K22
   assembly resolution establishes exact 2004689-2 mechanical timing.
-- Apollo 11 LM mission/G&N-system provenance is distinguished from physical
-  DSKY chassis identity. The NASA-perspective mission hierarchy identifies
-  6014999-091 as G&N system serial 609 (LM-5/Apollo 11), and its assembly
-  drilldown contains 2003994-091 -> six 2003952-031 -> 2003910-021.
-  The individual engraved/physical DSKY chassis serial remains unidentified.
+- Apollo 11 LM mission/G&N-system provenance and physical DSKY chassis
+  identity are both established. The NASA-perspective mission hierarchy
+  identifies 6014999-091 as G&N system serial 609 (LM-5/Apollo 11), and its
+  assembly drilldown contains 2003994-091 -> six 2003952-031 -> 2003910-021.
+  MIT/IL configuration reports identify the LM-5 DSKY as **S/N 54**:
+  E-1142-58 lists 2003994-021 S/N 54 on 1 Aug 1968; E-1142-59 records the
+  same S/N 54 modified to 2003994-051; E-1142-61 lists LM-5/System 609 at
+  KSC with 2003994-091 S/N 54 on 1 Apr 1969.
 - No claim of unique flown-unit acoustic fingerprints.
 - No claim that yaAGC channel 0163 physically existed in Apollo hardware.
 
@@ -143,14 +146,19 @@ haptic cue. Those are presentation aids, not historical measurements.
    the 2003910-021 / 2003952-031 configuration.** The earlier schematic
    conflict is no longer an open configuration-level implementation question.
 
-   Mission/configuration provenance is also established for Apollo 11 LM.
-   Virtual AGC's NASA-perspective G&N mission hierarchy identifies
-   **6014999-091** as G&N system serial **609** for **LM-5 / Apollo 11**.
-   The corresponding engineering drilldown contains DSKY **2003994-091**,
-   which contains six **2003952-031** indicator-driver modules; each module
-   contains **2003910-021**. Therefore Apollo 11 LM's documented G&N-system
-   configuration reaches the exact relay-circuit assembly for which Rev E
-   resolves K22. This does **not** identify the individual engraved/physical
-   DSKY chassis serial, which remains a narrower archival provenance question.
-   Exact 2004689-2 mechanical timing also remains unknown.
+   Mission/configuration and chassis provenance are also established for
+   Apollo 11 LM. Virtual AGC's NASA-perspective G&N mission hierarchy
+   identifies **6014999-091** as G&N system serial **609** for
+   **LM-5 / Apollo 11**. The corresponding engineering drilldown contains
+   DSKY **2003994-091**, which contains six **2003952-031** indicator-driver
+   modules; each module contains **2003910-021**.
+
+   MIT/IL G&N configuration reports close the chassis identity. E-1142-58
+   (1 Aug 1968) lists LM-5/System 609 DSKY **2003994-021 S/N 54**.
+   E-1142-59 (1 Oct 1968) states that DSKY S/N 54 was modified to
+   **2003994-051** while retaining S/N 54. E-1142-61 (1 Apr 1969) lists
+   LM-5/System 609 at KSC with **2003994-091 S/N 54** and records the
+   -051 -> -091 update. Therefore Apollo 11 LM DSKY **S/N 54** reaches the
+   exact relay-circuit assembly for which Rev E resolves K22. Exact
+   2004689-2 mechanical timing remains unknown.
 4. Preserve and explain the 1965 Information Series 13-bank (00..14) statement versus the Apollo 11 flight-software/final-report 12-row (01..14) configuration; do not collapse them into one undocumented model.
