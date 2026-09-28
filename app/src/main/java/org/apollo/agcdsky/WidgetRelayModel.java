@@ -24,9 +24,11 @@ final class WidgetRelayModel {
     static final int PHYSICAL_LATCHING_RELAYS = 120;
     static final double DRIVE_ENVELOPE_MS = 20.0;
     static final double MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS;
-    // Predecessor magnetic-latching SCD 1006282 specifies operate/release
-    // <=3 ms. Production 2004688 exact unit timing is unresolved, so this is a
-    // conservative presentation reference, not a measured production value.
+    // Predecessor magnetic-latching SCD 1006282 is revision-sensitive:
+    // initial release specifies <=3 ms at suggested source voltage; Rev C later
+    // permits <=10 ms under all Table I conditions and includes dash -2.
+    // Production 2004688 exact timing is unresolved, so 3 ms remains only the
+    // existing initial-release presentation reference.
     static final double LATCHING_PRESENTATION_REFERENCE_MS = 3.0;
 
     // Comanche RELTAB low-five-bit codes for decimal 0..9.
