@@ -36,6 +36,9 @@
   const desiredClockDigits=()=>clock.desiredDigits();
   const clockWord=(group,want)=>clock.relayWord(group,want);
   const T4_MS=120;
+  // Canonical runtime name retained: this 20-ms boundary is the Comanche/T4
+  // row-command hold, not measured production-relay mechanical settle time.
+  const RELAY_DRIVE_MS=20;
   const RELAY_ROW_HOLD_MS=20;
   const DIRTY_ROW_START_MS=40;
   const CLOCK_RELAY_ORDER=Object.freeze([12,11,10,9,8,7,6,5,4,3,2,1]);
@@ -131,7 +134,7 @@
       const paint=!!render&&settledPaintAllowed(relay,low11);
       display.commitRelayWord(relay,low11,{render:paint});
       if(hw.activeDrive===relay)hw.activeDrive=0;
-    },RELAY_ROW_HOLD_MS);
+    },RELAY_DRIVE_MS);
   }
 
   function hardwareDecodeChannel10(value){
@@ -191,7 +194,7 @@
         const digits=getClockDigits(),touched=new Set();
         for(const [name,index] of cellsOfJob(job)){digits[name][index]=job.want[name][index];touched.add(name)}
         touched.forEach(name=>clock.renderReg(name));
-      },RELAY_ROW_HOLD_MS);
+      },RELAY_DRIVE_MS);
       later(step,DIRTY_ROW_START_MS);
     };
     later(step,startDelay);
@@ -225,7 +228,7 @@
   setInterval(()=>{try{if(fidelityState.mode==='clock'&&!getLampTestActive()&&!getRelayBusy())clock.tick()}catch(_){}},20);
 
   function baseSnapshot(){return{
-    t4Ms:T4_MS,relayDriveMs:RELAY_ROW_HOLD_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,physicalRelayCount:topology.physicalRelayCount,latchingRelayCount:topology.latchingRelayCount,nonLatchingRelayCount:topology.nonLatchingRelayCount,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
+    t4Ms:T4_MS,relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,physicalRelayCount:topology.physicalRelayCount,latchingRelayCount:topology.latchingRelayCount,nonLatchingRelayCount:topology.nonLatchingRelayCount,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
   }}
   function snapshot(){
     let state=baseSnapshot();
@@ -237,5 +240,5 @@
   function registerSnapshotExtension(name,extension){if(typeof name!=='string'||!name||typeof extension!=='function')throw new TypeError('Hardware snapshot extension requires name/function');snapshotExtensions.set(name,extension);return()=>snapshotExtensions.delete(name)}
   function registerSettledPaintPolicy(name,policy){if(typeof name!=='string'||!name||typeof policy!=='function')throw new TypeError('Settled-paint policy requires name/function');settledPaintPolicies.set(name,policy);return()=>settledPaintPolicies.delete(name)}
 
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE',Object.freeze({snapshot,baseSnapshot,registerSnapshotExtension,registerSettledPaintPolicy,beginRelayDrive:(relay,word,render=true,present=true)=>beginRelayDrive(relay,word,render,present),relayDriveMs:RELAY_ROW_HOLD_MS,dirtyRowStartMs:DIRTY_ROW_START_MS}),'hardware-fidelity publication');
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_HARDWARE',Object.freeze({snapshot,baseSnapshot,registerSnapshotExtension,registerSettledPaintPolicy,beginRelayDrive:(relay,word,render=true,present=true)=>beginRelayDrive(relay,word,render,present),relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS}),'hardware-fidelity publication');
 })();
