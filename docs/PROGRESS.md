@@ -1,6 +1,22 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
+
+
+## 2026-09-28 RLY-01 source-bound relay-presentation reconciliation
+
+The RLY-01 relay-visualization work is being restarted from the verified RLY-02 physical model rather than the obsolete 140-relay experiment. The canonical population is **132 physical packages**: six D1-D6 modules, each with K1-K20 type-2004688 latching packages and K21-K22 type-2004689-2 non-latching packages.
+
+The first audit of current `main` found one active fidelity regression left behind by the old experiment: `relay-perceptual-personality.js` could still override the source-bounded class-level relay audio with deterministic package-specific pitch/decay/gain variation derived from a stored unit seed and relay ordinal. No recovered Apollo source supports those per-package acoustic/manufacturing fingerprints, and RLY-02 explicitly forbids inventing them.
+
+Current repair on `fix/rly-01-source-bounded-visualization`:
+
+- removes the optional synthetic per-package perceptual-audio layer from the packaged runtime;
+- removes relay-show choreography dependence on per-package travel/spread statistics;
+- keeps `relay-identity-audio.js` as the source-bounded generic relay-class cue and `relay-visual-coupling.js` as the single armature/contact presentation-event authority;
+- strengthens source smokes so the unsupported personality layer and its old unit-seed model cannot silently return.
+
+This is a source correction checkpoint only until the canonical source smoke/build gates are executed. The next RLY-01 step is to add the **132-package D1-D6/K1-K22 live visualization** above the DSKY as a subscriber to the existing shared relay event stream, with no independent animation scheduler or fabricated per-unit mechanics.
 
 
 ## 2026-09-27 RLY-02 source/provenance re-audit

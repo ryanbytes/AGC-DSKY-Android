@@ -17,10 +17,8 @@ const html=read('app/src/main/assets/index.html');
 const cm=read('app/src/main/assets/cm-mode.js');
 const show=read('app/src/main/assets/relay-show.js');
 const diagnostics=read('app/src/main/assets/diagnostics.js');
-const perceptual=read('app/src/main/assets/relay-perceptual-personality.js');
 
 new vm.Script(show,{filename:'relay-show.js'});
-new vm.Script(perceptual,{filename:'relay-perceptual-personality.js'});
 
 /* Parser ownership. cm-mode is configuration-only now. */
 req(cm,'performs no script injection','CM parser-ownership contract');
@@ -29,11 +27,13 @@ forbid(html,'id="relay-show"','primary options relay-show control');
 req(diagnostics,'id="diag-relay-show"','diagnostics relay-show control');
 req(diagnostics,"lateService('AGCDSKY_RELAY_SHOW')",'diagnostics relay-show service action');
 forbid(show,"document.getElementById('relay-show')",'relay-show menu-button ownership');
+forbid(html,'relay-perceptual-personality.js','unsupported per-package relay personality layer');
 ordered(html,[
-  '<script src="relay-perceptual-personality.js"',
+  '<script src="relay-identity-audio.js"',
+  '<script src="relay-visual-coupling.js"',
   '<script src="relay-show.js"',
   '<script src="parallax-3d.js"'
-],'presentation parser order');
+],'source-bounded relay presentation parser order');
 
 /* Explicit runtime-service ownership. */
 for(const token of [
@@ -63,7 +63,6 @@ ordered(show,[
 for(const token of [
   "display.implementation('decodeChannel10')","display.implementation('decodeChannel11')","display.implementation('decodeChannel163')",
   'clock.digitRelayCode(digit)','clock.snapshotBackingState()',
-  'model.profileFor(row,bit)','timing.meanTravelMs','timing.spreadMs',
   'NON_DECIMAL_CODES','for(let digit=0;digit<=9;digit++)','decode11(0o46)','decode163(0o730)',
   'await showSleep(1000)'
 ]) req(show,token,'physical relay choreography');
@@ -90,21 +89,14 @@ for(const token of [
 ]) req(show,token,'safe relay-show restore');
 forbid(show,'saved.coreRunning&&appVisible','old visibility-racy resume path');
 
-/* Relay personality stays deterministic and derives timing from the physical model. */
-for(const token of [
-  'window.AGCDSKY_AUDIO','window.AGCDSKY_ENVIRONMENT',
-  "window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_HARDWARE')",
-  'const audioModel=window.DSKY_RELAY_AUDIO','audioModel.profileFor(row,bit)',
-  "audio.implementation('emitTick')","audio.installImplementation('emitTick'",
-  "localStorage.getItem('dskyHardwareUnitSeedV1')",'p.setTravelMs','p.resetTravelMs',
-  "model:'deterministic-installed-unit-audible-spread-v1'"
-]) req(perceptual,token,'relay personality contract');
-forbid(perceptual,'AGCDSKY_COMPAT','relay personality direct compatibility dependency');
-forbid(perceptual,'window.AGCDSKY_HARDWARE','relay personality late-service compatibility read');
-forbid(perceptual,'Math.random(','non-deterministic relay identity');
+/* Relay-show choreography must not synthesize package-specific mechanics or acoustic identity. */
+for(const token of ['profileFor(', 'personalityGapMs', 'meanTravelMs', 'spreadMs', 'dskyHardwareUnitSeedV1', 'deterministic-installed-unit-audible-spread-v1'])
+  forbid(show,token,'relay-show synthetic per-package personality');
+req(html,'<script src="relay-identity-audio.js"','source-bounded relay audio model');
+req(html,'<script src="relay-visual-coupling.js"','single relay presentation-event authority');
 
 /* User explicitly rejected synthetic brightness/glare effects. */
 for(const token of ['brightness(','relay-flare','filter:']) forbid(show,token,'relay-show optical hack');
 
 console.log('Relay show smoke: PASS');
-console.log('  diagnostics-owned launch control, registry-backed service ownership, display/clock-owned choreography, checkpoint/restore sequencing, visibility-safe resume, physical relay timing, deterministic identity, and no synthetic flare verified');
+console.log('  diagnostics-owned launch control, registry-backed service ownership, fixed show choreography, source-bounded relay event authority, checkpoint/restore sequencing, visibility-safe resume, and no synthetic package personality verified');

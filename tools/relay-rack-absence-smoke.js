@@ -24,7 +24,9 @@ assert(diagnostics.includes('id="diag-relay-show"'),
 assert(html.includes('<script src="relay-visual-coupling.js"></script>'),
   'physical relay contact/audio/display coupling must remain loaded');
 assert(html.includes('<script src="relay-identity-audio.js"></script>'),
-  'per-relay manufactured audio identity model must remain loaded');
+  'source-bounded generic relay-class audio model must remain loaded');
+assert(!html.includes('relay-perceptual-personality.js'),
+  'unsupported synthetic per-package relay personality layer must remain absent');
 
 console.log('relay rack absence smoke: PASS');
-console.log('  visual rack/timing controls removed; underlying relay simulation/audio/contact coupling retained');
+console.log('  visual rack/timing controls removed; source-bounded relay simulation/audio/contact coupling retained; synthetic package personality absent');
