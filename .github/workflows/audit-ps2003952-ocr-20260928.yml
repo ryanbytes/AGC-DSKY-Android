@@ -1,0 +1,64 @@
+name: Audit PS 2003952 page OCR
+on:
+  push:
+    branches:
+      - audit/relay-box459-20260928
+
+jobs:
+  extract-ps2003952:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Fetch Box 459 OCR and extract PS 2003952 pages
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p ps2003952-ocr
+          cd ps2003952-ocr
+          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0'             -o box459-djvu.xml             'https://archive.org/download/apertureCardBox459NARASW_images/apertureCardBox459NARASW_djvu.xml'
+          sha256sum box459-djvu.xml > SOURCE-SHA256.txt
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          wanted=set(range(433,485))
+          out=[]
+          page_index=-1
+          for event, elem in ET.iterparse("box459-djvu.xml", events=("end",)):
+              if elem.tag.upper().endswith("OBJECT"):
+                  page_index += 1
+                  if page_index in wanted:
+                      words=[]
+                      for node in elem.iter():
+                          tag=node.tag.upper().split("}")[-1]
+                          if tag=="WORD" and node.text:
+                              words.append(node.text.strip())
+                      text=" ".join(w for w in words if w)
+                      out.append((page_index,text))
+                  elem.clear()
+          with open("ps2003952-pages-ocr.txt","w") as f:
+              for n,text in out:
+                  f.write(f"===== n{n} =====\n{text}\n\n")
+          terms=("relay","contact","operate","release","bounce","pulse","delay","millisecond","msec"," ms ","switch")
+          with open("timing-term-hits.txt","w") as f:
+              for n,text in out:
+                  low=" "+text.lower()+" "
+                  if any(t in low for t in terms):
+                      f.write(f"===== n{n} =====\n{text}\n\n")
+          print("extracted pages",len(out))
+          PY
+          rm box459-djvu.xml
+          {
+            echo "Source: https://archive.org/download/apertureCardBox459NARASW_images/apertureCardBox459NARASW_djvu.xml"
+            echo "Mapped by Box 459 index: n433-n484 cover drawing 2003952 revisions A-F and unrevised sheets."
+            echo "Source XML removed from artifact after hashing; parsed page OCR preserved."
+            echo
+            cat SOURCE-SHA256.txt
+          } > ACQUISITION.txt
+          wc -c *.txt
+          head -c 20000 timing-term-hits.txt || true
+      - name: Upload parsed PS 2003952 OCR evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: PS2003952-page-OCR-2026-09-28
+          path: ps2003952-ocr/
+          if-no-files-found: error
