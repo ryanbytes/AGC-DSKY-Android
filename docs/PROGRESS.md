@@ -19,7 +19,9 @@ Current repair on `fix/rly-01-source-bounded-visualization`:
 - maps latching row/bit events and all 12 non-latching function events back to their proven physical package slots before changing rack state;
 - keeps rack motion passive: it subscribes to `DSKY_RELAY_VISUAL` and contains no timer, animation-frame scheduler, randomizer, per-package timing profile, or independent relay-state machine.
 
-The source implementation is now staged on the branch. The canonical local source/build/device gates still require execution in a complete checkout before RLY-01 can be marked VERIFIED; this environment's container cannot resolve GitHub for a recursive checkout.
+The source implementation is now staged on the branch. Direct execution of the exact committed panel source against a mocked hardware/event environment passed: 132 unique package cells were created; the 120/12 split was preserved; ROW 10/bit 0 resolved to D3:K6; COMP resolved to D4:K22; snapshot state populated both cells; and shared latching/non-latching drive/contact events moved and settled those exact package cells. A direct committed-source contract check also confirmed the synthetic personality script is absent, source-bounded identity/coupling layers remain loaded, Relay Show no longer consumes per-package profile/spread values, and the canonical smoke manifest now selects relay-panel-smoke.js.
+
+Draft PR **#163** contains the RLY-01 source implementation. The canonical `bash tools/build-local.sh`, APK verification, and Android device gates still require execution in a complete checkout before RLY-01 can be marked VERIFIED. A recursive clone attempt in this execution environment failed because its container cannot resolve `github.com`; per repository policy, no GitHub Actions/Codespaces substitute was used.
 
 
 ## 2026-09-27 RLY-02 source/provenance re-audit
