@@ -11,27 +11,19 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch exact PS 2016009 Rev A pages 4-6
+      - name: Fetch PS 2016009 Rev A page 4
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p out
-          id="apertureCardBox466Part1NARASW_images"
-          stem="apertureCardBox466Part1NARASW"
-          iiif="https://iiif.archive.org/image/iiif/2/${id}%2F${stem}_jp2.zip%2F${stem}_jp2%2F${stem}"
-          for n in 0186 0187 0188; do
-            url="${iiif}_${n}.jp2/full/3000,/0/default.jpg"
-            echo "Fetching $url"
-            curl --fail --location --retry 2 --retry-delay 2 --connect-timeout 20 --max-time 180 \
-              "$url" -o "out/${n}.jpg"
-            file "out/${n}.jpg"
-          done
+          url="https://iiif.archive.org/image/iiif/2/apertureCardBox466Part1NARASW_images%2FapertureCardBox466Part1NARASW_jp2.zip%2FapertureCardBox466Part1NARASW_jp2%2FapertureCardBox466Part1NARASW_0186.jp2/full/1200,/0/default.jpg"
+          curl --fail --location --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 90 "$url" -o out/0186-page4.jpg
+          file out/0186-page4.jpg
           sha256sum out/* > out/SHA256SUMS.txt
-          ls -lh out
-      - name: Upload exact pages
+      - name: Upload page 4
         uses: actions/upload-artifact@v4
         with:
-          name: ps2016009-reva-pages-4-6
+          name: ps2016009-reva-page4
           path: out/
           if-no-files-found: error
           retention-days: 7
