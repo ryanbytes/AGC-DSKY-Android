@@ -60,10 +60,11 @@
   function nextT4Delay(){return phaseDelay(T4_MS,t4Epoch)}
 
   // Physical population is production-source-backed; exact unit timing for
-  // production 2004688 has not been recovered. 3 ms is the documented maximum
-  // operate/release time of predecessor magnetic-latching SCD 1006282 and is
-  // used only as a conservative presentation reference inside the separate
-  // documented 20-ms bank-drive envelope. Do not assign per-bit timing here.
+  // production 2004688 has not been recovered. Initial-release predecessor
+  // SCD 1006282 gives 3 ms at the suggested source voltage, while Rev C later
+  // permits 10 ms under all Table I conditions and includes dash -2. Keep the
+  // existing 3 ms only as a presentation reference, not a family-wide upper
+  // bound or a production timing claim.
   const LATCHING_PRESENTATION_REFERENCE_MS=3;
   const ARMATURE_SETTLE_MS=Object.freeze(Array(11).fill(LATCHING_PRESENTATION_REFERENCE_MS));
   function relayArmatureClack(_relay,_bit,_turningOn,delayMs){
