@@ -15,8 +15,11 @@ Current repair on `fix/rly-01-source-bounded-visualization`:
 - removes relay-show choreography dependence on per-package travel/spread statistics;
 - keeps `relay-identity-audio.js` as the source-bounded generic relay-class cue and `relay-visual-coupling.js` as the single armature/contact presentation-event authority;
 - strengthens source smokes so the unsupported personality layer and its old unit-seed model cannot silently return.
+- adds a live **132-package** rack above the DSKY, ordered as D1-D6 with K1-K22 and driven exclusively from the verified `DSKY_RELAY_TOPOLOGY` package map;
+- maps latching row/bit events and all 12 non-latching function events back to their proven physical package slots before changing rack state;
+- keeps rack motion passive: it subscribes to `DSKY_RELAY_VISUAL` and contains no timer, animation-frame scheduler, randomizer, per-package timing profile, or independent relay-state machine.
 
-This is a source correction checkpoint only until the canonical source smoke/build gates are executed. The next RLY-01 step is to add the **132-package D1-D6/K1-K22 live visualization** above the DSKY as a subscriber to the existing shared relay event stream, with no independent animation scheduler or fabricated per-unit mechanics.
+The source implementation is now staged on the branch. The canonical local source/build/device gates still require execution in a complete checkout before RLY-01 can be marked VERIFIED; this environment's container cannot resolve GitHub for a recursive checkout.
 
 
 ## 2026-09-27 RLY-02 source/provenance re-audit
