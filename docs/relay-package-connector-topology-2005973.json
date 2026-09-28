@@ -12,7 +12,7 @@
     "K1-K20 use the Relay-1006282 symbol; K21-K22 use Relay-1010784 in this source.",
     "connectorPins are same-net J1/J2 endpoints. viaDiodes records connector endpoints reached across a diode from a relay pad net; it is a wiring trace, not an assertion that the diode is electrically transparent.",
     "The remaining crosswalk step is to transcribe the D1-D6 connector signal labels from 2005954A and join them to these connector endpoints.",
-    "K22 is disputed between surviving 2005973- and 2005940A documentation. This artifact records 2005973- only and must not be promoted to a serial-number/as-flown claim."
+    "The former 2005973-vs-2005940A K22 contact discrepancy is resolved for the 2003910-021 / 2003952-031 configuration by 2003910 Rev E assembly jumpers K22-8 to K22-4, K22-7 to K22-3, and K22-6 to K22-2; those jumpers make the 2005940A pinout match 2005973 exactly. Serial-number-specific provenance remains separate."
   ],
   "relayCount": 22,
   "relays": [

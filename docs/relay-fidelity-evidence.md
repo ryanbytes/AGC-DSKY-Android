@@ -79,9 +79,10 @@ mechanical operate/release time.
 - No pseudo-random per-relay operate/release time.
 - No pseudo-random contact-bounce count or timing.
 - No pseudo-random pole-to-pole skew.
-- No claim that the proven K21/K22 drive-function mapping also resolves exact
-  2004689-2 mechanical timing or the disputed K22 switched-contact wiring of a
-  particular flown DSKY.
+- No claim that the proven K21/K22 drive-function mapping or the Rev E K22
+  assembly resolution establishes exact 2004689-2 mechanical timing.
+- No serial-number-specific claim is made beyond the established
+  2003910-021 / 2003952-031 configuration without matching unit provenance.
 - No claim of unique flown-unit acoustic fingerprints.
 - No claim that yaAGC channel 0163 physically existed in Apollo hardware.
 
@@ -112,26 +113,33 @@ haptic cue. Those are presentation aids, not historical measurements.
    - D5: K22 INJ SEQ START; K21 STBY.
    - D6: K22 CUTOFF; K21 CIRCUIT.
 
-   This is independently robust to the 2005973-vs-2005940A disagreement:
-   both schematic transcriptions use the same K21/K22 pin-1 drive and pin-5
-   common topology. Their difference is in **K22 switched contacts**, not the
-   drive coil. The machine-readable proof is
+   The drive-function join remains independently robust because both schematic
+   transcriptions use the same K21/K22 pin-1 drive and pin-5 common topology.
+   The machine-readable proof is
    `docs/relay-package-functional-crosswalk-2005954A-2005973.json`.
 
-   This closes the function-to-package drive crosswalk only. Exact
-   2004689-2 operate/release/bounce timing remains unknown, and the K22
-   contact-wiring conflict remains bounded below rather than silently resolved.
+   Exact 2004689-2 operate/release/bounce timing remains unknown. The former
+   K22 contact-wiring discrepancy is resolved separately by the -021 assembly
+   instructions below.
 
-3. Preserve the K22 documentation conflict without treating all surviving evidence as equally authoritative.
+3. Resolve the K22 documentation discrepancy at the 2003910-021 assembly level.
 
-   Exact K22 delta checked against the Virtual AGC netlists:
+   The apparent K22 delta in the schematic transcriptions is:
    - original-drawing transcription 2005973-: K22 pin 2 -> J1-5, pin 3 -> J1-3, pin 8 -> J1-6.
    - original-drawing transcription 2005940A: K22 pins 2, 3, and 8 are explicitly unconnected.
-   - K22 pins 1, 4, 5, 6, and 7 agree; K21 is not the differing relay.
+   - K22 pins 1, 4, 5, 6, and 7 otherwise agree.
 
-   Provenance matters. Virtual AGC's separate `2005973r` is explicitly a 2018 reconstruction made from predecessor drawing 2005952- plus ND-1021042 figure 4-226; it is not an independently surviving production drawing. Its 2005940-like K22 wiring therefore does not outweigh the later recovered original 2005973- aperture-card drawing.
+   User-recovered primary-source 2003910 Rev E assembly evidence resolves that
+   difference for the **2003910-021** configuration. The Rev E instruction is
+   to install jumpers **K22-8 to K22-4, K22-7 to K22-3, and K22-6 to K22-2**.
+   In 2005940A, K22 pins 6, 7, and 4 lead respectively to J1-5, J1-3, and
+   J1-6. After the specified jumpers are installed, pins 2, 3, and 8 therefore
+   acquire exactly the J1-5, J1-3, and J1-6 connectivity shown by 2005973.
 
-   The production-design evidence favors 2005973-: the immediate relay-circuit assembly 2003910-021 (the assembly containing the 20 x 2004688 and 2 x 2004689 relays) calls out 2005973; ND-1021042/ND-1021043 table 8-II calls out 2005973 for DSKY 2003994; and original 2005973- has later drawing/TDRR and approval chronology than 2005940A. The parent indicator-driver assembly 2003952-031 still calls out 2005940, and ND-1021042 figure 4-226 carries the older 2005940-style K22 wiring.
-
-   Audit conclusion: use original 2005973- as the best-supported **production design basis** for K22. Do not promote that to a serial-number/as-flown claim: no unit-specific as-built or acceptance-test record has yet been recovered that independently proves the K22 contact wiring of a particular flown DSKY. The K22 function-to-package **drive** mapping is now proven as described above; the remaining dispute is K22 switched-contact wiring, not which external function actuates the package.
+   Audit conclusion: **the 2005973 K22 switched-contact topology is proven for
+   the 2003910-021 / 2003952-031 configuration.** The earlier schematic
+   conflict is no longer an open configuration-level implementation question.
+   Serial-number-specific provenance is still required before claiming that an
+   arbitrary unit outside this established hierarchy was built to that same
+   configuration. Exact 2004689-2 mechanical timing remains unknown.
 4. Preserve and explain the 1965 Information Series 13-bank (00..14) statement versus the Apollo 11 flight-software/final-report 12-row (01..14) configuration; do not collapse them into one undocumented model.

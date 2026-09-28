@@ -187,4 +187,4 @@ AGC/PHONE CLOCK logical word
 
 ## Evidence boundary
 
-The six D1-D6 modules contain K1-K20 latching and K21-K22 non-latching relay packages, giving 132 exact physical package slots. The audit does **not** fabricate a complete D1-D6/K-number crosswalk for logical/function identities where the surviving interconnect evidence has not yet been decoded. `docs/physical-relay-inventory.json` enumerates those package slots separately from the functional runtime identities.
+The six D1-D6 modules contain K1-K20 latching and K21-K22 non-latching relay packages, giving 132 exact physical package slots. The source join now proves the complete production design-basis crosswalk: all 120 latching identities and all 12 non-latching function drives map one-to-one to D1-D6/K1-K22. `docs/physical-relay-inventory.json` records the physical inventory and provenance. Exact 2004688/2004689 mechanical timing remains unrecovered.
