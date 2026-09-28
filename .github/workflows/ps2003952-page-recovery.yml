@@ -11,50 +11,27 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch Box 466 OCR only
+      - name: Fetch exact PS 2016009 Rev A pages 4-6
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p out
           id="apertureCardBox466Part1NARASW_images"
           stem="apertureCardBox466Part1NARASW"
-          curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 180 \
-            "https://archive.org/download/$id/${stem}_djvu.txt" \
-            -o "out/${stem}_djvu.txt"
-          python - <<'PY'
-          import pathlib,re
-          p=pathlib.Path("out/apertureCardBox466Part1NARASW_djvu.txt")
-          text=p.read_text(errors="replace")
-          pats=[
-            ("3.1.18",re.compile(r"3\s*[\.,*]\s*1\s*[\.,*]\s*18",re.I)),
-            ("3.1.19",re.compile(r"3\s*[\.,*]\s*1\s*[\.,*]\s*19",re.I)),
-            ("3.1.20",re.compile(r"3\s*[\.,*]\s*1\s*[\.,*]\s*20",re.I)),
-            ("3.1.21",re.compile(r"3\s*[\.,*]\s*1\s*[\.,*]\s*21",re.I)),
-            ("3.1.22",re.compile(r"3\s*[\.,*]\s*1\s*[\.,*]\s*22",re.I)),
-            ("3.1.23",re.compile(r"3\s*[\.,*]\s*1\s*[\.,*]\s*23",re.I)),
-          ]
-          out=[]
-          for label,rx in pats:
-            out.append("===== "+label+" =====")
-            ms=list(rx.finditer(text))
-            out.append("count="+str(len(ms)))
-            for j,m in enumerate(ms[:30],1):
-              s=max(0,m.start()-1200);e=min(len(text),m.end()+3000)
-              out.append(f"--- {j} offset {m.start()} ---\n{text[s:e]}")
-          for term in ["operate","release","transfer","bounce","relay contact","milliseconds","msec"]:
-            out.append("===== TERM "+term+" =====")
-            for j,m in enumerate(re.finditer(re.escape(term),text,re.I),1):
-              s=max(0,m.start()-700);e=min(len(text),m.end()+1800)
-              out.append(f"--- {j} offset {m.start()} ---\n{text[s:e]}")
-              if j>=40: break
-          pathlib.Path("out/targeted-OCR-contexts.txt").write_text("\n".join(out))
-          PY
+          iiif="https://iiif.archive.org/image/iiif/2/${id}%2F${stem}_jp2.zip%2F${stem}_jp2%2F${stem}"
+          for n in 0186 0187 0188; do
+            url="${iiif}_${n}.jp2/full/3000,/0/default.jpg"
+            echo "Fetching $url"
+            curl --fail --location --retry 2 --retry-delay 2 --connect-timeout 20 --max-time 180 \
+              "$url" -o "out/${n}.jpg"
+            file "out/${n}.jpg"
+          done
           sha256sum out/* > out/SHA256SUMS.txt
           ls -lh out
-      - name: Upload Box 466 OCR
+      - name: Upload exact pages
         uses: actions/upload-artifact@v4
         with:
-          name: ps2003952-box466-ocr-only
+          name: ps2016009-reva-pages-4-6
           path: out/
           if-no-files-found: error
           retention-days: 7
