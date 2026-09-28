@@ -44,13 +44,13 @@
       "drawing2005973Path": "Schematics/2005973-/2005973--p1of1.kicad_sch",
       "drawing2005973BlobSha": "c5c5f902f805f4015fd160296710a6c3afac32f5",
       "driveInstruction": "RELAY CKT FOR K21 & K22 TO SWITCH FROM POSITION SHOWN, APPLY PLUS VOLTAGE ON PIN 1",
-      "sourceBoundary": "This proves the production design-basis drive pin/dash assignment used for the function-to-package join. It does not prove exact 2004689-2 operate/release timing or the K22 switched-contact configuration of a particular flown serial-number unit."
+      "sourceBoundary": "This proves the production design-basis drive pin/dash assignment used for the function-to-package join. Exact 2004689-2 operate/release timing remains unrecovered. K22 switched-contact topology is separately resolved for the 2003910-021 / 2003952-031 configuration by 2003910 Rev E assembly jumpers; serial-number-specific provenance remains separate."
     },
     "alternateSchematic2005940A": {
       "description": "Virtual AGC transcription of original drawing 2005940A, checked specifically to determine whether the documented K22 disagreement affects the drive-function join.",
       "sourcePath": "Schematics/2005940A/module.net",
       "sourceBlobSha": "5dab31c0c7ad378d34a67049722fc91810ff32f5",
-      "result": "K21 and K22 use the same relay drive pins/networks as 2005973 (pin 1 driven, pin 5 common). The disagreement is limited to K22 switched-contact wiring, so it does not change the function-to-package mapping."
+      "result": "K21 and K22 use the same relay drive pins/networks as 2005973 (pin 1 driven, pin 5 common). The apparent K22 switched-contact difference is reconciled for 2003910-021 by the Rev E assembly jumpers K22-8->4, K22-7->3, and K22-6->2, which make the 2005940A pinout match 2005973."
     },
     "nonLatchingDriveJoin": {
       "description": "2005954A routes the 12 external annunciator-control signals to D1-D6 module terminals 85/86. In 2005973, terminal 85 feeds R22/C6/Q12 and returns on terminal 87; 2005954A loops 87 to module terminal 4, which 2005973 connects to K22 pin 1. Terminal 86 feeds R24/C7/Q13 and returns on terminal 95; 2005954A loops 95 to terminal 7, which 2005973 connects to K21 pin 1. Both K21/K22 pin 5 returns use module terminal 26.",
@@ -65,7 +65,7 @@
     "Preserve steering-diode traversal explicitly instead of treating it as a direct net.",
     "Require all four drive pads (1,5,9,10) for all 20 latching relays in every D module to resolve.",
     "Join the 12 external non-latching control signals on D1-D6 terminals 85/86 through the 2005973 Q12/Q13 drive paths and the 2005954A 87->4 / 95->7 internal jumpers to K22/K21 pin 1.",
-    "Cross-check 2005940A to ensure its K22 disagreement does not alter K21/K22 drive pins; preserve the remaining contact-wiring conflict separately."
+    "Cross-check 2005940A and reconcile its apparent K22 contact difference with the 2003910 Rev E -021 assembly jumpers; preserve serial-number-specific provenance as a separate boundary."
   ],
   "validation": {
     "modules": 6,
@@ -6536,23 +6536,23 @@
       "note": "Function-to-package drive mapping is source-joined for all D1-D6 K21 packages. This does not establish exact 2004689-2 mechanical timing."
     },
     "K22": {
-      "status": "functional_drive_mapping_proven_contact_conflict_preserved",
+      "status": "functional_drive_mapping_proven_contact_topology_resolved_for_2003910_021",
       "installedRelayPart": "2004689-2",
       "relayDrivePins": [
         1,
         5
       ],
       "mappingRule": "module input terminal 85 -> Q12 -> terminal 87 -> terminal 4 -> K22 pin 1; K22 pin 5 -> terminal 26",
-      "contactTopologyStatus": "conflicting_2005973_vs_2005940A",
+      "contactTopologyStatus": "resolved_2003910_revE_jumpers_to_2005973_topology",
       "exactProductionTimingStatus": "unresolved",
-      "note": "Function-to-package drive mapping is source-joined for all D1-D6 K22 packages because both candidate schematics agree on the drive pins. The switched-contact wiring conflict remains: 2005973 connects K22 pads 2/3/8 where 2005940A leaves them unconnected."
+      "note": "Function-to-package drive mapping is source-joined for all D1-D6 K22 packages. 2003910 Rev E resolves the apparent switched-contact difference for the -021 assembly by requiring jumpers K22-8->4, K22-7->3, and K22-6->2; applied to 2005940A, those jumpers produce the 2005973 K22 connectivity exactly."
     }
   },
   "limitations": [
     "This file is the physical-package-to-DSKY-internal-signal layer. The downstream AGC Channel 010 row/bit -> physical D1-D6/K1-K20 join is now proven separately in docs/relay-logical-physical-crosswalk-2005918.json.",
-    "It is design-document evidence, not an as-flown serial-number configuration claim.",
+    "It is configuration-level design/assembly evidence. Serial-number-specific provenance is still required before claiming an arbitrary flown unit used this configuration.",
     "K21/K22 function-to-package drive mapping is proven at the production design-document level, but exact 2004689-2 mechanical timing remains unrecovered.",
-    "The 2005973-vs-2005940A K22 switched-contact conflict remains unresolved for any specific flown serial-number DSKY; it does not affect the K22 drive-function assignment because both drawings agree on pins 1/5 and the upstream drive path."
+    "The 2005973-vs-2005940A K22 switched-contact discrepancy is resolved for the 2003910-021 / 2003952-031 configuration by 2003910 Rev E assembly jumpers. Serial-number-specific provenance is still required before extending that configuration claim to an arbitrary flown unit."
   ],
   "downstreamLogicalCrosswalk": {
     "status": "proven_for_all_120_latching_packages",
@@ -6579,7 +6579,7 @@
         5
       ],
       "relayCommonTerminal": 26,
-      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "contactConfigurationStatus": "resolved_for_2003910_021_by_2003910_revE_jumpers",
       "exactProductionTimingStatus": "unresolved"
     },
     {
@@ -6623,7 +6623,7 @@
         5
       ],
       "relayCommonTerminal": 26,
-      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "contactConfigurationStatus": "resolved_for_2003910_021_by_2003910_revE_jumpers",
       "exactProductionTimingStatus": "unresolved"
     },
     {
@@ -6667,7 +6667,7 @@
         5
       ],
       "relayCommonTerminal": 26,
-      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "contactConfigurationStatus": "resolved_for_2003910_021_by_2003910_revE_jumpers",
       "exactProductionTimingStatus": "unresolved"
     },
     {
@@ -6711,7 +6711,7 @@
         5
       ],
       "relayCommonTerminal": 26,
-      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "contactConfigurationStatus": "resolved_for_2003910_021_by_2003910_revE_jumpers",
       "exactProductionTimingStatus": "unresolved"
     },
     {
@@ -6755,7 +6755,7 @@
         5
       ],
       "relayCommonTerminal": 26,
-      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "contactConfigurationStatus": "resolved_for_2003910_021_by_2003910_revE_jumpers",
       "exactProductionTimingStatus": "unresolved"
     },
     {
@@ -6799,7 +6799,7 @@
         5
       ],
       "relayCommonTerminal": 26,
-      "contactConfigurationStatus": "design_basis_2005973_preferred_but_2005940A_conflict_preserved",
+      "contactConfigurationStatus": "resolved_for_2003910_021_by_2003910_revE_jumpers",
       "exactProductionTimingStatus": "unresolved"
     },
     {
