@@ -1,0 +1,39 @@
+name: PS2003952 page recovery
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch indexed Box 459 requirement cards
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          base="https://archive.org/download/apertureCardBox459NARASW_images/page"
+          scans="475 476 477 478 479 480 481 482 483 484"
+          for n in $scans; do
+            url="$base/n${n}.jpg"
+            echo "Fetching $url"
+            curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 180 \
+              "$url" -o "out/n${n}.jpg"
+            file "out/n${n}.jpg"
+          done
+          curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 180 \
+            "https://archive.org/metadata/apertureCardBox459NARASW_images" \
+            -o out/archive-metadata.json
+          sha256sum out/* > out/SHA256SUMS.txt
+          ls -lh out
+      - name: Upload recovered scans
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps2003952-box459-pages-16-27
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
