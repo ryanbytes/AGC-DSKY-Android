@@ -11,25 +11,59 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch exact Box 459 JP2 leaves
+      - name: Fetch Box 466 PS 2003952 reissue source
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p out
-          base="https://iiif.archive.org/image/iiif/2/apertureCardBox459NARASW_images%2FapertureCardBox459NARASW_jp2.zip%2FapertureCardBox459NARASW_jp2%2FapertureCardBox459NARASW"
-          for n in 0475 0476 0477; do
-            url="${base}_${n}.jp2/full/3000,/0/default.jpg"
+          mkdir -p out/leaves
+          id="apertureCardBox466Part1NARASW_images"
+          stem="apertureCardBox466Part1NARASW"
+          base="https://archive.org/download/$id"
+          for file in \
+            "${stem}_djvu.txt" \
+            "${stem}_djvu.xml" \
+            "${stem}_scandata.xml"; do
+            echo "Fetching $file"
+            curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 600 \
+              "$base/$file" -o "out/$file"
+          done
+          curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 180 \
+            "https://archive.org/metadata/$id" -o out/archive-metadata.json
+
+          iiif="https://iiif.archive.org/image/iiif/2/${id}%2F${stem}_jp2.zip%2F${stem}_jp2%2F${stem}"
+          for n in 0188 0189 0190 0191 0192 0193 0194 0195 0196; do
+            url="${iiif}_${n}.jp2/full/3000,/0/default.jpg"
             echo "Fetching $url"
             curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 300 \
-              "$url" -o "out/${n}.jpg"
-            file "out/${n}.jpg"
+              "$url" -o "out/leaves/${n}.jpg"
           done
-          sha256sum out/* > out/SHA256SUMS.txt
-          ls -lh out
-      - name: Upload exact leaves
+
+          python - <<'PY'
+          import pathlib, re
+          p=pathlib.Path("out/apertureCardBox466Part1NARASW_djvu.txt")
+          text=p.read_text(errors="replace")
+          pats={
+            "requirements": re.compile(r"3\s*[\.,]\s*1\s*[\.,]\s*(?:18|19|20|21|22|23)",re.I),
+            "relay_terms": re.compile(r"relay.{0,100}(?:contact|closure|operate|release|transfer|bounce|msec|millisecond)|(?:operate|release|transfer|bounce|msec|millisecond).{0,100}relay",re.I|re.S),
+            "document_ids": re.compile(r"2016009|2003952",re.I),
+          }
+          out=[]
+          for name,rx in pats.items():
+            out.append(f"===== {name} =====")
+            for j,m in enumerate(rx.finditer(text),1):
+              s=max(0,m.start()-900); e=min(len(text),m.end()+2200)
+              out.append(f"--- match {j} offset {m.start()} ---\n{text[s:e]}")
+              if j>=120:
+                out.append("[truncated at 120 matches]")
+                break
+          pathlib.Path("out/targeted-OCR-contexts.txt").write_text("\n".join(out))
+          PY
+          sha256sum out/* out/leaves/* > out/SHA256SUMS.txt
+          ls -lh out out/leaves
+      - name: Upload Box 466 recovery
         uses: actions/upload-artifact@v4
         with:
-          name: ps2003952-exact-leaves-0475-0477
+          name: ps2003952-box466-reissue-pages-6-14
           path: out/
           if-no-files-found: error
           retention-days: 7
