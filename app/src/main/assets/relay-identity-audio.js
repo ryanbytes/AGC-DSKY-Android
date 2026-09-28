@@ -143,6 +143,17 @@
   function nativeHapticBridge(){
     try{const candidate=window.HapticBridge;if(!candidate||typeof candidate.relayImpact!=='function')return null;if(typeof candidate.available==='function'&&!candidate.available())return null;return candidate}catch(_){return null}
   }
+  function browserHapticFallbackAllowed(){
+    try{
+      // Android WebView owns relay haptics through the native bridge. Never fall
+      // through to the browser vibrator there: Chromium rejects pre-gesture calls
+      // and promotes the policy warning into the local debug report.
+      if(typeof window!=='undefined'&&window.HapticBridge)return false;
+      if(typeof navigator==='undefined'||typeof navigator.vibrate!=='function')return false;
+      const activation=navigator.userActivation;
+      return !!(activation&&activation.hasBeenActive);
+    }catch(_){return false}
+  }
   function playWaveform(waveform,fallbackSignature){
     if(!identityState.relayHaptics)return false;
     const native=nativeHapticBridge();
@@ -150,7 +161,7 @@
       try{return native.relayWaveform(waveform.timings.join(','),waveform.amplitudes.join(','))!==false}catch(_){}
     }
     if(native&&fallbackSignature){try{return native.relayImpact(fallbackSignature.durationMs,fallbackSignature.amplitude)!==false}catch(_){}}
-    try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function'&&waveform.timings.length)return navigator.vibrate(browserPatternFromWaveform(waveform))!==false}catch(_){}
+    try{if(browserHapticFallbackAllowed()&&waveform.timings.length)return navigator.vibrate(browserPatternFromWaveform(waveform))!==false}catch(_){}
     return false;
   }
   function playHapticProfile(p,engaging){
@@ -178,7 +189,7 @@
     if(!signature)return false;
     const native=nativeHapticBridge();
     if(native){try{return native.relayImpact(signature.durationMs,signature.amplitude)!==false}catch(_){}}
-    try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')return navigator.vibrate(signature.durationMs)!==false}catch(_){}
+    try{if(browserHapticFallbackAllowed())return navigator.vibrate(signature.durationMs)!==false}catch(_){}
     return false;
   }
   function playRelayBankHaptic(events){

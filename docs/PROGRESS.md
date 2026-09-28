@@ -524,3 +524,14 @@ Verification performed in this environment:
 - [ ] iPhone/iPad/macOS native print flow has been exercised on-device.
 
 The File Store contains Android SDK/build-tools/signing material used for test-package work, but there is still no complete current recursive checkout plus offline Android Gradle Plugin 9.3.0 cache in the execution container. Do not call this a canonical source build until `bash tools/build-local.sh` succeeds from the exact branch HEAD.
+
+
+## 2026-09-28 RLY-01 owner rejection and Android 17 vibration-policy repair
+
+Physical Pixel 9a test of the PR #163 candidate produced repeated Chromium/WebView console reports that navigator.vibrate() was blocked before the first user gesture. The owner also explicitly rejected the relay-panel UI.
+
+This revision removes the relay panel completely from the runtime DOM, CSS, JavaScript, and canonical smoke suite; restores the explicit relay-rack-absence regression gate; retains the verified 132-package physical relay model internally for contact/audio/haptic behavior only; keeps relay sound/haptic coupling source-bounded; prevents Android WebView from falling through to navigator.vibrate() whenever the native HapticBridge object is present; and permits browser/PWA navigator.vibrate() fallback only after navigator.userActivation.hasBeenActive is true.
+
+Observed device evidence: Pixel 9a, Android 17 / SDK 37, WebView 153.0.8010.36 repeatedly reported the pre-gesture vibration-policy rejection from relay-identity-audio.js. The prior panel candidate is rejected and superseded.
+
+RLY-01 remains IN PROGRESS until a rebuilt exact-source release-signed APK is installed and the owner confirms: no relay panel, no startup vibration-policy debug spam, and relay haptics still work after interaction.

@@ -53,7 +53,7 @@ relay-code-map-smoke.js
 physical-relay-audit-smoke.js
 relay-spec-fidelity-smoke.js
 relay-haptic-smoke.js
-relay-panel-smoke.js
+relay-rack-absence-smoke.js
 relay-stretch-stability-smoke.js
 
 dream-mode-smoke.js
