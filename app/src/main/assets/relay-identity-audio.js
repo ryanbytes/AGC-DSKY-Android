@@ -28,10 +28,12 @@
   // separate from the relay-unit presentation reference.
   const CONTACT_GUARD_MS = 0;
   const MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
-  // NASA/MIT SCD 1006282 (predecessor magnetic-latching relay): operate/release
-  // <=3 ms, transfer <=1 ms, contact bounce <=2 ms. Later production DSKY BOMs
-  // use 2004688; its readable SCD has not been recovered, so 3 ms is retained
-  // only as a conservative predecessor-spec presentation reference.
+  // NASA/MIT SCD 1006282 is revision-sensitive. Initial release specifies
+  // operate/release <=3 ms at the suggested source voltage, transfer <=1 ms,
+  // bounce <=2 ms; Rev C later permits operate <=10 ms under all Table I
+  // conditions and includes dash -2. Production 2004688 timing is unrecovered.
+  // Keep 3 ms only as the existing initial-release presentation reference; it
+  // is not a conservative family-wide upper bound or a production measurement.
   const LATCHING_PRESENTATION_REFERENCE_MS = 3;
   // NASA/MIT SCD 1010784 (predecessor general-purpose relay): operate/release
   // <=5 ms and contact bounce <=2 ms. Production DSKYs use 2004689; 5 ms is a
@@ -60,7 +62,7 @@
     const travelMs=auxiliary?NON_LATCHING_PRESENTATION_REFERENCE_MS:LATCHING_PRESENTATION_REFERENCE_MS;
     const timingBasis=auxiliary
       ?'predecessor-1010784-upper-bound-reference; production-2004689-exact-timing-unresolved'
-      :'predecessor-1006282-upper-bound-reference; production-2004688-exact-timing-unresolved';
+      :'predecessor-1006282-initial-release-reference; rev-c-10ms-dash-2; production-2004688-exact-timing-unresolved';
     // Do not fabricate bounce timing or pole-to-pole skew. The predecessor SCDs
     // specify maxima but do not provide an individual unit trace, and the later
     // production relay SCDs are not presently readable in the recovered archive.
