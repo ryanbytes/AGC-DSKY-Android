@@ -12,7 +12,7 @@ Verified/retained:
 - Block II DSKY physical population remains 132 relay packages: 120 latching + 12 non-latching.
 - Each D1-D6 relay-circuit assembly 2003910-021 contains 20 x 2004688-1/-2 and 2 x 2004689-2.
 - Exact production 2004688/2004689 unit timing remains unrecovered; the app must not invent per-package travel, bounce, pole skew, or acoustic manufacturing fingerprints.
-- The 3 ms / 5 ms values remain explicitly predecessor-SCD presentation bounds only.
+- The 3 ms / 5 ms runtime values remain presentation references only. The latching 3 ms value comes from initial-release SCD 1006282; later 1006282 Rev C permits <=10 ms and includes dash -2, so 3 ms is not a conservative family-wide upper bound. Exact 2004688/2004689 production timing remains unknown.
 - The complete production design-basis logical/function -> D1-D6/K1-K22 package crosswalk is now source-joined: 120/120 latching identities through 2005918 + 2005954A + 2005973, and 12/12 non-latching function drives through 2005954A + 2005973. 2003910 Rev E resolves the K22 switched-contact topology for the 2003910-021 / 2003952-031 configuration; exact production relay mechanical timing remains explicitly unresolved.
 
 K22 provenance was tightened after checking the actual Virtual AGC schematic sources:
