@@ -1,0 +1,72 @@
+name: Audit NARA Box 459 relay drawings
+on:
+  push:
+    branches:
+      - audit/relay-box459-20260928
+
+jobs:
+  search-box459:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Fetch and search Box 459 index
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p box459-audit/candidates
+          cd box459-audit
+          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0'             -o AgcDrawingIndexBox459.html             'https://www.ibiblio.org/apollo/AgcDrawingIndexBox459.html'
+          sha256sum AgcDrawingIndexBox459.html > SHA256SUMS.txt
+          grep -niE '2004688|2004689|1006282|1010784|2003952' AgcDrawingIndexBox459.html             > exact-matches.txt || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import html, re
+          from urllib.parse import urljoin
+          data=Path("AgcDrawingIndexBox459.html").read_text(errors="replace")
+          base="https://www.ibiblio.org/apollo/AgcDrawingIndexBox459.html"
+          targets=["2004688","2004689","1006282","1010784","2003952"]
+          out=[]
+          urls=[]
+          for target in targets:
+              for m in re.finditer(re.escape(target), data, re.I):
+                  a=max(0,m.start()-1800); b=min(len(data),m.end()+1800)
+                  ctx=data[a:b]
+                  hrefs=re.findall(r'href=["\']([^"\']+)["\']',ctx,re.I)
+                  resolved=[urljoin(base,html.unescape(h)) for h in hrefs]
+                  out.append(f"===== {target} @ byte {m.start()} =====\n{ctx}\nLINKS:\n" + "\n".join(resolved))
+                  urls.extend(resolved)
+          Path("match-context.txt").write_text("\n\n".join(out))
+          seen=[]
+          for u in urls:
+              if u not in seen: seen.append(u)
+          Path("candidate-urls.txt").write_text("\n".join(seen)+("\n" if seen else ""))
+          print("matches",len(out),"candidate_urls",len(seen))
+          PY
+          while IFS= read -r url; do
+            [ -n "$url" ] || continue
+            case "$url" in
+              http://*|https://*) ;;
+              *) continue ;;
+            esac
+            name="$(printf '%s' "$url" | sed 's/[?#].*$//' | awk -F/ '{print $NF}')"
+            [ -n "$name" ] || continue
+            curl -fL --retry 3 --retry-all-errors -A 'Mozilla/5.0'               -o "candidates/$name" "$url" || true
+          done < candidate-urls.txt
+          find candidates -type f -maxdepth 1 -print0 | xargs -0 -r sha256sum >> SHA256SUMS.txt
+          {
+            echo "Source: https://www.ibiblio.org/apollo/AgcDrawingIndexBox459.html"
+            echo "Fetched: $(date -u +%FT%TZ)"
+            echo
+            echo "Exact target strings:"
+            wc -l exact-matches.txt
+            echo
+            cat exact-matches.txt
+          } > AUDIT.txt
+          ls -lhR
+      - name: Upload Box 459 audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: Apollo-NARA-Box459-relay-audit-2026-09-28
+          path: box459-audit/
+          if-no-files-found: error
+          compression-level: 0
