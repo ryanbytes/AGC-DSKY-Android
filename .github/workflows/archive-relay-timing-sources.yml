@@ -1,0 +1,44 @@
+name: Relay timing source archive bridge
+
+on:
+  push:
+    branches:
+      - archive/relay-timing-sources-20260927
+    paths:
+      - .github/workflows/archive-relay-timing-sources.yml
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch source documents
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          curl -L --fail --retry 4 --retry-all-errors -o evidence/HSI-208478.pdf \
+            https://www.ibiblio.org/apollo/Documents/HSI-208478.pdf
+          curl -L --fail --retry 4 --retry-all-errors -o evidence/hardware_difference_ecps_2.pdf \
+            https://www.ibiblio.org/apollo/Documents/hardware_difference_ecps_2.pdf
+          curl -L --fail --retry 4 --retry-all-errors -o evidence/AgcApertureCardsBatchStewart_djvu.txt \
+            https://archive.org/download/AgcApertureCardsBatchStewart/AgcApertureCardsBatchStewart_djvu.txt
+          curl -L --fail --retry 4 --retry-all-errors -o evidence/AgcDrawingIndex.html \
+            https://www.ibiblio.org/apollo/AgcDrawingIndex.html
+          {
+            echo "Acquired 2026-09-27"
+            echo "HSI-208478.pdf: https://www.ibiblio.org/apollo/Documents/HSI-208478.pdf"
+            echo "hardware_difference_ecps_2.pdf: https://www.ibiblio.org/apollo/Documents/hardware_difference_ecps_2.pdf"
+            echo "AgcApertureCardsBatchStewart_djvu.txt: https://archive.org/download/AgcApertureCardsBatchStewart/AgcApertureCardsBatchStewart_djvu.txt"
+            echo "AgcDrawingIndex.html: https://www.ibiblio.org/apollo/AgcDrawingIndex.html"
+          } > evidence/ACQUISITION.txt
+          file evidence/* > evidence/FILETYPES.txt
+          sha256sum evidence/* | sort > evidence/SHA256SUMS.txt
+          test "$(head -c 4 evidence/HSI-208478.pdf)" = "%PDF"
+          test "$(head -c 4 evidence/hardware_difference_ecps_2.pdf)" = "%PDF"
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: relay-timing-sources-2026-09-27
+          path: evidence/
+          if-no-files-found: error
+          compression-level: 6
