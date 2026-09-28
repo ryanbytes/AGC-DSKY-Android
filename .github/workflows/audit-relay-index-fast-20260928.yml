@@ -1,0 +1,42 @@
+name: Fast Apollo relay index sweep
+on:
+  push:
+    branches:
+      - audit/relay-index-fast-20260928
+
+jobs:
+  fast-sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Parallel search likely Apollo drawing boxes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p sweep/indexes
+          cd sweep
+          seq 450 480 | xargs -P16 -I{} bash -c '
+            n={}
+            url="https://www.ibiblio.org/apollo/AgcDrawingIndexBox${n}.html"
+            curl -fsL --connect-timeout 5 --max-time 20 -A "Mozilla/5.0" -o "indexes/box${n}.html" "$url" || rm -f "indexes/box${n}.html"
+          '
+          : > matches.txt
+          : > fetched-boxes.txt
+          for f in indexes/box*.html; do
+            [ -e "$f" ] || continue
+            n="${f##*box}"; n="${n%.html}"
+            echo "$n" >> fetched-boxes.txt
+            grep -niE '2004688|2004689|PS[[:space:]]*2003952|>2003952<' "$f" | sed "s#^#BOX ${n}: #" >> matches.txt || true
+          done
+          sort -n fetched-boxes.txt -o fetched-boxes.txt
+          cat fetched-boxes.txt
+          echo "=== MATCHES ==="
+          cat matches.txt
+          sha256sum indexes/*.html > INDEX-SHA256SUMS.txt
+      - name: Upload fast sweep
+        uses: actions/upload-artifact@v4
+        with:
+          name: Apollo-relay-index-fast-sweep-2026-09-28
+          path: sweep/
+          if-no-files-found: error
+          compression-level: 0
