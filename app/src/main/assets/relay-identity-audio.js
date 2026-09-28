@@ -6,9 +6,10 @@
  * Surviving production documentation proves the physical relay population but
  * does not provide measured unit-by-unit timing for 2004688/2004689. Therefore
  * this service must not invent per-relay mechanical travel, bounce, pole skew,
- * or "manufacturing fingerprints". The contact timing below is an explicitly
- * documented predecessor-spec upper-bound reference, not a measured production
- * 2004688/2004689 calibration.
+ * or "manufacturing fingerprints". The contact timing below uses explicitly
+ * documented predecessor presentation references. The latching 3-ms value is
+ * from initial-release 1006282; later Rev C permits 10 ms and includes dash -2.
+ * Neither reference is a measured production 2004688/2004689 calibration.
  */
 (() => {
   const audio=window.AGCDSKY_AUDIO;
