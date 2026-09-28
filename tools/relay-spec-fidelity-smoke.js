@@ -33,6 +33,8 @@ req(String(inventory.scope.missionConfigurationProvenance||''),'6014999-091','Ap
 req(String(inventory.scope.missionConfigurationProvenance||''),'serial 609','Apollo 11 LM G&N serial provenance');
 req(String(inventory.scope.missionConfigurationProvenance||''),'2003994-091','Apollo 11 LM DSKY assembly provenance');
 req(String(inventory.scope.missionConfigurationProvenance||''),'2003910-021','Apollo 11 LM relay-circuit provenance');
+if(inventory.scope.apollo11LmDskySerial!==54)fail('Apollo 11 LM DSKY chassis serial provenance missing');
+req(String(inventory.scope.apollo11LmDskySerialProvenance||''),'2003994-091 S/N 54','Apollo 11 LM final DSKY serial/configuration provenance');
 no(JSON.stringify(inventory.scope),'Dn:K22 functional crosswalk remain unverified','stale inventory K22 drive-mapping claim');
 no(topology,'function-to-package assignment remains deliberately unresolved','stale runtime-topology auxiliary mapping claim');
 no(physicalAudit,'do not yet establish a complete one-to-one crosswalk','stale physical-audit crosswalk claim');
@@ -52,6 +54,8 @@ if(crosswalk.validation.uniqueNonLatchingFunctions!==12)fail('crosswalk does not
 if(crosswalk.provenance.apollo11LmConfiguration?.gnSystem!=='6014999-091')fail('Apollo 11 LM G&N assembly provenance missing');
 if(crosswalk.provenance.apollo11LmConfiguration?.gnSystemSerial!==609)fail('Apollo 11 LM G&N serial provenance missing');
 if(crosswalk.provenance.apollo11LmConfiguration?.dskyAssembly!=='2003994-091')fail('Apollo 11 LM DSKY provenance missing');
+if(crosswalk.provenance.apollo11LmConfiguration?.dskySerial!==54)fail('Apollo 11 LM DSKY S/N 54 provenance missing');
+req(String(crosswalk.provenance.apollo11LmConfiguration?.dskySerialChronology||''),'2003994-021 S/N 54 -> 2003994-051 S/N 54 -> 2003994-091 S/N 54','Apollo 11 LM DSKY serial chronology');
 if(crosswalk.provenance.apollo11LmConfiguration?.indicatorDriverAssembly!=='2003952-031'||crosswalk.provenance.apollo11LmConfiguration?.indicatorDriverQuantity!==6)fail('Apollo 11 LM indicator-driver provenance missing');
 if(crosswalk.provenance.apollo11LmConfiguration?.relayCircuitAssembly!=='2003910-021')fail('Apollo 11 LM relay-circuit provenance missing');
 let crosswalkCount=0;
@@ -181,7 +185,10 @@ req(evidence,'2003910-021 / 2003952-031 configuration','K22 configuration bounda
 req(evidence,'6014999-091','Apollo 11 LM G&N system evidence');
 req(evidence,'serial **609**','Apollo 11 LM G&N serial evidence');
 req(evidence,'2003994-091','Apollo 11 LM DSKY evidence');
-req(evidence,'individual engraved/physical DSKY chassis serial','DSKY chassis-serial boundary evidence');
+req(evidence,'2003994-021 S/N 54','Apollo 11 LM original DSKY serial evidence');
+req(evidence,'2003994-091 S/N 54','Apollo 11 LM final DSKY serial evidence');
+req(evidence,'DSKY **S/N 54**','Apollo 11 LM chassis identity evidence');
+no(evidence,'chassis serial remains unidentified','stale unresolved DSKY chassis claim');
 no(evidence,'Serial-number-specific provenance is still required before claiming that an','stale broad serial-provenance claim');
 no(progress,'recovered serial-number-specific provenance tying an arbitrary flown unit','stale broad serial-provenance checklist item');
 req(evidence,'No pseudo-random per-relay operate/release time.','anti-fabrication rule');
@@ -201,4 +208,4 @@ no(evidence,'remaining dispute is K22 switched-contact wiring','stale K22 confli
 no(progress,'The K22 switched-contact conflict and exact production relay timing remain explicitly unresolved.','stale progress K22 conflict claim');
 
 console.log('relay specification fidelity smoke: PASS');
-console.log('  132 production packages + 120/12 split + 12 logical holes retained; all 120 latching and all 12 non-latching function identities source-map one-to-one to D1-D6 package slots; 2003910 Rev E resolves K22 contact topology for 2003910-021/2003952-031; Apollo 11 LM mission/G&N provenance reaches that hierarchy; individual DSKY chassis serial and exact production relay timing remain unknown');
+console.log('  132 production packages + 120/12 split + 12 logical holes retained; all 120 latching and all 12 non-latching function identities source-map one-to-one to D1-D6 package slots; 2003910 Rev E resolves K22 contact topology for 2003910-021/2003952-031; Apollo 11 LM G&N system 609 and DSKY S/N 54 reach that hierarchy; exact production relay timing remains unknown');
