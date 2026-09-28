@@ -24,11 +24,14 @@
 
   const LATCHING_RELAY_COUNT = topology.latchingRelayCount;
   const PHYSICAL_RELAY_COUNT = topology.physicalRelayCount;
+  // DRIVE_ENVELOPE_MS is the established runtime/API label. The evidence now
+  // bounds it specifically as a software row-command hold, not relay settle time.
+  const DRIVE_ENVELOPE_MS = 20;
   const SOFTWARE_ROW_HOLD_MS = 20;
   // Keep the software row-hold boundary separate from the relay-unit
   // presentation reference. PS 2016009 specifies driver pulse width separately.
   const CONTACT_GUARD_MS = 0;
-  const MAX_CONTACT_STABLE_MS = SOFTWARE_ROW_HOLD_MS - CONTACT_GUARD_MS;
+  const MAX_CONTACT_STABLE_MS = DRIVE_ENVELOPE_MS - CONTACT_GUARD_MS;
   // NASA/MIT SCD 1006282 (predecessor magnetic-latching relay): operate/release
   // <=3 ms, transfer <=1 ms, contact bounce <=2 ms. Later production DSKY BOMs
   // use 2004688; its readable SCD has not been recovered, so 3 ms is retained
@@ -260,7 +263,7 @@
   });
 
   window.DSKY_RELAY_AUDIO=Object.freeze({
-    latchingRelayCount:LATCHING_RELAY_COUNT,auxiliaryRelayCount:AUX_ORDER.length,totalIndividualRelays:LATCHING_RELAY_COUNT+AUX_ORDER.length,driveEnvelopeMs:SOFTWARE_ROW_HOLD_MS,softwareRowHoldMs:SOFTWARE_ROW_HOLD_MS,maxContactStableMs:MAX_CONTACT_STABLE_MS,relayIdentity,
+    latchingRelayCount:LATCHING_RELAY_COUNT,auxiliaryRelayCount:AUX_ORDER.length,totalIndividualRelays:LATCHING_RELAY_COUNT+AUX_ORDER.length,driveEnvelopeMs:DRIVE_ENVELOPE_MS,softwareRowHoldMs:SOFTWARE_ROW_HOLD_MS,maxContactStableMs:MAX_CONTACT_STABLE_MS,relayIdentity,
     settleMsFor:(row,bit)=>{const p=relayProfile(row,bit);return p?Math.max(p.setStableMs,p.resetStableMs):null},
     profileFor:(row,bit)=>relayProfile(row,bit),
     contactTraceFor:(row,bit,engaging)=>{const p=relayProfile(row,bit);return p?contactTraceFromProfile(p,!!engaging):[]},
