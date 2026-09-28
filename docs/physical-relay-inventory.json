@@ -22,14 +22,14 @@
       ],
       "coveredIdentities": 132
     },
-    "packageSlotWiringConflict": "K22 switched-contact wiring differs between surviving 2005973- and 2005940A evidence. Original 2005973- is the best-supported production design basis, but a particular flown serial-number K22 contact configuration remains unverified. This conflict does not affect the proven D1-D6/K22 function-to-package drive mapping because both candidate schematics agree on the drive path.",
+    "packageSlotWiringConflict": "Historical 2005973-vs-2005940A K22 switched-contact discrepancy is resolved for the 2003910-021 / 2003952-031 configuration by 2003910 Rev E assembly jumpers K22-8->4, K22-7->3, and K22-6->2. Applying those jumpers to 2005940A yields the 2005973 connectivity exactly. Serial-number-specific provenance remains separate.",
     "productionRelayTimingStatus": "exact 2004688/2004689 unit timing specifications not recovered; model uses clearly labeled predecessor-spec upper-bound presentation references and invents no per-package timing variation",
     "logicalRelayWordRows": 12,
     "logicalRelayWordBankCodesOctal": "01 through 14 (octal), corresponding to decimal row ordinals 1 through 12",
     "bank00Status": "documented in 1965 AGC Information Series 13-bank description but not emitted by Apollo 11 Comanche055 RELTAB; excluded from flight-configuration runtime mapping",
     "configurationEvidenceStatus": "Apollo 11 flight mapping follows R-700 12-row description plus Comanche055 RELTAB codes 1..12; 1965 13-bank statement retained as historical/document discrepancy",
     "latchingPackageSlotCrosswalkStatus": "resolved: 120/120 source-joined, zero ambiguous, 12 logical holes preserved",
-    "nonLatchingPackageSlotCrosswalkStatus": "resolved: 12/12 production design-basis K21/K22 function-drive assignments source-joined; K22 switched-contact/as-flown uncertainty preserved",
+    "nonLatchingPackageSlotCrosswalkStatus": "resolved: 12/12 production design-basis K21/K22 function-drive assignments source-joined; K22 contact topology resolved for 2003910-021 / 2003952-031 by 2003910 Rev E; serial-number-specific provenance remains separate",
     "logicalPhysicalCrosswalkEvidence": "docs/relay-logical-physical-crosswalk-2005918.json"
   },
   "evidence": [
@@ -63,7 +63,7 @@
     },
     {
       "document": "Production DSKY documentation and drawings 2005973 / 2005940",
-      "claim": "2003910-021 and the DSKY 2003994 system-manual table call 2005973; parent 2003952-031 calls 2005940 and the manual figure carries the older K22 wiring. The surviving original 2005973- is the best-supported production design basis; 2005973r is only a reconstruction. Exact as-flown K22 wiring remains unverified without unit-specific as-built or acceptance evidence."
+      "claim": "2003910 Rev E explicitly instructs the -021 assembly to install jumpers K22-8 to K22-4, K22-7 to K22-3, and K22-6 to K22-2. Those jumpers reconcile the parent 2005940A pinout with the 2005973 K22 connectivity exactly, proving the 2005973 topology for 2003910-021 / 2003952-031. Serial-number-specific provenance remains separate."
     },
     {
       "document": "Apollo 11 Comanche055 T4RUPT_PROGRAM.agc RELTAB",
@@ -3191,7 +3191,7 @@
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
       "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
       "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
-      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
+      "contactTopologyStatus": "drive mapping proven; K22 contact topology resolved for 2003910-021 by 2003910 Rev E jumpers to 2005973 topology"
     },
     {
       "ordinal": 122,
@@ -3278,7 +3278,7 @@
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
       "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
       "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
-      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
+      "contactTopologyStatus": "drive mapping proven; K22 contact topology resolved for 2003910-021 by 2003910 Rev E jumpers to 2005973 topology"
     },
     {
       "ordinal": 125,
@@ -3307,7 +3307,7 @@
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
       "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
       "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
-      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
+      "contactTopologyStatus": "drive mapping proven; K22 contact topology resolved for 2003910-021 by 2003910 Rev E jumpers to 2005973 topology"
     },
     {
       "ordinal": 126,
@@ -3336,7 +3336,7 @@
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
       "runtimeChannelStatus": "historical/runtime command source as documented by the applicable AGC/DSKY interface mapping",
       "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
-      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
+      "contactTopologyStatus": "drive mapping proven; K22 contact topology resolved for 2003910-021 by 2003910 Rev E jumpers to 2005973 topology"
     },
     {
       "ordinal": 127,
@@ -3365,7 +3365,7 @@
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
       "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
       "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
-      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
+      "contactTopologyStatus": "drive mapping proven; K22 contact topology resolved for 2003910-021 by 2003910 Rev E jumpers to 2005973 topology"
     },
     {
       "ordinal": 128,
@@ -3423,7 +3423,7 @@
       "timingBasis": "source-bounded proxy: predecessor specification maximum, explicitly not a measured 2004689 unit time",
       "runtimeChannelStatus": "yaAGC fictitious effective-hardware-state channel; not a historical Apollo AGC output channel",
       "driveCrosswalkEvidence": "docs/relay-package-functional-crosswalk-2005954A-2005973.json",
-      "contactTopologyStatus": "drive mapping proven; K22 switched-contact 2005973-vs-2005940A conflict preserved"
+      "contactTopologyStatus": "drive mapping proven; K22 contact topology resolved for 2003910-021 by 2003910 Rev E jumpers to 2005973 topology"
     },
     {
       "ordinal": 130,
