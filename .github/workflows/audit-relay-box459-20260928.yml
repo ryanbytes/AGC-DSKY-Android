@@ -7,13 +7,13 @@ on:
 jobs:
   search-box459:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Fetch and search Box 459 index
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p box459-audit/candidates
+          mkdir -p box459-audit/candidates box459-audit/ps2003952
           cd box459-audit
           curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0'             -o AgcDrawingIndexBox459.html             'https://www.ibiblio.org/apollo/AgcDrawingIndexBox459.html'
           sha256sum AgcDrawingIndexBox459.html > SHA256SUMS.txt
@@ -52,21 +52,63 @@ jobs:
             [ -n "$name" ] || continue
             curl -fL --retry 3 --retry-all-errors -A 'Mozilla/5.0'               -o "candidates/$name" "$url" || true
           done < candidate-urls.txt
-          find candidates -type f -maxdepth 1 -print0 | xargs -0 -r sha256sum >> SHA256SUMS.txt
+
+          curl -fL --retry 4 --retry-all-errors -A 'Mozilla/5.0'             -o archive-metadata.json             'https://archive.org/metadata/apertureCardBox459NARASW_images'
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, urllib.parse, urllib.request
+          meta=json.loads(Path("archive-metadata.json").read_text())
+          files=meta.get("files",[])
+          matches=[]
+          for f in files:
+              name=f.get("name","")
+              if "2003952" in name:
+                  matches.append({
+                      "name":name,
+                      "size":f.get("size"),
+                      "format":f.get("format"),
+                      "source":f.get("source"),
+                      "md5":f.get("md5"),
+                      "sha1":f.get("sha1"),
+                  })
+          Path("archive-2003952-files.json").write_text(json.dumps(matches,indent=2))
+          Path("archive-2003952-files.txt").write_text("\n".join(x["name"] for x in matches)+"\n")
+          base="https://archive.org/download/apertureCardBox459NARASW_images/"
+          outdir=Path("ps2003952")
+          outdir.mkdir(exist_ok=True)
+          for item in matches:
+              name=item["name"]
+              url=base+urllib.parse.quote(name,safe="/")
+              dest=outdir/Path(name).name
+              req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0"})
+              try:
+                  with urllib.request.urlopen(req,timeout=120) as resp:
+                      dest.write_bytes(resp.read())
+                  print("downloaded",name,dest.stat().st_size)
+              except Exception as e:
+                  print("FAILED",name,repr(e))
+          PY
+
+          sha256sum archive-metadata.json >> SHA256SUMS.txt
+          find candidates ps2003952 -type f -maxdepth 1 -print0 | xargs -0 -r sha256sum >> SHA256SUMS.txt
           {
             echo "Source: https://www.ibiblio.org/apollo/AgcDrawingIndexBox459.html"
+            echo "Archive metadata: https://archive.org/metadata/apertureCardBox459NARASW_images"
             echo "Fetched: $(date -u +%FT%TZ)"
             echo
             echo "Exact target strings:"
             wc -l exact-matches.txt
             echo
             cat exact-matches.txt
+            echo
+            echo "Archive files whose names contain 2003952:"
+            cat archive-2003952-files.txt
           } > AUDIT.txt
           ls -lhR
       - name: Upload Box 459 audit evidence
         uses: actions/upload-artifact@v4
         with:
-          name: Apollo-NARA-Box459-relay-audit-2026-09-28
+          name: Apollo-NARA-Box459-relay-audit-2026-09-28-r2
           path: box459-audit/
           if-no-files-found: error
           compression-level: 0
