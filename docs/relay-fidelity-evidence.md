@@ -48,17 +48,23 @@ proof that the SCD never existed. Repeating the same indexed-source search must
 not be treated as new timing evidence unless a new scan/catalog record is
 found.
 
-The readable predecessor magnetic-latching relay SCD 1006282 specifies:
+The predecessor magnetic-latching SCD **1006282 is revision-sensitive**.
+The initial-release drawing 1006282- specifies:
 
-- operate time: <= 3 ms
-- release time: <= 3 ms
+- operate/release time: <= 3 ms at the suggested source voltage of Table I
 - transfer time: <= 1 ms
 - contact bounce: <= 2 ms
-- contact chatter under vibration/shock: <= 10 microseconds
 
 Source: https://www.ibiblio.org/apollo/SCDs/scd_1006282-.pdf
 
-The readable predecessor general-purpose relay SCD 1010784 specifies:
+Later **revision C** changes the operate requirement to **<= 10 ms under all
+conditions specified in Table I** while retaining <= 1 ms transfer and <= 2 ms
+bounce. Revision C Table I explicitly includes dash **-2**, so 3 ms must not be
+described as a generic or conservative upper bound for the predecessor family.
+
+Source: https://www.ibiblio.org/apollo/SCDs/scd_1006282c.pdf
+
+The readable predecessor general-purpose relay SCD 1010784C specifies:
 
 - operate time: <= 5 ms
 - release time: <= 5 ms
@@ -66,9 +72,26 @@ The readable predecessor general-purpose relay SCD 1010784 specifies:
 
 Source: https://www.ibiblio.org/apollo/SCDs/scd_1010784c.pdf
 
-These values are retained only as conservative **predecessor-spec presentation
-references**. They are not relabeled as exact production 2004688/2004689
-measurements.
+The simulation's existing 3 ms latching value is retained only as a
+**presentation reference selected from the initial-release 1006282 requirement**.
+It is not a conservative family-wide upper bound and is not relabeled as an exact
+production 2004688 measurement. The 5 ms non-latching value likewise remains a
+predecessor presentation reference, not an exact 2004689-2 measurement.
+
+The production-number gap is also historically meaningful. MIT/IL R-700 states
+that the relay flight-processing specification covered 1005001 (latching) and
+1005003 (non-latching), and that parts passing flight processing were identified
+with new flight-qualified part numbers before module assembly. HSI-208478 records
+that DSKY relay part numbers were deliberately changed after the early relay
+reliability problems so old relays could not enter flight equipment. ECP 504
+identifies ND 1002341 as the relay FPS for 1005001/1005003. However, no recovered
+primary source yet explicitly crosswalks those identifiers to 2004688/2004689.
+That relationship therefore remains a research lead, not a timing proof.
+
+Sources:
+- https://www.ibiblio.org/apollo/Documents/R-700.pdf
+- https://www.ibiblio.org/apollo/Documents/HSI-208478.pdf
+- https://www.ibiblio.org/apollo/Documents/hardware_difference_ecps_3.pdf
 
 The AGC's roughly 20 ms DSKY relay-drive interval is a separate system-level
 drive/settle allowance. It must not be confused with an individual relay's
