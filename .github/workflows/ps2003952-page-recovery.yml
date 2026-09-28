@@ -11,19 +11,19 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch PS 2016009 Rev A page 4
+      - name: Fetch corrected PS 2016009 Rev A requirement leaf
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p out
-          url="https://iiif.archive.org/image/iiif/2/apertureCardBox466Part1NARASW_images%2FapertureCardBox466Part1NARASW_jp2.zip%2FapertureCardBox466Part1NARASW_jp2%2FapertureCardBox466Part1NARASW_0186.jp2/full/1200,/0/default.jpg"
-          curl --fail --location --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 90 "$url" -o out/0186-page4.jpg
-          file out/0186-page4.jpg
+          url="https://iiif.archive.org/image/iiif/2/apertureCardBox466Part1NARASW_images%2FapertureCardBox466Part1NARASW_jp2.zip%2FapertureCardBox466Part1NARASW_jp2%2FapertureCardBox466Part1NARASW_0187.jp2/full/1800,/0/default.jpg"
+          curl --fail --location --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 120 "$url" -o out/0187-requirements.jpg
+          file out/0187-requirements.jpg
           sha256sum out/* > out/SHA256SUMS.txt
-      - name: Upload page 4
+      - name: Upload corrected leaf
         uses: actions/upload-artifact@v4
         with:
-          name: ps2016009-reva-page4
+          name: ps2016009-reva-relay-requirements-page
           path: out/
           if-no-files-found: error
           retention-days: 7
