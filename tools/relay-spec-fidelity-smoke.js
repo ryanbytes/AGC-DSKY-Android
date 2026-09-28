@@ -122,6 +122,7 @@ for(const m of logicalCrosswalk.mappings){
 
 req(identity,'const LATCHING_PRESENTATION_REFERENCE_MS = 3;','web latching timing reference');
 req(identity,'const NON_LATCHING_PRESENTATION_REFERENCE_MS = 5;','web non-latching timing reference');
+req(identity,'predecessor-1006282-initial-release-reference; rev-c-10ms-dash-2; production-2004688-exact-timing-unresolved','web revision-sensitive latching timing provenance');
 req(identity,'production-2004688-exact-timing-unresolved','web 2004688 uncertainty');
 req(identity,'production-2004689-exact-timing-unresolved','web 2004689 uncertainty');
 req(identity,'setBounceTimesMs:Object.freeze([])','web fabricated bounce suppression');
@@ -176,8 +177,14 @@ for(const r of inventory.nonLatchingRelays){
 if(new Set(inventory.nonLatchingRelays.map(r=>r.packageSlot)).size!==12)fail('documented non-latching package slots are not one-to-one');
 
 if(!/120\s+latching relays and 12 nonlatching relays/.test(evidence))fail('R-700 population evidence missing');
-req(evidence,'operate time: <= 3 ms','1006282 timing evidence');
+req(evidence,'initial-release drawing 1006282- specifies','1006282 initial-release timing provenance');
+req(evidence,'operate/release time: <= 3 ms at the suggested source voltage','1006282 initial-release 3 ms evidence');
+req(evidence,'revision C','1006282 revision-change evidence');
+req(evidence,'<= 10 ms under all','1006282 Rev C 10 ms evidence');
+req(evidence,'includes dash **-2**','1006282 Rev C dash-2 applicability evidence');
 req(evidence,'operate time: <= 5 ms','1010784 timing evidence');
+no(evidence,'conservative **predecessor-spec presentation','stale conservative timing-bound claim');
+no(JSON.stringify(inventory),'predecessor-spec upper-bound presentation reference','stale inventory timing-bound claim');
 req(evidence,'K22-8 to K22-4','2003910 Rev E K22 jumper evidence');
 req(evidence,'K22-7 to K22-3','2003910 Rev E K22 jumper evidence');
 req(evidence,'K22-6 to K22-2','2003910 Rev E K22 jumper evidence');
