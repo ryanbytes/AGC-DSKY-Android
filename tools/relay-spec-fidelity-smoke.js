@@ -69,7 +69,7 @@ for(let d=1;d<=6;d++){
 }
 if(crosswalkCount!==120)fail('crosswalk enumeration did not total 120 packages');
 if(crosswalk.nonLatchingRelays.K21.status!=='functional_drive_mapping_proven')fail('K21 drive mapping is not proven');
-if(crosswalk.nonLatchingRelays.K22.status!=='functional_drive_mapping_proven_contact_conflict_preserved')fail('K22 drive mapping/contact-conflict boundary changed');
+if(crosswalk.nonLatchingRelays.K22.status!=='functional_drive_mapping_proven_contact_topology_resolved_for_2003910_021')fail('K22 drive/contact topology resolution state changed');
 const auxMappings=crosswalk.nonLatchingFunctionalMappings||[];
 if(auxMappings.length!==12)fail('non-latching crosswalk does not contain 12 package mappings');
 if(new Set(auxMappings.map(x=>x.packageSlot)).size!==12)fail('non-latching crosswalk reuses a package slot');
@@ -81,6 +81,8 @@ for(const m of auxMappings){
   if(m.packageSlot.endsWith(':K22')){
     if(m.moduleInputTerminal!==85||m.driverTransistor!=='Q12'||m.moduleReturnTerminal!==87||m.relayDriveTerminal!==4)
       fail('K22 drive path mismatch: '+m.packageSlot);
+    if(m.contactConfigurationStatus!=='resolved_for_2003910_021_by_2003910_revE_jumpers')
+      fail('K22 contact topology is not marked Rev E resolved: '+m.packageSlot);
   }else{
     if(m.moduleInputTerminal!==86||m.driverTransistor!=='Q13'||m.moduleReturnTerminal!==95||m.relayDriveTerminal!==7)
       fail('K21 drive path mismatch: '+m.packageSlot);
@@ -163,7 +165,10 @@ if(new Set(inventory.nonLatchingRelays.map(r=>r.packageSlot)).size!==12)fail('do
 if(!/120\s+latching relays and 12 nonlatching relays/.test(evidence))fail('R-700 population evidence missing');
 req(evidence,'operate time: <= 3 ms','1006282 timing evidence');
 req(evidence,'operate time: <= 5 ms','1010784 timing evidence');
-if(!/K22[\s\S]{0,160}(conflict|disagreement|differ)/i.test(evidence))fail('K22 unresolved evidence missing');
+req(evidence,'K22-8 to K22-4','2003910 Rev E K22 jumper evidence');
+req(evidence,'K22-7 to K22-3','2003910 Rev E K22 jumper evidence');
+req(evidence,'K22-6 to K22-2','2003910 Rev E K22 jumper evidence');
+req(evidence,'2003910-021 / 2003952-031 configuration','K22 configuration boundary evidence');
 req(evidence,'No pseudo-random per-relay operate/release time.','anti-fabrication rule');
 req(evidence,'Comanche055 flight software RELTAB emits relay-word codes 1 through 12','flight row-code evidence');
 req(evidence,'thirteen banks octal 00 through 14','1965 13-bank discrepancy evidence');
@@ -176,7 +181,9 @@ req(evidence,'2004689-2','production non-latching relay dash evidence');
 req(evidence,'positive voltage is applied on pin 1','production non-latching relay drive-pin evidence');
 req(evidence,'D1: K22 FLASH; K21 OPR ERROR.','D1 non-latching function mapping evidence');
 req(evidence,'D6: K22 CUTOFF; K21 CIRCUIT.','D6 non-latching function mapping evidence');
-req(evidence,'remaining dispute is K22 switched-contact wiring','K22 contact-vs-drive boundary evidence');
+req(evidence,'the 2005973 K22 switched-contact topology is proven for','K22 contact-topology resolution evidence');
+no(evidence,'remaining dispute is K22 switched-contact wiring','stale K22 conflict claim');
+no(progress,'The K22 switched-contact conflict and exact production relay timing remain explicitly unresolved.','stale progress K22 conflict claim');
 
 console.log('relay specification fidelity smoke: PASS');
-console.log('  132 production packages + 120/12 split + 12 logical holes retained; all 120 latching and all 12 non-latching function identities source-map one-to-one to D1-D6 package slots; exact production timing and the K22 switched-contact conflict remain bounded');
+console.log('  132 production packages + 120/12 split + 12 logical holes retained; all 120 latching and all 12 non-latching function identities source-map one-to-one to D1-D6 package slots; 2003910 Rev E resolves K22 contact topology for 2003910-021/2003952-031; exact production relay timing remains unknown');
