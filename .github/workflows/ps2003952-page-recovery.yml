@@ -1,4 +1,4 @@
-name: PS2003952 page recovery
+name: PS2003952 source recovery
 
 on:
   pull_request:
@@ -11,29 +11,54 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch indexed Box 459 requirement cards
+      - name: Fetch Box 459 OCR and page map
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p out
-          base="https://archive.org/download/apertureCardBox459NARASW_images/page"
-          scans="475 476 477 478 479 480 481 482 483 484"
-          for n in $scans; do
-            url="$base/n${n}.jpg"
-            echo "Fetching $url"
-            curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 180 \
-              "$url" -o "out/n${n}.jpg"
-            file "out/n${n}.jpg"
+          base="https://archive.org/download/apertureCardBox459NARASW_images"
+          for file in \
+            apertureCardBox459NARASW_djvu.txt \
+            apertureCardBox459NARASW_djvu.xml \
+            apertureCardBox459NARASW_scandata.xml; do
+            echo "Fetching $file"
+            curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 600 \
+              "$base/$file" -o "out/$file"
           done
           curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 180 \
             "https://archive.org/metadata/apertureCardBox459NARASW_images" \
             -o out/archive-metadata.json
+          python - <<'PY'
+          import pathlib, re
+          p = pathlib.Path("out/apertureCardBox459NARASW_djvu.txt")
+          text = p.read_text(errors="replace")
+          pats = {
+              "requirements_3_1_18_23": re.compile(r"3\s*\.\s*1\s*\.\s*(?:18|19|20|21|22|23)", re.I),
+              "tests_4_2_18_23": re.compile(r"4\s*\.\s*2\s*\.\s*(?:18|19|20|21|22|23)", re.I),
+              "relay_contact": re.compile(r"relay.{0,80}(?:contact|closure)|(?:contact|closure).{0,80}relay", re.I|re.S),
+              "indicator_driver": re.compile(r"indicator\s+driver", re.I),
+              "drawing_2003952": re.compile(r"2003952", re.I),
+          }
+          out=[]
+          for name, rx in pats.items():
+              out.append(f"===== {name} =====")
+              count=0
+              for m in rx.finditer(text):
+                  count += 1
+                  s=max(0,m.start()-900); e=min(len(text),m.end()+1600)
+                  out.append(f"--- match {count} offset {m.start()} ---\n{text[s:e]}")
+                  if count >= 80:
+                      out.append("[truncated at 80 matches]")
+                      break
+              out.append(f"TOTAL_SHOWN={min(count,80)}\n")
+          pathlib.Path("out/targeted-OCR-contexts.txt").write_text("\n".join(out))
+          PY
           sha256sum out/* > out/SHA256SUMS.txt
           ls -lh out
-      - name: Upload recovered scans
+      - name: Upload recovered source derivatives
         uses: actions/upload-artifact@v4
         with:
-          name: ps2003952-box459-pages-16-27
+          name: ps2003952-box459-ocr-page-map
           path: out/
           if-no-files-found: error
           retention-days: 7
