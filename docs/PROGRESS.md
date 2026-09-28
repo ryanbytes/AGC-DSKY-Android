@@ -13,7 +13,7 @@ Verified/retained:
 - Each D1-D6 relay-circuit assembly 2003910-021 contains 20 x 2004688-1/-2 and 2 x 2004689-2.
 - Exact production 2004688/2004689 unit timing remains unrecovered; the app must not invent per-package travel, bounce, pole skew, or acoustic manufacturing fingerprints.
 - The 3 ms / 5 ms values remain explicitly predecessor-SCD presentation bounds only.
-- The complete production design-basis logical/function -> D1-D6/K1-K22 package crosswalk is now source-joined: 120/120 latching identities through 2005918 + 2005954A + 2005973, and 12/12 non-latching function drives through 2005954A + 2005973. The K22 switched-contact conflict and exact production relay timing remain explicitly unresolved.
+- The complete production design-basis logical/function -> D1-D6/K1-K22 package crosswalk is now source-joined: 120/120 latching identities through 2005918 + 2005954A + 2005973, and 12/12 non-latching function drives through 2005954A + 2005973. 2003910 Rev E resolves the K22 switched-contact topology for the 2003910-021 / 2003952-031 configuration; exact production relay mechanical timing remains explicitly unresolved.
 
 K22 provenance was tightened after checking the actual Virtual AGC schematic sources:
 
@@ -24,7 +24,7 @@ K22 provenance was tightened after checking the actual Virtual AGC schematic sou
 - immediate relay-circuit assembly 2003910-021 and the DSKY 2003994 system-manual table call out 2005973; parent assembly 2003952-031 calls out 2005940 and the manual figure preserves older 2005940-style K22 wiring;
 - a NARA aperture-card scan of original drawing 2005973- survives and was the basis for the later direct transcription.
 
-Current conclusion: **2005973- is the best-supported production-design basis for K22.** That is not promoted to an exact flown-unit claim because no unit-specific as-built/acceptance record has yet been recovered that independently proves K22 wiring for a particular flight DSKY.
+Current conclusion: **2003910 Rev E proves the 2005973 K22 topology for the 2003910-021 / 2003952-031 configuration.** Rev E explicitly instructs installation of jumpers K22-8 to K22-4, K22-7 to K22-3, and K22-6 to K22-2. Applying those jumpers to the 2005940A pinout produces the 2005973 connectivity exactly. Serial-number-specific provenance is a separate question and is required only before claiming that an arbitrary unit outside this established configuration hierarchy used the same wiring.
 
 This re-audit supersedes the 2026-09-25 relay-rack section's claims of measured-looking per-relay manufacturing profiles, contact bounce, pole skew, and unique package acoustic identity. Those were simulation inventions rather than recovered Apollo measurements and are being removed in PR #156.
 
@@ -37,7 +37,8 @@ Verification performed for this audit:
 - [ ] recovered/read a production SCD for 2004688;
 - [ ] recovered/read a production SCD for 2004689;
 - [x] recovered and machine-gated the complete production design-basis D1-D6/Kx logical/function crosswalk (120 latching + 12 non-latching drive mappings);
-- [ ] recovered unit-specific as-built/acceptance evidence resolving K22 on a particular flown DSKY;
+- [x] recovered 2003910 Rev E assembly evidence resolving K22 switched-contact wiring for the 2003910-021 / 2003952-031 configuration;
+- [ ] recovered serial-number-specific provenance tying an arbitrary flown unit outside the established hierarchy to that configuration;
 - [x] exact final PR #156 head 970828493f1998ca23b2f75180747071dce6d9dd passed Android 36352669981, PWA 36352669967, and Apple 36352669972; the accepted minimal 1 ms / amplitude 1 handset relay haptic was retained rather than retuned.
 
 
