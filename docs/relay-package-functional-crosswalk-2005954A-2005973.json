@@ -44,7 +44,25 @@
       "drawing2005973Path": "Schematics/2005973-/2005973--p1of1.kicad_sch",
       "drawing2005973BlobSha": "c5c5f902f805f4015fd160296710a6c3afac32f5",
       "driveInstruction": "RELAY CKT FOR K21 & K22 TO SWITCH FROM POSITION SHOWN, APPLY PLUS VOLTAGE ON PIN 1",
-      "sourceBoundary": "This proves the production design-basis drive pin/dash assignment used for the function-to-package join. Exact 2004689-2 operate/release timing remains unrecovered. K22 switched-contact topology is separately resolved for the 2003910-021 / 2003952-031 configuration by 2003910 Rev E assembly jumpers; serial-number-specific provenance remains separate."
+      "sourceBoundary": "This proves the production design-basis drive pin/dash assignment used for the function-to-package join. Exact 2004689-2 operate/release timing remains unrecovered. K22 switched-contact topology is separately resolved for the 2003910-021 / 2003952-031 configuration by 2003910 Rev E assembly jumpers. Apollo 11 LM mission/G&N-system provenance is established through 6014999-091 / serial 609 -> 2003994-091 -> six 2003952-031 -> 2003910-021, and MIT/IL E-1142-58/-59/-61 identify that LM-5 DSKY as S/N 54 through the -021 -> -051 -> -091 configuration updates."
+    },
+    "apollo11LmConfiguration": {
+      "description": "Mission/G&N-system provenance for the Apollo 11 LM relay hierarchy.",
+      "gnSystem": "6014999-091",
+      "gnSystemSerial": 609,
+      "spacecraftMission": "LM-5 / Apollo 11",
+      "dskyAssembly": "2003994-091",
+      "dskySerial": 54,
+      "dskySerialSources": [
+        "E-1142-58",
+        "E-1142-59",
+        "E-1142-61"
+      ],
+      "dskySerialChronology": "2003994-021 S/N 54 -> 2003994-051 S/N 54 -> 2003994-091 S/N 54",
+      "indicatorDriverAssembly": "2003952-031",
+      "indicatorDriverQuantity": 6,
+      "relayCircuitAssembly": "2003910-021",
+      "boundary": "This establishes Apollo 11 LM mission/G&N-system and DSKY chassis provenance through S/N 54 to the relay-circuit assembly. Exact 2004688/2004689-2 mechanical timing remains outside this provenance proof."
     },
     "alternateSchematic2005940A": {
       "description": "Virtual AGC transcription of original drawing 2005940A, checked specifically to determine whether the documented K22 disagreement affects the drive-function join.",
@@ -65,7 +83,7 @@
     "Preserve steering-diode traversal explicitly instead of treating it as a direct net.",
     "Require all four drive pads (1,5,9,10) for all 20 latching relays in every D module to resolve.",
     "Join the 12 external non-latching control signals on D1-D6 terminals 85/86 through the 2005973 Q12/Q13 drive paths and the 2005954A 87->4 / 95->7 internal jumpers to K22/K21 pin 1.",
-    "Cross-check 2005940A and reconcile its apparent K22 contact difference with the 2003910 Rev E -021 assembly jumpers; preserve serial-number-specific provenance as a separate boundary."
+    "Cross-check 2005940A and reconcile its apparent K22 contact difference with the 2003910 Rev E -021 assembly jumpers; retain the proven Apollo 11 LM chain through G&N system serial 609 and DSKY S/N 54 while keeping exact production relay timing separate."
   ],
   "validation": {
     "modules": 6,
@@ -6550,9 +6568,9 @@
   },
   "limitations": [
     "This file is the physical-package-to-DSKY-internal-signal layer. The downstream AGC Channel 010 row/bit -> physical D1-D6/K1-K20 join is now proven separately in docs/relay-logical-physical-crosswalk-2005918.json.",
-    "It is configuration-level design/assembly evidence. Serial-number-specific provenance is still required before claiming an arbitrary flown unit used this configuration.",
+    "It is configuration-level design/assembly evidence. Apollo 11 LM mission/G&N-system and chassis provenance are established through 6014999-091 / serial 609 -> DSKY 2003994-091 S/N 54 -> six 2003952-031 -> 2003910-021.",
     "K21/K22 function-to-package drive mapping is proven at the production design-document level, but exact 2004689-2 mechanical timing remains unrecovered.",
-    "The 2005973-vs-2005940A K22 switched-contact discrepancy is resolved for the 2003910-021 / 2003952-031 configuration by 2003910 Rev E assembly jumpers. Serial-number-specific provenance is still required before extending that configuration claim to an arbitrary flown unit."
+    "The 2005973-vs-2005940A K22 switched-contact discrepancy is resolved for the 2003910-021 / 2003952-031 configuration by 2003910 Rev E assembly jumpers. Apollo 11 LM mission/G&N-system serial 609 and DSKY S/N 54 both reach that exact assembly hierarchy."
   ],
   "downstreamLogicalCrosswalk": {
     "status": "proven_for_all_120_latching_packages",
