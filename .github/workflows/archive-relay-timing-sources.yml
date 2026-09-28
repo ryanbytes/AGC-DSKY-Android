@@ -22,36 +22,45 @@ jobs:
             https://www.ibiblio.org/apollo/Documents/hardware_difference_ecps_2.pdf
           curl -L --fail --retry 4 --retry-all-errors -o evidence/AgcApertureCardsBatchStewart_djvu.txt \
             https://archive.org/download/AgcApertureCardsBatchStewart/AgcApertureCardsBatchStewart_djvu.txt
+          curl -L --fail --retry 4 --retry-all-errors -o evidence/AgcApertureCardsBatchStewart_metadata.json \
+            https://archive.org/metadata/AgcApertureCardsBatchStewart
           curl -L --fail --retry 4 --retry-all-errors -o evidence/AgcDrawingIndex.html \
             https://www.ibiblio.org/apollo/AgcDrawingIndex.html
           curl -L --fail --retry 4 --retry-all-errors -o evidence/AgcDrawingIndexBox459.html \
             https://www.ibiblio.org/apollo/AgcDrawingIndexBox459.html
-          python3 - <<'PY'
-          from pathlib import Path
-          import re, html
-          s=Path("evidence/AgcDrawingIndexBox459.html").read_text(errors="replace")
-          for pn in ("2004688","2004689"):
-              print("\n###",pn)
-              for m in re.finditer(pn,s):
-                  frag=s[max(0,m.start()-1200):m.start()+2200]
-                  print(html.unescape(re.sub(r"<[^>]+>"," ",frag)))
-          PY
+
+          # Exact drawing images for the flight-qualified relay SCD candidates.
+          # n258 = 1005001 rev C sheet 1; n269 = 1005003 initial sheet 1.
+          curl -L --fail --retry 4 --retry-all-errors \
+            -o evidence/1005001-C-sheet1-n258.jpg \
+            https://archive.org/download/AgcApertureCardsBatchStewart/page/n258_w2000.jpg
+          curl -L --fail --retry 4 --retry-all-errors \
+            -o evidence/1005003-sheet1-n269.jpg \
+            https://archive.org/download/AgcApertureCardsBatchStewart/page/n269_w2000.jpg
+
           {
             echo "Acquired 2026-09-27"
             echo "HSI-208478.pdf: https://www.ibiblio.org/apollo/Documents/HSI-208478.pdf"
             echo "hardware_difference_ecps_2.pdf: https://www.ibiblio.org/apollo/Documents/hardware_difference_ecps_2.pdf"
             echo "AgcApertureCardsBatchStewart_djvu.txt: https://archive.org/download/AgcApertureCardsBatchStewart/AgcApertureCardsBatchStewart_djvu.txt"
+            echo "AgcApertureCardsBatchStewart_metadata.json: https://archive.org/metadata/AgcApertureCardsBatchStewart"
             echo "AgcDrawingIndex.html: https://www.ibiblio.org/apollo/AgcDrawingIndex.html"
             echo "AgcDrawingIndexBox459.html: https://www.ibiblio.org/apollo/AgcDrawingIndexBox459.html"
+            echo "1005001-C-sheet1-n258.jpg: IA page n258"
+            echo "1005003-sheet1-n269.jpg: IA page n269"
           } > evidence/ACQUISITION.txt
+
           file evidence/* > evidence/FILETYPES.txt
           sha256sum evidence/* | sort > evidence/SHA256SUMS.txt
           test "$(head -c 4 evidence/HSI-208478.pdf)" = "%PDF"
           test "$(head -c 4 evidence/hardware_difference_ecps_2.pdf)" = "%PDF"
+          file evidence/1005001-C-sheet1-n258.jpg | grep -Eq 'JPEG|PNG'
+          file evidence/1005003-sheet1-n269.jpg | grep -Eq 'JPEG|PNG'
+
       - name: Upload source archive
         uses: actions/upload-artifact@v4
         with:
-          name: relay-timing-sources-box459-2026-09-27
+          name: relay-timing-sources-scd-images-2026-09-27
           path: evidence/
           if-no-files-found: error
           compression-level: 6
