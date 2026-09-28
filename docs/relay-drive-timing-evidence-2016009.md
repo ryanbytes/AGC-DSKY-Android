@@ -31,7 +31,10 @@ Recovered from NARA aperture-card Box 466 through the Internet Archive item
 - Rev F: changed sheets 1, 2, scans n208–n209.
 
 Rev F sheet 2 explicitly identifies PS 2016009 as an addendum to **PS 2003952
-Revision F**. The unrecovered PS 2003952 base specification therefore remains a
+Revision F**. PS 2003952 is now partially recovered from NARA aperture-card
+Box 459: the revision index, Rev A cover sheet, and surviving acceptance-test
+pages are available, but the requirement pages defining paragraphs 3.1.18
+through 3.1.23 are absent from that scanned set. PS 2003952 therefore remains a
 separate evidence target where PS 2016009 says "Same as PS 2003952."
 
 Relevant source-image SHA-256 values:
@@ -112,3 +115,41 @@ The remaining timing unknown is still exact production **2004688/2004689-2
 mechanical operate/release/bounce behavior**. Recovering PS 2003952 Revision F
 or the production relay SCDs could narrow that unknown; until then, no exact
 production mechanical timing may be claimed.
+
+
+## PS 2003952 / drawing-index recovery
+
+A follow-up NARA-SW Box 459 recovery narrowed the remaining timing question
+without changing the simulation:
+
+- The Box 459 index identifies PS 2003952 revisions A through F. The recovered
+  original Rev A cover sheet states that PS 2003952 consists of pages 1–26 and
+  that Rev A changed pages 1, 16, 18, and 22.
+- Surviving PS 2003952 acceptance-test pages 25–26 contain relay-contact-closure
+  tests in paragraphs 4.2.18 through 4.2.23. Those procedures verify the
+  required contacts after applying the designated module inputs, but they refer
+  back to paragraphs 3.1.18 through 3.1.23 for the governing input conditions.
+  Those requirement pages are not present in the recovered Box 459 scan set.
+- A parallel exact-number sweep of every available Virtual AGC NARA drawing-box
+  index from Box 450 through Box 477 found **zero** occurrences of production
+  relay drawing numbers `2004688` or `2004689`. The only timing-relevant
+  exact-number match in that sweep was PS `2003952` in Box 459.
+
+Preserved acquisition artifacts:
+
+- `Apollo-NARA-Box459-relay-audit-2026-09-28-r2.zip` — GitHub Actions artifact
+  10974316889, artifact digest
+  `sha256:13e56cb81cb77e2fa6ece3cf35b301af9a6504852ff810fab7f66f058eb7c834`.
+- `PS2003952-page-OCR-2026-09-28.zip` — artifact 10973499168, digest
+  `sha256:244fce311d1688cae12dea18806ba61ef493f65b865e39f90bc5c458b65f1bcb`.
+- `Apollo-relay-index-fast-sweep-2026-09-28.zip` — artifact 10974926601,
+  digest
+  `sha256:3bd63a32cbaf06473006ae9043bae4edf42554c9c3156798e64eb4dd0a0f6348`.
+
+The same three artifacts are archived in Google Drive under
+`ChatGPT/AGC-DSKY-Audit-Evidence/Relay-Specs/2026-09-28`.
+
+This closes the obvious scanned drawing-index route without finding a production
+relay timing specification. Exact production **2004688/2004689-2**
+operate/release/transfer/bounce timing therefore remains a bounded unknown, and
+no runtime timing, sound, or haptic behavior is changed by this evidence.
