@@ -5,7 +5,7 @@ Last updated: 2026-09-27
 
 ## 2026-09-27 RLY-02 source/provenance re-audit
 
-The relay-fidelity audit now separates **production design authority**, **mission/G&N-system configuration provenance**, and **individual DSKY chassis-serial proof**.
+The relay-fidelity audit now separately tracks **production design authority**, **mission/G&N-system configuration provenance**, and **individual DSKY chassis provenance**; all three are now established for the Apollo 11 LM relay hierarchy, while exact production relay mechanical timing remains unknown.
 
 Verified/retained:
 
@@ -24,7 +24,7 @@ K22 provenance was tightened after checking the actual Virtual AGC schematic sou
 - immediate relay-circuit assembly 2003910-021 and the DSKY 2003994 system-manual table call out 2005973; parent assembly 2003952-031 calls out 2005940 and the manual figure preserves older 2005940-style K22 wiring;
 - a NARA aperture-card scan of original drawing 2005973- survives and was the basis for the later direct transcription.
 
-Current conclusion: **2003910 Rev E proves the 2005973 K22 topology for the 2003910-021 / 2003952-031 configuration.** Rev E explicitly instructs installation of jumpers K22-8 to K22-4, K22-7 to K22-3, and K22-6 to K22-2. Applying those jumpers to the 2005940A pinout produces the 2005973 connectivity exactly. Mission/G&N-system provenance is now established for Apollo 11 LM: Virtual AGC's NASA-perspective hierarchy identifies 6014999-091 as G&N system serial 609 (LM-5/Apollo 11), and its engineering drilldown contains DSKY 2003994-091 -> six 2003952-031 indicator-driver modules -> 2003910-021 relay-circuit assemblies. What remains unproven in this audit is the individual physical DSKY chassis serial number, not the Apollo 11 LM configuration chain.
+Current conclusion: **2003910 Rev E proves the 2005973 K22 topology for the 2003910-021 / 2003952-031 configuration, and that hierarchy is now tied to Apollo 11 LM's actual DSKY chassis.** Virtual AGC's NASA-perspective hierarchy identifies 6014999-091 as G&N system serial 609 (LM-5/Apollo 11), with DSKY 2003994-091 -> six 2003952-031 -> 2003910-021. MIT/IL reports E-1142-58, E-1142-59, and E-1142-61 provide the chassis chronology: LM-5/System 609 DSKY S/N 54 was 2003994-021, retained S/N 54 through the -051 modification, and is listed at KSC as 2003994-091 S/N 54 on 1 April 1969. Thus Apollo 11 LM DSKY **S/N 54** reaches the Rev-E-resolved relay assembly hierarchy. Exact production relay mechanical timing remains unknown.
 
 This re-audit supersedes the 2026-09-25 relay-rack section's claims of measured-looking per-relay manufacturing profiles, contact bounce, pole skew, and unique package acoustic identity. Those were simulation inventions rather than recovered Apollo measurements and are being removed in PR #156.
 
@@ -39,7 +39,7 @@ Verification performed for this audit:
 - [x] recovered and machine-gated the complete production design-basis D1-D6/Kx logical/function crosswalk (120 latching + 12 non-latching drive mappings);
 - [x] recovered 2003910 Rev E assembly evidence resolving K22 switched-contact wiring for the 2003910-021 / 2003952-031 configuration;
 - [x] established Apollo 11 LM mission/G&N-system provenance: 6014999-091 / serial 609 -> DSKY 2003994-091 -> 6 x 2003952-031 -> 2003910-021;
-- [ ] recovered the engraved/physical serial number or equivalent chassis-specific as-built record for an individual DSKY; this is a documentation provenance gap, not an open runtime implementation gate;
+- [x] established Apollo 11 LM DSKY chassis provenance: MIT/IL E-1142-58/-59/-61 track DSKY S/N 54 from 2003994-021 -> -051 -> 2003994-091 for LM-5/System 609;
 - [x] exact final PR #156 head 970828493f1998ca23b2f75180747071dce6d9dd passed Android 36352669981, PWA 36352669967, and Apple 36352669972; the accepted minimal 1 ms / amplitude 1 handset relay haptic was retained rather than retuned.
 
 
