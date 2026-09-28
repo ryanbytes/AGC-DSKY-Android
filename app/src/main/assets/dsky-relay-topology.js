@@ -29,8 +29,9 @@
  * package wiring proves the complete Channel 010 logical row/bit ->
  * D1-D6/K1-K20 crosswalk for all 120 latching packages. The same production
  * interconnect/schematic join proves all 12 non-latching function drives to
- * D1-D6/K21-K22. The separate K22 switched-contact documentation conflict is
- * preserved as an as-flown/contact-topology uncertainty, not a drive-mapping gap.
+ * D1-D6/K21-K22. 2003910 Rev E resolves the former 2005940A-vs-2005973
+ * K22 contact discrepancy for the 2003910-021 / 2003952-031 configuration
+ * by specifying the K22-8/4, K22-7/3, and K22-6/2 assembly jumpers.
  */
 (() => {
   const ABSENT_KEYS=new Set([
