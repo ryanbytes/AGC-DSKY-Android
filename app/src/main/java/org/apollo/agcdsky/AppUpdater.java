@@ -1,5 +1,6 @@
 package org.apollo.agcdsky;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -27,6 +28,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.NoRouteToHostException;
@@ -45,6 +47,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 final class AppUpdater {
     private static final String RELEASE_API = "https://api.github.com/repos/ryanbytes/AGC-DSKY-Android/releases/latest";
+    private static final String FALLBACK_VERSION_URL = "https://raw.githubusercontent.com/ryanbytes/AGC-DSKY-Android/main/VERSION";
+    private static final String RELEASE_DOWNLOAD_BASE = "https://github.com/ryanbytes/AGC-DSKY-Android/releases/download/v";
     private static final long CHECK_INTERVAL_MS = 12L * 60L * 60L * 1000L;
     private static final long RETRY_INTERVAL_MS = 30L * 60L * 1000L;
     private static final String PREFS = "self_update";
@@ -54,23 +58,41 @@ final class AppUpdater {
     private static final String PREF_PENDING_SHA256 = "pending_sha256";
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
-    private static final AtomicBoolean PERMISSION_POLLING = new AtomicBoolean(false);
+    private static volatile WeakReference<Activity> foregroundActivity = new WeakReference<>(null);
 
     private AppUpdater() {}
 
-    static void check(Context source) {
+    static void check(Context source) { check(source, false); }
+
+    static void checkNow(Context source) { check(source, true); }
+
+    static void onForeground(Activity activity) {
+        if (activity == null) return;
+        foregroundActivity = new WeakReference<>(activity);
+        if (!resumePendingInstall(activity)) check(activity);
+    }
+
+    static void onBackground(Activity activity) {
+        Activity current = foregroundActivity.get();
+        if (current == activity) foregroundActivity = new WeakReference<>(null);
+    }
+
+    private static void check(Context source, boolean force) {
         Context context = source.getApplicationContext();
         if (BuildConfig.DEBUG || (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) return;
         if (!RUNNING.compareAndSet(false, true)) return;
         EXECUTOR.execute(() -> {
             try {
-                if (resumePendingInstall(context)) return;
+                if (hasValidPending(context)) {
+                    offerPendingToForeground();
+                    return;
+                }
                 SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
                 long now = System.currentTimeMillis();
-                if (now - prefs.getLong(PREF_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return;
-                if (now - prefs.getLong(PREF_LAST_ATTEMPT, 0L) < RETRY_INTERVAL_MS) return;
+                if (!force && now - prefs.getLong(PREF_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return;
+                if (!force && now - prefs.getLong(PREF_LAST_ATTEMPT, 0L) < RETRY_INTERVAL_MS) return;
                 prefs.edit().putLong(PREF_LAST_ATTEMPT, now).apply();
-                Release release = fetchLatestRelease();
+                Release release = fetchLatestReleaseResilient();
                 prefs.edit().putLong(PREF_LAST_CHECK, System.currentTimeMillis()).remove(PREF_LAST_ATTEMPT).apply();
                 cancelRetry(context);
                 if (release == null || compareVersion(release.version, BuildConfig.VERSION_NAME) <= 0) return;
@@ -93,7 +115,7 @@ final class AppUpdater {
                     return;
                 }
                 prefs.edit().putString(PREF_PENDING, candidate.getAbsolutePath()).putString(PREF_PENDING_SHA256, expectedSha256).apply();
-                requestInstallPermissionOrInstall(context, candidate);
+                offerPendingToForeground();
             } catch (Exception error) {
                 if (isTransientNetworkFailure(error)) scheduleRetry(context);
                 else DebugReporter.appendNativeError(context, "Updater: " + error);
@@ -101,6 +123,12 @@ final class AppUpdater {
                 RUNNING.set(false);
             }
         });
+    }
+
+    private static void offerPendingToForeground() {
+        Activity activity = foregroundActivity.get();
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        new Handler(Looper.getMainLooper()).post(() -> resumePendingInstall(activity));
     }
 
     private static boolean isTransientNetworkFailure(Throwable error) {
@@ -133,21 +161,28 @@ final class AppUpdater {
         if (alarm != null) alarm.cancel(retryIntent(context));
     }
 
-    static boolean resumePendingInstall(Context context) {
+    private static boolean hasValidPending(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String path = prefs.getString(PREF_PENDING, null);
         String expected = prefs.getString(PREF_PENDING_SHA256, null);
         if (path == null || expected == null) return false;
         File file = new File(path);
         try {
-            if (!file.isFile() || !expected.equalsIgnoreCase(sha256(file)) || !verifyApkIdentity(context, file)) {
-                clearPending(context, file);
-                return false;
-            }
+            if (file.isFile() && expected.equalsIgnoreCase(sha256(file)) && verifyApkIdentity(context, file)) return true;
+        } catch (Exception ignored) {}
+        clearPending(context, file);
+        return false;
+    }
+
+    static boolean resumePendingInstall(Context context) {
+        if (!hasValidPending(context)) return false;
+        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        File file = new File(prefs.getString(PREF_PENDING, ""));
+        try {
             requestInstallPermissionOrInstall(context, file);
             return true;
         } catch (Exception error) {
-            clearPending(context, file);
+            DebugReporter.appendNativeError(context, "Updater install: " + error);
             return false;
         }
     }
@@ -156,33 +191,12 @@ final class AppUpdater {
         PackageManager pm = context.getPackageManager();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !pm.canRequestPackageInstalls()) {
             Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + context.getPackageName()));
-            settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (settings.resolveActivity(pm) == null) settings = new Intent(Settings.ACTION_SECURITY_SETTINGS);
+            if (!(context instanceof Activity)) settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(settings);
-            pollInstallPermission(context, candidate);
             return;
         }
         installPackage(context, candidate);
-    }
-
-    private static void pollInstallPermission(Context context, File candidate) {
-        if (!PERMISSION_POLLING.compareAndSet(false, true)) return;
-        Handler handler = new Handler(Looper.getMainLooper());
-        final int[] remaining = {120};
-        Runnable poll = new Runnable() {
-            @Override public void run() {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.getPackageManager().canRequestPackageInstalls()) {
-                    PERMISSION_POLLING.set(false);
-                    EXECUTOR.execute(() -> {
-                        try { if (candidate.isFile() && verifyApkIdentity(context, candidate)) installPackage(context, candidate); }
-                        catch (Exception error) { DebugReporter.appendNativeError(context, "Updater install: " + error); }
-                    });
-                    return;
-                }
-                if (--remaining[0] <= 0) { PERMISSION_POLLING.set(false); return; }
-                handler.postDelayed(this, 1000L);
-            }
-        };
-        handler.postDelayed(poll, 1000L);
     }
 
     private static void installPackage(Context context, File apk) throws Exception {
@@ -210,6 +224,31 @@ final class AppUpdater {
     static void clearPending(Context context, File file) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(PREF_PENDING).remove(PREF_PENDING_SHA256).apply();
         if (file != null && file.isFile()) file.delete();
+    }
+
+    private static Release fetchLatestReleaseResilient() throws Exception {
+        try {
+            return fetchLatestRelease();
+        } catch (Exception primary) {
+            try {
+                return fetchFallbackRelease();
+            } catch (Exception fallback) {
+                primary.addSuppressed(fallback);
+                throw primary;
+            }
+        }
+    }
+
+    private static Release fetchFallbackRelease() throws Exception {
+        String version = normalizeVersion(downloadText(FALLBACK_VERSION_URL));
+        if (version == null) return null;
+        String base = RELEASE_DOWNLOAD_BASE + version + "/";
+        return new Release(version, new Asset[]{
+                new Asset("app-fire-release.apk", base + "app-fire-release.apk", ""),
+                new Asset("app-fire-release.apk.sha256", base + "app-fire-release.apk.sha256", ""),
+                new Asset("app-regular-release.apk", base + "app-regular-release.apk", ""),
+                new Asset("app-regular-release.apk.sha256", base + "app-regular-release.apk.sha256", "")
+        });
     }
 
     private static Release fetchLatestRelease() throws Exception {
