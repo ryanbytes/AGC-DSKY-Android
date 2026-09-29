@@ -245,10 +245,10 @@ final class AppUpdater {
             int count;
             while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
             session.fsync(output);
-            Intent callback = new Intent(context, UpdateInstallReceiver.class).setAction(UpdateInstallReceiver.ACTION_INSTALL_STATUS);
+            Intent callback = new Intent(context, UpdateInstallActivity.class).setAction(UpdateInstallActivity.ACTION_INSTALL_STATUS);
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags |= PendingIntent.FLAG_MUTABLE;
-            PendingIntent pending = PendingIntent.getBroadcast(context, sessionId, callback, flags);
+            PendingIntent pending = PendingIntent.getActivity(context, sessionId, callback, flags);
             session.commit(pending.getIntentSender());
         } catch (Exception error) {
             try { installer.abandonSession(sessionId); } catch (Exception ignored) {}
