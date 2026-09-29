@@ -208,6 +208,11 @@ assert(CONTROLS.includes('text-overflow:clip') && CONTROLS.includes('white-space
   'control button labels must remain unellipsized and on one line');
 assert(CONTROLS.includes('.app-controls span{display:none!important}'),
   'obsolete mode/status span must stay hidden in the fixed control panel');
+assert(CONTROLS.includes('.app-controls button:active{'),
+  'panel buttons must retain a physical press visual');
+assert(!CONTROLS.includes('button[aria-pressed="true"]'),
+  'logical aria-pressed state must not leave panel buttons visually depressed');
+
 assert(CONTROLS.includes('100vh - 122px') && CONTROLS.includes('100vh - 136px'),
   'DSKY sizing must reserve room for the fixed option panel');
 assert(CONTROLS.includes('@media (orientation:landscape)'),
