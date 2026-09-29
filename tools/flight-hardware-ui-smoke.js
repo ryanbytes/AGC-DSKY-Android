@@ -25,7 +25,7 @@ for(const [text,filename] of [[ui,'flight-hardware-ui.js'],[rheostat,'lighting-r
   try{new vm.Script(text,{filename})}catch(error){fail(`${filename} syntax error: ${error.message}`)}
 }
 
-const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-perceptual-personality','relay-show'];
+const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-show'];
 let previous=-1;
 for(const feature of features){
   const tag=`<script src="${feature}.js" data-feature="${feature}"></script>`,pos=html.indexOf(tag);
