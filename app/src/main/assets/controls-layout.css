@@ -103,8 +103,7 @@
   border-bottom:1px solid rgba(27,30,27,.72);
 }
 .app-controls button:hover{filter:brightness(1.035)}
-.app-controls button:active,
-.app-controls button[aria-pressed="true"]{
+.app-controls button:active{
   background:linear-gradient(180deg,#737870 0 11px,#30332f 11px 13px,#11120f 13px 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.15),
