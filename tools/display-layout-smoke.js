@@ -198,7 +198,7 @@ for (const marker of [
   '#diagnostics{grid-column:3;grid-row:2}',
   '.options-tools{\n  grid-column:1 / -1;\n  grid-row:3'
 ]) assert(CONTROLS.includes(marker), 'fixed option-panel position missing: ' + marker);
-assert(CONTROLS.includes('max-height:32vh') && CONTROLS.includes('overflow-y:auto'),
+assert(CONTROLS.includes('max-height:26vh') && CONTROLS.includes('overflow-y:auto'),
   'portrait option panel must stay vertically bounded and scroll if necessary');
 assert(CONTROLS.includes('width:100%') && CONTROLS.includes('min-width:0'),
   'fixed-grid control cells must size to their assigned panel positions');
@@ -206,7 +206,7 @@ assert(CONTROLS.includes('text-overflow:clip') && CONTROLS.includes('white-space
   'control button labels must remain unellipsized and on one line');
 assert(CONTROLS.includes('.app-controls span{display:none!important}'),
   'obsolete mode/status span must stay hidden in the fixed control panel');
-assert(CONTROLS.includes('100vh - 154px') && CONTROLS.includes('100vh - 168px'),
+assert(CONTROLS.includes('100vh - 122px') && CONTROLS.includes('100vh - 136px'),
   'DSKY sizing must reserve room for the fixed option panel');
 assert(CONTROLS.includes('@media (orientation:landscape)'),
   'control strip landscape sizing override missing');
@@ -219,6 +219,11 @@ assert(CONTROLS.includes('.options-tools-menu #cheat{grid-column:1;grid-row:1}')
   'TOOLS / INFO control positions must remain fixed, including full-width manual update');
 assert(HTML.includes('<button id="update" data-panel-legend="SOFTWARE">CHECK FOR UPDATE</button>'),
   'manual CHECK FOR UPDATE control missing from auxiliary panel');
+assert(CONTROLS.includes('min-height:32px') &&
+       CONTROLS.includes('padding:13px 5px 4px') &&
+       CONTROLS.includes('gap:3px') &&
+       CONTROLS.includes('max-height:26vh'),
+  'compact option-panel sizing must remain in effect');
 assert(HTML.includes('<div class="hint" id="hint">HOLD PANEL FOR OPTIONS</div>'),
   'first-start hold-for-options instruction missing');
 assert(!HTML.includes('.hint{display:none!important}'),
@@ -232,7 +237,7 @@ assert(CONTROLS.includes('body.dream .app-controls,body.display-only .app-contro
 for (const marker of [
   'Apollo-style auxiliary panel operators',
   'content:attr(data-panel-legend)',
-  'linear-gradient(180deg,#737870 0 15px,#30332f 15px 17px,#1a1b18 17px 100%)',
+  'linear-gradient(180deg,#737870 0 11px,#30332f 11px 13px,#1a1b18 13px 100%)',
   'border-radius:1px',
   'transform:none;',
   '"Arial Narrow"'
