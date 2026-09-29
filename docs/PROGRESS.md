@@ -2,6 +2,13 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 v1.1.41 release candidate + updater repair
+
+Release candidate v1.1.41 / Android versionCode 2026092901 consolidates the verified post-v1.1.40 mainline and repairs the native self-update handoff. The previous updater could initiate unknown-source/package-installer UI from the background startup provider. The repaired flow keeps release discovery, download, SHA-256 verification, package/version validation, and signer validation in the background, but stores a verified pending APK and hands permission/install UI to the foreground SensorMainActivity. Process startup now forces one release-discovery check instead of being suppressed by the persisted 12-hour success window. The normal periodic receiver remains throttled. If GitHub's releases/latest API fails, the updater falls back to main/VERSION plus deterministic release asset and .sha256 URLs, preserving the same integrity and signing checks. ACTION_SECURITY_SETTINGS is a fallback when per-app unknown-source settings are unavailable.
+
+Focused self-update, branding, app-shell, display-layout, and asset-reference smokes PASS. Both Regular and Fire were rebuilt from source using aapt2 -> javac 17 -> d8 -> zipalign -> apksigner with the established standalone release key. Both packages are org.apollo.agcdsky v1.1.41/code 2026092901, target/compile SDK 37, zipalign PASS, APK Signature Scheme v2/v3 PASS, signer certificate SHA-256 409ad676e8052e50416a1bf69e095137ef639ac13ce4652160a19380a117fa1f. Runtime asset audit: 73 expected / 73 packaged in each APK, 0 missing, 0 extra, 0 byte mismatches; relay-perceptual-personality.js and relay-panel.js/css absent. Regular APK: 460898 bytes, SHA-256 75ac8a796792872293e4d2b156293076b43112342e24b2dd11ad1ec7e16e3c6a. Fire APK: 464994 bytes, SHA-256 018dc1831e810dec4fd0785a8380377c4bf2df753a0e683c7f58cb8cf3c47ef6. Release assets prepared as app-regular-release.apk, app-fire-release.apk, and matching .sha256 sidecars.
+
+
 ## 2026-09-29 Fixed options panel + first-start instruction
 
 The Apollo-style application options were revised after device feedback so the buttons no longer use a flowing/wrapping strip. The panel now has explicit fixed grid positions: AUDIO / TACTILE / DISPLAY on row one; COMPUTER / OPTICS / TEST on row two; AUXILIARY spanning row three. The TOOLS / INFO submenu is a fixed two-column grid. A one-time first-start instruction now reads `HOLD PANEL FOR OPTIONS`; the prior inline rule that forcibly hid the hint was removed, and the new `optionsHintV1` key makes existing installs see the instruction once after this update.

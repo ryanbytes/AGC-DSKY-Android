@@ -16,7 +16,7 @@ public final class UpdateInitProvider extends ContentProvider {
     @Override public boolean onCreate() {
         Context context = getContext();
         if (context != null) {
-            AppUpdater.check(context);
+            AppUpdater.checkNow(context);
             schedule(context.getApplicationContext());
         }
         return true;
