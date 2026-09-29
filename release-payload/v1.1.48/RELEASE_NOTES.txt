@@ -1,0 +1,5 @@
+AGC DSKY v1.1.48
+
+- Version-only updater test target over the v1.1.47 Fire direct-installer fix.
+- Verified pending APKs are handed directly to the system installer from the foreground activity through a private read-only content provider.
+- PackageInstaller session callback path removed for Fire OS compatibility.
