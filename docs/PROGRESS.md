@@ -2,6 +2,28 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 v1.1.50 SOFTWARE updater talkback
+
+Owner requested replacing the updater status text with an Apollo-style panel talkback. The TOOLS / INFO submenu remains one compact row. The SOFTWARE cell contains a rectangular talkback and a separate compact CHECK pushbutton; long updater status strings are no longer rendered into the button.
+
+Talkback semantics are intentionally application-specific while following Apollo talkback visual language:
+- gray = current / normal software state;
+- barber pole = update process active or unresolved (CHECKING, DOWNLOADING, READY TO INSTALL, UPDATE CHECK BUSY);
+- red = updater failure state;
+- CHECK remains a short manual operator.
+
+This is not a claim that Apollo barber pole universally meant "update pending"; the software mapping is an app-side convention.
+
+v1.1.50 / Android versionCode 2026092910. Exact changed source blobs: VERSION da44c7f34804178c3004959361167ab1ce211579; app/build.gradle 0c094b484ba6b276b4f6ff19776c75bb712cc3f5; AndroidManifest.xml 972db36664b9bc62eaf4ad385aef6b78f3cb199d; index.html 4cbc6ef72e6f250c4fe3d6531fb347ad249f1c21; controls-layout.css 7d8416e6ac0851d7ab1c02fb2bba485372c231b9; app-shell-runtime.js a585d1903f723c54242204cb96e6d7851a49dd53; display-layout-smoke.js 2bff078fa1eb168e4e1f1871dc3d85dfb59ac028; self-update-smoke.js dbc1774b94de4834ddb6125e03d9a9626c0709ab.
+
+Source gates PASS: display-layout, self-update, app-shell-runtime, asset-reference. Regular and Fire rebuilt from source with aapt2 -> javac 17 -> d8 -> zipalign -> apksigner using the established standalone release signer. Both packages are org.apollo.agcdsky v1.1.50/code 2026092910; 73/73 runtime assets with 0 missing/extra/mismatch; rejected relay-panel/personality assets absent; zipalign PASS; APK Signature Scheme v2/v3 PASS; signer certificate MATCH.
+
+Regular SHA-256 c3c474db0c207e669ef5820755a8b40f7fb9fa566758d45d1e037c7b53bdc9f9.
+Fire SHA-256 00b702a3b2dac9474523c4f8b421fc4cd655e7a0c6cf7c9423a03f8be6b425bf.
+
+Physical phone/Fire appearance remains pending owner device acceptance.
+
+
 ## 2026-09-29 v1.1.49 updater test + phone software-cell fit
 
 Owner requested a fresh updater test from v1.1.48 and then reported the SOFTWARE/update status text was clipped on the phone. v1.1.49 / versionCode 2026092909 keeps the current Fire direct-installer path unchanged and widens only the TOOLS / INFO software cell. The submenu remains one row: CHEAT and LEGAL occupy one quarter each; SOFTWARE / CHECK FOR UPDATE spans the remaining half. No extra vertical row was added.
