@@ -159,5 +159,27 @@ assert(waveformCalls.length===0&&impactCalls.length===0,'disabled relay haptics 
 context.AGCDSKY_APP_STATE.relayHaptics=true;
 assert(model.hapticsEnabled()===true,'relay haptic enabled state did not restore ON');
 
+const browserVibrationCalls=[];
+const browserHardware={snapshot(){return {auxRelays:{}}},registerSnapshotExtension(){}};
+const browserContext={
+  console,Math,Date,Object,Array,Number,String,Map,Set,
+  setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},
+  navigator:{userActivation:{hasBeenActive:false},vibrate(pattern){browserVibrationCalls.push(pattern);return true}},
+  document:{getElementById(){return null}},
+  AGCDSKY_APP_STATE:{tickSound:false,relayHaptics:true},
+  AGCDSKY_ENVIRONMENT:{tickLevel(){return 1}},
+  AGCDSKY_AUDIO:{implementation(){return()=>true},installImplementation(){},ensure(){return null}},
+  AGCDSKY_SERVICE_REGISTRY:{get(name){return name==='AGCDSKY_HARDWARE'?browserHardware:null}}
+};
+browserContext.window=browserContext;vm.createContext(browserContext);
+vm.runInContext(topologySource,browserContext,{filename:'dsky-relay-topology.js'});
+vm.runInContext(identity,browserContext,{filename:'relay-identity-audio.js'});
+const browserModel=browserContext.DSKY_RELAY_AUDIO;
+assert(browserModel.playRelayHaptic(4,7,true)===false,'browser relay haptic must be suppressed before user activation');
+assert(browserVibrationCalls.length===0,'navigator.vibrate was called before browser user activation');
+browserContext.navigator.userActivation.hasBeenActive=true;
+assert(browserModel.playRelayHaptic(4,7,true)===true,'browser relay haptic did not enable after user activation');
+assert(browserVibrationCalls.length===1,'browser relay haptic should issue exactly one navigator.vibrate call after activation');
+
 console.log('relay haptic smoke: PASS');
 console.log('  authentic mode uses one non-overwriting bank waveform; each physical relay contributes one 1 ms / 1-of-255 armature tick and contact bounce stays non-haptic');

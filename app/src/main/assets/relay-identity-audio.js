@@ -150,7 +150,10 @@
       try{return native.relayWaveform(waveform.timings.join(','),waveform.amplitudes.join(','))!==false}catch(_){}
     }
     if(native&&fallbackSignature){try{return native.relayImpact(fallbackSignature.durationMs,fallbackSignature.amplitude)!==false}catch(_){}}
-    try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function'&&waveform.timings.length)return navigator.vibrate(browserPatternFromWaveform(waveform))!==false}catch(_){}
+    try{
+      const browserActivated=typeof navigator!=='undefined'&&navigator.userActivation&&navigator.userActivation.hasBeenActive===true;
+      if(browserActivated&&typeof navigator.vibrate==='function'&&waveform.timings.length)return navigator.vibrate(browserPatternFromWaveform(waveform))!==false
+    }catch(_){}
     return false;
   }
   function playHapticProfile(p,engaging){
