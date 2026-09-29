@@ -6,6 +6,7 @@ const path=require('path');
 const ROOT=path.resolve(__dirname,'..');
 const ASSETS=path.join(ROOT,'app/src/main/assets');
 const source=fs.readFileSync(path.join(ASSETS,'optics.js'),'utf8');
+const tap=fs.readFileSync(path.join(ASSETS,'sextant-tap-mark.js'),'utf8');
 const css=fs.readFileSync(path.join(ASSETS,'optics.css'),'utf8');
 const html=fs.readFileSync(path.join(ASSETS,'index.html'),'utf8');
 function assert(condition,message){if(!condition)throw new Error(message)}
@@ -18,6 +19,26 @@ assert(source.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_OPTICS'
   'optics must publish a frozen dedicated service explicitly through the registry');
 for(const forbidden of ['api.openSextant =','api.closeSextant =','api.sextantStatus ='])
   assert(!source.includes(forbidden),`optics regained direct public-facade mutation: ${forbidden}`);
+for(const marker of [
+  'const SHAFT_COUNTS_PER_DEG = 32768 / 360',
+  'const TRUNNION_COUNTS_PER_DEG = 32768 / 90',
+  'const TRUNNION_BIAS_COUNTS = 7200',
+  'function signed15(word)',
+  'function shaftDegrees(word)',
+  'function trunnionDegrees(word)',
+  'const scales=[SHAFT_COUNTS_PER_DEG,TRUNNION_COUNTS_PER_DEG]',
+  'TRUNNION_ZERO_BIAS_DEG'
+])assert(source.includes(marker),`optics CDU scale/bias marker missing: ${marker}`);
+assert(!source.includes('const COUNTS_PER_DEG = COUNTS_PER_REV / 360'),
+  'optics must not use the shaft 360-degree scale for trunnion CDU pulses/readout');
+for(const marker of [
+  'const SHAFT_COUNTS_PER_DEG = 32768 / 360',
+  'const TRUNNION_COUNTS_PER_DEG = 32768 / 90',
+  'shaftOffsetDeg * SHAFT_COUNTS_PER_DEG',
+  'trunnionOffsetDeg * TRUNNION_COUNTS_PER_DEG'
+])assert(tap.includes(marker),`tap-to-mark CDU scale marker missing: ${marker}`);
+assert(!tap.includes('const COUNTS_PER_DEG = 32768 / 360'),
+  'tap-to-mark must not use one 360-degree scale for both optical CDUs');
 for(const marker of [
   'async function open()',
   'function close()',
