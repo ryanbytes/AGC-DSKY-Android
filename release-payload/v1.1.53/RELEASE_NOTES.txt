@@ -1,0 +1,7 @@
+AGC DSKY v1.1.53
+
+- Renames the application-panel controls with terse Apollo/NASA-style nomenclature.
+- RLY AUDIO, VIB, DSKY DISP, GUIDANCE, OPTICS, SYS TEST, AUX, NIGHT DISP, SW LOAD, PROCEDURES, TECH DATA.
+- Button faces are shortened to ON/OFF, FULL/EXIT, CLOCK/CMC, SXT, RUN, DATA, CHECK, QUICK REF, SOURCE.
+- These are application conventions using Apollo panel language, not claims that these exact controls existed on Apollo hardware.
+- Retains the v1.1.52 fix where logical toggle state does not leave HAPTICS/VIB mechanically depressed.
