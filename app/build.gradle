@@ -14,8 +14,8 @@ android {
         applicationId 'org.apollo.agcdsky'
         minSdk 26
         targetSdk 37
-        versionCode 2026092902
-        versionName '1.1.42'
+        versionCode 2026092903
+        versionName '1.1.43'
     }
 
     buildFeatures {
