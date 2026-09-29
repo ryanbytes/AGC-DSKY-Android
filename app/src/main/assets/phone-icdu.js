@@ -184,8 +184,9 @@
     return qNorm(q);
   }
 
-  // Relative orientation -> conventional X/Y/Z roll/pitch/yaw decomposition.
-  // These are used as the simulated outer/inner/middle gimbal angles.
+  // Conventional device X/Y/Z roll/pitch/yaw. Keep this for camera aiming
+  // and magnetic-yaw input conditioning; it is NOT the Apollo IMU gimbal
+  // decomposition for compound attitudes.
   function eulerXYZ(q) {
     const [w,x,y,z] = q;
     const sinr = 2*(w*x + y*z);
@@ -197,6 +198,22 @@
     const cosy = 1 - 2*(y*y + z*z);
     const yaw = Math.atan2(siny, cosy);
     return [deg(roll), deg(pitch), deg(yaw)];
+  }
+
+  // Apollo CDU_TO_DCM uses M = Ry(inner) * Rz(middle) * Rx(outer), where
+  // X=outer/CDUX, Y=inner/CDUY, Z=middle/CDUZ. Extract those angles directly
+  // from the quaternion DCM rather than using generic Z-Y-X Euler angles.
+  function apolloGimbals(q) {
+    const [w,x,y,z] = q;
+    const m00 = 1 - 2*(y*y + z*z);
+    const m10 = 2*(x*y + w*z);
+    const m11 = 1 - 2*(x*x + z*z);
+    const m12 = 2*(y*z - w*x);
+    const m20 = 2*(x*z - w*y);
+    const middle = Math.asin(clamp(m10, -1, 1));
+    const inner = Math.atan2(-m20, m00);
+    const outer = Math.atan2(-m12, m11);
+    return [deg(outer), deg(inner), deg(middle)];
   }
 
   function zeroHere(q=null) {
@@ -273,7 +290,7 @@
     }
 
     const rel = qNorm(qMul(qConj(referenceQ), q));
-    const e = eulerXYZ(rel);
+    const e = apolloGimbals(rel);
 
     // GAME_ROTATION_VECTOR intentionally ignores magnetic north and therefore
     // has excellent short-term motion but can drift in yaw. Use the absolute
@@ -283,7 +300,8 @@
     if (magneticEnabled && magneticSeen && magneticQ && magneticReferenceYaw != null
         && magneticAccuracy !== 0) {
       const magRelYaw = wrap180(eulerXYZ(magneticQ)[2] - magneticReferenceYaw);
-      const err = wrap180(magRelYaw - (e[2] + magneticYawCorrection));
+      const gameRelYaw = eulerXYZ(rel)[2];
+      const err = wrap180(magRelYaw - (gameRelYaw + magneticYawCorrection));
       magneticYawCorrection += clamp(err * 0.0025, -0.05, 0.05);
       e[2] += magneticYawCorrection;
     }
