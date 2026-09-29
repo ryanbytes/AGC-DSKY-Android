@@ -2,6 +2,24 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 v1.1.51 SOFTWARE beside DREAM + momentary flag
+
+Owner requested moving the SOFTWARE talkback next to DREAM and keeping the flag present for as long as CHECK is physically pressed.
+
+Final row 3 is fixed as AUXILIARY | DREAM | SOFTWARE. SOFTWARE is no longer inside the AUXILIARY submenu. REFERENCE and DOCUMENTS remain under AUXILIARY; when opened, that submenu spans the row in two columns.
+
+CHECK is now a true momentary operator for the talkback flag. Pointer-down forces the SOFTWARE talkback to barber pole and captures the pointer. Pointer-up, pointer-cancel, or lost pointer capture releases the forced flag and restores the actual updater state. If the updater itself is still checking/downloading/ready-to-install, the talkback remains barber pole because that is the real state. Gray remains current/normal and red remains updater failure.
+
+v1.1.51 / Android versionCode 2026092911. Source gates PASS: display-layout, self-update, app-shell-runtime, asset-reference. Exact changed source blobs: VERSION 3baec79077d35049d23cd22950bc118a880021ba; app/build.gradle c294ac93e29822cb1bce01d20651e2c68f15fee8; AndroidManifest.xml 5ab16d993047b5bc16b7c8afac63303186624f65; index.html 4387580891c150b8adab5593961ec2d346f349d6; controls-layout.css e378e0addb4e87c6b25110004c67a06178acb881; app-shell-runtime.js facba0c6a30d63d4dfd37c6e3e80c7537eb0c570; display-layout-smoke.js 594d93b9e280db7f05704598e3b71799ecdccf76; self-update-smoke.js dbb318c0da0d1a17aae91ebc88ef98ac668c3458.
+
+Regular and Fire rebuilt from exact source via aapt2 -> javac 17 -> d8 -> zipalign -> apksigner with the established standalone release signer. Both org.apollo.agcdsky v1.1.51/code 2026092911; 73/73 runtime assets with 0 missing/extra/mismatch; rejected relay-panel/personality assets absent; zipalign PASS; APK Signature Scheme v2/v3 PASS; signer certificate MATCH.
+
+Regular SHA-256 539d148cdb8d95dbc502be1e0cbee82edc183fd7ebd34c8385dea051f4349b9f.
+Fire SHA-256 e1dfec786c2b5f799de475117a11570fe6ec2aee7f92a503fb9ed2cb2c61a2e2.
+
+Physical row placement and press-duration behavior remain pending owner device acceptance.
+
+
 ## 2026-09-29 v1.1.50 SOFTWARE updater talkback
 
 Owner requested replacing the updater status text with an Apollo-style panel talkback. The TOOLS / INFO submenu remains one compact row. The SOFTWARE cell contains a rectangular talkback and a separate compact CHECK pushbutton; long updater status strings are no longer rendered into the button.
