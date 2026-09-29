@@ -12,8 +12,9 @@
  *   keyboard-electrical-interlock.js is the single owner of normal keycoded
  *   channel-015 make/KEYRST behavior. PRO remains a separate channel-032
  *   control owned by the source-backed hardware-fidelity layer.
- * - Deterministic component personalities preserve small manufacturing-style
- *   differences between runs of the same simulated DSKY.
+ * - Only source-bounded component variation is modeled. The persistent unit
+ *   seed is retained solely for the documented key spring-rate range; optical,
+ *   timing, and synthesized-audio estimates are fixed rather than randomized.
  * - NUMERICS and INTEGRAL are continuous app-side rheostat models with a
  *   mechanical minimum stop; intermediate percentages are interpolated UI values.
  */
@@ -73,24 +74,6 @@
   }
 
   const hardwareSeed = readHardwareSeed();
-  function hash32(text) {
-    let h = 0x811c9dc5;
-    const s = `${hardwareSeed}|${text}`;
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
-      h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    h ^= h >>> 16; h = Math.imul(h, 0x7feb352d) >>> 0;
-    h ^= h >>> 15; h = Math.imul(h, 0x846ca68b) >>> 0;
-    return (h ^ (h >>> 16)) >>> 0;
-  }
-  function signedUnit(id) {
-    return (hash32(id) / 0xffffffff) * 2 - 1;
-  }
-  function vary(base, fraction, id) {
-    return base * (1 + signedUnit(id) * fraction);
-  }
-
   let effectiveNumerics = readLevel('dskyNumericsValue','dskyNumericsLevel');
   let effectiveIntegral = readLevel('dskyIntegralValue','dskyIntegralLevel');
 
@@ -270,10 +253,9 @@
           const source = document.createElement('span');
           source.className = `lamp-source lamp-source-${i + 1}`;
           source.setAttribute('aria-hidden', 'true');
-          const prefix = `lamp:${lampName}:${i + 1}`;
-          const rise = vary(model.riseMs, 0.13, `${prefix}:rise`);
-          const fall = vary(model.fallMs, 0.13, `${prefix}:fall`);
-          const gain = Math.max(0.82, Math.min(1.18, vary(1, 0.10, `${prefix}:gain`)));
+          const rise = model.riseMs;
+          const fall = model.fallMs;
+          const gain = 1;
           source.style.setProperty('--lamp-rise', `${rise.toFixed(1)}ms`);
           source.style.setProperty('--lamp-fall', `${fall.toFixed(1)}ms`);
           source.style.setProperty('--lamp-gain', gain.toFixed(3));
@@ -294,11 +276,11 @@
     const key = button && button.dataset ? button.dataset.key : '?';
     if (keyPersonalities[key]) return keyPersonalities[key];
     const p = Object.freeze({
-      contactMs: Number(vary(KEY_CONTACT_BASE_MS, 0.14, `key:${key}:contact`).toFixed(1)),
-      returnSoundMs: Number(vary(KEY_RETURN_SOUND_BASE_MS, 0.18, `key:${key}:return`).toFixed(1)),
-      makePitch: Number(vary(520, 0.055, `key:${key}:make-pitch`).toFixed(1)),
-      returnPitch: Number(vary(330, 0.055, `key:${key}:return-pitch`).toFixed(1)),
-      soundGain: Number(vary(1, 0.09, `key:${key}:gain`).toFixed(3))
+      contactMs: KEY_CONTACT_BASE_MS,
+      returnSoundMs: KEY_RETURN_SOUND_BASE_MS,
+      makePitch: 520,
+      returnPitch: 330,
+      soundGain: 1
     });
     keyPersonalities[key] = p;
     return p;
