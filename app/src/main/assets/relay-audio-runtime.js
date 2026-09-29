@@ -71,7 +71,7 @@
     const go=()=>{const base=ctx.currentTime+.002;for(let i=0;i<count;i++)emitSlot.get()(ctx,base+i*1.7/1000)};
     if(ctx.state==='running')go();else ctx.resume().then(go).catch(()=>{});
   }
-  function baseApplyTickSound(){audioShell.store.set('audioTickV4',audioState.tickSound?'1':'0');const b=audioShell.element('sound');if(b)b.textContent=audioState.tickSound?'RELAY CLICKS ON':'RELAY CLICKS OFF'}
+  function baseApplyTickSound(){audioShell.store.set('audioTickV4',audioState.tickSound?'1':'0');const b=audioShell.element('sound');if(b){b.textContent=audioState.tickSound?'RELAY CLICKS ON':'RELAY CLICKS OFF';if(typeof b.setAttribute==='function')b.setAttribute('aria-pressed',audioState.tickSound?'true':'false')}}
 
   const isFn=value=>typeof value==='function';
   contextSlot=createContextSlot();
