@@ -35,12 +35,11 @@
             android:name=".UpdateCheckReceiver"
             android:exported="false" />
 
-        <activity
-            android:name=".UpdateInstallActivity"
+        <provider
+            android:name=".UpdateApkProvider"
+            android:authorities="${applicationId}.update-file"
             android:exported="false"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            android:grantUriPermissions="true" />
 
         <activity
             android:name=".SensorMainActivity"
