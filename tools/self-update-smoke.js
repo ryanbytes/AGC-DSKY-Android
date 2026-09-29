@@ -79,6 +79,11 @@ assert(installActivity.includes('startActivity(confirm)'),'installer callback ac
 assert(installActivity.includes('PackageInstaller.STATUS_PENDING_USER_ACTION'),'installer callback activity must handle pending user action');
 assert(!manifest.includes('android:name=".UpdateInstallReceiver"'),'obsolete installer broadcast receiver must stay removed');
 for(const marker of ['app-regular-release.apk','app-fire-release.apk','app-regular-release.apk.sha256','app-fire-release.apk.sha256','apksigner','sha256'])assert(prep.includes(marker),`release-prep script missing ${marker}`);
+assert(java.includes('PackageManager.GET_SIGNING_CERTIFICATES | PackageManager.GET_SIGNATURES'),
+  'Android 9/10 archive verification must request legacy signatures alongside SigningInfo');
+assert(java.includes('Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.signingInfo != null') &&
+       java.includes('signatures = info.signatures;'),
+  'signer extraction must fall back to PackageInfo.signatures when archive SigningInfo is null');
 assert(!java.includes('http://'),'updater must not use cleartext endpoints');
 console.log('self update smoke: PASS');
 console.log('  forced startup discovery + periodic checks, manual CHECK FOR UPDATE status, API fallback, activity-based installer confirmation, phone/Fire selection, release integrity, signer/version checks, debug exclusion, and PackageInstaller flow verified');
