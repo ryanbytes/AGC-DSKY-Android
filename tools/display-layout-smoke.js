@@ -203,15 +203,20 @@ assert(CONTROLS.includes('@media (orientation:landscape)'),
 assert(CONTROLS.includes('body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}'),
   'dream/display-only/screen-only modes must suppress app controls');
 for (const marker of [
-  'same black-key / white-EL visual language as the DSKY',
-  'color:var(--key-el-color',
-  'text-shadow:var(--key-el-shadow',
-  'linear-gradient(145deg,#343532',
-  'transform:translateY(2px)',
+  'Apollo-style auxiliary panel operators',
+  'content:attr(data-panel-legend)',
+  'linear-gradient(180deg,#737870 0 15px,#30332f 15px 17px,#1a1b18 17px 100%)',
+  'border-radius:1px',
+  'transform:none;',
   '"Arial Narrow"'
 ]) {
-  assert(CONTROLS.includes(marker), 'DSKY-style settings-button treatment missing: ' + marker);
+  assert(CONTROLS.includes(marker), 'Apollo-panel settings-button treatment missing: ' + marker);
 }
+for (const legend of ['AUDIO','TACTILE','DISPLAY','COMPUTER','OPTICS','TEST','AUXILIARY','REFERENCE','DOCUMENTS']) {
+  assert(HTML.includes(`data-panel-legend="${legend}"`), 'Apollo panel nomenclature missing: ' + legend);
+}
+assert(!CONTROLS.includes('same black-key / white-EL visual language as the DSKY'),
+  'superseded DSKY-key option-button styling must not return');
 assert(!CONTROLS.includes('Series 2 barrier-mount operator indicators'),
   'obsolete Series 2 option-button styling must not return');
 
@@ -248,5 +253,5 @@ console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(
 console.log(`  full-screen EL stack: cover ${nominalCoverDepthAt106.toFixed(3)} + 1006315 package ${nominalIndicatorDepthAt106.toFixed(3)} = ${nominalTotalDepthAt106.toFixed(3)} units at 106-wide`);
 console.log('  annunciators: three-source per-bulb thermal fade with foreground fixed Gorton vector legends');
 console.log('  lighting: independent NUMERICS/INTEGRAL with fixed-vector white EL key legends');
-console.log('  options: bounded DSKY-style illuminated key strip');
+console.log('  options: bounded Apollo-style panel operators with separate nomenclature');
 console.log('  recovered UI: forced FS595/glass finish is parser-loaded while physical parallax retains motion ownership');
