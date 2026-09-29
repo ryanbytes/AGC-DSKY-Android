@@ -39,6 +39,12 @@ The documented spring rate and assembled stroke allow only the spring-force *inc
 - The INTEGRAL control feeds unlike loads: illuminated key legends are electroluminescent while status/caution legends use incandescent lamps. `lighting-electrical-model.js` therefore keeps their optical response separate; the incandescent `V^3.4` response is explicitly an engineering approximation rather than an Apollo-specified dimmer curve.
 - SCD/part evidence establishes the three-bulb annunciator construction but not a statistical distribution for optical rise/decay or bulb-to-bulb gain. Those presentation estimates are fixed across simulated bulbs; the app does not invent per-bulb manufacturing tolerances.
 
+### CM IMU gimbal geometry
+
+- Apollo AGC CDU-to-direction-cosine-matrix documentation defines X as outer gimbal/CDUX, Y as inner gimbal/CDUY, and Z as middle gimbal/CDUZ.
+- The documented matrix is exactly `Ry(inner) * Rz(middle) * Rx(outer)`. A generic roll/pitch/yaw `Rz * Ry * Rx` decomposition agrees for isolated single-axis motion but is wrong for compound attitudes.
+- `phone-icdu.js` therefore keeps conventional device Euler angles only for camera aiming and magnetic-yaw input conditioning; the flight CDU path extracts Apollo outer/inner/middle angles from the quaternion DCM before generating CDUX/CDUY/CDUZ pulses.
+
 ### CM optics CDU scaling
 
 - Comanche erasable assignments identify location 0035 as CDUT (optics trunnion) and 0036 as CDUS (optics shaft).
