@@ -63,7 +63,7 @@ function updateDreamEnvironment(){
 }
 function applyDreamMode(){
   environmentShell.store.set('dreamMode',environmentState.dreamMode);environmentShell.store.set('dreamBright',environmentState.dreamMode==='bright'?'1':'0');
-  const b=environmentShell.element('dreambright');if(b)b.textContent=environmentState.dreamMode==='solar'?'DREAM BRIGHTNESS AUTO':'DREAM BRIGHTNESS '+environmentState.dreamMode.toUpperCase();
+  const b=environmentShell.element('dreambright');if(b)b.textContent=environmentState.dreamMode==='solar'?'AUTO':environmentState.dreamMode.toUpperCase();
   if(environmentState.dream)updateDreamEnvironment();
 }
 function cycleDreamMode(){
@@ -73,7 +73,7 @@ function cycleDreamMode(){
     if(have){environmentState.dreamMode='solar';applyDreamMode();environmentShell.element('mode').textContent='SUN AUTO · 60 MIN SUNRISE/SUNSET FADE'}else requestSolarLocation();
   }else{environmentState.dreamMode='dim';applyDreamMode()}
 }
-function applyDisplayOnly(){document.body.classList.toggle('display-only',environmentState.displayOnly);if(!environmentState.dream)environmentShell.store.set('displayOnly',environmentState.displayOnly?'1':'0');const b=environmentShell.element('display');if(b)b.textContent=environmentState.displayOnly?'EXIT FULL DSKY DISPLAY':'FULL DSKY DISPLAY'}
+function applyDisplayOnly(){document.body.classList.toggle('display-only',environmentState.displayOnly);if(!environmentState.dream)environmentShell.store.set('displayOnly',environmentState.displayOnly?'1':'0');const b=environmentShell.element('display');if(b)b.textContent=environmentState.displayOnly?'EXIT':'FULL'}
 
 window.AGCDSKY_ENVIRONMENT=Object.freeze({
   solarTimes,
