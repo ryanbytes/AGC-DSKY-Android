@@ -1,0 +1,5 @@
+AGC DSKY v1.1.46
+
+- Version-only updater test target over the Android 9/Fire OS 7 archive-signature fallback fix in v1.1.45.
+- Uses activity-based PackageInstaller confirmation.
+- No DSKY, relay, or UI behavior changes from v1.1.45.
