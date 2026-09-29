@@ -5,7 +5,7 @@ const ROOT=path.resolve(__dirname,'..');
 const java=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/AppUpdater.java'),'utf8');
 const provider=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateInitProvider.java'),'utf8');
 const checkReceiver=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateCheckReceiver.java'),'utf8');
-const installReceiver=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateInstallReceiver.java'),'utf8');
+const installActivity=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateInstallActivity.java'),'utf8');
 const activity=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java'),'utf8');
 const html=fs.readFileSync(path.join(ROOT,'app/src/main/assets/index.html'),'utf8');
 const shell=fs.readFileSync(path.join(ROOT,'app/src/main/assets/app-shell-runtime.js'),'utf8');
@@ -42,7 +42,7 @@ for(const marker of [
   'hasValidPending(context)',
   'PackageInstaller.SessionParams.MODE_FULL_INSTALL',
   'PackageInstaller.STATUS_PENDING_USER_ACTION'
-])assert(java.includes(marker)||installReceiver.includes(marker),`missing updater safety marker: ${marker}`);
+])assert(java.includes(marker)||installActivity.includes(marker),`missing updater safety marker: ${marker}`);
 const fetchIndex=java.indexOf('Release release = fetchLatestReleaseResilient();');
 const successIndex=java.indexOf('putLong(PREF_LAST_CHECK, System.currentTimeMillis())');
 assert(fetchIndex>=0&&successIndex>fetchIndex,'successful-check timestamp must be written only after the release request succeeds');
@@ -71,9 +71,14 @@ assert(java.includes('new WeakReference<>(activity)')&&java.includes('new Handle
 assert(java.includes('new Asset("app-fire-release.apk.sha256"')&&java.includes('new Asset("app-regular-release.apk.sha256"'),
   'fallback release discovery must retain sidecar integrity verification');
 
-for(const marker of ['android.permission.REQUEST_INSTALL_PACKAGES','android:name=".UpdateInitProvider"','${applicationId}.update-init','android:name=".UpdateCheckReceiver"','android:name=".UpdateInstallReceiver"'])assert(manifest.includes(marker),`manifest missing updater declaration: ${marker}`);
+for(const marker of ['android.permission.REQUEST_INSTALL_PACKAGES','android:name=".UpdateInitProvider"','${applicationId}.update-init','android:name=".UpdateCheckReceiver"','android:name=".UpdateInstallActivity"'])assert(manifest.includes(marker),`manifest missing updater declaration: ${marker}`);
 assert((manifest.match(/android:exported="false"/g)||[]).length>=4,'updater components are not consistently private');
+assert(java.includes('PendingIntent.getActivity(context, sessionId, callback, flags)'),'PackageInstaller status must target a foreground activity callback');
+assert(!java.includes('PendingIntent.getBroadcast(context, sessionId, callback, flags)'),'PackageInstaller confirmation must not route through a background broadcast receiver');
+assert(installActivity.includes('startActivity(confirm)'),'installer callback activity must launch the system confirmation intent');
+assert(installActivity.includes('PackageInstaller.STATUS_PENDING_USER_ACTION'),'installer callback activity must handle pending user action');
+assert(!manifest.includes('android:name=".UpdateInstallReceiver"'),'obsolete installer broadcast receiver must stay removed');
 for(const marker of ['app-regular-release.apk','app-fire-release.apk','app-regular-release.apk.sha256','app-fire-release.apk.sha256','apksigner','sha256'])assert(prep.includes(marker),`release-prep script missing ${marker}`);
 assert(!java.includes('http://'),'updater must not use cleartext endpoints');
 console.log('self update smoke: PASS');
-console.log('  forced startup discovery + periodic checks, manual CHECK FOR UPDATE status, API fallback, foreground-only install UI, phone/Fire selection, release integrity, signer/version checks, debug exclusion, and PackageInstaller flow verified');
+console.log('  forced startup discovery + periodic checks, manual CHECK FOR UPDATE status, API fallback, activity-based installer confirmation, phone/Fire selection, release integrity, signer/version checks, debug exclusion, and PackageInstaller flow verified');
