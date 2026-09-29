@@ -263,8 +263,11 @@ for (const marker of [
 ]) {
   assert(CONTROLS.includes(marker), 'Apollo-panel settings-button treatment missing: ' + marker);
 }
-for (const legend of ['AUDIO','TACTILE','DISPLAY','COMPUTER','OPTICS','TEST','AUXILIARY','REFERENCE','DOCUMENTS','SOFTWARE']) {
-  assert(HTML.includes(`data-panel-legend="${legend}"`), 'Apollo panel nomenclature missing: ' + legend);
+for (const legend of ['RLY AUDIO','VIB','DSKY DISP','GUIDANCE','OPTICS','SYS TEST','AUX','PROCEDURES','TECH DATA','SW LOAD','NIGHT DISP']) {
+  assert(HTML.includes(`data-panel-legend="${legend}"`), 'Apollo-style panel nomenclature missing: ' + legend);
+}
+for (const face of ['>ON</button>','>FULL</button>','>CLOCK</button>','>SXT</button>','>RUN</button>','>DATA</summary>','>QUICK REF</button>','>SOURCE</button>']) {
+  assert(HTML.includes(face),'terse panel operator legend missing: '+face);
 }
 assert(!CONTROLS.includes('same black-key / white-EL visual language as the DSKY'),
   'superseded DSKY-key option-button styling must not return');
