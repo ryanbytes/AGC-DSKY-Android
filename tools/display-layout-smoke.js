@@ -196,7 +196,8 @@ for (const marker of [
   '#mode-toggle{grid-column:1;grid-row:2}',
   '#sxt{grid-column:2;grid-row:2}',
   '#diagnostics{grid-column:3;grid-row:2}',
-  '.options-tools{\n  grid-column:1 / -1;\n  grid-row:3'
+  '#dreambright{grid-column:3;grid-row:3}',
+  '.options-tools{\n  grid-column:1 / 3;\n  grid-row:3'
 ]) assert(CONTROLS.includes(marker), 'fixed option-panel position missing: ' + marker);
 assert(CONTROLS.includes('max-height:26vh') && CONTROLS.includes('overflow-y:auto'),
   'portrait option panel must stay vertically bounded and scroll if necessary');
