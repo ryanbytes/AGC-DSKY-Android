@@ -10,8 +10,16 @@
  */
 (() => {
   const api = window.AGCDSKY;
-  const COUNTS_PER_REV = 32768;
-  const COUNTS_PER_DEG = COUNTS_PER_REV / 360;
+  // Block II CM optics use different CDU angular scales:
+  //   CDUS/shaft:    32768 counts = 360 degrees.
+  //   CDUT/trunnion: 32768 counts =  90 degrees.
+  // Comanche ZERO OPTICS loads CDUT with -7200 signed counts (-20DEGS);
+  // adding the corresponding 19.775390625-degree programmed bias recovers
+  // the true line-of-sight trunnion angle.
+  const SHAFT_COUNTS_PER_DEG = 32768 / 360;
+  const TRUNNION_COUNTS_PER_DEG = 32768 / 90;
+  const TRUNNION_BIAS_COUNTS = 7200;
+  const TRUNNION_ZERO_BIAS_DEG = TRUNNION_BIAS_COUNTS / TRUNNION_COUNTS_PER_DEG;
   const SHAFT_CH = 0o200 | 0o36;
   const TRUNNION_CH = 0o200 | 0o35;
   const PCDU = 0o01;
@@ -429,8 +437,9 @@
 
   function addOpticsDegrees(shaftDeg, trunnionDeg){
     const vals=[shaftDeg,trunnionDeg];
+    const scales=[SHAFT_COUNTS_PER_DEG,TRUNNION_COUNTS_PER_DEG];
     for(let i=0;i<2;i++){
-      fraction[i] += vals[i] * COUNTS_PER_DEG;
+      fraction[i] += vals[i] * scales[i];
       const whole = fraction[i] < 0 ? Math.ceil(fraction[i]) : Math.floor(fraction[i]);
       if (whole) { pending[i]+=whole; fraction[i]-=whole; }
     }
@@ -467,14 +476,19 @@
     if(ok){if(typeof api.scheduleAgcAutosave==='function')api.scheduleAgcAutosave(bit===MARK_BIT?'SXT MARK':'SXT MARK REJECT');setTimeout(()=>{if(st&&document.getElementById('sxt-view')?.classList.contains('open'))st.textContent='SXT · MOVE PHONE TO AIM · 1.8°';},500)}
   }
 
-  function cduDegrees(word){ return ((word & 0x7fff) * 360 / COUNTS_PER_REV + 360) % 360; }
+  function signed15(word){
+    const raw=word & 0x7fff;
+    return (raw & 0x4000) ? raw - 0x8000 : raw;
+  }
+  function shaftDegrees(word){ return ((word & 0x7fff) / SHAFT_COUNTS_PER_DEG + 360) % 360; }
+  function trunnionDegrees(word){ return signed15(word) / TRUNNION_COUNTS_PER_DEG + TRUNNION_ZERO_BIAS_DEG; }
   function updateReadout(){
     const el=document.getElementById('sxt-readout'); if(!el) return;
     const c=core();
     if(!c || typeof c.readErasable!=='function'){el.innerHTML='SHAFT ---<br>TRUNNION ---';return;}
     const shaft=c.readErasable(0,0o36), trun=c.readErasable(0,0o35);
     if(shaft==null||trun==null){el.innerHTML='SHAFT ---<br>TRUNNION ---';return;}
-    el.innerHTML=`SHAFT ${cduDegrees(shaft).toFixed(2)}°<br>TRUNNION ${cduDegrees(trun).toFixed(2)}°`;
+    el.innerHTML=`SHAFT ${shaftDegrees(shaft).toFixed(2)}°<br>TRUNNION ${trunnionDegrees(trun).toFixed(2)}°`;
     updateStarFinder();
   }
 
