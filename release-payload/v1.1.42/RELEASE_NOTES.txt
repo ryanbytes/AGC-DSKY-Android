@@ -1,0 +1,6 @@
+AGC DSKY v1.1.42
+
+- AUXILIARY and DREAM now share the same compact third row.
+- Manual CHECK FOR UPDATE remains under TOOLS / INFO.
+- This release is the end-to-end updater test target from v1.1.41.
+- Relay fidelity, haptics, and accepted DSKY behavior are unchanged.
