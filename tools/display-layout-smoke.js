@@ -14,6 +14,7 @@ const CM_MODE = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/cm-mode.js'
 const SCREEN_ONLY = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/screen-only.css'), 'utf8');
 const SCREEN_ONLY_JS = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/screen-only.js'), 'utf8');
 const HTML = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/index.html'), 'utf8');
+const APP_SHELL = fs.readFileSync(path.join(ROOT, 'app/src/main/assets/app-shell-runtime.js'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -186,32 +187,57 @@ assert(CM.includes('.key.pressed') &&
 
 assert(CONTROLS.includes('max-width:calc(100vw - 8px)'),
   'control strip must remain constrained to the phone viewport');
-assert(CONTROLS.includes('flex-flow:row wrap'),
-  'control strip must wrap on narrow portrait screens');
-assert(CONTROLS.includes('max-height:30vh') && CONTROLS.includes('overflow-y:auto'),
-  'portrait control strip must stay vertically bounded and scroll if necessary');
-assert(CONTROLS.includes('min-width:max-content'),
-  'control labels must retain enough width to avoid truncation');
+assert(CONTROLS.includes('display:grid') && CONTROLS.includes('grid-template-columns:repeat(3,minmax(0,1fr))'),
+  'option panel must use a fixed three-column grid');
+for (const marker of [
+  '#sound{grid-column:1;grid-row:1}',
+  '#haptics{grid-column:2;grid-row:1}',
+  '#display{grid-column:3;grid-row:1}',
+  '#mode-toggle{grid-column:1;grid-row:2}',
+  '#sxt{grid-column:2;grid-row:2}',
+  '#diagnostics{grid-column:3;grid-row:2}',
+  '.options-tools{\n  grid-column:1 / -1;\n  grid-row:3'
+]) assert(CONTROLS.includes(marker), 'fixed option-panel position missing: ' + marker);
+assert(CONTROLS.includes('max-height:32vh') && CONTROLS.includes('overflow-y:auto'),
+  'portrait option panel must stay vertically bounded and scroll if necessary');
+assert(CONTROLS.includes('width:100%') && CONTROLS.includes('min-width:0'),
+  'fixed-grid control cells must size to their assigned panel positions');
 assert(CONTROLS.includes('text-overflow:clip') && CONTROLS.includes('white-space:nowrap'),
   'control button labels must remain unellipsized and on one line');
 assert(CONTROLS.includes('.app-controls span{display:none!important}'),
-  'obsolete mode/status span must stay hidden in the flowing control strip');
-assert(CONTROLS.includes('100vh - 138px') && CONTROLS.includes('100vh - 164px'),
-  'DSKY sizing must reserve room for the option strip');
+  'obsolete mode/status span must stay hidden in the fixed control panel');
+assert(CONTROLS.includes('100vh - 154px') && CONTROLS.includes('100vh - 168px'),
+  'DSKY sizing must reserve room for the fixed option panel');
 assert(CONTROLS.includes('@media (orientation:landscape)'),
   'control strip landscape sizing override missing');
+assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}') &&
+       CONTROLS.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),
+  'TOOLS / INFO submenu must use a fixed two-column grid');
+assert(HTML.includes('<div class="hint" id="hint">HOLD PANEL FOR OPTIONS</div>'),
+  'first-start hold-for-options instruction missing');
+assert(!HTML.includes('.hint{display:none!important}'),
+  'first-start options hint must not be forcibly hidden');
+assert(APP_SHELL.includes("store.get('optionsHintV1')!=='1'") &&
+       APP_SHELL.includes("store.set('optionsHintV1','1')") &&
+       APP_SHELL.includes('},4500);'),
+  'first-start options hint must display once for the new options UI');
 assert(CONTROLS.includes('body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}'),
   'dream/display-only/screen-only modes must suppress app controls');
 for (const marker of [
-  'same black-key / white-EL visual language as the DSKY',
-  'color:var(--key-el-color',
-  'text-shadow:var(--key-el-shadow',
-  'linear-gradient(145deg,#343532',
-  'transform:translateY(2px)',
+  'Apollo-style auxiliary panel operators',
+  'content:attr(data-panel-legend)',
+  'linear-gradient(180deg,#737870 0 15px,#30332f 15px 17px,#1a1b18 17px 100%)',
+  'border-radius:1px',
+  'transform:none;',
   '"Arial Narrow"'
 ]) {
-  assert(CONTROLS.includes(marker), 'DSKY-style settings-button treatment missing: ' + marker);
+  assert(CONTROLS.includes(marker), 'Apollo-panel settings-button treatment missing: ' + marker);
 }
+for (const legend of ['AUDIO','TACTILE','DISPLAY','COMPUTER','OPTICS','TEST','AUXILIARY','REFERENCE','DOCUMENTS']) {
+  assert(HTML.includes(`data-panel-legend="${legend}"`), 'Apollo panel nomenclature missing: ' + legend);
+}
+assert(!CONTROLS.includes('same black-key / white-EL visual language as the DSKY'),
+  'superseded DSKY-key option-button styling must not return');
 assert(!CONTROLS.includes('Series 2 barrier-mount operator indicators'),
   'obsolete Series 2 option-button styling must not return');
 
@@ -248,5 +274,5 @@ console.log(`  vertical translation: ${translateFraction.toFixed(6)} (target ${(
 console.log(`  full-screen EL stack: cover ${nominalCoverDepthAt106.toFixed(3)} + 1006315 package ${nominalIndicatorDepthAt106.toFixed(3)} = ${nominalTotalDepthAt106.toFixed(3)} units at 106-wide`);
 console.log('  annunciators: three-source per-bulb thermal fade with foreground fixed Gorton vector legends');
 console.log('  lighting: independent NUMERICS/INTEGRAL with fixed-vector white EL key legends');
-console.log('  options: bounded DSKY-style illuminated key strip');
+console.log('  options: fixed Apollo-style panel grid with first-start hold instruction');
 console.log('  recovered UI: forced FS595/glass finish is parser-loaded while physical parallax retains motion ownership');

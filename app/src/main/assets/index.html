@@ -20,7 +20,6 @@
 
 <style id="dsky-solo">
 html,body,#app{background:#000!important}
-.hint{display:none!important}
 #mode{display:none!important}
 #app{padding:2px!important}
 .dsky{z-index:3!important}
@@ -192,24 +191,24 @@ html,body,#app{background:#000!important}
     <i class="fastener f1"></i><i class="fastener f2"></i><i class="fastener f3"></i><i class="fastener f4"></i>
   </section>
   <div class="app-controls" id="controls">
-    <button id="dim" hidden>PANEL DIMMER</button>
-    <button id="dreambright" hidden>DREAM BRIGHTNESS DIM</button>
-    <button id="sound">RELAY CLICKS ON</button>
-    <button id="haptics" aria-pressed="true">HAPTICS ON</button>
-    <button id="display">FULL DSKY DISPLAY</button>
-    <button id="mode-toggle" aria-pressed="false">MODE · CLOCK</button>
-    <button id="sxt">SEXTANT</button>
-    <button id="diagnostics">DIAGNOSTICS</button>
+    <button id="dim" data-panel-legend="LIGHTING" hidden>PANEL DIMMER</button>
+    <button id="dreambright" data-panel-legend="DREAM" hidden>DREAM BRIGHTNESS DIM</button>
+    <button id="sound" data-panel-legend="AUDIO">RELAY CLICKS ON</button>
+    <button id="haptics" data-panel-legend="TACTILE" aria-pressed="true">HAPTICS ON</button>
+    <button id="display" data-panel-legend="DISPLAY">FULL DSKY DISPLAY</button>
+    <button id="mode-toggle" data-panel-legend="COMPUTER" aria-pressed="false">MODE · CLOCK</button>
+    <button id="sxt" data-panel-legend="OPTICS">SEXTANT</button>
+    <button id="diagnostics" data-panel-legend="TEST">DIAGNOSTICS</button>
     <details class="options-tools">
-      <summary>TOOLS / INFO</summary>
+      <summary data-panel-legend="AUXILIARY">TOOLS / INFO</summary>
       <div class="options-tools-menu">
-        <button id="cheat">CHEAT SHEET</button>
-        <button id="legal">LEGAL / SOURCE</button>
+        <button id="cheat" data-panel-legend="REFERENCE">CHEAT SHEET</button>
+        <button id="legal" data-panel-legend="DOCUMENTS">LEGAL / SOURCE</button>
       </div>
     </details>
     <span id="mode">PHONE CLOCK · LOCAL WALL TIME</span>
   </div>
-  <div class="hint" id="hint">Hold panel for controls</div>
+  <div class="hint" id="hint">HOLD PANEL FOR OPTIONS</div>
 </main>
 <script src="agc-core.js"></script>
 <script src="spacecraft-default.js"></script>

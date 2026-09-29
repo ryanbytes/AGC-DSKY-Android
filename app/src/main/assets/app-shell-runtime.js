@@ -197,9 +197,9 @@ function initializeAppShell(api,services){
   document.addEventListener('pointerdown',()=>{if(shellState.tickSound)requestRelayAudioStart(false)},{passive:true});
 
   document.body.classList.toggle('dream',shellState.dream);
-  if(!shellState.dream&&!shellState.displayOnly&&store.get('hinted')!=='1'){
+  if(!shellState.dream&&!shellState.displayOnly&&store.get('optionsHintV1')!=='1'){
     document.body.classList.add('first-run');
-    setTimeout(()=>{document.body.classList.remove('first-run');store.set('hinted','1')},3200);
+    setTimeout(()=>{document.body.classList.remove('first-run');store.set('optionsHintV1','1')},4500);
   }
   updateModeButton();updateHapticsButton();updateDreamOptionVisibility();refreshTimeStatus();environment.applyDim();environment.applyDreamMode();environment.applyDisplayOnly();audio.applySetting();applyMissionButton();renderer.clearLamps();renderer.set2('prog','00');show(shellState.verb,shellState.noun);clock.syncFace();
   setInterval(clock.tick,20);
