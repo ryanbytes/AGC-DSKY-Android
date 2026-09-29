@@ -33,6 +33,8 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   assert(audioSource.includes('setContext'),'audio runtime must own context replacement');
   assert(audioSource.includes('function createOwnedSlot(name,initial,validate=null)'),'audio implementation slot owner missing');
   assert(audioSource.includes('function createContextSlot()'),'audio context slot owner missing');
+  assert(audioSource.includes("b.setAttribute('aria-pressed',audioState.tickSound?'true':'false')"),
+    'relay clicks ON/OFF state must remain logical/accessibility state without relying on a latched visual');
   assert(audioSource.includes("compat.alias('audioCtx'")&&audioSource.includes('compat.alias(name,slot.get'),'audio compatibility globals must forward to audio-owned slots');
   for(const token of ["compat.accessor('audioCtx'","compat.mutable('ensureAudio'","compat.mutable('emitTick'","compat.mutable('playRelayBurst'","compat.mutable('applyTickSound'"])assert(!audioSource.includes(token),`compatibility registry still owns audio live state: ${token}`);
   assert(guardSource.includes("audio.installImplementation('ensure'"),'audio guard must install resilient ensure through audio service');
