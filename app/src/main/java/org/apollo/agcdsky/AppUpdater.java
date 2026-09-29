@@ -364,7 +364,9 @@ final class AppUpdater {
 
     private static boolean verifyApkIdentity(Context context, File apk) throws Exception {
         PackageManager pm = context.getPackageManager();
-        int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES;
+        int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                ? PackageManager.GET_SIGNING_CERTIFICATES | PackageManager.GET_SIGNATURES
+                : PackageManager.GET_SIGNATURES;
         PackageInfo archive = pm.getPackageArchiveInfo(apk.getAbsolutePath(), flags);
         PackageInfo current = pm.getPackageInfo(context.getPackageName(), flags);
         if (archive == null || !context.getPackageName().equals(archive.packageName)) return false;
@@ -378,10 +380,11 @@ final class AppUpdater {
 
     private static Set<String> signerDigests(PackageInfo info) throws Exception {
         Signature[] signatures;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            if (info.signingInfo == null) return java.util.Collections.emptySet();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.signingInfo != null) {
             signatures = info.signingInfo.hasMultipleSigners() ? info.signingInfo.getApkContentsSigners() : info.signingInfo.getSigningCertificateHistory();
-        } else signatures = info.signatures;
+        } else {
+            signatures = info.signatures;
+        }
         Set<String> out = new HashSet<>();
         if (signatures != null) for (Signature signature : signatures) out.add(hex(MessageDigest.getInstance("SHA-256").digest(signature.toByteArray())));
         return out;
