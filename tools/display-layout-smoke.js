@@ -196,8 +196,9 @@ for (const marker of [
   '#mode-toggle{grid-column:1;grid-row:2}',
   '#sxt{grid-column:2;grid-row:2}',
   '#diagnostics{grid-column:3;grid-row:2}',
-  '#dreambright{grid-column:3;grid-row:3}',
-  '.options-tools{\n  grid-column:1 / 3;\n  grid-row:3'
+  '#dreambright{grid-column:2;grid-row:3}',
+  '.options-tools{\n  grid-column:1;\n  grid-row:3',
+  '> .software-update-control{\n  grid-column:3;\n  grid-row:3'
 ]) assert(CONTROLS.includes(marker), 'fixed option-panel position missing: ' + marker);
 assert(CONTROLS.includes('max-height:26vh') && CONTROLS.includes('overflow-y:auto'),
   'portrait option panel must stay vertically bounded and scroll if necessary');
@@ -212,13 +213,15 @@ assert(CONTROLS.includes('100vh - 122px') && CONTROLS.includes('100vh - 136px'),
 assert(CONTROLS.includes('@media (orientation:landscape)'),
   'control strip landscape sizing override missing');
 assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}') &&
-       CONTROLS.includes('grid-template-columns:repeat(4,minmax(0,1fr))'),
-  'TOOLS / INFO submenu must preserve a fixed compact row with wider software status');
+       CONTROLS.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&
+       CONTROLS.includes('width:calc(300% + 6px)'),
+  'AUXILIARY submenu must span the row for REFERENCE and DOCUMENTS after SOFTWARE moves out');
 assert(CONTROLS.includes('.options-tools-menu #cheat{grid-column:1;grid-row:1}') &&
-       CONTROLS.includes('.options-tools-menu #legal{grid-column:2;grid-row:1}') &&
-       CONTROLS.includes('.options-tools-menu .software-update-control{') &&
-       CONTROLS.includes('grid-column:3 / 5;'),
-  'TOOLS / INFO controls must remain fixed in one compact row with a double-width software talkback cell');
+       CONTROLS.includes('.options-tools-menu #legal{grid-column:2;grid-row:1}'),
+  'AUXILIARY submenu controls must remain fixed in two columns');
+assert(CONTROLS.includes('.app-controls #dreambright{grid-column:2;grid-row:3}') &&
+       CONTROLS.includes('.app-controls > .software-update-control{\n  grid-column:3;\n  grid-row:3;'),
+  'row 3 must be AUXILIARY | DREAM | SOFTWARE');
 assert(HTML.includes('id="update-talkback"') &&
        HTML.includes('class="software-talkback"') &&
        HTML.includes('data-state="gray"') &&
