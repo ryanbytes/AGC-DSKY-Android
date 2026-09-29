@@ -1,7 +1,13 @@
 # AGC DSKY Android progress
 
-Last updated: 2026-09-27
+Last updated: 2026-09-29
 
+
+## 2026-09-29 Apollo-style application option panel
+
+After physical Pixel acceptance closed RLY-01, the bottom application-options strip was restyled without changing relay or AGC behavior. The controls remain explicitly application-only, but now use an Apollo spacecraft panel vocabulary: gray metal panel field, a separate painted nomenclature band, recessed dark pushbutton face, and restrained white lettering. Each operator has a stable `data-panel-legend` nomenclature label while the existing button text/state and IDs remain unchanged, so sound, haptics, display, mode, optics, diagnostics, checklist, and legal/source behavior keep their existing event ownership. The TOOLS / INFO summary uses the same treatment.
+
+The display-layout regression gate now requires the Apollo panel treatment and all visible nomenclature labels, and rejects restoration of the superseded DSKY-key styling. Relay-panel UI and synthetic relay personality/timing remain forbidden and untouched.
 
 ## 2026-09-27 RLY-02 source/provenance re-audit
 
