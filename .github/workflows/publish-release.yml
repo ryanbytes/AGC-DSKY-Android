@@ -1,0 +1,59 @@
+name: Publish signed release payload
+
+on:
+  push:
+    branches:
+      - 'release-payload/**'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify signed release payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
+          PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
+          test -f "${PAYLOAD_DIR}/app-regular-release.apk"
+          test -f "${PAYLOAD_DIR}/app-fire-release.apk"
+          test -f "${PAYLOAD_DIR}/app-regular-release.apk.sha256"
+          test -f "${PAYLOAD_DIR}/app-fire-release.apk.sha256"
+          (
+            cd "${PAYLOAD_DIR}"
+            sha256sum -c app-regular-release.apk.sha256
+            sha256sum -c app-fire-release.apk.sha256
+          )
+
+      - name: Create or refresh GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
+          TAG="v${VERSION_NAME}"
+          PAYLOAD_DIR="release-payload/${TAG}"
+          NOTES="${PAYLOAD_DIR}/RELEASE_NOTES.txt"
+          ASSETS=(
+            "${PAYLOAD_DIR}/app-regular-release.apk"
+            "${PAYLOAD_DIR}/app-regular-release.apk.sha256"
+            "${PAYLOAD_DIR}/app-fire-release.apk"
+            "${PAYLOAD_DIR}/app-fire-release.apk.sha256"
+          )
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${ASSETS[@]}" --clobber
+            gh release edit "${TAG}" --title "AGC DSKY ${TAG}" --target main --latest
+          else
+            if test -f "${NOTES}"; then
+              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
+            else
+              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --generate-notes --latest
+            fi
+          fi
