@@ -2,6 +2,36 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 v1.1.53 terse Apollo-style panel nomenclature
+
+Owner requested more NASA/Apollo-like names for the application-panel buttons and legends. This is a presentation convention for app functions, not a claim that these exact controls existed on Apollo hardware.
+
+Final nomenclature:
+- RLY AUDIO — ON/OFF
+- VIB — ON/OFF
+- DSKY DISP — FULL/EXIT
+- GUIDANCE — CLOCK/CMC/CMC LOAD/RLY TEST
+- OPTICS — SXT
+- SYS TEST — RUN
+- AUX — DATA
+- NIGHT DISP — DIM/BRIGHT/AUTO
+- SW LOAD — CHECK plus existing talkback
+- PROCEDURES — QUICK REF
+- TECH DATA — SOURCE
+- hidden panel-lighting operator: PANEL LTG — DIMMER
+
+The v1.1.52 physical-state repair remains intact: logical aria-pressed state does not leave toggle buttons mechanically depressed; only the actual active press receives the depressed visual.
+
+v1.1.53 / Android versionCode 2026092913. Source gates PASS: display-layout, self-update, app-shell-runtime, asset-reference. Exact key source blobs: VERSION 36a0393faacda946f0e653c6104ade7ca58d07e6; app/build.gradle 88e9811a3ecf6b8eb2c687ef355165bc97786712; AndroidManifest.xml 127c15e270b941378a01b0a51d4c255c8acbb36c; index.html 3d74cb1e9733173dfc41e539769d24849d9a64e6; app-shell-runtime.js 35327dd677da3931e1444fcae878d67b9171969b; relay-audio-runtime.js 4996e9d97b1dcd8f7003d5e550f66f8116ffc8a6; display-environment.js 720e0a1df0c887626abee2f738388933a38d4d3f; display-layout-smoke.js 67f1a5d94e8945e904a2b659be26f8718b73816b; self-update-smoke.js f78cfae0b4e6a7e098f8d62a36008feae661ae03; app-shell-runtime-smoke.js 848e65b3eaccf5e0451367c279a483e1e7a0b685.
+
+Regular and Fire were rebuilt locally from source with aapt2 -> javac 17 -> d8 -> zipalign -> apksigner using the established standalone signer. Both packages are org.apollo.agcdsky v1.1.53/code 2026092913; 73/73 runtime assets with 0 missing/extra/mismatch; relay-panel.js, relay-panel.css, and relay-perceptual-personality.js absent; zipalign PASS; APK Signature Scheme v2/v3 PASS; signer certificate MATCH.
+
+Regular SHA-256 10ab903bb200f3f0a1d181692be71ce09b4b4f5d195746c5d833034333f8be9f.
+Fire SHA-256 ad4c152a6ebfd2e73d89d2f51ef2ad46b4e06bdf4d1bb8811ce42593b888d7ef.
+
+Physical nomenclature/fit acceptance remains pending owner device inspection.
+
+
 ## 2026-09-29 v1.1.52 momentary panel-button visuals
 
 Owner reported HAPTICS stayed visually depressed while enabled and requested the same correction for RELAY CLICKS.

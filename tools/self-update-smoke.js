@@ -57,7 +57,7 @@ assert(activity.includes('new UpdateBridge(),"UpdateBridge"'),'launcher must exp
 assert(activity.includes('AppUpdater.checkNow(SensorMainActivity.this, SensorMainActivity.this::pushUpdateStatus)'),
   'manual updater bridge must request a forced check with status callback');
 assert(activity.includes('AGCDSKY_SHELL.nativeUpdateStatus'),'native updater status must be forwarded to the application shell');
-assert(html.includes('id="update-talkback"')&&html.includes('data-panel-legend="SOFTWARE"')&&
+assert(html.includes('id="update-talkback"')&&html.includes('data-panel-legend="SW LOAD"')&&
        html.includes('<button id="update" class="software-check">CHECK</button>'),
   'software talkback and manual CHECK control must be present on the main options panel');
 assert(shell.includes("UpdateBridge.checkNow()")&&shell.includes("nativeUpdateStatus('CHECKING')"),
