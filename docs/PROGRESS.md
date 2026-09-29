@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 v1.1.42 updater test candidate
+
+Owner requested AUXILIARY and DREAM share one row and explicitly chose this change as the end-to-end updater test. The compact fixed main panel now places AUXILIARY across columns 1-2 on row 3 and DREAM in column 3 on row 3. The TOOLS / INFO submenu remains one fixed row of three equal controls: CHEAT SHEET | LEGAL / SOURCE | CHECK FOR UPDATE. No flowing/reordering was introduced.
+
+Version metadata is v1.1.42 / Android versionCode 2026092902. Source gates PASS: display-layout, self-update, app-shell-runtime, and asset-reference. Both Regular and Fire were rebuilt from source using aapt2 -> javac 17 -> d8 -> zipalign -> apksigner with the established release key. Both packages are org.apollo.agcdsky v1.1.42/code 2026092902, target/compile SDK 37, 73/73 runtime assets with 0 missing/extra/byte mismatches, rejected relay panel/personality assets absent, zipalign PASS, APK Signature Scheme v2/v3 PASS, signer certificate SHA-256 409ad676e8052e50416a1bf69e095137ef639ac13ce4652160a19380a117fa1f MATCH. Regular SHA-256 7b3b8c06942054f6a5e3dd7813d9bd2b9d27eedf9d010d21e861d5ee1f8ce37f. Fire SHA-256 441d11cc06860f598b102656dcbae071d86e2d0a7f89b67b329a94b4d1a54222.
+
+A dedicated .github/workflows/publish-release.yml was added. It triggers only on release-payload/** branches, verifies committed SHA-256 sidecars, and uses the repository GITHUB_TOKEN with contents:write to create/refresh the matching GitHub Release against main from the exact pre-signed APK bytes. This avoids CI re-signing and therefore preserves updater signer equality. The payload branch is release-only and is not merged into main. The intended device test is installed v1.1.41 -> manual CHECK FOR UPDATE -> v1.1.42 discovery/download/install.
+
+
 ## 2026-09-29 manual updater control candidate
 
 After the v1.1.41 updater repair, device feedback showed there was still no visible manual update command. This candidate adds a fixed full-width SOFTWARE / CHECK FOR UPDATE control under TOOLS / INFO. The button invokes a native UpdateBridge forced check and displays asynchronous updater state directly on the control: CHECKING, UP TO DATE, DOWNLOADING, READY TO INSTALL, NETWORK ERROR, checksum/signature/package rejection, or other explicit failure state. The auxiliary submenu remains fixed-position in one compact row: CHEAT SHEET, LEGAL / SOURCE, and CHECK FOR UPDATE occupy three equal cells.
