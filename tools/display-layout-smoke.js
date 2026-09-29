@@ -211,12 +211,12 @@ assert(CONTROLS.includes('100vh - 122px') && CONTROLS.includes('100vh - 136px'),
 assert(CONTROLS.includes('@media (orientation:landscape)'),
   'control strip landscape sizing override missing');
 assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}') &&
-       CONTROLS.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),
+       CONTROLS.includes('grid-template-columns:repeat(3,minmax(0,1fr))'),
   'TOOLS / INFO submenu must use a fixed two-column grid');
 assert(CONTROLS.includes('.options-tools-menu #cheat{grid-column:1;grid-row:1}') &&
        CONTROLS.includes('.options-tools-menu #legal{grid-column:2;grid-row:1}') &&
-       CONTROLS.includes('.options-tools-menu #update{grid-column:1 / -1;grid-row:2}'),
-  'TOOLS / INFO control positions must remain fixed, including full-width manual update');
+       CONTROLS.includes('.options-tools-menu #update{grid-column:3;grid-row:1}'),
+  'TOOLS / INFO controls must remain fixed in one compact three-button row');
 assert(HTML.includes('<button id="update" data-panel-legend="SOFTWARE">CHECK FOR UPDATE</button>'),
   'manual CHECK FOR UPDATE control missing from auxiliary panel');
 assert(CONTROLS.includes('min-height:32px') &&
