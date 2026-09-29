@@ -25,7 +25,7 @@ for(const [text,filename] of [[ui,'flight-hardware-ui.js'],[rheostat,'lighting-r
   try{new vm.Script(text,{filename})}catch(error){fail(`${filename} syntax error: ${error.message}`)}
 }
 
-const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-perceptual-personality','relay-show'];
+const features=['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock','lighting-electrical-model','relay-show'];
 let previous=-1;
 for(const feature of features){
   const tag=`<script src="${feature}.js" data-feature="${feature}"></script>`,pos=html.indexOf(tag);
@@ -45,7 +45,8 @@ for(const marker of ["const MIN_LIGHT_LEVEL = 0.25","const MAX_LIGHT_LEVEL = 1.0
 for(const marker of ["const MIN_NORMAL_LEVEL = 0.25","const MAX_NORMAL_LEVEL = 1.00","continuousUiInterpolation:true","completeOffMethod:'open lighting feed / circuit breaker, not normal rheostat rotation'","function clamp(value)"])req(rheostat,marker,'continuous lighting rheostat mechanical stop');
 for(const forbidden of ['LIGHT BUS DEMO','lighting-bus-demo','lightingBusDemo','demoActive','cycleNumerics','cycleIntegral','zeroReservedFor','decodeChannel10(','agcCore.stop(','agcCore.reset(','resetAgcFace('])no(ui+rheostat,forbidden,'retired lighting demo/step controls');
 
-for(const marker of ["const KEY_CONTACT_BASE_MS = 36","const KEY_RETURN_SOUND_BASE_MS = 18","const HARDWARE_SEED_KEY = 'dskyHardwareUnitSeedV1'","contactMs: Number(vary(KEY_CONTACT_BASE_MS","returnSoundMs: Number(vary(KEY_RETURN_SOUND_BASE_MS","makePitch: Number(vary(520","returnPitch: Number(vary(330","function prepareKeys()","const lighting = Object.freeze({","function hardwarePersonality()", "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_FLIGHT_HARDWARE_UI',Object.freeze({lighting,hardwarePersonality})"])req(ui,marker,'key presentation personality service');
+for(const marker of ["const KEY_CONTACT_BASE_MS = 36","const KEY_RETURN_SOUND_BASE_MS = 18","const HARDWARE_SEED_KEY = 'dskyHardwareUnitSeedV1'","contactMs: KEY_CONTACT_BASE_MS","returnSoundMs: KEY_RETURN_SOUND_BASE_MS","makePitch: 520","returnPitch: 330","soundGain: 1","function prepareKeys()","const lighting = Object.freeze({","function hardwarePersonality()", "window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_FLIGHT_HARDWARE_UI',Object.freeze({lighting,hardwarePersonality})"])req(ui,marker,'key presentation personality service');
+for(const forbidden of ['vary(KEY_CONTACT_BASE_MS','vary(KEY_RETURN_SOUND_BASE_MS','vary(520','vary(330','vary(1, 0.09'])no(ui,forbidden,'unsourced key timing/audio manufacturing variation');
 for(const forbidden of ['travelVmin','--key-travel'])no(ui,forbidden,'unsourced per-key screen-plane travel');
 for(const forbidden of ['window.AGCDSKY.lighting =','window.AGCDSKY.hardwarePersonality =','NORMAL_KEY_CHANNEL','DSKY_KEY_CODE','function fireKeyContact(','function onKeyDown(','function releaseAgcKey(','function releaseKey(','function releaseAllKeys(',"document.addEventListener('pointerdown'","document.addEventListener('pointerup'","document.addEventListener('pointercancel'",'core.keyPress(code)','core.writeIo(0o15','keyState = new Map()'])no(ui,forbidden,'presentation layer electrical/facade ownership');
 
@@ -62,7 +63,8 @@ for(const forbidden of ['core.proceedKey(true)','core.proceedKey(false)','window
 for(const forbidden of ["document.querySelector('[data-key=\"P\"]')",'proPointer','releaseProceed','proceedKey(true)','proceedKey(false)','hardwareEnterClock'])no(hw,forbidden,'relay fidelity PRO ownership');
 no(ui,"P:0o",'presentation layer normal-key map');
 
-for(const marker of ["part:'MS24367-713'","part:'MS24367-680'","riseMs:32, fallMs:48","riseMs:40, fallMs:58","source.className = `lamp-source lamp-source-${i + 1}`","--lamp-rise","--lamp-fall","--lamp-gain","legend.className = 'lamp-legend'","document.body.classList.add('lamp-hardware-ready')",".lamp .lamp-source","transition-duration:var(--lamp-fall,52ms)","transition-duration:var(--lamp-rise,36ms)"])req(ui+finish,marker,'three-bulb incandescent model');
+for(const marker of ["part:'MS24367-713'","part:'MS24367-680'","riseMs:32, fallMs:48","riseMs:40, fallMs:58","const rise = model.riseMs","const fall = model.fallMs","const gain = 1","source.className = `lamp-source lamp-source-${i + 1}`","--lamp-rise","--lamp-fall","--lamp-gain","legend.className = 'lamp-legend'","document.body.classList.add('lamp-hardware-ready')",".lamp .lamp-source","transition-duration:var(--lamp-fall,52ms)","transition-duration:var(--lamp-rise,36ms)"])req(ui+finish,marker,'three-bulb incandescent model');
+for(const forbidden of ['vary(model.riseMs','vary(model.fallMs','vary(1, 0.10'])no(ui,forbidden,'unsupported per-bulb manufacturing variation');
 no(finish,'transition:opacity 145ms','obsolete generic annunciator decay');no(finish,'transition-duration:85ms','obsolete generic annunciator rise');
 for(const marker of ['--key-el-color','--key-el-shadow','--key-el-filter','.key.pressed','R-700 §3.10.1.5','transform:none;','fill:var(--key-el-color','filter:var(--key-el-filter','text-shadow:var(--key-el-shadow'])req(finish+style+controls,marker,'white EL key illumination / source-backed panel-normal press styling');
 for(const forbidden of ['translateY(var(--key-travel','--key-travel'])no(finish+style,forbidden,'obsolete screen-plane key depression');

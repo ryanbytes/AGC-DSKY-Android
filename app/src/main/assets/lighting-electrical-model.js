@@ -73,7 +73,7 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source {
 
   // flight-hardware-ui.js changes the normalized INTEGRAL control by writing
   // --integral-level on the root style. Recompute the incandescent branch
-  // after each such control/feed change, including LIGHT BUS DEMO transitions.
+  // after each control change.
   const observer = new MutationObserver(mutations => {
     if (mutations.some(m => m.type === 'attributes' && m.attributeName === 'style')) apply();
   });

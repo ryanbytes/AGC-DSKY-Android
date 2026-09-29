@@ -27,7 +27,6 @@ const features = [
   'key-tactile-feedback',
   'keyboard-electrical-interlock',
   'lighting-electrical-model',
-  'relay-perceptual-personality',
   'relay-show'
 ];
 

@@ -47,11 +47,11 @@ The 11 relays in the selected row are electrically commanded in parallel. The mo
 
 ## Acoustic model
 
-Physical armatures and contacts need not land at the exact same instant even when their coils are commanded together. To reproduce the short irregular relay rattle heard from restored DSKY hardware, the app distributes individual changed-relay contact snaps across the documented 20 ms drive window.
+The current source-bounded physical presentation does **not** invent per-relay mechanical scatter, bounce, pole skew, or unit-specific timing. Latching relay armature/contact presentation uses the readable predecessor 1006282 <=3 ms operate/release limit only as an explicitly labeled upper-bound reference; non-latching presentation similarly uses predecessor 1010784 <=5 ms. Exact production 2004688/2004689-2 mechanical timing remains unknown.
 
-That within-bank mechanical scatter is an **acoustic heuristic**, not a measured Apollo relay timing specification. The historical 20/40/120 ms electrical/software timing is kept separate from the sound-calibration constants.
+Relay sound is a generic synthesized presentation cue, not measured Apollo audio. Its waveform synthesis may contain noise/phase generation to avoid an artificial identical digital sample, but that synthesis is not allowed to alter the authoritative relay identity, contact timing, bank-drive timing, or claim package-specific acoustic fingerprints. The documented 20/40/120 ms electrical/software timing remains separate from acoustic rendering.
 
-Both setting and resetting a bistable relay are mechanical transitions and can produce a click. A modeled non-latching relay can also produce a mechanical event on energize and release.
+Both setting and resetting a bistable relay are mechanical transitions and can produce a generic click cue. A modeled non-latching relay can likewise produce a cue on energize and release.
 
 ## V35 DSKY light test
 
@@ -72,17 +72,14 @@ V35's own test mask does **not force COMP ACTY** because channel 11 bit 2 is abs
 
 Therefore:
 
-- **synthetic phone-clock V35** does not invent COMP ACTY and keeps it off;
-- **real AGC V35** accepts either COMP state and requires the rendered COMP lamp to exactly match raw channel `011` bit `00002`;
-- UPLINK is likewise required to match raw channel `011` bit `00004`.
+- V35 has **one operational authority** in the current app: DSKY key input -> yaAGC/Comanche055 -> AGC output channels -> hardware/display model.
+- PHONE CLOCK explicitly rejects V35 and contains no local V35 row/lamp/flash choreography.
+- Diagnostics does not inject V35. When AGC is running it closes the diagnostic path and instructs the operator to key VERB 35 ENTR on the DSKY.
+- Real AGC V35 accepts either COMP state and requires the rendered COMP lamp to exactly match raw channel `011` bit `00002`; UPLINK likewise matches raw channel `011` bit `00004`.
 
-This is a stronger hardware-fidelity rule than hard-coding a particular COMP state.
+yaAGC's DSKY hardware model exposes effective flashing/hardware state through simulator channel `0163`. That channel is a VirtualAGC simulator interface, not a historical Apollo AGC output channel. The frontend follows the yaAGC-provided modulation and does not create a second V35 flasher.
 
-yaAGC's DSKY hardware model further defines flashing as a **1.28 s period with 75% duty cycle**. During the off quarter, V/N is blanked and KEY REL / OPR ERR are suppressed. AGC mode follows the already-modulated synthetic channel `0163`; it does not start a second frontend flasher. The phone-clock-only V35 convenience mode mirrors that 4 × 320 ms modulation locally because no AGC engine is running there.
-
-Both clock-mode and AGC-mode V35 numerical rendering use the same channel-10 relay decoder. Clock-mode V35 does not use an `88`/all-lamps DOM shortcut, and ordinary keypad input is ignored while the five-second synthetic test owns the display except for RSET.
-
-The synthetic relay model also accounts for the mechanical transition into and out of the light test. It captures the phone-clock latch state immediately before V35, computes changed relay bits as `FULLDSP/FULLDSP1` replaces that state, preserves the active V35 latches for the five-second interval, and computes a second set of changes when RSET/natural completion restores the phone clock. Natural completion uses the same RSET path and returns to canonical **V16 N65**. Entering real AGC mode discards this synthetic return snapshot because the AGC reset/output path immediately takes ownership of the display.
+If the operator begins typing while PHONE CLOCK is selected, the clock keypad fallback promotes to AGC and forwards the queued physical key sequence through the normal AGC input runtime. There is no clock-mode V35 implementation or synthetic five-second light-test owner.
 
 ## Automated relay gates
 
@@ -97,15 +94,15 @@ The synthetic relay model also accounts for the mechanical transition into and o
 - shared phone-clock/AGC relay topology;
 - channel 011 and synthetic channel 0163 mappings.
 
-`tools/v35-model-smoke.js` loads the effective `app.js` + `app-refine.js` behavior and checks the source-backed `FULLDSP`/`FULLDSP1` low-11 relay words on every numerical selector, including relay 8's unused C bank, plus-sign rows, 5-second duration, synthetic-clock COMP exclusion, relay-12 mask, and 1.28-second/75% flash model.
+`tools/v35-model-smoke.js` is now an authority gate: it rejects any synthetic PHONE CLOCK/hardware V35 machinery, requires the explicit PHONE CLOCK rejection, requires diagnostics to remain user-driven, and guards the source-bounded relay model against reintroduced random relay timing.
 
-`tools/app-refine-smoke.js` checks the V35 input lock, natural/RSET return to V16 N65, clock-to-V35-to-clock physical relay deltas, mission cleanup, read-only relay snapshots, and raw channel `011`/`0163` diagnostic snapshots.
+`tools/operation-authority-smoke.js` independently requires PHONE CLOCK to reject V35 and diagnostics to avoid injecting key, I/O, or lamp-test state.
 
-`tools/device-v35-policy-smoke.js` guards the real-device proof contract at source-test time. In particular it rejects a fixed `COMP === false` assertion and requires COMP/UPLINK plus all channel-0163-derived lamp/blink states to be compared with their exact raw AGC bits.
+`tools/device-v35-policy-smoke.js` guards the current CM/Comanche device-proof contract. It requires Comanche055 relay-12 state `0650` and compares COMP, UPLINK, TEMP, KEY REL, V/N blanking, OPR ERR, RESTART, STBY, and EL-off presentation with the exact raw channel `011`/`0163` bits.
 
-`tools/wasm-runtime-smoke.js` drives real `V37E00E` then `V35E` through the exact pinned yaAGC WASM and ropes. Its semantic relay gate requires both five-relay character banks on selectors 1 through 11 to carry the digit-8 code, plus-sign bits on R1/R2/R3, and exact mission-specific relay-12 low-11 state (`00674` Luminary099, `00650` Comanche055).
+`tools/wasm-runtime-smoke.js` drives real `V37E00E` then `V35E` through the pinned yaAGC WASM and Comanche055 rope. Its semantic gate requires all numerical 8s, plus signs, and Comanche relay-12 low-11 state `00650`.
 
-The live Android `tools/device-v35-smoke.js` then requires the same real Luminary low-11 relay states, rendered `88` / `+88888` output, the source-backed V35 annunciators, and an observed yaAGC-modulated V/N + KEY REL/OPR ERR off phase. Instead of assuming COMP state, it requires the rendered channel-011 and channel-0163 discretes to exactly match the raw channel words captured from yaAGC.
+The live Android `tools/device-v35-smoke.js` exercises pointer input -> Pinball -> yaAGC/Comanche055 -> channel `010`/`011`/`0163` -> hardware latches -> rendered DSKY. It requires complete V35 relay/render state plus a channel-0163-consistent V/N flash transition; it does not use a PHONE CLOCK V35 surrogate.
 
 These host-side gates are part of `tools/build-local.sh`. They are not a substitute for the Android/WebView device gate and must not be reported as passing until actually executed in a complete checkout with the pinned WASM/rope assets.
 
