@@ -81,7 +81,8 @@
   transition:box-shadow 50ms linear,background 50ms linear,color 90ms linear;
 }
 .app-controls button[data-panel-legend]::before,
-.app-controls .options-tools summary[data-panel-legend]::before{
+.app-controls .options-tools summary[data-panel-legend]::before,
+.app-controls .software-update-control[data-panel-legend]::before{
   content:attr(data-panel-legend);
   position:absolute;
   left:3px;
@@ -172,7 +173,53 @@
 .app-controls .options-tools[open] .options-tools-menu{display:grid}
 .app-controls .options-tools-menu #cheat{grid-column:1;grid-row:1}
 .app-controls .options-tools-menu #legal{grid-column:2;grid-row:1}
-.app-controls .options-tools-menu #update{grid-column:3 / 5;grid-row:1}
+.app-controls .options-tools-menu .software-update-control{
+  grid-column:3 / 5;
+  grid-row:1;
+  position:relative;
+  min-width:0;
+  min-height:32px;
+  box-sizing:border-box;
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(42px,.55fr);
+  align-items:end;
+  gap:3px;
+  padding:13px 3px 3px;
+  border:1px solid #20231f;
+  outline:1px solid #747971;
+  border-radius:1px;
+  background:linear-gradient(180deg,#737870 0 11px,#30332f 11px 13px,#4d514c 13px 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -2px 3px rgba(0,0,0,.55),0 2px 0 #090a09;
+}
+.app-controls .software-talkback{
+  height:14px;
+  min-width:0;
+  border:1px solid #0b0c0b;
+  outline:1px solid #747971;
+  border-radius:1px;
+  box-shadow:inset 1px 1px 2px rgba(0,0,0,.72),inset -1px -1px 1px rgba(255,255,255,.10);
+}
+.app-controls .software-talkback[data-state="gray"]{
+  background:linear-gradient(180deg,#a5a69f 0%,#858780 52%,#6f716b 100%);
+}
+.app-controls .software-talkback[data-state="barber"]{
+  background:repeating-linear-gradient(135deg,#e7e5dc 0 4px,#252724 4px 8px);
+}
+.app-controls .software-talkback[data-state="red"]{
+  background:linear-gradient(180deg,#b2493e 0%,#7d2d26 58%,#521d18 100%);
+}
+.app-controls .software-update-control .software-check{
+  min-height:14px;
+  height:14px;
+  padding:0 3px;
+  border-radius:1px;
+  font-size:6.2px;
+  line-height:12px;
+  letter-spacing:.05em;
+  background:linear-gradient(180deg,#343733,#181a17);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 -1px 1px rgba(0,0,0,.72),0 1px 0 #090a09;
+}
+.app-controls .software-update-control .software-check:disabled{filter:brightness(.68)}
 
 /* Apollo-style application rheostats.
    These are app-side controls modeled after the rotary panel hardware; vertical
