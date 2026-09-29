@@ -126,9 +126,9 @@
 .app-controls #sxt{grid-column:2;grid-row:2}
 .app-controls #diagnostics{grid-column:3;grid-row:2}
 .app-controls #dim{grid-column:1;grid-row:4}
-.app-controls #dreambright{grid-column:2;grid-row:4}
+.app-controls #dreambright{grid-column:3;grid-row:3}
 .app-controls .options-tools{
-  grid-column:1 / -1;
+  grid-column:1 / 3;
   grid-row:3;
   position:relative;
   margin:0;
