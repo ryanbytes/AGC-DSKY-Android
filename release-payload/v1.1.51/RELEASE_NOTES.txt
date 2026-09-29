@@ -1,0 +1,6 @@
+AGC DSKY v1.1.51
+
+- Row 3 is now AUXILIARY | DREAM | SOFTWARE.
+- SOFTWARE talkback moved out of AUXILIARY and sits beside DREAM.
+- Holding CHECK forces barber pole for the full physical press; release returns control to the real updater state.
+- Fire direct system-installer path is unchanged.
