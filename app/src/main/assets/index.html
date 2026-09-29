@@ -193,6 +193,10 @@ html,body,#app{background:#000!important}
   <div class="app-controls" id="controls">
     <button id="dim" data-panel-legend="LIGHTING" hidden>PANEL DIMMER</button>
     <button id="dreambright" data-panel-legend="DREAM" hidden>DREAM BRIGHTNESS DIM</button>
+    <div class="software-update-control" data-panel-legend="SOFTWARE">
+      <div id="update-talkback" class="software-talkback" data-state="gray" role="status" aria-live="polite" aria-label="Software current" title="Software current"></div>
+      <button id="update" class="software-check">CHECK</button>
+    </div>
     <button id="sound" data-panel-legend="AUDIO">RELAY CLICKS ON</button>
     <button id="haptics" data-panel-legend="TACTILE" aria-pressed="true">HAPTICS ON</button>
     <button id="display" data-panel-legend="DISPLAY">FULL DSKY DISPLAY</button>
@@ -204,10 +208,6 @@ html,body,#app{background:#000!important}
       <div class="options-tools-menu">
         <button id="cheat" data-panel-legend="REFERENCE">CHEAT SHEET</button>
         <button id="legal" data-panel-legend="DOCUMENTS">LEGAL / SOURCE</button>
-        <div class="software-update-control" data-panel-legend="SOFTWARE">
-          <div id="update-talkback" class="software-talkback" data-state="gray" role="status" aria-live="polite" aria-label="Software current" title="Software current"></div>
-          <button id="update" class="software-check">CHECK</button>
-        </div>
       </div>
     </details>
     <span id="mode">PHONE CLOCK · LOCAL WALL TIME</span>
