@@ -35,7 +35,7 @@ The documented spring rate and assembled stroke allow only the spring-force *inc
 - The CM NUMERICS and INTEGRAL lighting controls are rheostats with mechanical stops that prevent normal rotation to OFF; spacecraft training/schematic material specifies opening the applicable circuit breaker/feed when complete lighting disable is required.
 - The normal app control range is clamped to a nonzero mechanical-stop range; complete OFF is represented only as an opened lighting feed/circuit-breaker condition, not as a rheostat position. The retired LIGHT BUS DEMO is not part of the current runtime.
 - `lighting-rheostat-stop.js` enforces the normal nonzero range and normalizes legacy saved zero settings back to a legal nonzero position.
-- The current discrete UI positions (`100%`, `75%`, `50%`, `25%`) are interaction approximations, not claimed Apollo rheostat calibration detents. The hardware control was continuous.
+- The current app control is continuous between its modeled mechanical stops. Its swipe-to-angle/percentage mapping is an interaction approximation, not a claimed Apollo rheostat calibration curve or detent pattern.
 - The INTEGRAL control feeds unlike loads: illuminated key legends are electroluminescent while status/caution legends use incandescent lamps. `lighting-electrical-model.js` therefore keeps their optical response separate; the incandescent `V^3.4` response is explicitly an engineering approximation rather than an Apollo-specified dimmer curve.
 - SCD/part evidence establishes the three-bulb annunciator construction but not a statistical distribution for optical rise/decay or bulb-to-bulb gain. Those presentation estimates are fixed across simulated bulbs; the app does not invent per-bulb manufacturing tolerances.
 
