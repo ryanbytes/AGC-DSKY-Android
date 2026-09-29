@@ -2,6 +2,22 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 v1.1.52 momentary panel-button visuals
+
+Owner reported HAPTICS stayed visually depressed while enabled and requested the same correction for RELAY CLICKS.
+
+Root cause: controls-layout.css coupled logical toggle state to physical button travel with `button[aria-pressed="true"]` in the depressed-face selector. HAPTICS correctly uses aria-pressed to represent enabled state, so the panel face remained visually latched. The fix removes logical aria-pressed from the physical depression selector; panel buttons now use only `:active` for the depressed appearance. HAPTICS and RELAY CLICKS keep their logical ON/OFF state and accessibility semantics without looking mechanically held. RELAY CLICKS now explicitly projects its ON/OFF state to aria-pressed as well.
+
+v1.1.52 / Android versionCode 2026092912. Source gates PASS: display-layout, self-update, app-shell-runtime, asset-reference, audio-recovery. Exact changed source blobs: VERSION cf6931b078c9307190606ffba8eb48e07da31117; app/build.gradle 5f89c159eb0196132e0fa4f3753f39d037cbc16f; AndroidManifest.xml 783000d44979494de28b2cdeaaef0812d86bea4d; controls-layout.css 89455384bd5e64ce2f65490652828ee178602c25; display-layout-smoke.js f9bb50979fdd90ff6a73c11f1199aff8e3c3e007; relay-audio-runtime.js 69e2c3868be8248e5e24f61bd172f86c70925fac; audio-recovery-smoke.js 615fe317cd1a8a21f0d83bbfc1baece533b59227.
+
+Regular and Fire rebuilt from exact exported source through aapt2 -> javac 17 -> classes.jar -> d8 -> zipalign -> apksigner with the established standalone release signer. Both org.apollo.agcdsky v1.1.52/code 2026092912; 73/73 runtime assets with 0 missing/extra/mismatch; rejected relay panel/personality assets absent; zipalign PASS; APK Signature Scheme v2/v3 PASS; signer certificate MATCH.
+
+Regular SHA-256 b642965b36ce2c25c29edb1ef189751915b7a75c5615a1373cff5d002e37dc5c.
+Fire SHA-256 945a3b50c9a1e635466ea63b17e4a14cee8df87c9b2bcc2f3d75c4140063ce29.
+
+Physical device gate: confirm HAPTICS and RELAY CLICKS return visually to their normal raised face immediately after release while their ON/OFF labels/state remain correct.
+
+
 ## 2026-09-29 v1.1.51 SOFTWARE beside DREAM + momentary flag
 
 Owner requested moving the SOFTWARE talkback next to DREAM and keeping the flag present for as long as CHECK is physically pressed.
