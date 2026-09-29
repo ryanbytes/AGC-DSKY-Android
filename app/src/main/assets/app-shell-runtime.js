@@ -115,13 +115,13 @@ function updateModeButton(){
   const b=$('mode-toggle');if(!b)return;
   const mode=String(shellState.mode||'clock');
   const busy=mode==='agc-loading'||mode==='relay-show';
-  b.textContent=mode==='agc'?'MODE · AGC':(mode==='agc-loading'?'MODE · AGC LOADING':(mode==='relay-show'?'MODE · RELAY SHOW':'MODE · CLOCK'));
+  b.textContent=mode==='agc'?'CMC':(mode==='agc-loading'?'CMC LOAD':(mode==='relay-show'?'RLY TEST':'CLOCK'));
   b.disabled=busy;
   b.setAttribute('aria-pressed',mode==='agc'?'true':'false');
 }
 function updateHapticsButton(){
   const b=$('haptics');if(!b)return;
-  b.textContent=shellState.relayHaptics?'HAPTICS ON':'HAPTICS OFF';
+  b.textContent=shellState.relayHaptics?'ON':'OFF';
   b.setAttribute('aria-pressed',shellState.relayHaptics?'true':'false');
 }
 function updateDreamOptionVisibility(){
