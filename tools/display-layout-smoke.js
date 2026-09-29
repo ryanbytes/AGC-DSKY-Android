@@ -213,6 +213,12 @@ assert(CONTROLS.includes('@media (orientation:landscape)'),
 assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}') &&
        CONTROLS.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),
   'TOOLS / INFO submenu must use a fixed two-column grid');
+assert(CONTROLS.includes('.options-tools-menu #cheat{grid-column:1;grid-row:1}') &&
+       CONTROLS.includes('.options-tools-menu #legal{grid-column:2;grid-row:1}') &&
+       CONTROLS.includes('.options-tools-menu #update{grid-column:1 / -1;grid-row:2}'),
+  'TOOLS / INFO control positions must remain fixed, including full-width manual update');
+assert(HTML.includes('<button id="update" data-panel-legend="SOFTWARE">CHECK FOR UPDATE</button>'),
+  'manual CHECK FOR UPDATE control missing from auxiliary panel');
 assert(HTML.includes('<div class="hint" id="hint">HOLD PANEL FOR OPTIONS</div>'),
   'first-start hold-for-options instruction missing');
 assert(!HTML.includes('.hint{display:none!important}'),
@@ -233,7 +239,7 @@ for (const marker of [
 ]) {
   assert(CONTROLS.includes(marker), 'Apollo-panel settings-button treatment missing: ' + marker);
 }
-for (const legend of ['AUDIO','TACTILE','DISPLAY','COMPUTER','OPTICS','TEST','AUXILIARY','REFERENCE','DOCUMENTS']) {
+for (const legend of ['AUDIO','TACTILE','DISPLAY','COMPUTER','OPTICS','TEST','AUXILIARY','REFERENCE','DOCUMENTS','SOFTWARE']) {
   assert(HTML.includes(`data-panel-legend="${legend}"`), 'Apollo panel nomenclature missing: ' + legend);
 }
 assert(!CONTROLS.includes('same black-key / white-EL visual language as the DSKY'),
