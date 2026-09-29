@@ -165,14 +165,14 @@
 .app-controls .options-tools summary:focus-visible{outline:2px solid rgba(245,247,237,.72);outline-offset:2px}
 .app-controls .options-tools-menu{
   display:none;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:3px;
   padding:3px 0 0;
 }
 .app-controls .options-tools[open] .options-tools-menu{display:grid}
 .app-controls .options-tools-menu #cheat{grid-column:1;grid-row:1}
 .app-controls .options-tools-menu #legal{grid-column:2;grid-row:1}
-.app-controls .options-tools-menu #update{grid-column:3;grid-row:1}
+.app-controls .options-tools-menu #update{grid-column:3 / 5;grid-row:1}
 
 /* Apollo-style application rheostats.
    These are app-side controls modeled after the rotary panel hardware; vertical

@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 v1.1.49 updater test + phone software-cell fit
+
+Owner requested a fresh updater test from v1.1.48 and then reported the SOFTWARE/update status text was clipped on the phone. v1.1.49 / versionCode 2026092909 keeps the current Fire direct-installer path unchanged and widens only the TOOLS / INFO software cell. The submenu remains one row: CHEAT and LEGAL occupy one quarter each; SOFTWARE / CHECK FOR UPDATE spans the remaining half. No extra vertical row was added.
+
+Exact changed source blobs: VERSION 8ac3ef6b26a02f52e23597a7f122911721c6b2ae; app/build.gradle dd12ace44e7909096a80bc557581ac37b7294a8e; AndroidManifest.xml 1911f4f2db764f9240069e6a78da96b9df7fde7f; controls-layout.css dacdeebc4f4e4be1c85c4741b71b2ddb893d1f21; display-layout-smoke.js 1d71837086b8748291234dbbed52f28dcf2f8281.
+
+Source gates PASS: display-layout, self-update, app-shell-runtime, asset-reference. Regular and Fire rebuilt from source with aapt2 -> javac 17 -> d8 -> zipalign -> apksigner using the established standalone release signer. Both are org.apollo.agcdsky v1.1.49/code 2026092909, 73/73 runtime assets with 0 missing/extra/mismatch, rejected relay panel/personality assets absent, zipalign PASS, APK Signature Scheme v2/v3 PASS, signer certificate MATCH. Regular SHA-256 ee033f2d40bf4bd4eecf25e5bc0e0a355239a0bacfddd462953cd9f45abd4f48. Fire SHA-256 485d5fba6a3d13560506f94e02ec0b95645aa171f3ff54239579c9e797388598.
+
+
 ## 2026-09-29 v1.1.42 updater test candidate
 
 Owner requested AUXILIARY and DREAM share one row and explicitly chose this change as the end-to-end updater test. The compact fixed main panel now places AUXILIARY across columns 1-2 on row 3 and DREAM in column 3 on row 3. The TOOLS / INFO submenu remains one fixed row of three equal controls: CHEAT SHEET | LEGAL / SOURCE | CHECK FOR UPDATE. No flowing/reordering was introduced.
