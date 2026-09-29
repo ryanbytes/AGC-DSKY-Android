@@ -535,3 +535,5 @@ This revision removes the relay panel completely from the runtime DOM, CSS, Java
 Observed device evidence: Pixel 9a, Android 17 / SDK 37, WebView 153.0.8010.36 repeatedly reported the pre-gesture vibration-policy rejection from relay-identity-audio.js. The prior panel candidate is rejected and superseded.
 
 RLY-01 remains IN PROGRESS until a rebuilt exact-source release-signed APK is installed and the owner confirms: no relay panel, no startup vibration-policy debug spam, and relay haptics still work after interaction.
+
+Owner partial device acceptance: the owner described the underlying app behavior from the first PR #163 Pixel candidate as good, while explicitly rejecting the relay-panel UI. Treat that as acceptance of the underlying DSKY/relay behavior only. It does not accept the rejected panel, the superseded pre-gesture vibration behavior, or the corrected no-panel replacement APK. The corrected replacement still requires physical confirmation of no panel, no startup/pre-gesture navigator.vibrate debug spam, and working relay haptics after interaction.
