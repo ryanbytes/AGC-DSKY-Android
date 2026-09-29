@@ -1,0 +1,5 @@
+AGC DSKY v1.1.44
+
+- Version-only updater installation test target.
+- Uses the repaired foreground UpdateInstallActivity PackageInstaller callback introduced in v1.1.43.
+- No DSKY/relay/UI behavior changes from v1.1.43.
