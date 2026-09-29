@@ -6,11 +6,11 @@
 #app{
   flex-direction:column;
   justify-content:center;
-  gap:6px;
+  gap:4px;
   overflow:hidden;
 }
 .dsky{
-  width:min(calc(100vw - 4px),calc((100vh - 154px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372));
+  width:min(calc(100vw - 4px),calc((100vh - 122px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372));
 }
 .app-controls{
   position:relative;
@@ -20,13 +20,13 @@
   width:min(calc(100vw - 8px),920px);
   max-width:calc(100vw - 8px);
   min-height:0;
-  max-height:32vh;
+  max-height:26vh;
   flex:0 0 auto;
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   grid-template-rows:auto auto auto;
-  gap:5px;
-  padding:7px;
+  gap:3px;
+  padding:4px;
   margin:0;
   overflow-y:auto;
   background:
@@ -56,17 +56,17 @@
   width:100%;
   min-width:0;
   max-width:none;
-  min-height:42px;
-  padding:18px 7px 6px;
+  min-height:32px;
+  padding:13px 5px 4px;
   overflow:hidden;
   text-overflow:clip;
   white-space:nowrap;
   border:1px solid #121411;
   border-radius:1px;
   outline:1px solid #747971;
-  background:linear-gradient(180deg,#737870 0 15px,#30332f 15px 17px,#1a1b18 17px 100%);
+  background:linear-gradient(180deg,#737870 0 11px,#30332f 11px 13px,#1a1b18 13px 100%);
   color:#eef0e8;
-  font:800 8.1px/.98 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
+  font:800 7.6px/.96 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
   letter-spacing:.045em;
   text-transform:uppercase;
   text-shadow:0 .08em #000;
@@ -84,10 +84,10 @@
 .app-controls .options-tools summary[data-panel-legend]::before{
   content:attr(data-panel-legend);
   position:absolute;
-  left:4px;
-  right:4px;
-  top:2px;
-  height:11px;
+  left:3px;
+  right:3px;
+  top:1px;
+  height:9px;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -95,7 +95,7 @@
   white-space:nowrap;
   pointer-events:none;
   color:#f2f2e9;
-  font:800 6.3px/.92 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
+  font:800 5.8px/.9 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
   letter-spacing:.09em;
   text-transform:uppercase;
   text-shadow:0 1px 1px rgba(0,0,0,.88);
@@ -104,7 +104,7 @@
 .app-controls button:hover{filter:brightness(1.035)}
 .app-controls button:active,
 .app-controls button[aria-pressed="true"]{
-  background:linear-gradient(180deg,#737870 0 15px,#30332f 15px 17px,#11120f 17px 100%);
+  background:linear-gradient(180deg,#737870 0 11px,#30332f 11px 13px,#11120f 13px 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.15),
     inset 1px 2px 4px rgba(0,0,0,.72),
@@ -138,18 +138,18 @@
   list-style:none;
   cursor:pointer;
   user-select:none;
-  min-height:42px;
+  min-height:32px;
   box-sizing:border-box;
   display:flex;
   align-items:flex-end;
   justify-content:center;
-  padding:18px 7px 6px;
+  padding:13px 5px 4px;
   border:1px solid #121411;
   border-radius:1px;
   outline:1px solid #747971;
-  background:linear-gradient(180deg,#737870 0 15px,#30332f 15px 17px,#1a1b18 17px 100%);
+  background:linear-gradient(180deg,#737870 0 11px,#30332f 11px 13px,#1a1b18 13px 100%);
   color:#eef0e8;
-  font:800 8.1px/.98 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
+  font:800 7.6px/.96 "Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;
   letter-spacing:.045em;
   text-transform:uppercase;
   text-shadow:0 .08em #000;
@@ -159,15 +159,15 @@
 .app-controls .options-tools summary::after{content:" ▾";margin-left:6px;font-size:.9em}
 .app-controls .options-tools[open] summary::after{content:" ▴"}
 .app-controls .options-tools[open] summary{
-  background:linear-gradient(180deg,#737870 0 15px,#30332f 15px 17px,#11120f 17px 100%);
+  background:linear-gradient(180deg,#737870 0 11px,#30332f 11px 13px,#11120f 13px 100%);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 1px 2px 4px rgba(0,0,0,.72),0 1px 1px rgba(0,0,0,.38);
 }
 .app-controls .options-tools summary:focus-visible{outline:2px solid rgba(245,247,237,.72);outline-offset:2px}
 .app-controls .options-tools-menu{
   display:none;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:5px;
-  padding:5px 0 0;
+  gap:3px;
+  padding:3px 0 0;
 }
 .app-controls .options-tools[open] .options-tools-menu{display:grid}
 .app-controls .options-tools-menu #cheat{grid-column:1;grid-row:1}
@@ -355,10 +355,10 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
 .controls-visible .hint{opacity:0!important;visibility:hidden!important}
 
 @media (max-width:380px){
-  .dsky{width:min(calc(100vw - 4px),calc((100vh - 168px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372))}
-  .app-controls{gap:4px;padding:5px}
-  .app-controls button{min-height:40px;font-size:6.8px;padding:17px 5px 5px}
-  .app-controls .options-tools summary{min-height:40px;font-size:6.8px;padding:17px 5px 5px}
+  .dsky{width:min(calc(100vw - 4px),calc((100vh - 136px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*320/372))}
+  .app-controls{gap:2px;padding:3px}
+  .app-controls button{min-height:30px;font-size:6.6px;padding:12px 4px 3px}
+  .app-controls .options-tools summary{min-height:30px;font-size:6.6px;padding:12px 4px 3px}
   .app-controls .lighting-controls{gap:5px;padding:4px 5px}
   .app-controls .lighting-control{width:70px}
   .app-controls .lighting-knob{width:38px;min-width:38px;height:38px;min-height:38px}
@@ -367,11 +367,11 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
 @media (orientation:landscape){
   .dsky,.dream .dsky{
     width:auto!important;
-    height:calc(100vh - 82px - max(4px,env(safe-area-inset-bottom)));
+    height:calc(100vh - 66px - max(4px,env(safe-area-inset-bottom)));
     max-width:92vw;
   }
-  .app-controls{width:min(calc(100vw - 8px),1180px);max-height:34vh;gap:4px;padding:5px}
-  .app-controls button{min-height:38px;font-size:7.2px;padding:16px 6px 5px}
+  .app-controls{width:min(calc(100vw - 8px),1180px);max-height:28vh;gap:2px;padding:3px}
+  .app-controls button{min-height:30px;font-size:6.9px;padding:12px 4px 3px}
 }
 body.dream #app,body.display-only #app,body.screen-only #app{gap:0}
 body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}
