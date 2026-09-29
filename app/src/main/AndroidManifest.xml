@@ -17,7 +17,7 @@
         android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher_original"
         android:roundIcon="@mipmap/ic_launcher_original"
-        android:label="AGC DSKY v1.1.46"
+        android:label="AGC DSKY v1.1.47"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <meta-data
@@ -35,12 +35,11 @@
             android:name=".UpdateCheckReceiver"
             android:exported="false" />
 
-        <activity
-            android:name=".UpdateInstallActivity"
+        <provider
+            android:name=".UpdateApkProvider"
+            android:authorities="${applicationId}.update-file"
             android:exported="false"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            android:grantUriPermissions="true" />
 
         <activity
             android:name=".SensorMainActivity"

@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.net.Uri;
@@ -210,11 +209,11 @@ final class AppUpdater {
     }
 
     static boolean resumePendingInstall(Context context) {
-        if (!hasValidPending(context)) return false;
+        if (!(context instanceof Activity) || !hasValidPending(context)) return false;
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         File file = new File(prefs.getString(PREF_PENDING, ""));
         try {
-            requestInstallPermissionOrInstall(context, file);
+            requestInstallPermissionOrInstall((Activity) context, file);
             return true;
         } catch (Exception error) {
             DebugReporter.appendNativeError(context, "Updater install: " + error);
@@ -222,38 +221,30 @@ final class AppUpdater {
         }
     }
 
-    private static void requestInstallPermissionOrInstall(Context context, File candidate) throws Exception {
-        PackageManager pm = context.getPackageManager();
+    private static void requestInstallPermissionOrInstall(Activity activity, File candidate) throws Exception {
+        PackageManager pm = activity.getPackageManager();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !pm.canRequestPackageInstalls()) {
-            Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + context.getPackageName()));
+            Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.getPackageName()));
             if (settings.resolveActivity(pm) == null) settings = new Intent(Settings.ACTION_SECURITY_SETTINGS);
-            if (!(context instanceof Activity)) settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(settings);
+            activity.startActivity(settings);
             return;
         }
-        installPackage(context, candidate);
+        launchSystemInstaller(activity, candidate);
     }
 
-    private static void installPackage(Context context, File apk) throws Exception {
-        PackageInstaller installer = context.getPackageManager().getPackageInstaller();
-        PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-        int sessionId = installer.createSession(params);
-        try (PackageInstaller.Session session = installer.openSession(sessionId);
-             FileInputStream input = new FileInputStream(apk);
-             java.io.OutputStream output = session.openWrite("base.apk", 0, apk.length())) {
-            byte[] buffer = new byte[64 * 1024];
-            int count;
-            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
-            session.fsync(output);
-            Intent callback = new Intent(context, UpdateInstallActivity.class).setAction(UpdateInstallActivity.ACTION_INSTALL_STATUS);
-            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags |= PendingIntent.FLAG_MUTABLE;
-            PendingIntent pending = PendingIntent.getActivity(context, sessionId, callback, flags);
-            session.commit(pending.getIntentSender());
-        } catch (Exception error) {
-            try { installer.abandonSession(sessionId); } catch (Exception ignored) {}
-            throw error;
+    private static void launchSystemInstaller(Activity activity, File apk) {
+        Uri uri = UpdateApkProvider.uriFor(activity, apk);
+        Intent install = new Intent(Intent.ACTION_INSTALL_PACKAGE);
+        install.setData(uri);
+        install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        install.setClipData(android.content.ClipData.newRawUri("AGC DSKY update", uri));
+        if (install.resolveActivity(activity.getPackageManager()) == null) {
+            install = new Intent(Intent.ACTION_VIEW);
+            install.setDataAndType(uri, "application/vnd.android.package-archive");
+            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            install.setClipData(android.content.ClipData.newRawUri("AGC DSKY update", uri));
         }
+        activity.startActivity(install);
     }
 
     static void clearPending(Context context, File file) {
