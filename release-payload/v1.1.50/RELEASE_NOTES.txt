@@ -1,0 +1,6 @@
+AGC DSKY v1.1.50
+
+- SOFTWARE updater status is now an Apollo-style talkback with a separate compact CHECK pushbutton.
+- Gray = current/normal; barber pole = checking/downloading/install pending; red = updater failure.
+- The mapping is an application convention using Apollo talkback visual language; it does not claim barber pole had one universal Apollo meaning.
+- Fire direct system-installer path is unchanged.
