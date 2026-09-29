@@ -2,6 +2,13 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 Fixed options panel + first-start instruction
+
+The Apollo-style application options were revised after device feedback so the buttons no longer use a flowing/wrapping strip. The panel now has explicit fixed grid positions: AUDIO / TACTILE / DISPLAY on row one; COMPUTER / OPTICS / TEST on row two; AUXILIARY spanning row three. The TOOLS / INFO submenu is a fixed two-column grid. A one-time first-start instruction now reads `HOLD PANEL FOR OPTIONS`; the prior inline rule that forcibly hid the hint was removed, and the new `optionsHintV1` key makes existing installs see the instruction once after this update.
+
+Source regression gates cover the fixed grid positions, fixed submenu, visible hint, one-time runtime key, Apollo nomenclature, and absence of the rejected relay panel/personality layer. Physical Pixel acceptance remains pending; PR #166 stays draft.
+
+
 
 ## 2026-09-29 Apollo-style application option panel
 
