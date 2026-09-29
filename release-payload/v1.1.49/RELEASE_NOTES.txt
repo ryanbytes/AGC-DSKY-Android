@@ -1,0 +1,6 @@
+AGC DSKY v1.1.49
+
+- Fresh updater test over v1.1.48.
+- TOOLS / INFO remains one compact row.
+- SOFTWARE / CHECK FOR UPDATE now spans half the submenu width on phones so update status text is not clipped.
+- Fire direct system-installer path is unchanged.
