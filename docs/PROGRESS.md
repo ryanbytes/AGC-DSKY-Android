@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-29
 
+## 2026-09-29 manual updater control candidate
+
+After the v1.1.41 updater repair, device feedback showed there was still no visible manual update command. This candidate adds a fixed full-width SOFTWARE / CHECK FOR UPDATE control under TOOLS / INFO. The button invokes a native UpdateBridge forced check and displays asynchronous updater state directly on the control: CHECKING, UP TO DATE, DOWNLOADING, READY TO INSTALL, NETWORK ERROR, checksum/signature/package rejection, or other explicit failure state. The auxiliary submenu remains fixed-position: CHEAT SHEET and LEGAL / SOURCE on row one, CHECK FOR UPDATE spanning row two.
+
+Source gates PASS: self-update smoke, display-layout smoke, app-shell runtime smoke, and asset-reference smoke. Exact branch runtime/source blobs used by the local build are AppUpdater.java 3b858b3ca12027582165ca7846c9ad5727f4c49c, SensorMainActivity.java 85c271acb71942ac2c3a3781edc7cf3986ef8ec8, index.html 9aefd532cacba17544647de4e1b2de764ddd5e70, app-shell-runtime.js 1dc54a7c2cdd75f78ec7f999d153902466db10fd, controls-layout.css 2e761d94a262e23038e30f39f5a2453556efa565, display-layout-smoke.js bd6cdeab6265f7d71c8344090ed7f924eb68f1b8, and self-update-smoke.js 15332bb24e9fd1bbb2f99affb384ac21072a2acc.
+
+Regular and Fire release APKs were rebuilt from source via aapt2 -> javac 17 -> d8 -> zipalign -> apksigner. Both are org.apollo.agcdsky v1.1.41/code 2026092901, SDK 26/37, 73 expected / 73 packaged runtime assets, 0 missing, 0 extra, 0 byte mismatches, rejected relay panel/personality assets absent, zipalign PASS, APK Signature Scheme v2/v3 PASS, established signer certificate MATCH. Regular SHA-256 cff7b8dc485917e85fbb59d408512e6b263da2203d44ec0f80976c897ce9bd7f. Fire SHA-256 db62a6868ee2d2e6bc31b309177a93d322bc94fa461239fd1e4194a650472cd1. Physical Fire/Pixel acceptance is pending; do not merge until the manual control is observed and exercised on device.
+
+
 ## 2026-09-29 v1.1.41 release candidate + updater repair
 
 Release candidate v1.1.41 / Android versionCode 2026092901 consolidates the verified post-v1.1.40 mainline and repairs the native self-update handoff. The previous updater could initiate unknown-source/package-installer UI from the background startup provider. The repaired flow keeps release discovery, download, SHA-256 verification, package/version validation, and signer validation in the background, but stores a verified pending APK and hands permission/install UI to the foreground SensorMainActivity. Process startup now forces one release-discovery check instead of being suppressed by the persisted 12-hour success window. The normal periodic receiver remains throttled. If GitHub's releases/latest API fails, the updater falls back to main/VERSION plus deterministic release asset and .sha256 URLs, preserving the same integrity and signing checks. ACTION_SECURITY_SETTINGS is a fallback when per-app unknown-source settings are unavailable.
