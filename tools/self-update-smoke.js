@@ -59,16 +59,21 @@ assert(activity.includes('AppUpdater.checkNow(SensorMainActivity.this, SensorMai
 assert(activity.includes('AGCDSKY_SHELL.nativeUpdateStatus'),'native updater status must be forwarded to the application shell');
 assert(html.includes('id="update-talkback"')&&html.includes('data-panel-legend="SOFTWARE"')&&
        html.includes('<button id="update" class="software-check">CHECK</button>'),
-  'software talkback and manual CHECK control must be visible in TOOLS / INFO');
+  'software talkback and manual CHECK control must be present on the main options panel');
 assert(shell.includes("UpdateBridge.checkNow()")&&shell.includes("nativeUpdateStatus('CHECKING')"),
   'manual update control must invoke the native bridge and enter a visible checking state');
 for(const marker of [
   "talkback.dataset.state=state",
   "text.startsWith('UP TO DATE')",
   "text.startsWith('READY TO INSTALL')",
-  "state=current?'gray':(active?'barber':'red')",
-  "b.textContent='CHECK'"
-])assert(shell.includes(marker),'software talkback updater mapping missing: '+marker);
+  "updateButtonHeld?'barber'",
+  "b.textContent='CHECK'",
+  "updateButton.addEventListener('pointerdown'",
+  "updateButton.addEventListener('pointerup',releaseUpdateCheck)",
+  "updateButton.addEventListener('pointercancel',releaseUpdateCheck)",
+  "updateButton.addEventListener('lostpointercapture',releaseUpdateCheck)",
+  "updateButton.setPointerCapture(event.pointerId)"
+])assert(shell.includes(marker),'software talkback updater mapping/press behavior missing: '+marker);
 for(const status of ['UP TO DATE · ','UPDATE ASSET MISSING','UPDATE DIGEST MISSING','DOWNLOADING · ','UPDATE CHECKSUM FAILED','UPDATE REJECTED','READY TO INSTALL · ','NETWORK ERROR','UPDATE ERROR'])
   assert(java.includes(status),'manual updater status missing: '+status);
 assert(!java.includes('pollInstallPermission('),'background permission polling must stay removed');

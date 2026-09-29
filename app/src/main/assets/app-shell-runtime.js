@@ -128,17 +128,22 @@ function updateDreamOptionVisibility(){
   const b=$('dreambright');if(!b)return;
   b.hidden=!(window.TimeBridge&&!shellState.dream);
 }
-function nativeUpdateStatus(value){
+let updateButtonHeld=false,lastUpdateStatus='CHECK FOR UPDATE';
+function renderUpdateStatus(){
   const b=$('update'),talkback=$('update-talkback');if(!b||!talkback)return;
-  const text=String(value||'UPDATE ERROR').toUpperCase();
+  const text=lastUpdateStatus;
   const active=text==='CHECKING'||text.startsWith('DOWNLOADING')||text.startsWith('READY TO INSTALL')||text==='UPDATE CHECK BUSY';
   const current=text.startsWith('UP TO DATE')||text.startsWith('UPDATED TO')||text==='CHECK FOR UPDATE';
-  const state=current?'gray':(active?'barber':'red');
+  const state=updateButtonHeld?'barber':(current?'gray':(active?'barber':'red'));
   talkback.dataset.state=state;
-  talkback.setAttribute('aria-label','Software: '+text);
-  talkback.title=text;
+  talkback.setAttribute('aria-label','Software: '+(updateButtonHeld?'CHECK PRESSED':text));
+  talkback.title=updateButtonHeld?'CHECK PRESSED':text;
   b.textContent='CHECK';
   b.disabled=text==='CHECKING'||text.startsWith('DOWNLOADING');
+}
+function nativeUpdateStatus(value){
+  lastUpdateStatus=String(value||'UPDATE ERROR').toUpperCase();
+  renderUpdateStatus();
 }
 function showControls(){
   if(shellState.dream||shellState.displayOnly)return;
@@ -206,14 +211,26 @@ function initializeAppShell(api,services){
     updateModeButton();
     Promise.resolve(request).catch(error=>console.error('Mode transition failed',error)).finally(()=>{updateModeButton();showControls()});
   });
-  const updateButton=$('update');if(updateButton)updateButton.addEventListener('click',()=>{
-    nativeUpdateStatus('CHECKING');
-    try{
-      if(window.UpdateBridge&&typeof UpdateBridge.checkNow==='function')UpdateBridge.checkNow();
-      else nativeUpdateStatus('ANDROID ONLY');
-    }catch(_){nativeUpdateStatus('UPDATE ERROR')}
-    showControls();
-  });
+  const updateButton=$('update');if(updateButton){
+    const releaseUpdateCheck=()=>{if(!updateButtonHeld)return;updateButtonHeld=false;renderUpdateStatus()};
+    updateButton.addEventListener('pointerdown',event=>{
+      if(updateButton.disabled)return;
+      updateButtonHeld=true;
+      renderUpdateStatus();
+      try{updateButton.setPointerCapture(event.pointerId)}catch(_){}
+    });
+    updateButton.addEventListener('pointerup',releaseUpdateCheck);
+    updateButton.addEventListener('pointercancel',releaseUpdateCheck);
+    updateButton.addEventListener('lostpointercapture',releaseUpdateCheck);
+    updateButton.addEventListener('click',()=>{
+      nativeUpdateStatus('CHECKING');
+      try{
+        if(window.UpdateBridge&&typeof UpdateBridge.checkNow==='function')UpdateBridge.checkNow();
+        else nativeUpdateStatus('ANDROID ONLY');
+      }catch(_){nativeUpdateStatus('UPDATE ERROR')}
+      showControls();
+    });
+  }
   document.addEventListener('pointerdown',()=>{if(shellState.tickSound)requestRelayAudioStart(false)},{passive:true});
 
   document.body.classList.toggle('dream',shellState.dream);
