@@ -129,9 +129,15 @@ function updateDreamOptionVisibility(){
   b.hidden=!(window.TimeBridge&&!shellState.dream);
 }
 function nativeUpdateStatus(value){
-  const b=$('update');if(!b)return;
+  const b=$('update'),talkback=$('update-talkback');if(!b||!talkback)return;
   const text=String(value||'UPDATE ERROR').toUpperCase();
-  b.textContent=text;
+  const active=text==='CHECKING'||text.startsWith('DOWNLOADING')||text.startsWith('READY TO INSTALL')||text==='UPDATE CHECK BUSY';
+  const current=text.startsWith('UP TO DATE')||text.startsWith('UPDATED TO')||text==='CHECK FOR UPDATE';
+  const state=current?'gray':(active?'barber':'red');
+  talkback.dataset.state=state;
+  talkback.setAttribute('aria-label','Software: '+text);
+  talkback.title=text;
+  b.textContent='CHECK';
   b.disabled=text==='CHECKING'||text.startsWith('DOWNLOADING');
 }
 function showControls(){

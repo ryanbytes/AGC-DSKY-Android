@@ -216,10 +216,20 @@ assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}
   'TOOLS / INFO submenu must preserve a fixed compact row with wider software status');
 assert(CONTROLS.includes('.options-tools-menu #cheat{grid-column:1;grid-row:1}') &&
        CONTROLS.includes('.options-tools-menu #legal{grid-column:2;grid-row:1}') &&
-       CONTROLS.includes('.options-tools-menu #update{grid-column:3 / 5;grid-row:1}'),
-  'TOOLS / INFO controls must remain fixed in one compact row with a double-width software cell');
-assert(HTML.includes('<button id="update" data-panel-legend="SOFTWARE">CHECK FOR UPDATE</button>'),
-  'manual CHECK FOR UPDATE control missing from auxiliary panel');
+       CONTROLS.includes('.options-tools-menu .software-update-control{') &&
+       CONTROLS.includes('grid-column:3 / 5;'),
+  'TOOLS / INFO controls must remain fixed in one compact row with a double-width software talkback cell');
+assert(HTML.includes('id="update-talkback"') &&
+       HTML.includes('class="software-talkback"') &&
+       HTML.includes('data-state="gray"') &&
+       HTML.includes('<button id="update" class="software-check">CHECK</button>'),
+  'software talkback and compact CHECK control missing from auxiliary panel');
+for (const marker of [
+  '.software-talkback[data-state="gray"]',
+  '.software-talkback[data-state="barber"]',
+  'repeating-linear-gradient(135deg',
+  '.software-talkback[data-state="red"]'
+]) assert(CONTROLS.includes(marker),'software talkback state styling missing: '+marker);
 assert(CONTROLS.includes('min-height:32px') &&
        CONTROLS.includes('padding:13px 5px 4px') &&
        CONTROLS.includes('gap:3px') &&

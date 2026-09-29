@@ -57,10 +57,18 @@ assert(activity.includes('new UpdateBridge(),"UpdateBridge"'),'launcher must exp
 assert(activity.includes('AppUpdater.checkNow(SensorMainActivity.this, SensorMainActivity.this::pushUpdateStatus)'),
   'manual updater bridge must request a forced check with status callback');
 assert(activity.includes('AGCDSKY_SHELL.nativeUpdateStatus'),'native updater status must be forwarded to the application shell');
-assert(html.includes('id="update"')&&html.includes('CHECK FOR UPDATE')&&html.includes('data-panel-legend="SOFTWARE"'),
-  'manual update control must be visible in TOOLS / INFO');
+assert(html.includes('id="update-talkback"')&&html.includes('data-panel-legend="SOFTWARE"')&&
+       html.includes('<button id="update" class="software-check">CHECK</button>'),
+  'software talkback and manual CHECK control must be visible in TOOLS / INFO');
 assert(shell.includes("UpdateBridge.checkNow()")&&shell.includes("nativeUpdateStatus('CHECKING')"),
   'manual update control must invoke the native bridge and enter a visible checking state');
+for(const marker of [
+  "talkback.dataset.state=state",
+  "text.startsWith('UP TO DATE')",
+  "text.startsWith('READY TO INSTALL')",
+  "state=current?'gray':(active?'barber':'red')",
+  "b.textContent='CHECK'"
+])assert(shell.includes(marker),'software talkback updater mapping missing: '+marker);
 for(const status of ['UP TO DATE · ','UPDATE ASSET MISSING','UPDATE DIGEST MISSING','DOWNLOADING · ','UPDATE CHECKSUM FAILED','UPDATE REJECTED','READY TO INSTALL · ','NETWORK ERROR','UPDATE ERROR'])
   assert(java.includes(status),'manual updater status missing: '+status);
 assert(!java.includes('pollInstallPermission('),'background permission polling must stay removed');
