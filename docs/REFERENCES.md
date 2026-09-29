@@ -39,6 +39,13 @@ The documented spring rate and assembled stroke allow only the spring-force *inc
 - The INTEGRAL control feeds unlike loads: illuminated key legends are electroluminescent while status/caution legends use incandescent lamps. `lighting-electrical-model.js` therefore keeps their optical response separate; the incandescent `V^3.4` response is explicitly an engineering approximation rather than an Apollo-specified dimmer curve.
 - SCD/part evidence establishes the three-bulb annunciator construction but not a statistical distribution for optical rise/decay or bulb-to-bulb gain. Those presentation estimates are fixed across simulated bulbs; the app does not invent per-bulb manufacturing tolerances.
 
+### CM optics CDU scaling
+
+- Comanche erasable assignments identify location 0035 as CDUT (optics trunnion) and 0036 as CDUS (optics shaft).
+- The Block II optical shaft CDU uses 32768 counts per 360 degrees (39.55078125 arcsec/count). The optical trunnion CDU uses 32768 counts per 90 degrees (9.8876953125 arcsec/count); these scales must not be shared.
+- Comanche ZERO OPTICS stores zero in CDUS and `-20DEGS` in CDUT. The programmed `20DEGS` magnitude is 7200 signed CDUT counts, equivalent to 19.775390625 degrees. True trunnion line-of-sight angle is therefore decoded from signed CDUT plus that programmed bias.
+- `optics.js` and the explicitly non-flight `sextant-tap-mark.js` simulator aid use the same source-backed shaft/trunnion delta scales. Only the live readout applies the absolute CDUT zero bias.
+
 ### Mappings implemented in v0.7
 
 - COMP ACTY: output channel `011` octal, bit 2.

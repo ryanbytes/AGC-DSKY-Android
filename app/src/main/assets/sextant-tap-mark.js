@@ -15,7 +15,8 @@
 
   const api = window.AGCDSKY;
   if (!api) throw new Error('AGCDSKY public facade unavailable');
-  const COUNTS_PER_DEG = 32768 / 360;
+  const SHAFT_COUNTS_PER_DEG = 32768 / 360;
+  const TRUNNION_COUNTS_PER_DEG = 32768 / 90;
   const SHAFT_CH = 0o200 | 0o36;
   const TRUNNION_CH = 0o200 | 0o35;
   const PCDU = 0o01;
@@ -129,8 +130,8 @@
     const halfFov = SXT_FOV_DEG / 2;
     const shaftOffsetDeg = point.x * halfFov;
     const trunnionOffsetDeg = -point.y * halfFov;
-    const shaftCounts = Math.round(shaftOffsetDeg * COUNTS_PER_DEG);
-    const trunnionCounts = Math.round(trunnionOffsetDeg * COUNTS_PER_DEG);
+    const shaftCounts = Math.round(shaftOffsetDeg * SHAFT_COUNTS_PER_DEG);
+    const trunnionCounts = Math.round(trunnionOffsetDeg * TRUNNION_COUNTS_PER_DEG);
 
     lastMark = {
       timestamp:Date.now(),
