@@ -41,12 +41,12 @@ for(const marker of [
 assert(bridge.includes('performRelayOneShot'),'minimum relay one-shot path missing');
 assert(!bridge.includes('amplitudes[i] == 0 ? 0 : 255'),'relay waveform must not promote tiny pulses to full-strength 255 fallback');
 
-const waveformCalls=[],impactCalls=[];
+const waveformCalls=[],impactCalls=[];let browserCalls=0;
 const hardware={snapshot(){return {auxRelays:{}}},registerSnapshotExtension(){}};
 const context={
   console,Math,Date,Object,Array,Number,String,Map,Set,
   setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},
-  navigator:{vibrate(){throw new Error('native waveform bridge should win')}},
+  navigator:{userActivation:{hasBeenActive:false},vibrate(){browserCalls++;return true}},
   document:{getElementById(){return null}},
   AGCDSKY_APP_STATE:{tickSound:false,relayHaptics:true},
   AGCDSKY_ENVIRONMENT:{tickLevel(){return 1}},
@@ -148,6 +148,19 @@ const aux=model.auxiliaryHapticPatternFor('comp',true);
 assert(aux.pulses.length===1&&aux.pulses[0].kind==='armature','aux relay haptic must contain one armature tick only');
 assert(model.playAuxHaptic('comp',true)===true&&waveformCalls.length===1,'aux waveform dispatch failed');
 
+assert(browserCalls===0,'native Android haptic path leaked into navigator.vibrate');
+context.HapticBridge=null;
+browserCalls=0;
+assert(model.playRelayHaptic(4,7,true)===false,'pre-gesture browser haptic should be suppressed');
+assert(browserCalls===0,'pre-gesture navigator.vibrate was called');
+context.navigator.userActivation.hasBeenActive=true;
+assert(model.playRelayHaptic(4,7,true)===true,'post-gesture browser haptic fallback did not run');
+assert(browserCalls===1,'post-gesture browser haptic fallback should issue exactly one vibrate call');
+context.HapticBridge={available(){return false},relayImpact(){throw new Error('unavailable Android bridge must not dispatch')}};
+browserCalls=0;
+assert(model.playRelayHaptic(4,7,true)===false,'Android bridge presence must suppress browser fallback when native haptics are unavailable');
+assert(browserCalls===0,'Android WebView fell through to navigator.vibrate despite HapticBridge presence');
+
 context.AGCDSKY_APP_STATE.relayHaptics=false;
 waveformCalls.length=0;impactCalls.length=0;
 assert(model.hapticsEnabled()===false,'relay haptic enabled state did not reflect OFF');
@@ -159,27 +172,5 @@ assert(waveformCalls.length===0&&impactCalls.length===0,'disabled relay haptics 
 context.AGCDSKY_APP_STATE.relayHaptics=true;
 assert(model.hapticsEnabled()===true,'relay haptic enabled state did not restore ON');
 
-const browserVibrationCalls=[];
-const browserHardware={snapshot(){return {auxRelays:{}}},registerSnapshotExtension(){}};
-const browserContext={
-  console,Math,Date,Object,Array,Number,String,Map,Set,
-  setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},
-  navigator:{userActivation:{hasBeenActive:false},vibrate(pattern){browserVibrationCalls.push(pattern);return true}},
-  document:{getElementById(){return null}},
-  AGCDSKY_APP_STATE:{tickSound:false,relayHaptics:true},
-  AGCDSKY_ENVIRONMENT:{tickLevel(){return 1}},
-  AGCDSKY_AUDIO:{implementation(){return()=>true},installImplementation(){},ensure(){return null}},
-  AGCDSKY_SERVICE_REGISTRY:{get(name){return name==='AGCDSKY_HARDWARE'?browserHardware:null}}
-};
-browserContext.window=browserContext;vm.createContext(browserContext);
-vm.runInContext(topologySource,browserContext,{filename:'dsky-relay-topology.js'});
-vm.runInContext(identity,browserContext,{filename:'relay-identity-audio.js'});
-const browserModel=browserContext.DSKY_RELAY_AUDIO;
-assert(browserModel.playRelayHaptic(4,7,true)===false,'browser relay haptic must be suppressed before user activation');
-assert(browserVibrationCalls.length===0,'navigator.vibrate was called before browser user activation');
-browserContext.navigator.userActivation.hasBeenActive=true;
-assert(browserModel.playRelayHaptic(4,7,true)===true,'browser relay haptic did not enable after user activation');
-assert(browserVibrationCalls.length===1,'browser relay haptic should issue exactly one navigator.vibrate call after activation');
-
 console.log('relay haptic smoke: PASS');
-console.log('  authentic mode uses one non-overwriting bank waveform; each physical relay contributes one 1 ms / 1-of-255 armature tick and contact bounce stays non-haptic');
+console.log('  authentic mode uses one non-overwriting bank waveform; Android never falls through to pre-gesture navigator.vibrate; browser fallback requires prior user activation');
