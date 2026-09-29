@@ -1,0 +1,5 @@
+AGC DSKY v1.1.52
+
+- HAPTICS no longer remains visually depressed while enabled.
+- RELAY CLICKS follows the same rule: ON/OFF remains logical state, while the button face is depressed only during the physical press.
+- Accessibility aria-pressed state remains available for both toggles without driving panel travel styling.
