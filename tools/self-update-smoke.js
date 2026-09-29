@@ -47,7 +47,7 @@ const fetchIndex=java.indexOf('Release release = fetchLatestReleaseResilient();'
 const successIndex=java.indexOf('putLong(PREF_LAST_CHECK, System.currentTimeMillis())');
 assert(fetchIndex>=0&&successIndex>fetchIndex,'successful-check timestamp must be written only after the release request succeeds');
 assert(!java.includes('putLong(PREF_LAST_CHECK, now).apply()'),'updater must not consume the 12-hour check window before network success');
-assert(java.includes('if (isTransientNetworkFailure(error)) scheduleRetry(context);'),'transient updater network failures must retry quietly');
+assert(java.includes('if (isTransientNetworkFailure(error)) {')&&java.includes('scheduleRetry(context);')&&java.includes('notifyStatus(listener, "NETWORK ERROR")'),'transient updater network failures must schedule retry and report manual-check status');
 for(const marker of ['AppUpdater.checkNow(context)','AlarmManager.ELAPSED_REALTIME','setInexactRepeating','CHECK_INTERVAL_MS'])assert(provider.includes(marker),`startup provider missing periodic updater marker: ${marker}`);
 assert(checkReceiver.includes('AppUpdater.check(context)'),'periodic receiver does not invoke updater');
 assert(activity.includes('AppUpdater.onForeground(this)'),'launcher activity must resume pending update UI from the foreground');
