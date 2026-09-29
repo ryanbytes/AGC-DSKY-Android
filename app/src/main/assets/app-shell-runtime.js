@@ -128,6 +128,12 @@ function updateDreamOptionVisibility(){
   const b=$('dreambright');if(!b)return;
   b.hidden=!(window.TimeBridge&&!shellState.dream);
 }
+function nativeUpdateStatus(value){
+  const b=$('update');if(!b)return;
+  const text=String(value||'UPDATE ERROR').toUpperCase();
+  b.textContent=text;
+  b.disabled=text==='CHECKING'||text.startsWith('DOWNLOADING');
+}
 function showControls(){
   if(shellState.dream||shellState.displayOnly)return;
   updateModeButton();updateHapticsButton();updateDreamOptionVisibility();
@@ -194,6 +200,14 @@ function initializeAppShell(api,services){
     updateModeButton();
     Promise.resolve(request).catch(error=>console.error('Mode transition failed',error)).finally(()=>{updateModeButton();showControls()});
   });
+  const updateButton=$('update');if(updateButton)updateButton.addEventListener('click',()=>{
+    nativeUpdateStatus('CHECKING');
+    try{
+      if(window.UpdateBridge&&typeof UpdateBridge.checkNow==='function')UpdateBridge.checkNow();
+      else nativeUpdateStatus('ANDROID ONLY');
+    }catch(_){nativeUpdateStatus('UPDATE ERROR')}
+    showControls();
+  });
   document.addEventListener('pointerdown',()=>{if(shellState.tickSound)requestRelayAudioStart(false)},{passive:true});
 
   document.body.classList.toggle('dream',shellState.dream);
@@ -233,6 +247,7 @@ window.AGCDSKY_SHELL=Object.freeze({
   cycleMission,
   updateModeControl:updateModeButton,
   updateHapticsControl:updateHapticsButton,
+  nativeUpdateStatus,
   showControls,
   initialize:initializeAppShell
 });

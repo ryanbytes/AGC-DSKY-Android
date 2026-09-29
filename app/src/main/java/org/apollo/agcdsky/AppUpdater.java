@@ -60,11 +60,20 @@ final class AppUpdater {
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
     private static volatile WeakReference<Activity> foregroundActivity = new WeakReference<>(null);
 
+    interface StatusListener { void onStatus(String status); }
+
     private AppUpdater() {}
 
-    static void check(Context source) { check(source, false); }
+    static void check(Context source) { check(source, false, null); }
 
-    static void checkNow(Context source) { check(source, true); }
+    static void checkNow(Context source) { check(source, true, null); }
+
+    static void checkNow(Context source, StatusListener listener) { check(source, true, listener); }
+
+    private static void notifyStatus(StatusListener listener, String status) {
+        if (listener == null) return;
+        try { listener.onStatus(status); } catch (RuntimeException ignored) {}
+    }
 
     static void onForeground(Activity activity) {
         if (activity == null) return;
@@ -77,13 +86,21 @@ final class AppUpdater {
         if (current == activity) foregroundActivity = new WeakReference<>(null);
     }
 
-    private static void check(Context source, boolean force) {
+    private static void check(Context source, boolean force, StatusListener listener) {
         Context context = source.getApplicationContext();
-        if (BuildConfig.DEBUG || (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) return;
-        if (!RUNNING.compareAndSet(false, true)) return;
+        if (BuildConfig.DEBUG || (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            notifyStatus(listener, "UPDATE DISABLED IN DEBUG");
+            return;
+        }
+        if (!RUNNING.compareAndSet(false, true)) {
+            notifyStatus(listener, "UPDATE CHECK BUSY");
+            return;
+        }
         EXECUTOR.execute(() -> {
             try {
+                notifyStatus(listener, "CHECKING");
                 if (hasValidPending(context)) {
+                    notifyStatus(listener, "READY TO INSTALL");
                     offerPendingToForeground();
                     return;
                 }
@@ -95,30 +112,48 @@ final class AppUpdater {
                 Release release = fetchLatestReleaseResilient();
                 prefs.edit().putLong(PREF_LAST_CHECK, System.currentTimeMillis()).remove(PREF_LAST_ATTEMPT).apply();
                 cancelRetry(context);
-                if (release == null || compareVersion(release.version, BuildConfig.VERSION_NAME) <= 0) return;
+                if (release == null || compareVersion(release.version, BuildConfig.VERSION_NAME) <= 0) {
+                    notifyStatus(listener, "UP TO DATE · " + BuildConfig.VERSION_NAME);
+                    return;
+                }
                 String apkName = "fire".equals(BuildConfig.FLAVOR) ? "app-fire-release.apk" : "app-regular-release.apk";
                 Asset apk = release.find(apkName);
-                if (apk == null) return;
+                if (apk == null) {
+                    notifyStatus(listener, "UPDATE ASSET MISSING");
+                    return;
+                }
                 String expectedSha256 = release.sha256For(apkName, apk.digest);
-                if (expectedSha256 == null) return;
+                if (expectedSha256 == null) {
+                    notifyStatus(listener, "UPDATE DIGEST MISSING");
+                    return;
+                }
                 File updateDir = new File(context.getFilesDir(), "updates");
                 if (!updateDir.isDirectory() && !updateDir.mkdirs()) return;
                 File candidate = new File(updateDir, apkName);
+                notifyStatus(listener, "DOWNLOADING · " + release.version);
                 downloadToFile(apk.url, candidate);
                 String actualSha256 = sha256(candidate);
                 if (!expectedSha256.equalsIgnoreCase(actualSha256)) {
                     candidate.delete();
+                    notifyStatus(listener, "UPDATE CHECKSUM FAILED");
                     return;
                 }
                 if (!verifyApkIdentity(context, candidate)) {
                     candidate.delete();
+                    notifyStatus(listener, "UPDATE REJECTED");
                     return;
                 }
                 prefs.edit().putString(PREF_PENDING, candidate.getAbsolutePath()).putString(PREF_PENDING_SHA256, expectedSha256).apply();
+                notifyStatus(listener, "READY TO INSTALL · " + release.version);
                 offerPendingToForeground();
             } catch (Exception error) {
-                if (isTransientNetworkFailure(error)) scheduleRetry(context);
-                else DebugReporter.appendNativeError(context, "Updater: " + error);
+                if (isTransientNetworkFailure(error)) {
+                    scheduleRetry(context);
+                    notifyStatus(listener, "NETWORK ERROR");
+                } else {
+                    DebugReporter.appendNativeError(context, "Updater: " + error);
+                    notifyStatus(listener, "UPDATE ERROR");
+                }
             } finally {
                 RUNNING.set(false);
             }

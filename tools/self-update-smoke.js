@@ -7,6 +7,8 @@ const provider=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcd
 const checkReceiver=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateCheckReceiver.java'),'utf8');
 const installReceiver=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateInstallReceiver.java'),'utf8');
 const activity=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java'),'utf8');
+const html=fs.readFileSync(path.join(ROOT,'app/src/main/assets/index.html'),'utf8');
+const shell=fs.readFileSync(path.join(ROOT,'app/src/main/assets/app-shell-runtime.js'),'utf8');
 const manifest=fs.readFileSync(path.join(ROOT,'app/src/main/AndroidManifest.xml'),'utf8');
 const prep=fs.readFileSync(path.join(ROOT,'tools/prepare-update-release.sh'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
@@ -45,11 +47,21 @@ const fetchIndex=java.indexOf('Release release = fetchLatestReleaseResilient();'
 const successIndex=java.indexOf('putLong(PREF_LAST_CHECK, System.currentTimeMillis())');
 assert(fetchIndex>=0&&successIndex>fetchIndex,'successful-check timestamp must be written only after the release request succeeds');
 assert(!java.includes('putLong(PREF_LAST_CHECK, now).apply()'),'updater must not consume the 12-hour check window before network success');
-assert(java.includes('if (isTransientNetworkFailure(error)) scheduleRetry(context);'),'transient updater network failures must retry quietly');
+assert(java.includes('if (isTransientNetworkFailure(error)) {')&&java.includes('scheduleRetry(context);')&&java.includes('notifyStatus(listener, "NETWORK ERROR")'),'transient updater network failures must schedule retry and report manual-check status');
 for(const marker of ['AppUpdater.checkNow(context)','AlarmManager.ELAPSED_REALTIME','setInexactRepeating','CHECK_INTERVAL_MS'])assert(provider.includes(marker),`startup provider missing periodic updater marker: ${marker}`);
 assert(checkReceiver.includes('AppUpdater.check(context)'),'periodic receiver does not invoke updater');
 assert(activity.includes('AppUpdater.onForeground(this)'),'launcher activity must resume pending update UI from the foreground');
 assert(activity.includes('AppUpdater.onBackground(this)'),'launcher activity must clear updater foreground ownership on pause');
+assert(activity.includes('new UpdateBridge(),"UpdateBridge"'),'launcher must expose the manual updater bridge to packaged UI');
+assert(activity.includes('AppUpdater.checkNow(SensorMainActivity.this, SensorMainActivity.this::pushUpdateStatus)'),
+  'manual updater bridge must request a forced check with status callback');
+assert(activity.includes('AGCDSKY_SHELL.nativeUpdateStatus'),'native updater status must be forwarded to the application shell');
+assert(html.includes('id="update"')&&html.includes('CHECK FOR UPDATE')&&html.includes('data-panel-legend="SOFTWARE"'),
+  'manual update control must be visible in TOOLS / INFO');
+assert(shell.includes("UpdateBridge.checkNow()")&&shell.includes("nativeUpdateStatus('CHECKING')"),
+  'manual update control must invoke the native bridge and enter a visible checking state');
+for(const status of ['UP TO DATE · ','UPDATE ASSET MISSING','UPDATE DIGEST MISSING','DOWNLOADING · ','UPDATE CHECKSUM FAILED','UPDATE REJECTED','READY TO INSTALL · ','NETWORK ERROR','UPDATE ERROR'])
+  assert(java.includes(status),'manual updater status missing: '+status);
 assert(!java.includes('pollInstallPermission('),'background permission polling must stay removed');
 const pendingWrite=java.indexOf('putString(PREF_PENDING, candidate.getAbsolutePath())');
 const directInstall=java.indexOf('requestInstallPermissionOrInstall(context, candidate)', pendingWrite);
@@ -64,4 +76,4 @@ assert((manifest.match(/android:exported="false"/g)||[]).length>=4,'updater comp
 for(const marker of ['app-regular-release.apk','app-fire-release.apk','app-regular-release.apk.sha256','app-fire-release.apk.sha256','apksigner','sha256'])assert(prep.includes(marker),`release-prep script missing ${marker}`);
 assert(!java.includes('http://'),'updater must not use cleartext endpoints');
 console.log('self update smoke: PASS');
-console.log('  forced startup discovery + periodic checks, API fallback, foreground-only install UI, phone/Fire selection, release integrity, signer/version checks, debug exclusion, and PackageInstaller flow verified');
+console.log('  forced startup discovery + periodic checks, manual CHECK FOR UPDATE status, API fallback, foreground-only install UI, phone/Fire selection, release integrity, signer/version checks, debug exclusion, and PackageInstaller flow verified');
