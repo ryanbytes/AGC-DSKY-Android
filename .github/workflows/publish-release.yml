@@ -16,15 +16,27 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Verify signed release payload
+        id: payload
         shell: bash
         run: |
           set -euo pipefail
           VERSION_NAME="$(tr -d '\r\n' < VERSION)"
           PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
-          test -f "${PAYLOAD_DIR}/app-regular-release.apk"
-          test -f "${PAYLOAD_DIR}/app-fire-release.apk"
-          test -f "${PAYLOAD_DIR}/app-regular-release.apk.sha256"
-          test -f "${PAYLOAD_DIR}/app-fire-release.apk.sha256"
+          if ! test -f "${PAYLOAD_DIR}/READY"; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Release payload is not complete yet; skipping publication."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          for FLAVOR in regular fire; do
+            APK="${PAYLOAD_DIR}/app-${FLAVOR}-release.apk"
+            B64="${APK}.b64"
+            if ! test -f "${APK}" && test -f "${B64}"; then
+              base64 --decode "${B64}" > "${APK}"
+            fi
+            test -f "${APK}"
+            test -f "${APK}.sha256"
+          done
           (
             cd "${PAYLOAD_DIR}"
             sha256sum -c app-regular-release.apk.sha256
@@ -32,6 +44,7 @@ jobs:
           )
 
       - name: Create or refresh GitHub Release
+        if: steps.payload.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
