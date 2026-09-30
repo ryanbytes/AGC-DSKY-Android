@@ -15,7 +15,7 @@ python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$SITE" >"$OUT/http.
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" >/dev/null 2>&1 || true' EXIT
 sleep .5
-cases=(normal display-only lamp-test diagnostics cheatsheet screen-only)
+cases=(normal legacy-geometry display-only lamp-test diagnostics cheatsheet screen-only)
 for case_name in "${cases[@]}"; do
   profile="$OUT/profile-$case_name"
   rm -rf "$profile"
