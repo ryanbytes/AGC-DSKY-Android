@@ -1,0 +1,8 @@
+AGC DSKY v1.1.60
+
+- Restores complete drawing-backed EL symbol placement, including the register sign overhang.
+- Extends the EL glass and native/generated widget frame leftward so the full sign envelope is visible.
+- Screen-only mode reserves 16 CSS pixels per side while preserving the 1006315G active-face aspect ratio.
+- Keeps the v1.1.59 updater freshness/no-cache repair intact.
+- Android version: 1.1.60 (versionCode 2026093007).
+- Release APKs use the established standalone signing identity for updater continuity.
