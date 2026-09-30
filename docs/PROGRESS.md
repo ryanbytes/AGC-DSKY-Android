@@ -1,3 +1,11 @@
+## 2026-09-30 v1.1.58 EL audit regression lock
+
+Carries forward the post-v1.1.57 drawing-audit result without replaying the divergent candidate history. The accepted screen-only renderer geometry remains unchanged from v1.1.57. The geometry lock now additionally requires exactly two occurrences of the accepted inset-width expression so the front EL face and parallax indicator-package rear cannot drift apart independently.
+
+The completed drawing audit measured the accepted source geometry at digit height 0.500351988 in, upper width 0.317299151 in, top-to-middle datum 0.220000000 in, side bevels 60.275606/59.896393 degrees, center gaps 0.010000 in, and sign envelope 0.338 x 0.265 in with 0.010-in gaps.
+
+Release candidate identifiers: 1.1.58 / Android versionCode 2026093005. Full CI, standalone signing, and publication remain release gates.
+
 ## 2026-09-30 v1.1.57 full-screen EL viewport clearance
 
 Transplanted the post-v1.1.56 screen-only EL work onto current main without replaying the already-squashed 1.1.56 history. Screen-only EL artwork now reserves 8 CSS pixels on each side while preserving the 1006315G active-face aspect ratio; the parallax indicator-package rear uses the identical inset dimensions so it remains aligned with the EL face.
