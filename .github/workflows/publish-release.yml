@@ -7,13 +7,51 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android Build Tools 36
+        run: sdkmanager 'build-tools;36.0.0' 'platform-tools'
+
+      - name: Download verified v1.1.54 unsigned APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run download 36719972495 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name AGC-DSKY-Android-unsigned-release \
+            --dir "$RUNNER_TEMP/unsigned"
+
+      - name: Reconstruct exact standalone-signed APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
+          test "$VERSION_NAME" = "1.1.54"
+          PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
+          BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
+          REG_U="$(find "$RUNNER_TEMP/unsigned" -type f -name app-regular-release-unsigned.apk -print -quit)"
+          FIRE_U="$(find "$RUNNER_TEMP/unsigned" -type f -name app-fire-release-unsigned.apk -print -quit)"
+          test -f "$REG_U"
+          test -f "$FIRE_U"
+          "$BT/zipalign" -p -f 4 "$REG_U" "$PAYLOAD_DIR/app-regular-release.apk"
+          "$BT/zipalign" -p -f 4 "$FIRE_U" "$PAYLOAD_DIR/app-fire-release.apk"
+          echo '308e22dd3c5c59156ac599bb1cd2ac20f1b059dc73ad7af4a176b810bdc3f102  release-payload/v1.1.54/app-regular-release.apk' | sha256sum -c -
+          echo '51cbf366033494c13cfbf94b8c24cc160a3c12cfc7df637b569edb9f7748cbba  release-payload/v1.1.54/app-fire-release.apk' | sha256sum -c -
+          cat "$PAYLOAD_DIR"/patches/regpart-* > "$RUNNER_TEMP/regular-signing.patch"
+          cat "$PAYLOAD_DIR"/patches/firepart-* > "$RUNNER_TEMP/fire-signing.patch"
+          (cd "$PAYLOAD_DIR" && git apply --binary "$RUNNER_TEMP/regular-signing.patch")
+          (cd "$PAYLOAD_DIR" && git apply --binary "$RUNNER_TEMP/fire-signing.patch")
 
       - name: Verify signed release payload
         shell: bash
@@ -21,15 +59,22 @@ jobs:
           set -euo pipefail
           VERSION_NAME="$(tr -d '\r\n' < VERSION)"
           PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
-          test -f "${PAYLOAD_DIR}/app-regular-release.apk"
-          test -f "${PAYLOAD_DIR}/app-fire-release.apk"
-          test -f "${PAYLOAD_DIR}/app-regular-release.apk.sha256"
-          test -f "${PAYLOAD_DIR}/app-fire-release.apk.sha256"
+          BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
           (
-            cd "${PAYLOAD_DIR}"
+            cd "$PAYLOAD_DIR"
             sha256sum -c app-regular-release.apk.sha256
             sha256sum -c app-fire-release.apk.sha256
           )
+          EXPECTED_CERT='409ad676e8052e50416a1bf69e095137ef639ac13ce4652160a19380a117fa1f'
+          for APK in "$PAYLOAD_DIR/app-regular-release.apk" "$PAYLOAD_DIR/app-fire-release.apk"; do
+            VERIFY="$($BT/apksigner verify --verbose --print-certs "$APK")"
+            echo "$VERIFY" | grep -F 'Verified using v2 scheme (APK Signature Scheme v2): true'
+            CERT="$(echo "$VERIFY" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':\r' | tr 'A-F' 'a-f')"
+            test "$CERT" = "$EXPECTED_CERT"
+            BADGE="$($BT/aapt dump badging "$APK")"
+            echo "$BADGE" | grep -F "package: name='org.apollo.agcdsky' versionCode='2026093001' versionName='1.1.54'"
+            echo "$BADGE" | grep -F "application-label:'AGC DSKY v1.1.54'"
+          done
 
       - name: Create or refresh GitHub Release
         env:
@@ -51,9 +96,5 @@ jobs:
             gh release upload "${TAG}" "${ASSETS[@]}" --clobber
             gh release edit "${TAG}" --title "AGC DSKY ${TAG}" --target main --latest
           else
-            if test -f "${NOTES}"; then
-              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
-            else
-              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --generate-notes --latest
-            fi
+            gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
           fi
