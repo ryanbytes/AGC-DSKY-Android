@@ -2,7 +2,11 @@
 
 The owner confirmed the supplied frames are complete app screenshots. They show screen-only artwork touching both viewport edges. Updated `screen-only.css` to reserve 8 CSS pixels on each side and calculate height from the same inset width; the parallax package rear uses the identical dimensions so it stays aligned with the EL face. This preserves the 1006315G active-face ratio while providing edge clearance.
 
-The source edit is committed on the candidate branch. No local checkout or Android build/device toolchain is available in the current VM, so the canonical build, screenshot comparison, signing, and release checks remain unrun. Do not publish this candidate until those local gates pass.
+The screen-only source change and geometry-lock update are committed on the candidate branch. The supplied 5983 screenshot is 684x1536; measured green artwork bounds are x=13..670, leaving visible clearance at both sides.
+
+Ran the candidate-branch `tools/el-drawing-conformance-smoke.js`, `tools/el-geometry-lock-smoke.js`, and `tools/dsky-mapping-smoke.js` from an isolated scratch copy of the exact fetched source files: all PASS. Drawing metrics: digit height 0.500351988 in; upper width 0.317299151 in; top-to-middle datum 0.220000000 in; side bevels 60.275606/59.896393 degrees; center gaps 0.010000 in; sign envelope 0.338 x 0.265 in with 0.010-in gaps. The geometry lock also confirms the EL face and parallax backing share the inset width.
+
+The current VM still has no complete recursive checkout or installed Android SDK/ADB. The canonical Gradle build, device capture of this source revision, release signing, and publication remain unverified; do not publish until those gates pass.
 
 ## 2026-09-30 EL accuracy release candidate preparation
 
