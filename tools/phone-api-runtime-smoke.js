@@ -30,6 +30,39 @@ assert(phone.includes('const app = window.AGCDSKY;'),'phone-icdu must retain app
 assert(phone.includes('const api = Object.create(app);'),'phone-icdu must define implementations on a module-local export object');
 assert(phone.includes("phoneService.installImplementations(api,'phone-icdu module registration');"),'phone-icdu explicit batch registration missing');
 assert(!phone.includes('const api = window.AGCDSKY;'),'phone-icdu regained direct root-facade alias');
+assert(phone.includes('const e = apolloGimbals(correctedRel);'),'flight IMU path must decompose the corrected attitude with Apollo gimbal geometry');
+assert(phone.includes('opticsAngles = eulerXYZ(opticalRel);'),'camera aiming must retain conventional device Euler decomposition');
+assert(phone.includes('const gameRelYaw = eulerXYZ(rel)[2];'),'magnetic drift estimator must compare conventional device yaw, not Apollo middle-gimbal angle');
+assert(phone.includes("correctedRel = qNorm(qMul(qAxis('z', rad(magneticYawCorrection)), rel));"),
+  'magnetic yaw correction must be applied to the attitude quaternion before Apollo gimbal decomposition');
+assert(!phone.includes('e[2] += magneticYawCorrection'),
+  'magnetic yaw correction must not be added directly to the Apollo middle-gimbal angle');
+
+const gimbalMatch=phone.match(/function apolloGimbals\(q\) \{[\s\S]*?\n  \}/);
+assert(gimbalMatch,'apolloGimbals implementation missing');
+const apolloGimbals=vm.runInNewContext(`(${gimbalMatch[0]})`,{
+  Math,
+  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
+  deg:r=>r*180/Math.PI
+});
+const qAxis=(axis,degrees)=>{
+  const h=degrees*Math.PI/360,c=Math.cos(h),s=Math.sin(h);
+  return axis==='x'?[c,s,0,0]:axis==='y'?[c,0,s,0]:[c,0,0,s];
+};
+const qMul=(a,b)=>[
+  a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3],
+  a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],
+  a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1],
+  a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]
+];
+const angleError=(actual,expected)=>Math.abs((((actual-expected)+180)%360+360)%360-180);
+for(const expectedAngles of [[20,0,0],[0,-30,0],[0,0,40],[37,-21,28],[-52,33,-41]]){
+  const [outer,inner,middle]=expectedAngles;
+  const q=qMul(qMul(qAxis('y',inner),qAxis('z',middle)),qAxis('x',outer));
+  const actual=apolloGimbals(q);
+  actual.forEach((value,i)=>assert(angleError(value,expectedAngles[i])<1e-9,
+    `Apollo gimbal extraction mismatch for ${JSON.stringify(expectedAngles)}: ${JSON.stringify(actual)}`));
+}
 const assigned=[...phone.matchAll(/^\s*api\.([A-Za-z_$][\w$]*)\s*=\s*(?!=)/gm)].map(m=>m[1]);
 same([...new Set(assigned)].sort(),expected.slice().sort(),'phone-icdu module export set changed without updating the explicit phone registry');
 
