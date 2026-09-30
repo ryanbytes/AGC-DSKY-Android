@@ -162,15 +162,24 @@
     }
   }
 
+  function presentContact(state) {
+    if (!state || state.cancelled || state.presented) return false;
+    state.presented = true;
+    keySound(state.button, false);
+    if (state.source === 'pointer') keyHaptic(state.button, false);
+    return true;
+  }
+
   function makeContact(state) {
     if (!state || !state.down || state.made) return;
     if (runtime.clockRequested()) {
       state.cancelled = true;
       return;
     }
+    // The Apollo keyboard drawing defines contact logic, not a software dwell.
+    // Electrical make therefore follows the owned press immediately.  The
+    // source-unbounded contactMs value is presentation timing only.
     state.made = true;
-    keySound(state.button, false);
-    if (state.source === 'pointer') keyHaptic(state.button, false);
     if (!state.accepted) return;
 
     const key = state.button.dataset.key;
@@ -284,12 +293,13 @@
     if (accepted) cycleLatched = true;
     const p = personality(button);
     const state = {
-      button, pointerId:event.pointerId, source:'pointer', down:true, accepted, made:false, cancelled:false, timer:0
+      button, pointerId:event.pointerId, source:'pointer', down:true, accepted, made:false, presented:false, cancelled:false, timer:0
     };
     pointers.set(event.pointerId, state);
     button.classList.add('pressed');
     try { button.setPointerCapture(event.pointerId); } catch (_) {}
-    state.timer = setTimeout(() => makeContact(state), Math.max(0, Number(p.contactMs) || FALLBACK_CONTACT_MS));
+    makeContact(state);
+    state.timer = setTimeout(() => presentContact(state), Math.max(0, Number(p.contactMs) || FALLBACK_CONTACT_MS));
   }
 
   function finishPointer(event, cancelled) {
@@ -300,7 +310,7 @@
     event.stopImmediatePropagation();
 
     clearTimeout(state.timer);
-    if (!cancelled && !state.made) makeContact(state);
+    if (!cancelled && !state.presented) presentContact(state);
     state.down = false;
     state.button.classList.remove('pressed');
     if (state.made && !cancelled) {
@@ -335,9 +345,10 @@
     const accepted = !cycleLatched;
     if (accepted) cycleLatched = true;
     const p = personality(button);
-    keyboardState = {button, source:'keyboard', down:true, accepted, made:false, cancelled:false, timer:0, key};
+    keyboardState = {button, source:'keyboard', down:true, accepted, made:false, presented:false, cancelled:false, timer:0, key};
     button.classList.add('pressed');
-    keyboardState.timer = setTimeout(() => makeContact(keyboardState), Math.max(0, Number(p.contactMs) || FALLBACK_CONTACT_MS));
+    makeContact(keyboardState);
+    keyboardState.timer = setTimeout(() => presentContact(keyboardState), Math.max(0, Number(p.contactMs) || FALLBACK_CONTACT_MS));
   }
 
   function onKeyUp(event) {
@@ -347,7 +358,7 @@
     event.stopPropagation();
     const state = keyboardState;
     clearTimeout(state.timer);
-    if (!state.made) makeContact(state);
+    if (!state.presented) presentContact(state);
     state.down = false;
     state.button.classList.remove('pressed');
     if (state.made) {
