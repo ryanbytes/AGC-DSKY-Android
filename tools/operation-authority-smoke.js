@@ -99,10 +99,12 @@ assert(core.includes('does not raise the')&&core.includes('corresponding KEYRUPT
 for(const marker of [
   'const MARK_BIT = 0o40;',
   'const REJECT_BIT = 0o100;',
-  "document.getElementById('sxt-mark').addEventListener('click', () => navPulse(MARK_BIT))",
-  "document.getElementById('sxt-reject').addEventListener('click', () => navPulse(REJECT_BIT))",
-  'const ok=c.navKeyPulse(bit,90);'
+  "bindNavContact('sxt-mark',MARK_BIT)",
+  "bindNavContact('sxt-reject',REJECT_BIT)",
+  'const ok=c.navKeyPress(bit);',
+  'held.core.navKeyRelease()'
 ]) assert(optics.includes(marker),'optics MARK/MARK REJECT authority path missing: '+marker);
+assert(!optics.includes('c.navKeyPulse(bit,90)'),'flight-facing optics MARK path regained synthetic fixed-duration pulse');
 for(const forbidden of ['commitRelayWord(','setChannelState(','AGCDSKY_DISPLAY'])
   assert(!optics.includes(forbidden),'optics MARK/MARK REJECT bypasses yaAGC output authority: '+forbidden);
 
