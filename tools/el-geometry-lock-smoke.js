@@ -33,7 +33,7 @@ for(const marker of [
   'const UPPER_ADVANCE_IN=.420,REGISTER_ADVANCE_IN=.410;',
   'const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);',
   'const BAR_H_IN=.060;',
-  'const REGISTER_GAP_IN=.070;',
+  'const REGISTER_GAP_IN=.060;',
   'const FIRST_DIGIT_X_IN=.180;',
   'const RIGHT_FIELD_X_IN=1.434549;',
   'const UPPER_GROUP_X_OFFSET_IN=1.470;',
