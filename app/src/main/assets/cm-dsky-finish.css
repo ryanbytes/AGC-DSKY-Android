@@ -148,10 +148,20 @@ body.spacecraft-cm .lamp.on.yellow{
 }
 
 /* Separate Block II lighting feeds. NUMERICS changes only energized EL output;
-   the gray glass, relay words and AGC task continue unchanged at zero light. */
-body.spacecraft-cm .el-static{opacity:var(--numerics-level)}
+   the gray glass, printed black legends, relay words and AGC task remain
+   unchanged. Preserve each phosphor element's nominal full-bright opacity. */
+body.spacecraft-cm .el-legend-bg{opacity:calc(.92 * var(--numerics-level))}
+body.spacecraft-cm .el-rule{opacity:calc(.88 * var(--numerics-level))}
 body.spacecraft-cm .el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level))}
-body.spacecraft-cm .comp-el{opacity:var(--numerics-level)}
+body.spacecraft-cm .comp-el.on .el-comp-bg{opacity:calc(.92 * var(--numerics-level))}
+
+/* Channel-0163 EL excitation loss overrides the NUMERICS rheostat without
+   hiding the separate black printed legends. This block follows the rheostat
+   rules so it also wins in the CM stylesheet cascade. */
+body.spacecraft-cm.el-off .el-legend-bg,
+body.spacecraft-cm.el-off .el-rule,
+body.spacecraft-cm.el-off .el-field .el-seg.on,
+body.spacecraft-cm.el-off .comp-el.on .el-comp-bg{opacity:0}
 
 /* R-700 §3.10.1.5: the cap housing moves about 3/16 in along the panel normal
    to actuate the switch, then may move another 1/16 in before bottoming.  The
