@@ -34,7 +34,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final float ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U;
     private static final float PANEL_W=2.620f*U,PANEL_H=4.420f*U;
     private static final float R1_Y=83.992f,R2_Y=118.127f,R3_Y=152.263f;
-    private static final float FRAME_X=-1.537f,FRAME_W=107.537f,FRAME_H=23f;
+    private static final float FRAME_W=107.537f,FRAME_H=23f;
 
     private static final int[] SECOND_DRAWABLES={
       R.drawable.el_sec_00,R.drawable.el_sec_01,R.drawable.el_sec_02,R.drawable.el_sec_03,R.drawable.el_sec_04,
@@ -81,7 +81,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         int[] flippers={R.id.el_hour_flipper,R.id.el_minute_flipper,R.id.el_seconds_flipper};
         float[] y={R1_Y,R2_Y,R3_Y};
         for(int i=0;i<flippers.length;i++){
-          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_START,(ACTIVE_X+FRAME_X)*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_START,ACTIVE_X*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
           views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_TOP,(ACTIVE_Y+y[i])*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
           views.setViewLayoutWidth(flippers[i],FRAME_W*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
           views.setViewLayoutHeight(flippers[i],FRAME_H*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
