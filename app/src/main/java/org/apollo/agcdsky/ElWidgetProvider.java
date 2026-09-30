@@ -34,7 +34,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final float ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U;
     private static final float PANEL_W=2.620f*U,PANEL_H=4.420f*U;
     private static final float R1_Y=83.992f,R2_Y=118.127f,R3_Y=152.263f;
-    private static final float FRAME_X=-1.537f,FRAME_W=107.537f,FRAME_H=23f;
+    private static final float FRAME_W=106f,FRAME_H=23f;
 
     private static final int[] SECOND_DRAWABLES={
       R.drawable.el_sec_00,R.drawable.el_sec_01,R.drawable.el_sec_02,R.drawable.el_sec_03,R.drawable.el_sec_04,
@@ -81,7 +81,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         int[] flippers={R.id.el_hour_flipper,R.id.el_minute_flipper,R.id.el_seconds_flipper};
         float[] y={R1_Y,R2_Y,R3_Y};
         for(int i=0;i<flippers.length;i++){
-          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_START,(ACTIVE_X+FRAME_X)*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
+          views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_START,ACTIVE_X*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
           views.setViewLayoutMargin(flippers[i],RemoteViews.MARGIN_TOP,(ACTIVE_Y+y[i])*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
           views.setViewLayoutWidth(flippers[i],FRAME_W*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
           views.setViewLayoutHeight(flippers[i],FRAME_H*scaleDp,TypedValue.COMPLEX_UNIT_DIP);
@@ -110,7 +110,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       // MIT/IL SCD 1006315G geometry; Detail A drawing dimensions control sign size. CAD retains the register placement. Coordinates below are inches in the STEP
       // component datum; U converts them uniformly into the 106-unit face.
       private static final float U=106f/2.360f,DIGIT_TOP_IN=.0322398905f;
-      private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.180f*U,REGISTER_ROW_X=-.010f*U;
+      private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.180f*U,REGISTER_ROW_X=.024223f*U;
       private static final float LEFT_FIELD_X=-.035451f*U,RIGHT_FIELD_X=1.434549f*U;
       private static final float PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U;
 
@@ -138,7 +138,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       }
       private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters){
         c.drawPath(box(.24f,.24f,PANEL_W-.48f,PANEL_H-.48f),HARDWARE_STROKE_P);
-        c.drawPath(box(ACTIVE_X+FRAME_X,ACTIVE_Y,ACTIVE_W-FRAME_X,ACTIVE_H),PANEL_P);
+        c.drawPath(box(ACTIVE_X,ACTIVE_Y,ACTIVE_W,ACTIVE_H),PANEL_P);
         c.save();
         c.translate(ACTIVE_X,ACTIVE_Y);
         dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.949f,1.294f,1.369f);
