@@ -38,8 +38,10 @@ const minY=Math.min(...all.map(p=>p[1])),maxY=Math.max(...all.map(p=>p[1]));
 // .505/.495 overall digit height.
 between(maxY-minY,.495,.505,'Detail C overall digit height');
 
-// .325/.315 upper outside width: outer upper side-electrode extrema.
-const upperOutside=Math.max(...paths.b.map(p=>p[0]))-Math.min(...paths.f.map(p=>p[0]));
+// .325/.315 upper outside width: horizontal distance between the topmost
+// outer vertices of the upper side electrodes H and F.
+const topmost=p=>p.reduce((best,v)=>v[1]<best[1]?v:best,p[0]);
+const upperOutside=topmost(paths.b)[0]-topmost(paths.f)[0];
 between(upperOutside,.315,.325,'Detail C upper outside width');
 
 // .225/.215 from top datum to upper edge of middle segment J (logical g).
