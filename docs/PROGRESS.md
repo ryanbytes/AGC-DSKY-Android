@@ -1,3 +1,9 @@
+## 2026-09-30 v1.1.57 full-screen EL viewport clearance
+
+Transplanted the post-v1.1.56 screen-only EL work onto current main without replaying the already-squashed 1.1.56 history. Screen-only EL artwork now reserves 8 CSS pixels on each side while preserving the 1006315G active-face aspect ratio; the parallax indicator-package rear uses the identical inset dimensions so it remains aligned with the EL face.
+
+Release candidate identifiers: 1.1.57 / Android versionCode 2026093004. Source/build/signing/publication gates are pending CI and standalone release verification.
+
 ## 2026-09-30 EL accuracy release candidate preparation
 
 Candidate source version is 1.1.56 / versionCode 2026093003, with the matching application label. These identifiers are a source candidate only. No release APK has been built or signed; the normal local Android build and standalone signing gates remain required before publishing.
