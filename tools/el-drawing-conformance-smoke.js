@@ -40,8 +40,12 @@ between(maxY-minY,.495,.505,'Detail C overall digit height');
 
 // .325/.315 upper outside width: horizontal distance between the topmost
 // outer vertices of the upper side electrodes H and F.
-const topmost=p=>p.reduce((best,v)=>v[1]<best[1]?v:best,p[0]);
-const upperOutside=topmost(paths.b)[0]-topmost(paths.f)[0];
+const topEdgeX=(p,which)=>{
+  const y=Math.min(...p.map(v=>v[1]));
+  const xs=p.filter(v=>Math.abs(v[1]-y)<1e-6).map(v=>v[0]);
+  return which==='max'?Math.max(...xs):Math.min(...xs);
+};
+const upperOutside=topEdgeX(paths.b,'max')-topEdgeX(paths.f,'min');
 between(upperOutside,.315,.325,'Detail C upper outside width');
 
 // .225/.215 from top datum to upper edge of middle segment J (logical g).
@@ -80,10 +84,23 @@ near(rightCenterGap,.010,1e-6,'right center split');
 // 59°30'-60°30' TYP bevels preserved on the drawing-constrained free ends.
 // The opposite clipped ends are straight-edge intersections and are not forced
 // into a generic symmetric seven-segment bevel.
-const fBevel=edge(paths.f,2).angle;
-const cBevel=edge(paths.c,1).angle;
+const fBevel=edge(paths.f,1).angle;
+const cBevel=edge(paths.c,2).angle;
 between(fBevel,59.5,60.5,'upper-left free-end bevel');
 between(cBevel,59.5,60.5,'lower-right free-end bevel');
+
+// Secondary named-solid orientation cross-check. VirtualAGC Tools/traceDSKY.py
+// (blob 6d994a40529d377ceaf865f63f8ce0bebec885a8) traces the original relay
+// schematic as E=top, F=upper-left, H=upper-right, J=middle,
+// K=lower-left, M=lower-right, N=bottom. The archived 1006315G STEP makes
+// E's horizontal span about .229 in and N's about .290 in. This guard is
+// intentionally asymmetric: a 180-degree rotation preserves the primary
+// Detail-C dimensions above but swaps these two named physical electrodes.
+const spanX=p=>Math.max(...p.map(v=>v[0]))-Math.min(...p.map(v=>v[0]));
+const topPhysicalE=spanX(paths.a),bottomPhysicalN=spanX(paths.d);
+between(topPhysicalE,.225,.235,'STEP SegE/top identity span');
+between(bottomPhysicalN,.285,.300,'STEP SegN/bottom identity span');
+if(!(topPhysicalE<bottomPhysicalN))fail('Apollo E/N physical segment identity reversed');
 
 // Handedness sanity: the digit's top envelope is right-shifted relative to its
 // bottom envelope as depicted by the Detail C front view.
