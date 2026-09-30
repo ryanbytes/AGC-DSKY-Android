@@ -50,7 +50,11 @@ for(const marker of [
   "api.setOpticsCaptureActive(true)",
   "api.setOpticsCaptureActive(false)",
   'c.writeIo(ch[axis],sign>0?PCDU:MCDU)',
-  'c.navKeyPulse(bit,90)',
+  'bindNavContact(\'sxt-mark\',MARK_BIT)',
+  'bindNavContact(\'sxt-reject\',REJECT_BIT)',
+  'const ok=c.navKeyPress(bit)',
+  'held.core.navKeyRelease()',
+  "addEventListener('blur',releaseNavContact)",
   'api.scheduleAgcAutosave',
   'cameraPending:!!cameraAcquire',
   'pointingCalibration:typeof api.skyCalibrationStatus',
@@ -73,5 +77,8 @@ for(const marker of [
   'z-index:10001!important'
 ])assert(css.includes(marker),`combined sextant/live DSKY layout missing: ${marker}`);
 assert(!source.includes('cloneNode('),'sextant must use the existing live DSKY, not a clone');
+assert(!source.includes('c.navKeyPulse(bit,90)'), 'flight-facing MARK controls must not synthesize a fixed 90 ms hold');
+assert(source.includes('releaseNavContact();\n    const view = document.getElementById(\'sxt-view\')'), 'closing sextant must release a held navigation contact');
+assert(source.includes('if (document.hidden) {\n      releaseNavContact();'), 'backgrounding sextant must release a held navigation contact');
 console.log('optics service smoke: PASS');
 console.log('  explicit sextant service publication, parser order, camera lifecycle, CDU/nav paths, autosave, and status telemetry retained');
