@@ -1,3 +1,11 @@
+## 2026-09-30 v1.1.59 updater freshness repair
+
+Observed failure: a device process that had already completed an automatic update check could miss a release published afterward because foreground resumes reused the 12-hour background freshness window. That made a newly published release legitimately invisible until manual CHECK, process restart, or the next periodic alarm.
+
+Repair: keep the 12-hour background alarm, but foreground resumes now recheck when the last successful discovery is at least 60 seconds old. Release HTTP connections also disable response caching and request no-cache semantics. Pending verified APKs are still offered before any network check, manual CHECK remains force-immediate, transient-network retry behavior is unchanged, and all existing signer/package/version/checksum gates remain intact.
+
+Release candidate identifiers: 1.1.59 / Android versionCode 2026093006. The self-update smoke now locks the short foreground freshness window and cache-bypass behavior.
+
 ## 2026-09-30 v1.1.58 EL audit regression lock
 
 Carries forward the post-v1.1.57 drawing-audit result without replaying the divergent candidate history. The accepted screen-only renderer geometry remains unchanged from v1.1.57. The geometry lock now additionally requires exactly two occurrences of the accepted inset-width expression so the front EL face and parallax indicator-package rear cannot drift apart independently.
