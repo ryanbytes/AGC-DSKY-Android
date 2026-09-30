@@ -24,11 +24,11 @@ The `.010 MIN TYP` leader is traced to the center split between the upper and lo
 
 The 59°30′–60°30′ and 14°30′–15°30′ construction callouts are evaluated against the directly corresponding Detail-C side-segment construction. Geometry not independently dimensioned by the SCD is not redesigned from scan appearance alone.
 
-## Detail E
+## Detail E and continuously-lit separators
 
-Detail E is a cross-section/profile of the electroluminescent construction. Its 0.055–0.065-in TYP dimensions constrain profile/depth relationships, not the X-Z front-face polygon planform audited here.
+Detail E is an enlarged front-face/detail of the digit/separator relationship. It does not provide evidence for a global digit flip and does not override the explicit Detail-C numeric-electrode dimensions above.
 
-A separate 3-D/profile audit is required if the app's parallax/depth representation is intended to reproduce the element construction itself.
+The continuously-lit separator geometry is audited separately in `STATIC_SEPARATOR_AUDIT.md`. Its dimensioned thickness/spacing remains within the sheet-2 tolerances; its previously collapsed horizontal lengths and WebView round end caps are a separate un-dimensioned shape/parity issue corrected from the archived drawing-backed STEP.
 
 ## Current conclusion
 
