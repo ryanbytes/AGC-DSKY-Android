@@ -107,8 +107,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final int CORE=Color.rgb(109,236,180),RULE=CORE;
       private static final int FRAME=Color.rgb(86,90,86),PANEL=Color.rgb(105,109,103),HARDWARE=Color.rgb(162,166,159),INK=Color.rgb(5,6,5);
 
-      // MIT/IL SCD 1006315G geometry transcribed from the drawing-backed
-      // 1006315G-exact.step model. Coordinates below are inches in the STEP
+      // MIT/IL SCD 1006315G geometry; Detail A drawing dimensions control sign size. CAD retains the register placement. Coordinates below are inches in the STEP
       // component datum; U converts them uniformly into the 106-unit face.
       private static final float U=106f/2.360f,DIGIT_TOP_IN=.0322398905f;
       private static final float DIGIT_H=.500f*U,UPPER_ADV=.420f*U,REG_ADV=.410f*U,FIRST_DIGIT_X=.180f*U,REGISTER_ROW_X=-.010f*U;
@@ -188,10 +187,10 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       }
       private static void sign(Canvas c,char s,float ox,float oy){
         if(s!='+'&&s!='-')return;
-        c.drawPath(rawBox(ox,oy,-.007784f,.231536f,.232122f,.065000f),ON);
+        c.drawPath(rawBox(ox,oy,-.024223f,.231536f,.265000f,.065000f),ON);
         if(s=='+'){
-          c.drawPath(rawBox(ox,oy,.073794f,.305065f,.065000f,.082843f),ON);
-          c.drawPath(rawBox(ox,oy,.073794f,.139908f,.065000f,.081628f),ON);
+          c.drawPath(rawBox(ox,oy,.073794f,.306536f,.065000f,.126500f),ON);
+          c.drawPath(rawBox(ox,oy,.073794f,.095036f,.065000f,.126500f),ON);
         }
       }
       private static Path rawBox(float ox,float oy,float xIn,float yIn,float wIn,float hIn){Path p=new Path();float x=sx(ox,xIn),y=sy(oy,yIn),w=wIn*U,h=hIn*U;p.moveTo(x,y);p.lineTo(x+w,y);p.lineTo(x+w,y+h);p.lineTo(x,y+h);p.close();return p;}
