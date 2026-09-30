@@ -74,8 +74,8 @@ for(const marker of [
 ])req(generated,marker,'generated-seconds accepted geometry');
 
 for(const marker of [
-  'width:min(100vw,calc(100vh * 106 / 182.356))!important',
-  'height:min(100vh,calc(100vw * 182.356 / 106))!important',
+  'width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important',
+  'height:min(100vh,calc((100vw - 16px) * 182.356 / 106))!important',
   'transform:translate(-50%,-50%)!important'
 ])req(screenOnly,marker,'screen-only accepted face geometry');
 
