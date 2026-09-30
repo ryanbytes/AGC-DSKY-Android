@@ -12,3 +12,14 @@ Archive commit: dcef5718b5a2cfa91143737617709511bb76ddaa
 Archived Git blob SHA: 841351a225482cb7926aeb4e97cced8db7ba2258
 
 Verification: upstream and archived Git blob SHAs are identical. This proves byte-for-byte identity of the STEP file stored for FA-05.
+
+FA-05 segment-orientation authority
+
+Relay/segment nomenclature source: virtualagc/virtualagc
+Source branch: master
+Source path: Tools/traceDSKY.py
+Source Git blob SHA: 6d994a40529d377ceaf865f63f8ce0bebec885a8
+Schematic layout traced there: E=top, F=upper-left, H=upper-right, J=middle, K=lower-left, M=lower-right, N=bottom.
+Cross-check: the archived 1006315G STEP names the corresponding solids SegE, SegF, SegH, SegJ, SegK, SegM, and SegN.
+Finding: the prior app polygons preserved the STEP vertical coordinate in SVG and assigned the named physical shapes 180 degrees from their Apollo schematic identity. Commit fbeec20b34b969db1a45cdae561ce8bdbdd0ef0b corrects the digit electrode orientation and adds an asymmetric E/N identity regression.
+
