@@ -1,0 +1,7 @@
+AGC DSKY v1.1.54
+
+- Corrects Apollo EL register segment geometry/assignment using the audited 1006315G drawing and exact STEP evidence.
+- Corrects DSKY key electrical timing so channel-015 contact make occurs at the actual press rather than after a presentation-only dwell estimate.
+- Corrects CM optics MARK and MARK REJECT to behave as maintained contacts for the duration of the operator press instead of a synthetic fixed pulse.
+- Carries the verified FA-05, FA-06, and FA-07 flight-fidelity fixes from main.
+- Android release package: org.apollo.agcdsky, versionCode 2026093001.
