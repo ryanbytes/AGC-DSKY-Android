@@ -57,7 +57,9 @@ for(const marker of [
   'case 5: // f: physical F / upper left',
   '.187742000f,.284562891f,true);ml(p,ox,oy,.233934000f,.112425891f',
   'rawBox(ox,oy,-.024223f,.231536f,.265000f,.065000f)',
-  'FRAME_W=107.537f,FRAME_H=23f;',
+  'FRAME_X=-1.537f,FRAME_W=107.537f,FRAME_H=23f;',
+  '(ACTIVE_X+FRAME_X)*scaleDp',
+  'ACTIVE_W-FRAME_X',
   'setViewLayoutWidth(flippers[i],FRAME_W*scaleDp',
   'rawBox(ox,oy,.073794f,.306536f,.065000f,.126500f)',
   'rawBox(ox,oy,.073794f,.095036f,.065000f,.126500f)'
@@ -94,6 +96,7 @@ if(screenOnly.split(insetFaceWidth).length-1!==2){
 const U=106/2.360,signMin=(-.010-.024223)*U,rightMax=(1.434549+.420+.505451)*U;
 if(Math.abs(signMin+1.537)>.001||Math.abs(rightMax-106)>.001)fail('edge overhang changed unexpectedly');
 if(!index.includes('viewBox="0 0 106 182.356"'))fail('EL viewBox changed');
+if(!index.includes('x="-1.537" y="0" width="107.537" height="182.356"'))fail('EL glass does not cover sign overhang');
 if(!screenOnly.includes('overflow:visible!important;'))fail('screen-only viewport clips overhang');
 console.log('EL geometry lock: PASS');
 console.log('  1006315G digit/sign polygons, datums, generated frames, and screen-only aspect are frozen');
