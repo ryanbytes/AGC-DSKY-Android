@@ -12,15 +12,15 @@ const native=read('app/src/main/java/org/apollo/agcdsky/ElWidgetProvider.java');
 const generated=read('tools/generate-el-second-frames.js');
 const screenOnly=read('app/src/main/assets/screen-only.css');
 
-// Accepted 1006315G geometry. Any change requires new drawing-backed evidence.
+// Accepted 1006315G front-view geometry. Apollo identity is E/H/M/N/K/F/J -> a/b/c/d/e/f/g; any change requires new drawing-backed evidence.
 const webPaths=[
-  "a:'M .420955898 .102240 L .490955898 .032240 L .198141898 .032240 L .236572898 .102240 Z'",
-  "b:'M .441577898 .269917 L .505451 .031888012 L .413468898 .123869 L .374277898 .269917 Z'",
-  "c:'M .371594898 .279917 L .325402898 .452054 L .371185049 .532239310 L .438893898 .279917 Z'",
-  "d:'M .360332954 .532240 L .322647898 .467240 L .148980898 .467240 L .131538898 .532240 Z'",
-  "e:'M .121184898 .532240 L .188893898 .279917 L .121594898 .279917 L .053885898 .532240 Z'",
-  "f:'M .124277898 .269917 L .191577898 .269917 L .2335968980 .113331 L .187590898 .033978 Z'",
-  "g:'M .3525668980 .312240 L .370009898 .247240 L .2080168980 .247240 L .190574898 .312240 Z'"
+  "a:'M .199003944 .032239891 L .236689000 .097239891 L .410356000 .097239891 L .427798000 .032239891 Z'",
+  "b:'M .438152000 .032239891 L .370443000 .284562891 L .437742000 .284562891 L .505451000 .032239891 Z'",
+  "c:'M .435059000 .294562891 L .367759000 .294562891 L .325740000 .451148891 L .371746000 .530501891 Z'",
+  "d:'M .138381000 .462239891 L .068381000 .532239891 L .361195000 .532239891 L .322764000 .462239891 Z'",
+  "e:'M .117759000 .294562891 L .053885898 .532591879 L .145868000 .440610891 L .185059000 .294562891 Z'",
+  "f:'M .187742000 .284562891 L .233934000 .112425891 L .188151849 .032240581 L .120443000 .284562891 Z'",
+  "g:'M .206770000 .252239891 L .189327000 .317239891 L .351320000 .317239891 L .368762000 .252239891 Z'"
 ];
 for(const p of webPaths)req(web,p,'WebView segment polygon');
 
@@ -33,7 +33,7 @@ for(const marker of [
   'const UPPER_ADVANCE_IN=.420,REGISTER_ADVANCE_IN=.410;',
   'const BAR_FROM_BOTTOM_IN=Object.freeze([2.280,1.520,0.760]);',
   'const BAR_H_IN=.060;',
-  'const REGISTER_GAP_IN=.070;',
+  'const REGISTER_GAP_IN=.060;',
   'const FIRST_DIGIT_X_IN=.180;',
   'const RIGHT_FIELD_X_IN=1.434549;',
   'const UPPER_GROUP_X_OFFSET_IN=1.470;',
@@ -47,14 +47,14 @@ for(const marker of [
   'REG_ADV=.410f*U,FIRST_DIGIT_X=.180f*U,REGISTER_ROW_X=-.010f*U;',
   'LEFT_FIELD_X=-.035451f*U,RIGHT_FIELD_X=1.434549f*U;',
   'PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U;',
-  'case 1: // b: physical right upper',
-  '.441577898f,.269917f,true);ml(p,ox,oy,.505451f,.031888012f',
-  'case 2: // c: physical right lower',
-  '.371594898f,.279917f,true);ml(p,ox,oy,.325402898f,.452054f',
-  'case 4: // e: physical left lower',
-  '.121184898f,.532240f,true);ml(p,ox,oy,.188893898f,.279917f',
-  'case 5: // f: physical left upper',
-  '.124277898f,.269917f,true);ml(p,ox,oy,.191577898f,.269917f',
+  'case 1: // b: physical H / upper right',
+  '.438152000f,.032239891f,true);ml(p,ox,oy,.370443000f,.284562891f',
+  'case 2: // c: physical M / lower right',
+  '.435059000f,.294562891f,true);ml(p,ox,oy,.367759000f,.294562891f',
+  'case 4: // e: physical K / lower left',
+  '.117759000f,.294562891f,true);ml(p,ox,oy,.053885898f,.532591879f',
+  'case 5: // f: physical F / upper left',
+  '.187742000f,.284562891f,true);ml(p,ox,oy,.233934000f,.112425891f',
   'rawBox(ox,oy,-.007784f,.231536f,.232122f,.065000f)',
   'rawBox(ox,oy,.073794f,.305065f,.065000f,.082843f)',
   'rawBox(ox,oy,.073794f,.139908f,.065000f,.081628f)'
@@ -63,11 +63,11 @@ for(const marker of [
 for(const marker of [
   'const FACE_W_IN=2.360, U=106/FACE_W_IN, DIGIT_TOP_IN=.0322398905011428;',
   'const REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010;',
-  'px(ox,.420955898)', 'px(ox,.490955898)', 'py(.032240)',
-  'px(ox,.441577898)', 'px(ox,.505451)', 'py(.031888012)',
-  'px(ox,.371594898)', 'px(ox,.325402898)', 'py(.452054)',
-  'px(ox,.121184898)', 'px(ox,.188893898)', 'px(ox,.053885898)',
-  'px(ox,.124277898)', 'px(ox,.191577898)', 'px(ox,.2335968980)',
+  'px(ox,.199003944)', 'px(ox,.427798000)', 'py(.032239891)',
+  'px(ox,.438152000)', 'px(ox,.505451000)', 'py(.284562891)',
+  'px(ox,.435059000)', 'px(ox,.325740000)', 'py(.451148891)',
+  'px(ox,.117759000)', 'px(ox,.053885898)', 'px(ox,.185059000)',
+  'px(ox,.187742000)', 'px(ox,.233934000)', 'px(ox,.188151849)',
   'rawRect(REGISTER_ROW_X_IN,.073794,.305065,.065000,.082843)',
   'rawRect(REGISTER_ROW_X_IN,-.007784,.231536,.232122,.065000)',
   'rawRect(REGISTER_ROW_X_IN,.073794,.139908,.065000,.081628)'

@@ -33,7 +33,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final float ACTIVE_W=106f,ACTIVE_H=4.060f*U;
     private static final float ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U;
     private static final float PANEL_W=2.620f*U,PANEL_H=4.420f*U;
-    private static final float R1_Y=84.441f,R2_Y=118.576f,R3_Y=152.712f;
+    private static final float R1_Y=83.992f,R2_Y=118.127f,R3_Y=152.263f;
     private static final float FRAME_H=23f;
 
     private static final int[] SECOND_DRAWABLES={
@@ -150,7 +150,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawText("VERB",19.763f,49.252f,LABEL_P);
         section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawText("NOUN",86.237f,49.252f,LABEL_P);
         section(c,0f,.633f,39.525f,35.838f,COMP_BG_P);c.drawText("COMP",19.763f,17.900f,COMP_P);c.drawText("ACTY",19.763f,25.000f,COMP_P);
-        rule(c,12.770f,78.602f,84.900f,2.695f);rule(c,12.770f,112.737f,84.900f,2.695f);rule(c,12.770f,146.873f,84.900f,2.695f);
+        rule(c,.020841f,78.602f,97.911123f,2.695f);rule(c,9.726333f,112.737f,88.205631f,2.695f);rule(c,9.726333f,146.873f,88.205631f,2.695f);
         digits(c,"00",RIGHT_FIELD_X,PROG_Y);digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y);digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y);
         if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),REGISTER_ROW_X,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),REGISTER_ROW_X,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),REGISTER_ROW_X,R3_Y);}
         c.restore();
@@ -168,20 +168,20 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static Path segmentPath(int logical,float ox,float oy){
         Path p=new Path();
         switch(logical){
-          case 0:
-            ml(p,ox,oy,.420955898f,.102240f,true);ml(p,ox,oy,.490955898f,.032240f,false);ml(p,ox,oy,.198141898f,.032240f,false);ml(p,ox,oy,.236572898f,.102240f,false);break;
-          case 1: // b: physical right upper
-            ml(p,ox,oy,.441577898f,.269917f,true);ml(p,ox,oy,.505451f,.031888012f,false);ml(p,ox,oy,.413468898f,.123869f,false);ml(p,ox,oy,.374277898f,.269917f,false);break;
-          case 2: // c: physical right lower
-            ml(p,ox,oy,.371594898f,.279917f,true);ml(p,ox,oy,.325402898f,.452054f,false);ml(p,ox,oy,.371185049f,.532239310f,false);ml(p,ox,oy,.438893898f,.279917f,false);break;
-          case 3:
-            ml(p,ox,oy,.360332954f,.532240f,true);ml(p,ox,oy,.322647898f,.467240f,false);ml(p,ox,oy,.148980898f,.467240f,false);ml(p,ox,oy,.131538898f,.532240f,false);break;
-          case 4: // e: physical left lower
-            ml(p,ox,oy,.121184898f,.532240f,true);ml(p,ox,oy,.188893898f,.279917f,false);ml(p,ox,oy,.121594898f,.279917f,false);ml(p,ox,oy,.053885898f,.532240f,false);break;
-          case 5: // f: physical left upper
-            ml(p,ox,oy,.124277898f,.269917f,true);ml(p,ox,oy,.191577898f,.269917f,false);ml(p,ox,oy,.2335968980f,.113331f,false);ml(p,ox,oy,.187590898f,.033978f,false);break;
-          case 6:
-            ml(p,ox,oy,.3525668980f,.312240f,true);ml(p,ox,oy,.370009898f,.247240f,false);ml(p,ox,oy,.2080168980f,.247240f,false);ml(p,ox,oy,.190574898f,.312240f,false);break;
+          case 0: // a: physical E / top
+            ml(p,ox,oy,.199003944f,.032239891f,true);ml(p,ox,oy,.236689000f,.097239891f,false);ml(p,ox,oy,.410356000f,.097239891f,false);ml(p,ox,oy,.427798000f,.032239891f,false);break;
+          case 1: // b: physical H / upper right
+            ml(p,ox,oy,.438152000f,.032239891f,true);ml(p,ox,oy,.370443000f,.284562891f,false);ml(p,ox,oy,.437742000f,.284562891f,false);ml(p,ox,oy,.505451000f,.032239891f,false);break;
+          case 2: // c: physical M / lower right
+            ml(p,ox,oy,.435059000f,.294562891f,true);ml(p,ox,oy,.367759000f,.294562891f,false);ml(p,ox,oy,.325740000f,.451148891f,false);ml(p,ox,oy,.371746000f,.530501891f,false);break;
+          case 3: // d: physical N / bottom
+            ml(p,ox,oy,.138381000f,.462239891f,true);ml(p,ox,oy,.068381000f,.532239891f,false);ml(p,ox,oy,.361195000f,.532239891f,false);ml(p,ox,oy,.322764000f,.462239891f,false);break;
+          case 4: // e: physical K / lower left
+            ml(p,ox,oy,.117759000f,.294562891f,true);ml(p,ox,oy,.053885898f,.532591879f,false);ml(p,ox,oy,.145868000f,.440610891f,false);ml(p,ox,oy,.185059000f,.294562891f,false);break;
+          case 5: // f: physical F / upper left
+            ml(p,ox,oy,.187742000f,.284562891f,true);ml(p,ox,oy,.233934000f,.112425891f,false);ml(p,ox,oy,.188151849f,.032240581f,false);ml(p,ox,oy,.120443000f,.284562891f,false);break;
+          case 6: // g: physical J / middle
+            ml(p,ox,oy,.206770000f,.252239891f,true);ml(p,ox,oy,.189327000f,.317239891f,false);ml(p,ox,oy,.351320000f,.317239891f,false);ml(p,ox,oy,.368762000f,.252239891f,false);break;
           default: return p;
         }
         p.close();return p;
