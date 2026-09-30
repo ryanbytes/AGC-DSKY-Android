@@ -48,8 +48,8 @@ jobs:
           "$BT/zipalign" -p -f 4 "$FIRE_U" "$PAYLOAD_DIR/app-fire-release.apk"
           echo '308e22dd3c5c59156ac599bb1cd2ac20f1b059dc73ad7af4a176b810bdc3f102  release-payload/v1.1.54/app-regular-release.apk' | sha256sum -c -
           echo '51cbf366033494c13cfbf94b8c24cc160a3c12cfc7df637b569edb9f7748cbba  release-payload/v1.1.54/app-fire-release.apk' | sha256sum -c -
-          cat "$PAYLOAD_DIR"/patches/regpart-* > "$RUNNER_TEMP/regular-signing.patch"
-          cat "$PAYLOAD_DIR"/patches/firepart-* > "$RUNNER_TEMP/fire-signing.patch"
+          cat "$PAYLOAD_DIR"/patches/regpart-* | base64 -d > "$RUNNER_TEMP/regular-signing.patch"
+          cat "$PAYLOAD_DIR"/patches/firepart-* | base64 -d > "$RUNNER_TEMP/fire-signing.patch"
           (cd "$PAYLOAD_DIR" && git apply --binary "$RUNNER_TEMP/regular-signing.patch")
           (cd "$PAYLOAD_DIR" && git apply --binary "$RUNNER_TEMP/fire-signing.patch")
 
