@@ -30,9 +30,13 @@ assert(phone.includes('const app = window.AGCDSKY;'),'phone-icdu must retain app
 assert(phone.includes('const api = Object.create(app);'),'phone-icdu must define implementations on a module-local export object');
 assert(phone.includes("phoneService.installImplementations(api,'phone-icdu module registration');"),'phone-icdu explicit batch registration missing');
 assert(!phone.includes('const api = window.AGCDSKY;'),'phone-icdu regained direct root-facade alias');
-assert(phone.includes('const e = apolloGimbals(rel);'),'flight IMU path must use Apollo gimbal decomposition');
+assert(phone.includes('const e = apolloGimbals(correctedRel);'),'flight IMU path must decompose the corrected attitude with Apollo gimbal geometry');
 assert(phone.includes('opticsAngles = eulerXYZ(opticalRel);'),'camera aiming must retain conventional device Euler decomposition');
 assert(phone.includes('const gameRelYaw = eulerXYZ(rel)[2];'),'magnetic drift estimator must compare conventional device yaw, not Apollo middle-gimbal angle');
+assert(phone.includes("correctedRel = qNorm(qMul(qAxis('z', rad(magneticYawCorrection)), rel));"),
+  'magnetic yaw correction must be applied to the attitude quaternion before Apollo gimbal decomposition');
+assert(!phone.includes('e[2] += magneticYawCorrection'),
+  'magnetic yaw correction must not be added directly to the Apollo middle-gimbal angle');
 
 const gimbalMatch=phone.match(/function apolloGimbals\(q\) \{[\s\S]*?\n  \}/);
 assert(gimbalMatch,'apolloGimbals implementation missing');
