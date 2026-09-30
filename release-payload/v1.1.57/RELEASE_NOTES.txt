@@ -1,0 +1,8 @@
+AGC DSKY v1.1.57
+
+- Keeps the screen-only EL face inside the viewport with 8 CSS pixels of side clearance.
+- Preserves the MIT/IL 1006315G active-face aspect ratio.
+- Aligns the parallax indicator-package rear with the inset EL face.
+- Updates the geometry smoke locks for the accepted inset behavior.
+- Android version: 1.1.57 (versionCode 2026093004).
+- Release APKs use the established standalone signing identity for updater continuity.
