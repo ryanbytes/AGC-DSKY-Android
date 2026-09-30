@@ -12,7 +12,7 @@ fs.mkdirSync(drawable, {recursive: true});
 // MIT/IL SCD 1006315G nominal sign dimensions and STEP-derived digit geometry.
 // Coordinates are inches in the shared component datum.
 const FACE_W_IN=2.360, U=106/FACE_W_IN, DIGIT_TOP_IN=.0322398905011428;
-const REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010;
+const REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=.024223;
 
 // Comanche RELTAB low-five-bit relay codes.  Generated launcher frames show
 // the settled state produced by the same physical K1..K5 contact matrix used by
@@ -79,7 +79,7 @@ for (let sec=0; sec<60; sec++) {
     });
   });
   const body=paths.map(p=>`    <path android:fillColor="${EL_COLOR}" android:pathData="${p}" />`).join('\n');
-  const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="107.537dp"\n    android:height="23dp"\n    android:viewportWidth="107.537"\n    android:viewportHeight="23">\n    <group android:translateX="1.537">\n${body}\n    </group>\n</vector>\n`;
+  const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="106dp"\n    android:height="23dp"\n    android:viewportWidth="106"\n    android:viewportHeight="23">\n${body}\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
 console.log(`generated 60 physical-datum Apollo relay-matrix EL second frames in ${drawable}`);
