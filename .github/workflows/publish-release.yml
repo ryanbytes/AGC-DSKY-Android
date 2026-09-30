@@ -16,13 +16,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Install Android Build Tools 36
+      - name: Resolve Android Build Tools 36
         shell: bash
         run: |
           set -euo pipefail
-          yes | sdkmanager "build-tools;36.0.0" >/dev/null
+          BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
+          if ! test -x "$BT/apksigner" || ! test -x "$BT/zipalign" || ! test -x "$BT/aapt2"; then
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+            test -x "$SDKMANAGER"
+            yes | "$SDKMANAGER" "build-tools;36.0.0" >/dev/null
+          fi
+          "$BT/apksigner" version
+          "$BT/zipalign" -h >/dev/null 2>&1 || true
 
       - name: Reconstruct standalone-signed 1.1.56 APKs
         env:
