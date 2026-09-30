@@ -1,4 +1,4 @@
-name: Publish signed release payload
+name: Publish standalone-signed release payload
 
 on:
   push:
@@ -7,29 +7,81 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify signed release payload
+      - name: Resolve Android Build Tools 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
+          if ! test -x "$BT/apksigner" || ! test -x "$BT/zipalign" || ! test -x "$BT/aapt2"; then
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+            test -x "$SDKMANAGER"
+            yes | "$SDKMANAGER" "build-tools;36.0.0" >/dev/null
+          fi
+          "$BT/apksigner" version
+          "$BT/zipalign" -h >/dev/null 2>&1 || true
+
+      - name: Verify merged source target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN="e899ec538e3aada84dad2507779ed4137875c719"
+          ACTUAL_MAIN="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          test "$ACTUAL_MAIN" = "$EXPECTED_MAIN"
+          test "$(tr -d '\r\n' < VERSION)" = "1.1.58"
+
+      - name: Reconstruct standalone-signed 1.1.58 APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           VERSION_NAME="$(tr -d '\r\n' < VERSION)"
-          PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
-          test -f "${PAYLOAD_DIR}/app-regular-release.apk"
-          test -f "${PAYLOAD_DIR}/app-fire-release.apk"
-          test -f "${PAYLOAD_DIR}/app-regular-release.apk.sha256"
-          test -f "${PAYLOAD_DIR}/app-fire-release.apk.sha256"
+          test "$VERSION_NAME" = "1.1.58"
+          PAYLOAD_DIR="release-payload/v$VERSION_NAME"
+          ARTIFACT_ID="11125379916"
+          BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
+          mkdir -p /tmp/dsky-unsigned
+          curl -L --fail --retry 3             -H "Authorization: Bearer $GH_TOKEN"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip"             -o /tmp/dsky-unsigned.zip
+          unzip -q /tmp/dsky-unsigned.zip -d /tmp/dsky-unsigned
+          "$BT/zipalign" -p -f 4             /tmp/dsky-unsigned/regular/release/app-regular-release-unsigned.apk             /tmp/app-regular-release-aligned.apk
+          "$BT/zipalign" -p -f 4             /tmp/dsky-unsigned/fire/release/app-fire-release-unsigned.apk             /tmp/app-fire-release-aligned.apk
+          python3 "$PAYLOAD_DIR/reconstruct_release.py"             /tmp/app-regular-release-aligned.apk             "$PAYLOAD_DIR/regular.patch.b64"             "$PAYLOAD_DIR/app-regular-release.apk"
+          python3 "$PAYLOAD_DIR/reconstruct_release.py"             /tmp/app-fire-release-aligned.apk             "$PAYLOAD_DIR/fire.patch.b64"             "$PAYLOAD_DIR/app-fire-release.apk"
+
+      - name: Verify release identity, signatures, and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
+          PAYLOAD_DIR="release-payload/v$VERSION_NAME"
+          BT="$ANDROID_SDK_ROOT/build-tools/36.0.0"
+          EXPECTED_CERT="409ad676e8052e50416a1bf69e095137ef639ac13ce4652160a19380a117fa1f"
           (
-            cd "${PAYLOAD_DIR}"
+            cd "$PAYLOAD_DIR"
             sha256sum -c app-regular-release.apk.sha256
             sha256sum -c app-fire-release.apk.sha256
           )
+          for APK in "$PAYLOAD_DIR/app-regular-release.apk" "$PAYLOAD_DIR/app-fire-release.apk"; do
+            "$BT/zipalign" -c -p 4 "$APK"
+            "$BT/apksigner" verify --verbose --print-certs "$APK" | tee /tmp/apksigner.txt
+            grep -F "Verified using v1 scheme (JAR signing): false" /tmp/apksigner.txt
+            grep -F "Verified using v2 scheme (APK Signature Scheme v2): true" /tmp/apksigner.txt
+            grep -F "Verified using v3 scheme (APK Signature Scheme v3): true" /tmp/apksigner.txt
+            grep -Fi "Signer #1 certificate SHA-256 digest: $EXPECTED_CERT" /tmp/apksigner.txt
+            "$BT/aapt2" dump badging "$APK" > /tmp/badging.txt
+            grep -F "package: name='org.apollo.agcdsky' versionCode='2026093005' versionName='1.1.58'" /tmp/badging.txt
+          done
 
       - name: Create or refresh GitHub Release
         env:
@@ -38,22 +90,18 @@ jobs:
         run: |
           set -euo pipefail
           VERSION_NAME="$(tr -d '\r\n' < VERSION)"
-          TAG="v${VERSION_NAME}"
-          PAYLOAD_DIR="release-payload/${TAG}"
-          NOTES="${PAYLOAD_DIR}/RELEASE_NOTES.txt"
+          TAG="v$VERSION_NAME"
+          PAYLOAD_DIR="release-payload/$TAG"
+          NOTES="$PAYLOAD_DIR/RELEASE_NOTES.txt"
           ASSETS=(
-            "${PAYLOAD_DIR}/app-regular-release.apk"
-            "${PAYLOAD_DIR}/app-regular-release.apk.sha256"
-            "${PAYLOAD_DIR}/app-fire-release.apk"
-            "${PAYLOAD_DIR}/app-fire-release.apk.sha256"
+            "$PAYLOAD_DIR/app-regular-release.apk"
+            "$PAYLOAD_DIR/app-regular-release.apk.sha256"
+            "$PAYLOAD_DIR/app-fire-release.apk"
+            "$PAYLOAD_DIR/app-fire-release.apk.sha256"
           )
-          if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release upload "${TAG}" "${ASSETS[@]}" --clobber
-            gh release edit "${TAG}" --title "AGC DSKY ${TAG}" --target main --latest
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+            gh release edit "$TAG" --title "AGC DSKY $TAG" --target main --latest
           else
-            if test -f "${NOTES}"; then
-              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
-            else
-              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --generate-notes --latest
-            fi
+            gh release create "$TAG" "${ASSETS[@]}" --target main --title "AGC DSKY $TAG" --notes-file "$NOTES" --latest
           fi
