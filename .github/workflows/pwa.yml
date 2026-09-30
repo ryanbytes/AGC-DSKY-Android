@@ -38,6 +38,8 @@ on:
       - 'tools/frontend-smoke.js'
       - 'tools/agc-core-smoke.js'
       - 'tools/wasm-runtime-smoke.js'
+      - 'tools/capture-visual-goldens.sh'
+      - 'tools/visual-golden-harness.html'
       - 'vendor/webAGC'
       - 'apple/tools/verify-pinned-assets.sh'
       - '.github/workflows/pwa.yml'

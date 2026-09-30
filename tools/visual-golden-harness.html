@@ -38,6 +38,40 @@
     r.set2('prog','00');r.set2('verb','16');r.set2('noun','65');
     r.setReg('r1','+','12345');r.setReg('r2','-','67890');r.setReg('r3','+','31415');
   }
+  function runtimeProbe(w,d){
+    const r=w.AGCDSKY_RENDERER;
+    const reg=d.getElementById('r1');
+    const glyph=reg?.querySelector('.el-glyph');
+    const pick=name=>glyph?.querySelector(`[data-seg="${name}"]`);
+    const implementation=name=>{
+      const fn=r.implementation?.(name);
+      return fn?{name:fn.name||'(anonymous)',source:String(fn).slice(0,120)}:null;
+    };
+    const payload={
+      versions:r.compatibilityVersions?.()||null,
+      implementations:{
+        glyph:implementation('glyph'),
+        renderDigits:implementation('renderDigits'),
+        renderReg:implementation('renderReg'),
+        set2:implementation('set2'),
+        setReg:implementation('setReg')
+      },
+      r1:{
+        staticGlyphs:reg?.querySelectorAll('[data-el-static-glyph="1"]').length||0,
+        baseGlyphs:reg?.querySelectorAll('[data-el-base-glyph="1"]').length||0,
+        glyphTransform:glyph?.getAttribute('transform')||null,
+        aPath:pick('a')?.getAttribute('d')||null,
+        dPath:pick('d')?.getAttribute('d')||null,
+        aClass:pick('a')?.getAttribute('class')||null,
+        dClass:pick('d')?.getAttribute('class')||null
+      }
+    };
+    const pre=document.createElement('pre');
+    pre.id='runtime-probe';
+    pre.textContent=JSON.stringify(payload);
+    frame.style.display='none';
+    document.body.appendChild(pre);
+  }
   function lampTest(w){
     const r=w.AGCDSKY_RENDERER;
     for(const name of ['uplink','temp','noatt','gimbal','stby','prog','keyrel','restart','oprerr','tracker','comp'])r.setLamp(name,true);
@@ -72,7 +106,8 @@
     const w=frame.contentWindow,d=frame.contentDocument;
     await waitFor(()=>w.AGCDSKY_RENDERER&&w.AGCDSKY_CLOCK&&d.getElementById('dsky'));
     freeze(w,d);fixedDisplay(w);
-    if(testCase==='lamp-test')lampTest(w);
+    if(testCase==='probe')runtimeProbe(w,d);
+    else if(testCase==='lamp-test')lampTest(w);
     else if(testCase==='display-only')d.body.classList.add('display-only');
     else if(testCase==='screen-only')d.body.classList.add('screen-only');
     else if(testCase==='diagnostics')diagnosticsFixture(w,d);
