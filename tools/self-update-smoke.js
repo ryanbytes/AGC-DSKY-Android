@@ -20,6 +20,8 @@ for(const marker of [
   'fetchLatestReleaseResilient()',
   'fetchFallbackRelease()',
   '12L * 60L * 60L * 1000L',
+  'FOREGROUND_CHECK_INTERVAL_MS',
+  '60L * 1000L',
   'RETRY_INTERVAL_MS',
   'PREF_LAST_ATTEMPT',
   'UnknownHostException',
@@ -52,6 +54,10 @@ assert(java.includes('if (isTransientNetworkFailure(error)) {')&&java.includes('
 for(const marker of ['AppUpdater.checkNow(context)','AlarmManager.ELAPSED_REALTIME','setInexactRepeating','CHECK_INTERVAL_MS'])assert(provider.includes(marker),`startup provider missing periodic updater marker: ${marker}`);
 assert(checkReceiver.includes('AppUpdater.check(context)'),'periodic receiver does not invoke updater');
 assert(activity.includes('AppUpdater.onForeground(this)'),'launcher activity must resume pending update UI from the foreground');
+assert(java.includes('if (!resumePendingInstall(activity)) checkForeground(activity);'),'foreground resume must use the short freshness window');
+assert(java.includes('check(source, false, FOREGROUND_CHECK_INTERVAL_MS, null)'),'foreground updater must not inherit the 12-hour background interval');
+assert(java.includes('now - prefs.getLong(PREF_LAST_CHECK, 0L) < minimumIntervalMs'),'updater check interval must be selected by caller');
+assert(java.includes('connection.setUseCaches(false)')&&java.includes('Cache-Control')&&java.includes('no-cache'),'release discovery must bypass stale HTTP response caches');
 assert(activity.includes('AppUpdater.onBackground(this)'),'launcher activity must clear updater foreground ownership on pause');
 assert(activity.includes('new UpdateBridge(),"UpdateBridge"'),'launcher must expose the manual updater bridge to packaged UI');
 assert(activity.includes('AppUpdater.checkNow(SensorMainActivity.this, SensorMainActivity.this::pushUpdateStatus)'),
