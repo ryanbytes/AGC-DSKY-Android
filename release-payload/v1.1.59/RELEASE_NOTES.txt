@@ -1,0 +1,8 @@
+AGC DSKY v1.1.59
+
+- Fixes updater freshness when a release is published while the app process is already alive.
+- Foreground resumes recheck for a newer release when the last successful check is at least 60 seconds old.
+- Keeps the existing 12-hour background update schedule.
+- Disables stale HTTP response caching for release discovery.
+- Retains checksum, package, versionCode, and standalone signer verification.
+- Android version: 1.1.59 (versionCode 2026093006).
