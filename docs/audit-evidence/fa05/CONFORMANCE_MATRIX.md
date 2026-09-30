@@ -1,37 +1,55 @@
 # FA-05 Detail-C conformance matrix
 
-Primary authority: MIT/MSC SCD 1006315G Detail C.  
-Current runtime inspected: `main@1fb5823cc512de4e441bf81bfd77dc81a0ee1872`.
+Primary dimensional authority: MIT/MSC SCD 1006315G Detail C.  
+Secondary geometry evidence: archived `1006315G-exact.step`.  
+Independent Apollo relay/segment nomenclature cross-check: VirtualAGC `Tools/traceDSKY.py`, blob `6d994a40529d377ceaf865f63f8ce0bebec885a8`, traced from the original DSKY relay schematics.
 
-## Explicit Detail-C checks
+## Explicit Detail-C checks on the corrected front-view candidate
 
-| Requirement | SCD limit | Current main | Status |
+| Requirement | SCD limit | FA-05 candidate | Status |
 |---|---:|---:|---|
 | Overall digit height | 0.495–0.505 in | 0.500351988 | PASS |
-| Upper outside width | 0.315–0.325 in | 0.317860102 | PASS |
-| Top-to-middle datum | 0.215–0.225 in | 0.215351988 | PASS |
-| Horizontal segment thickness | 0.060–0.070 in TYP | a=0.070000; g=0.065000; d=0.065000 | PASS |
-| Side-segment normal width | 0.060–0.070 in TYP | b=0.06500043; f=0.06500038; c=0.06499942; e=0.06499945 | PASS |
+| Upper outside width | 0.315–0.325 in | 0.317299151 | PASS |
+| Top-to-middle datum | 0.215–0.225 in | 0.220000000 | PASS |
+| Horizontal segment thickness | 0.060–0.070 in TYP | 0.065–0.070 | PASS |
+| Side-segment normal width | 0.060–0.070 in TYP | ~0.065 | PASS |
 | Side slant from vertical | 14°30′–15°30′ TYP | ~15.021° | PASS |
-| Directly corresponding ~60° free-end cuts | 59°30′–60°30′ TYP | f top=59.8964°; c bottom=60.2756° | PASS |
-| Center split between upper/lower side electrodes | 0.010 in MIN TYP | left=0.010000; right=0.010000 | PASS |
+| Directly corresponding ~60° free-end cuts | 59°30′–60°30′ TYP | 60.2756° / 59.8964° | PASS |
+| Center split between upper/lower side electrodes | 0.010 in MIN TYP | 0.010000 / 0.010000 | PASS |
 
-## Interpretation boundary
+## Segment-identity defect found
 
-The drawing explicitly says **DO NOT SCALE THIS DRAWING**. Scan-pixel proportions are therefore not promoted into dimensions.
+The earlier dimensional audit was insufficient because a 180-degree reassignment preserves the dimensions above.
 
-The `.010 MIN TYP` leader is traced to the center split between the upper and lower side electrodes. It is **not** a global Euclidean nearest-distance requirement at the diagonal top/bottom junctions. Earlier provisional claims to the contrary are withdrawn.
+VirtualAGC's traced schematic defines the physical EL sections as:
 
-The 59°30′–60°30′ and 14°30′–15°30′ construction callouts are evaluated against the directly corresponding Detail-C side-segment construction. Geometry not independently dimensioned by the SCD is not redesigned from scan appearance alone.
+```
+        E
+    F       H
+        J
+    K       M
+        N
+```
 
-## Detail E and continuously-lit separators
+Therefore the logical seven-segment binding is `E/H/M/N/K/F/J -> a/b/c/d/e/f/g`.
 
-Detail E is an enlarged front-face/detail of the digit/separator relationship. It does not provide evidence for a global digit flip and does not override the explicit Detail-C numeric-electrode dimensions above.
+The archived STEP independently names the solids `SegE`, `SegH`, `SegM`, `SegN`, `SegK`, `SegF`, and `SegJ`. On current main `1fb5823cc512de4e441bf81bfd77dc81a0ee1872`, the app's polygon shapes correspond instead to `N/K/F/E/H/M/J` for logical `a/b/c/d/e/f/g`: the physical electrode geometry is effectively rotated 180 degrees while the logical digit pattern remains normal.
 
-The continuously-lit separator geometry is audited separately in `STATIC_SEPARATOR_AUDIT.md`. Its dimensioned thickness/spacing remains within the sheet-2 tolerances; its previously collapsed horizontal lengths and WebView round end caps are a separate un-dimensioned shape/parity issue corrected from the archived drawing-backed STEP.
+The asymmetric horizontal spans make the error independently detectable:
+- archived STEP `SegE` (physical top): about 0.2285 in wide;
+- archived STEP `SegN` (physical bottom): about 0.2905 in wide;
+- corrected app candidate: logical `a` = 0.228794 in and logical `d` = 0.292814 in.
 
-## Current conclusion
+This explains why digits such as 2 and 5 can remain recognizable while their contour looks wrong: the same logical segments illuminate, but the asymmetric Apollo electrode shapes are at the opposite ends/sides.
 
-Current main passes the explicit Detail-C planform dimensions and the correctly interpreted center-split clearance gate checked here. No front-face polygon change is justified by the user's Detail-E crop or by the diagonal distances measured during the provisional clearance investigation.
+## Regression coverage
 
-FA-05 remains open for any remaining primary-source-backed shape question, but the previous two-end-cut correction is withdrawn.
+`tools/el-drawing-conformance-smoke.js` now contains an asymmetric E/N identity guard in addition to the primary SCD dimensional checks. The exact accepted coordinates remain frozen by `tools/el-geometry-lock-smoke.js`, and `tools/dsky-mapping-smoke.js` checks the physical E/H/M/N/K/F/J bindings.
+
+## Detail E / separators
+
+The visible separator thickness on current main is already 2.695 SVG units, approximately 0.060 in, and therefore passes the 0.055–0.065 in Detail-E thickness band. The remaining main-branch defect is the 0.070-in register placement gap; the FA-05 branch changes that to 0.060 in and also restores STEP-backed separator extents and square ends.
+
+## Status
+
+The corrected digit geometry passes the primary Detail-C conformance calculations. FA-05 remains open until the complete branch build/test gates and a rendered/device visual check are complete.
