@@ -23,3 +23,9 @@ Schematic layout traced there: E=top, F=upper-left, H=upper-right, J=middle, K=l
 Cross-check: the archived 1006315G STEP names the corresponding solids SegE, SegF, SegH, SegJ, SegK, SegM, and SegN.
 Finding: the prior app polygons preserved the STEP vertical coordinate in SVG and assigned the named physical shapes 180 degrees from their Apollo schematic identity. Commit fbeec20b34b969db1a45cdae561ce8bdbdd0ef0b corrects the digit electrode orientation and adds an asymmetric E/N identity regression.
 
+Archived nomenclature source path: docs/audit-evidence/fa05/traceDSKY.py
+Archived nomenclature Git blob SHA: 6d994a40529d377ceaf865f63f8ce0bebec885a8
+Verification: upstream VirtualAGC and archived traceDSKY.py blob SHAs are identical.
+Orientation audit: docs/audit-evidence/fa05/SEGMENT_ORIENTATION_AUDIT.md
+Regression-guard repair commit: e063ec58673cb847f8a7fb65815a1a67c0e309e7
+Evidence-document update commit: 4486e79e3e31a5a760f6bb2fb5af4ffae1f7b4c5
