@@ -52,8 +52,11 @@ jobs:
           echo '51cbf366033494c13cfbf94b8c24cc160a3c12cfc7df637b569edb9f7748cbba  release-payload/v1.1.54/app-fire-release.apk' | sha256sum -c -
           cat "$PAYLOAD_DIR"/patches/regpart-* | base64 -d > "$RUNNER_TEMP/regular-signing.patch"
           cat "$PAYLOAD_DIR"/patches/firepart-* | base64 -d > "$RUNNER_TEMP/fire-signing.patch"
+          echo 'a2a92d56b36fb490e51dc9a605aa2c97f2793b16cc4ef034c16c9e36659767b2  '"$RUNNER_TEMP"'/regular-signing.patch' | sha256sum -c -
+          echo 'ea63afb0550ff416de75999bbc7807e73aa0e4895ebcd22a2a429f2817fdb36b  '"$RUNNER_TEMP"'/fire-signing.patch' | sha256sum -c -
           (cd "$PAYLOAD_DIR" && git apply --binary "$RUNNER_TEMP/regular-signing.patch")
           (cd "$PAYLOAD_DIR" && git apply --binary "$RUNNER_TEMP/fire-signing.patch")
+          sha256sum "$PAYLOAD_DIR/app-regular-release.apk" "$PAYLOAD_DIR/app-fire-release.apk"
 
       - name: Verify signed release payload
         shell: bash
