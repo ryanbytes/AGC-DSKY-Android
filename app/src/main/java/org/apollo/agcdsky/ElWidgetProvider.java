@@ -33,7 +33,7 @@ public final class ElWidgetProvider extends AppWidgetProvider {
     private static final float ACTIVE_W=106f,ACTIVE_H=4.060f*U;
     private static final float ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U;
     private static final float PANEL_W=2.620f*U,PANEL_H=4.420f*U;
-    private static final float R1_Y=84.441f,R2_Y=118.576f,R3_Y=152.712f;
+    private static final float R1_Y=83.992f,R2_Y=118.127f,R3_Y=152.263f;
     private static final float FRAME_H=23f;
 
     private static final int[] SECOND_DRAWABLES={
