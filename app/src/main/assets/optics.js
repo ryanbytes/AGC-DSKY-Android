@@ -29,6 +29,7 @@
   const SXT_FOV_DEG = 1.8;     // Block II sextant field of view.
   const MAX_PULSES_PER_PUMP = 8;
   let opticsWriteRejected=0,lastOpticsAccept=0;
+  let navHeld=null;
 
   let stream = null;
   let track = null;
@@ -98,8 +99,8 @@
     document.body.appendChild(wrap);
 
     document.getElementById('sxt-close').addEventListener('click', close);
-    document.getElementById('sxt-mark').addEventListener('click', () => navPulse(MARK_BIT));
-    document.getElementById('sxt-reject').addEventListener('click', () => navPulse(REJECT_BIT));
+    bindNavContact('sxt-mark',MARK_BIT);
+    bindNavContact('sxt-reject',REJECT_BIT);
     document.getElementById('sxt-center').addEventListener('click', zeroSight);
     document.getElementById('sxt-aim-scale').addEventListener('click', cycleAimScale);
     document.getElementById('sxt-star-toggle').addEventListener('click', toggleStarFinder);
@@ -215,6 +216,7 @@
   }
 
   function close(){
+    releaseNavContact();
     const view = document.getElementById('sxt-view');
     if (view) view.classList.remove('open');
     document.body.classList.remove('sxt-combined');
@@ -228,6 +230,7 @@
     const view = document.getElementById('sxt-view');
     if (!view || !view.classList.contains('open')) return;
     if (document.hidden) {
+      releaseNavContact();
       releaseCamera();
       const status = document.getElementById('sxt-status');
       if (status) status.textContent = 'SXT · CAMERA PAUSED';
@@ -464,17 +467,71 @@
     }
   }
 
-  function navPulse(bit){
+  // Apollo channel-016 navigation inputs are maintained switch contacts:
+  // KEYRUPT2 is generated on button depression and the input trap resets when
+  // the button is released. Do not invent a fixed software hold interval here.
+  function pressNavContact(bit){
+    if(navHeld) return false;
     const c=core();
-    if(!c || !c.running || typeof c.navKeyPulse!=='function') {
+    if(!c || !c.running || typeof c.navKeyPress!=='function' || typeof c.navKeyRelease!=='function') {
       const st=document.getElementById('sxt-status'); if(st) st.textContent='SXT · AGC NOT RUNNING';
-      return;
+      return false;
     }
-    const ok=c.navKeyPulse(bit,90);
+    const ok=c.navKeyPress(bit);
     const st=document.getElementById('sxt-status');
-    if(st) st.textContent=ok?(bit===MARK_BIT?'SXT · MARK':'SXT · MARK REJECT'):'SXT · INPUT BUSY';
-    if(ok){if(typeof api.scheduleAgcAutosave==='function')api.scheduleAgcAutosave(bit===MARK_BIT?'SXT MARK':'SXT MARK REJECT');setTimeout(()=>{if(st&&document.getElementById('sxt-view')?.classList.contains('open'))st.textContent='SXT · MOVE PHONE TO AIM · 1.8°';},500)}
+    if(!ok){
+      if(st) st.textContent='SXT · INPUT BUSY';
+      return false;
+    }
+    navHeld={bit,core:c};
+    if(st) st.textContent=bit===MARK_BIT?'SXT · MARK':'SXT · MARK REJECT';
+    if(typeof api.scheduleAgcAutosave==='function')api.scheduleAgcAutosave(bit===MARK_BIT?'SXT MARK':'SXT MARK REJECT');
+    setTimeout(()=>{if(st&&document.getElementById('sxt-view')?.classList.contains('open'))st.textContent='SXT · MOVE PHONE TO AIM · 1.8°';},500);
+    return true;
   }
+
+  function releaseNavContact(){
+    const held=navHeld;
+    if(!held) return false;
+    navHeld=null;
+    try{return held.core.navKeyRelease()!==false}catch(_){return false}
+  }
+
+  function bindNavContact(id,bit){
+    const button=document.getElementById(id);
+    if(!button)return;
+    let pointerId=null,keyboardHeld=false;
+    button.addEventListener('pointerdown',event=>{
+      if(event.button!=null&&event.button!==0)return;
+      event.preventDefault();
+      if(!pressNavContact(bit))return;
+      pointerId=event.pointerId;
+      try{button.setPointerCapture(event.pointerId)}catch(_){}
+    });
+    const pointerRelease=event=>{
+      if(pointerId===null||event.pointerId!==pointerId)return;
+      event.preventDefault();
+      pointerId=null;
+      releaseNavContact();
+    };
+    button.addEventListener('pointerup',pointerRelease);
+    button.addEventListener('pointercancel',pointerRelease);
+    button.addEventListener('lostpointercapture',pointerRelease);
+    button.addEventListener('keydown',event=>{
+      if(event.repeat||keyboardHeld||(event.key!==' '&&event.key!=='Enter'))return;
+      event.preventDefault();
+      keyboardHeld=pressNavContact(bit);
+    });
+    button.addEventListener('keyup',event=>{
+      if(!keyboardHeld||(event.key!==' '&&event.key!=='Enter'))return;
+      event.preventDefault();
+      keyboardHeld=false;
+      releaseNavContact();
+    });
+    button.addEventListener('click',event=>event.preventDefault());
+  }
+
+  addEventListener('blur',releaseNavContact);
 
   function signed15(word){
     const raw=word & 0x7fff;
