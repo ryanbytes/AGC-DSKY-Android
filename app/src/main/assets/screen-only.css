@@ -1,7 +1,7 @@
 /* Borderless EL readout mode. Normal mode uses the DSKY display well as the
    hardware surround. Screen-only mode fills unused handset space with the same
    EL glass gray while preserving the 1006315G active-face aspect ratio and an
-   8 CSS-pixel side clearance so full-width artwork stays inside the viewport. */
+   16 CSS-pixel side clearance so full-width artwork stays inside the viewport. */
 body.screen-only,
 body.screen-only #app{
   padding:0!important;
@@ -38,12 +38,12 @@ body.screen-only .elpanel{
   position:absolute!important;
   left:50%!important;
   top:50%!important;
-  width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important;
-  height:min(100vh,calc((100vw - 16px) * 182.356 / 106))!important;
+  width:min(calc(100vw - 32px),calc(100vh * 106 / 182.356))!important;
+  height:min(100vh,calc((100vw - 32px) * 182.356 / 106))!important;
   max-width:none!important;
   max-height:none!important;
   transform:translate(-50%,-50%)!important;
-  overflow:hidden!important;
+  overflow:visible!important;
   background:#696d67!important;
 }
 
@@ -58,8 +58,8 @@ body.screen-only.parallax-3d:not(.dream):not(.display-only) #dsky .el-indicator-
   position:absolute!important;
   left:50%!important;
   top:50%!important;
-  width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important;
-  height:min(100vh,calc((100vw - 16px) * 182.356 / 106))!important;
+  width:min(calc(100vw - 32px),calc(100vh * 106 / 182.356))!important;
+  height:min(100vh,calc((100vw - 32px) * 182.356 / 106))!important;
   transform:
     translate(-50%,-50%)
     translate3d(0,0,var(--dsky-screen-indicator-back-z,-17.712px))!important;
