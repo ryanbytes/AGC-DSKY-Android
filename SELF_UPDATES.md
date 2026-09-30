@@ -4,10 +4,11 @@ Release builds for both Android targets use the same native updater.
 
 ## Device behavior
 
-- Release builds check `https://api.github.com/repos/ryanbytes/AGC-DSKY-Android/releases/latest` at startup and on a 12-hour inexact alarm.
+- Release builds force a release check at process startup, recheck on foreground resume when the last successful check is at least 60 seconds old, and retain a 12-hour inexact background alarm.
 - Debug / `-eltest` builds never self-update.
 - `regular` selects `app-regular-release.apk`.
 - `fire` selects `app-fire-release.apk`.
+- Release discovery disables HTTP response caching so a newly published `releases/latest` result is not hidden behind a stale cached response.
 - Draft and prerelease GitHub releases are ignored.
 - The release tag must be semantic, for example `v1.1.5`, and newer than the installed `versionName`.
 - The downloaded APK must have a higher Android `versionCode` than the installed app.
