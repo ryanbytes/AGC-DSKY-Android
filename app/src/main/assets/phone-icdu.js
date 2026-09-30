@@ -290,7 +290,7 @@
     }
 
     const rel = qNorm(qMul(qConj(referenceQ), q));
-    const e = apolloGimbals(rel);
+    let correctedRel = rel;
 
     // GAME_ROTATION_VECTOR intentionally ignores magnetic north and therefore
     // has excellent short-term motion but can drift in yaw. Use the absolute
@@ -303,8 +303,12 @@
       const gameRelYaw = eulerXYZ(rel)[2];
       const err = wrap180(magRelYaw - (gameRelYaw + magneticYawCorrection));
       magneticYawCorrection += clamp(err * 0.0025, -0.05, 0.05);
-      e[2] += magneticYawCorrection;
+      // The correction is a conventional yaw-frame correction. Apply it to
+      // the relative attitude before Apollo gimbal decomposition; adding it
+      // directly to e[2] would incorrectly treat middle gimbal as generic yaw.
+      correctedRel = qNorm(qMul(qAxis('z', rad(magneticYawCorrection)), rel));
     }
+    const e = apolloGimbals(correctedRel);
     if (!lastEuler) {
       lastEuler = e;
       updateButton();
