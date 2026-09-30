@@ -1,3 +1,15 @@
+## 2026-09-30 EL accuracy release candidate preparation
+
+Candidate source version is 1.1.56 / versionCode 2026093003, with the matching application label. These identifiers are a source candidate only. No release APK has been built or signed; the normal local Android build and standalone signing gates remain required before publishing.
+
+## 2026-09-30 EL sign geometry correction
+
+MIT/IL SCD 1006315G Detail A specifies a .338-in nominal sign envelope (.333/.343 limits), .265-in B-island width (.260/.270 limits), .065-in nominal thickness (.060/.070 TYP limits), and .010-in minimum spacing between A/B islands. The older STEP sign solids and all three app render paths were too small; the STEP profile was not used to overrule the controlled drawing.
+
+Updated the WebView, Android widget, and generated clock frames to the drawing nominal island dimensions. Placement retains the STEP-derived B-island center and existing register-row datum. The source conformance smoke now measures the Detail A envelope, B width, thickness, both gaps, and clearance to the first digit; the geometry lock requires the same paths in all three renderers.
+
+Source smoke checks were executed against the modified source contents in the available JavaScript runtime and passed. The full repository build and device visual check have not run in a local checkout.
+
 # AGC DSKY Android progress
 
 Last updated: 2026-09-29

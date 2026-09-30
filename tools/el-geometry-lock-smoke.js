@@ -25,9 +25,9 @@ const webPaths=[
 for(const p of webPaths)req(web,p,'WebView segment polygon');
 
 for(const marker of [
-  "aTop:'M .073794 .387908 L .073794 .305065 L .138794 .305065 L .138794 .387908 Z'",
-  "b:'M -.007784 .296536 L -.007784 .231536 L .224338 .231536 L .224338 .296536 Z'",
-  "aBottom:'M .073794 .221536 L .073794 .139908 L .138794 .139908 L .138794 .221536 Z'",
+  "aTop:'M .073794 .433036 L .073794 .306536 L .138794 .306536 L .138794 .433036 Z'",
+  "b:'M -.024223 .296536 L -.024223 .231536 L .240777 .231536 L .240777 .296536 Z'",
+  "aBottom:'M .073794 .221536 L .073794 .095036 L .138794 .095036 L .138794 .221536 Z'",
   'const DIGIT_TOP_IN=.0322398905011428;',
   'const FACE_W_IN=2.360,FACE_H_IN=4.060,U=106/FACE_W_IN,MM_TO_U=U/25.4;',
   'const UPPER_ADVANCE_IN=.420,REGISTER_ADVANCE_IN=.410;',
@@ -55,9 +55,9 @@ for(const marker of [
   '.117759000f,.294562891f,true);ml(p,ox,oy,.053885898f,.532591879f',
   'case 5: // f: physical F / upper left',
   '.187742000f,.284562891f,true);ml(p,ox,oy,.233934000f,.112425891f',
-  'rawBox(ox,oy,-.007784f,.231536f,.232122f,.065000f)',
-  'rawBox(ox,oy,.073794f,.305065f,.065000f,.082843f)',
-  'rawBox(ox,oy,.073794f,.139908f,.065000f,.081628f)'
+  'rawBox(ox,oy,-.024223f,.231536f,.265000f,.065000f)',
+  'rawBox(ox,oy,.073794f,.306536f,.065000f,.126500f)',
+  'rawBox(ox,oy,.073794f,.095036f,.065000f,.126500f)'
 ])req(native,marker,'native widget accepted geometry');
 
 for(const marker of [
@@ -68,9 +68,9 @@ for(const marker of [
   'px(ox,.435059000)', 'px(ox,.325740000)', 'py(.451148891)',
   'px(ox,.117759000)', 'px(ox,.053885898)', 'px(ox,.185059000)',
   'px(ox,.187742000)', 'px(ox,.233934000)', 'px(ox,.188151849)',
-  'rawRect(REGISTER_ROW_X_IN,.073794,.305065,.065000,.082843)',
-  'rawRect(REGISTER_ROW_X_IN,-.007784,.231536,.232122,.065000)',
-  'rawRect(REGISTER_ROW_X_IN,.073794,.139908,.065000,.081628)'
+  'rawRect(REGISTER_ROW_X_IN,.073794,.306536,.065000,.126500)',
+  'rawRect(REGISTER_ROW_X_IN,-.024223,.231536,.265000,.065000)',
+  'rawRect(REGISTER_ROW_X_IN,.073794,.095036,.065000,.126500)'
 ])req(generated,marker,'generated-seconds accepted geometry');
 
 for(const marker of [

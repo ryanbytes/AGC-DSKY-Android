@@ -9,8 +9,8 @@ const drawable = path.join(outRoot, 'drawable');
 fs.rmSync(outRoot, {recursive: true, force: true});
 fs.mkdirSync(drawable, {recursive: true});
 
-// MIT/IL SCD 1006315G geometry transcribed from the drawing-backed
-// 1006315G-exact.step model. Coordinates are inches in the STEP component datum.
+// MIT/IL SCD 1006315G nominal sign dimensions and STEP-derived digit geometry.
+// Coordinates are inches in the shared component datum.
 const FACE_W_IN=2.360, U=106/FACE_W_IN, DIGIT_TOP_IN=.0322398905011428;
 const REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010;
 
@@ -40,7 +40,7 @@ function segmentsForRelayCode(value){
   return segments;
 }
 
-// Exact 1006315G register sign and seven digit electrodes.
+// 1006315G Detail A nominal sign islands and seven digit electrodes.
 const n=v=>Number(v).toFixed(3).replace(/\.000$/,'');
 const px=(ox,x)=>n((ox+x)*U);
 const py=y=>n((y-DIGIT_TOP_IN)*U);
@@ -66,9 +66,9 @@ const EL_COLOR='#6DECB4';
 
 for (let sec=0; sec<60; sec++) {
   const paths=[
-    rawRect(REGISTER_ROW_X_IN,.073794,.305065,.065000,.082843),
-    rawRect(REGISTER_ROW_X_IN,-.007784,.231536,.232122,.065000),
-    rawRect(REGISTER_ROW_X_IN,.073794,.139908,.065000,.081628),
+    rawRect(REGISTER_ROW_X_IN,.073794,.306536,.065000,.126500),
+    rawRect(REGISTER_ROW_X_IN,-.024223,.231536,.265000,.065000),
+    rawRect(REGISTER_ROW_X_IN,.073794,.095036,.065000,.126500),
   ];
   const text=`000${String(sec).padStart(2,'0')}`;
   [...text].forEach((ch,i)=>{

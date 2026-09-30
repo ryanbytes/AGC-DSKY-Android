@@ -150,16 +150,18 @@ no(geometry,'DIGIT_SY','affine-squeezed WebView geometry');
 no(provider,'DIGIT_SX','affine-squeezed native geometry');
 no(provider,'DIGIT_SY','affine-squeezed native geometry');
 
-// Detail A position 6: three physical sign islands from the same STEP datum.
-req(geometry,"aTop:'M .073794 .387908",'WebView upper A sign island');
-req(geometry,"b:'M -.007784 .296536",'WebView B sign island');
+// Detail A position 6: three physical sign islands dimensioned by SCD 1006315G.
+req(geometry,"aTop:'M .073794 .433036",'WebView upper A sign island');
+req(geometry,"b:'M -.024223 .296536",'WebView B sign island');
 req(geometry,"aBottom:'M .073794 .221536",'WebView lower A sign island');
-req(provider,'rawBox(ox,oy,-.007784f,.231536f,.232122f,.065000f)','native B sign island');
-req(provider,'rawBox(ox,oy,.073794f,.305065f,.065000f,.082843f)','native upper A sign island');
-req(provider,'rawBox(ox,oy,.073794f,.139908f,.065000f,.081628f)','native lower A sign island');
-req(generator,'rawRect(REGISTER_ROW_X_IN,.073794,.305065,.065000,.082843)','generated upper A sign island');
-req(generator,'rawRect(REGISTER_ROW_X_IN,-.007784,.231536,.232122,.065000)','generated B sign island');
-req(generator,'rawRect(REGISTER_ROW_X_IN,.073794,.139908,.065000,.081628)','generated lower A sign island');
+req(provider,'rawBox(ox,oy,-.024223f,.231536f,.265000f,.065000f)','native B sign island');
+req(provider,'rawBox(ox,oy,.073794f,.306536f,.065000f,.126500f)','native upper A sign island');
+req(provider,'rawBox(ox,oy,.073794f,.095036f,.065000f,.126500f)','native lower A sign island');
+req(generator,'rawRect(REGISTER_ROW_X_IN,.073794,.306536,.065000,.126500)','generated upper A sign island');
+req(generator,'rawRect(REGISTER_ROW_X_IN,-.024223,.231536,.265000,.065000)','generated B sign island');
+req(generator,'rawRect(REGISTER_ROW_X_IN,.073794,.095036,.065000,.126500)','generated lower A sign island');
+req(geometry,'signWidthIn:.265','exported sign width');
+req(geometry,'signHeightIn:.338','exported sign height');
 
 // Current 1006315G field/register datums shared by WebView and native paths.
 req(geometry,'const UPPER_ADVANCE_IN=.420,REGISTER_ADVANCE_IN=.410;','upper/register pitch');

@@ -3,9 +3,11 @@
 /*
  * Apollo Block II DSKY EL geometry.
  *
- * Source of truth: MIT/IL SCD 1006315G. Segment and sign solids are transcribed
- * from the drawing-backed rrainey/agc-mechanical-cad 1006315G-exact.step model
- * (commit 2d7dccd5bc4f0263a14ac5a4fd112a15d447010d). The renderer service owns
+ * Source of truth: MIT/IL SCD 1006315G. Digit segments retain the
+ * drawing-backed rrainey/agc-mechanical-cad 1006315G-exact.step geometry
+ * (commit 2d7dccd5bc4f0263a14ac5a4fd112a15d447010d). Detail A controls sign
+ * island sizes because the STEP sign profiles do not meet those callouts.
+ * The renderer service owns
  * the implementation slots; this late drawing-geometry layer installs those
  * slots through AGCDSKY_RENDERER and does not depend on replica SVG geometry,
  * the generic compatibility registry, or parser globals.
@@ -65,15 +67,15 @@
   }
 
   /*
-   * 1006315G register sign electrodes, again in the STEP component datum.
-   * A is the two vertical electrodes used by '+'. B is the horizontal
-   * electrode used by both '+' and '-'. Their relative placement to the
-   * numeric digit is preserved from the source model.
+   * 1006315G Detail A register sign islands.
+   * A is the two vertical islands used by '+'. B is the horizontal island
+   * used by both '+' and '-'. The drawing controls island dimensions; the
+   * STEP bar center retains their placement relative to the register row.
    */
   const SIGN_PATH_IN=Object.freeze({
-    aTop:'M .073794 .387908 L .073794 .305065 L .138794 .305065 L .138794 .387908 Z',
-    b:'M -.007784 .296536 L -.007784 .231536 L .224338 .231536 L .224338 .296536 Z',
-    aBottom:'M .073794 .221536 L .073794 .139908 L .138794 .139908 L .138794 .221536 Z'
+    aTop:'M .073794 .433036 L .073794 .306536 L .138794 .306536 L .138794 .433036 Z',
+    b:'M -.024223 .296536 L -.024223 .231536 L .240777 .231536 L .240777 .296536 Z',
+    aBottom:'M .073794 .221536 L .073794 .095036 L .138794 .095036 L .138794 .221536 Z'
   });
   function signPath(name,segmentName){
     return `<path class="el-seg on" data-sign-seg="${segmentName}" d="${SIGN_PATH_IN[name]}"/>`;
@@ -258,8 +260,8 @@
     verbNounTopIn:VERB_NOUN_TOP_IN,
     upperRowVerticalSeparationIn:UPPER_ROW_Y_OFFSET_IN,
     upperDigitToSeparatorClearanceIn:UPPER_CLEARANCE_IN,
-    signWidthIn:.232122,
-    signHeightIn:.248000,
+    signWidthIn:.265,
+    signHeightIn:.338,
     signThicknessIn:.065,
     upperAdvance:UPPER_ADVANCE,
     registerAdvance:REGISTER_ADVANCE,
