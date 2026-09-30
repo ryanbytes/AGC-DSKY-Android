@@ -47,9 +47,12 @@
 }
 
 /* 1006315G sheet 2 gives .065/.055 TYP for the continuously-lit separator
-   thickness.  Nominal .060 in on a 106/2.360 active-face scale is 2.695. */
+   thickness. Nominal .060 in on a 106/2.360 active-face scale is 2.695.
+   The archived 1006315G STEP represents these electrodes as rectangular solids,
+   so their visible ends are square rather than SVG round caps. */
 .el-rule{
   stroke-width:2.695;
+  stroke-linecap:butt;
 }
 
 /* The EL phosphor itself emits the visible stroke. Do not add a neon-style
