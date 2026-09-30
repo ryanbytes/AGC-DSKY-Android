@@ -16,6 +16,7 @@ const renderer=read('dsky-display-renderer.js');
 const geometry=read('dsky-geometry.js');
 const display=read('agc-display-runtime.js');
 const stateCss=read('agc-state.css');
+const cmCss=read('cm-dsky-finish.css');
 
 const baseRender=section(renderer,'function baseRenderDigits(','function baseSet2(');
 assert(!baseRender.includes('innerHTML'),'base EL renderer still performs live subtree replacement');
@@ -39,7 +40,11 @@ assert(hardware.includes("function hardwareDecodeChannel163(value)")&&hardware.i
 assert(hardware.includes("if(render&&name==='flash')document.body.classList.toggle('vn-flash-off',on)"),'hardware V/N flash path is not owned by the modeled FLASH relay');
 
 assert(stateCss.includes('.vn-flash-off #verb')&&stateCss.includes('.vn-flash-off #noun'),'intentional VERB/NOUN flash CSS missing');
-assert(stateCss.includes('.el-off .el-static')&&stateCss.includes('.el-off .el-field')&&stateCss.includes('.el-off .comp-el'),'intentional EL supply-off CSS missing');
+for(const selector of ['.el-off .el-legend-bg','.el-off .el-rule','.el-off .el-field .el-seg.on','.el-off .comp-el.on .el-comp-bg'])assert(stateCss.includes(selector),'EL supply-off lost luminous selector '+selector);
+assert(!stateCss.includes('.el-off .el-static')&&!stateCss.includes('.el-off .comp-el {'),'EL supply-off must not hide printed legend groups');
+for(const selector of ['body.spacecraft-cm .el-legend-bg','body.spacecraft-cm .el-rule','body.spacecraft-cm .el-field .el-seg.on','body.spacecraft-cm .comp-el.on .el-comp-bg'])assert(cmCss.includes(selector),'NUMERICS dimmer lost phosphor-only selector '+selector);
+assert(!cmCss.includes('body.spacecraft-cm .el-static{opacity:')&&!cmCss.includes('body.spacecraft-cm .comp-el{opacity:'),'NUMERICS dimmer must not dim printed legend groups');
+for(const selector of ['body.spacecraft-cm.el-off .el-legend-bg','body.spacecraft-cm.el-off .el-rule','body.spacecraft-cm.el-off .el-field .el-seg.on','body.spacecraft-cm.el-off .comp-el.on .el-comp-bg'])assert(cmCss.includes(selector),'CM EL-off cascade override missing '+selector);
 assert(!stateCss.includes('transition'),'EL blanking CSS must not animate/fade and create unintended intermediate frames');
 
 const geometryNormal=section(geometry,'function ensureApolloDigitSlot(','renderer.installImplementation(');

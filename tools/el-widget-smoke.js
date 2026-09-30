@@ -178,6 +178,10 @@ req(provider,'PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U','native upper vertical datums
 req(provider,'Typeface.create("sans-serif",Typeface.BOLD)','native legend face');
 req(provider,'LABEL_P.setTextSize(7.42f)','native legend drawing height');
 req(provider,'COMP_P.setTextSize(7.42f)','native COMP ACTY drawing height');
+no(provider,'COMP_BG_P','native clock widget must not retain dormant COMP ACTY phosphor');
+no(provider,'section(c,0f,.633f,39.525f,35.838f','native clock widget must not paint dormant COMP ACTY phosphor');
+req(provider,'c.drawText("COMP",19.763f,17.900f,COMP_P)','native COMP printed legend');
+req(provider,'c.drawText("ACTY",19.763f,25.000f,COMP_P)','native ACTY printed legend');
 req(provider,'section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P)','native PROG zone');
 req(provider,'section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native VERB zone');
 req(provider,'section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native NOUN zone');

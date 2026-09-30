@@ -5,9 +5,11 @@
 }
 
 /* Channel 0163 represents the post-hardware DSKY EL excitation state.
-   When excitation is removed, the luminous strokes themselves are fully dark. */
-.el-off .el-static,
-.el-off .el-field,
-.el-off .comp-el {
+   Extinguish only energized phosphor. The black PROG/VERB/NOUN and COMP ACTY
+   legends are printed artwork and remain visible when EL excitation is absent. */
+.el-off .el-legend-bg,
+.el-off .el-rule,
+.el-off .el-field .el-seg.on,
+.el-off .comp-el.on .el-comp-bg {
   opacity: 0;
 }
