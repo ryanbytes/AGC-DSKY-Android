@@ -1,3 +1,9 @@
+## 2026-09-30 full-screen EL viewport clearance
+
+The owner confirmed the supplied frames are complete app screenshots. They show screen-only artwork touching both viewport edges. Updated `screen-only.css` to reserve 8 CSS pixels on each side and calculate height from the same inset width; the parallax package rear uses the identical dimensions so it stays aligned with the EL face. This preserves the 1006315G active-face ratio while providing edge clearance.
+
+The source edit is committed on the candidate branch. No local checkout or Android build/device toolchain is available in the current VM, so the canonical build, screenshot comparison, signing, and release checks remain unrun. Do not publish this candidate until those local gates pass.
+
 ## 2026-09-30 EL accuracy release candidate preparation
 
 Candidate source version is 1.1.56 / versionCode 2026093003, with the matching application label. These identifiers are a source candidate only. No release APK has been built or signed; the normal local Android build and standalone signing gates remain required before publishing.
