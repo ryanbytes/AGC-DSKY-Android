@@ -38,14 +38,14 @@ for(const marker of [
   'const FIRST_DIGIT_X_IN=.180;',
   'const RIGHT_FIELD_X_IN=1.434549;',
   'const UPPER_GROUP_X_OFFSET_IN=1.470;',
-  'const REGISTER_ROW_X_IN=.024223;',
+  'const REGISTER_ROW_X_IN=-.010;',
   'const PROG_TOP_IN=.315;',
   'const VERB_NOUN_TO_FIRST_BAR_CENTER_IN=.560;'
 ])req(web,marker,'WebView accepted datum/sign');
 
 for(const marker of [
   'private static final float U=106f/2.360f,DIGIT_TOP_IN=.0322398905f;',
-  'REG_ADV=.410f*U,FIRST_DIGIT_X=.180f*U,REGISTER_ROW_X=.024223f*U;',
+  'REG_ADV=.410f*U,FIRST_DIGIT_X=.180f*U,REGISTER_ROW_X=-.010f*U;',
   'LEFT_FIELD_X=-.035451f*U,RIGHT_FIELD_X=1.434549f*U;',
   'PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U;',
   'case 1: // b: physical H / upper right',
@@ -57,8 +57,9 @@ for(const marker of [
   'case 5: // f: physical F / upper left',
   '.187742000f,.284562891f,true);ml(p,ox,oy,.233934000f,.112425891f',
   'rawBox(ox,oy,-.024223f,.231536f,.265000f,.065000f)',
-  'FRAME_W=106f,FRAME_H=23f;',
-  'RemoteViews.MARGIN_START,ACTIVE_X*scaleDp',
+  'FRAME_X=-1.537f,FRAME_W=107.537f,FRAME_H=23f;',
+  '(ACTIVE_X+FRAME_X)*scaleDp',
+  'ACTIVE_W-FRAME_X',
   'setViewLayoutWidth(flippers[i],FRAME_W*scaleDp',
   'rawBox(ox,oy,.073794f,.306536f,.065000f,.126500f)',
   'rawBox(ox,oy,.073794f,.095036f,.065000f,.126500f)'
@@ -66,9 +67,10 @@ for(const marker of [
 
 for(const marker of [
   'const FACE_W_IN=2.360, U=106/FACE_W_IN, DIGIT_TOP_IN=.0322398905011428;',
-  'const REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=.024223;',
-  'android:width="106dp"',
-  'android:viewportWidth="106"',
+  'const REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010;',
+  'android:width="107.537dp"',
+  'android:viewportWidth="107.537"',
+  'android:translateX="1.537"',
   'px(ox,.199003944)', 'px(ox,.427798000)', 'py(.032239891)',
   'px(ox,.438152000)', 'px(ox,.505451000)', 'py(.284562891)',
   'px(ox,.435059000)', 'px(ox,.325740000)', 'py(.451148891)',
@@ -91,10 +93,10 @@ if(screenOnly.split(insetFaceWidth).length-1!==2){
   fail('screen-only EL face and parallax backing must share the inset width');
 }
 
-const U=106/2.360,signMin=(.024223-.024223)*U,lastDigitMax=(.024223+.180+4*.410+.505451)*U,rightMax=(1.434549+.420+.505451)*U;
-if(Math.abs(signMin)>.001||lastDigitMax>106||Math.abs(rightMax-106)>.001)fail('EL edge geometry does not fit the 106-unit glass');
+const U=106/2.360,signMin=(-.010-.024223)*U,rightMax=(1.434549+.420+.505451)*U;
+if(Math.abs(signMin+1.537)>.001||Math.abs(rightMax-106)>.001)fail('edge overhang changed unexpectedly');
 if(!index.includes('viewBox="0 0 106 182.356"'))fail('EL viewBox changed');
-if(!index.includes('x="0" y="0" width="106" height="182.356"'))fail('EL glass width changed');
+if(!index.includes('x="-1.537" y="0" width="107.537" height="182.356"'))fail('EL glass does not cover sign overhang');
 if(!screenOnly.includes('overflow:visible!important;'))fail('screen-only viewport clips overhang');
 console.log('EL geometry lock: PASS');
 console.log('  1006315G digit/sign polygons, datums, generated frames, and screen-only aspect are frozen');
