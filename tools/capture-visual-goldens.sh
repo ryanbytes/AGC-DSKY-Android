@@ -15,7 +15,7 @@ python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$SITE" >"$OUT/http.
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" >/dev/null 2>&1 || true' EXIT
 sleep .5
-cases=(normal legacy-geometry display-only lamp-test diagnostics cheatsheet screen-only)
+cases=(normal display-only lamp-test diagnostics cheatsheet screen-only)
 for case_name in "${cases[@]}"; do
   profile="$OUT/profile-$case_name"
   rm -rf "$profile"
@@ -42,6 +42,20 @@ a = payload.get('r1', {}).get('aPath')
 d = payload.get('r1', {}).get('dPath')
 if not a or not d:
     raise SystemExit('VISUAL RUNTIME PROBE FAIL: rendered a/d paths missing')
+expected_a = 'M .199003944 .032239891 L .236689000 .097239891 L .410356000 .097239891 L .427798000 .032239891 Z'
+expected_d = 'M .138381000 .462239891 L .068381000 .532239891 L .361195000 .532239891 L .322764000 .462239891 Z'
+if a != expected_a:
+    raise SystemExit('VISUAL RUNTIME PROBE FAIL: live top/E electrode path differs from accepted 1006315G geometry')
+if d != expected_d:
+    raise SystemExit('VISUAL RUNTIME PROBE FAIL: live bottom/N electrode path differs from accepted 1006315G geometry')
+impl = payload.get('implementations', {})
+if impl.get('glyph', {}).get('name') != 'apolloGlyph':
+    raise SystemExit('VISUAL RUNTIME PROBE FAIL: Apollo glyph renderer is not live')
+if impl.get('renderReg', {}).get('name') != 'apolloRenderReg':
+    raise SystemExit('VISUAL RUNTIME PROBE FAIL: Apollo register renderer is not live')
+r1 = payload.get('r1', {})
+if r1.get('staticGlyphs') != 5 or r1.get('baseGlyphs') != 0:
+    raise SystemExit('VISUAL RUNTIME PROBE FAIL: register is not using five static Apollo glyph slots')
 PY
 
 rm -rf "$OUT"/profile-*
