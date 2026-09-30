@@ -1,0 +1,14 @@
+FA-05 1006315G STEP evidence provenance
+
+Source repository: rrainey/agc-mechanical-cad
+Source commit: 2d7dccd5bc4f0263a14ac5a4fd112a15d447010d
+Source path: agc-block-ii/1006315G-exact.step
+Upstream Git blob SHA: 841351a225482cb7926aeb4e97cced8db7ba2258
+
+Archived repository: ryanbytes/AGC-DSKY-Android
+Archive branch: audit/fa05-el-geometry
+Archive path: docs/audit-evidence/fa05/1006315G-exact.step
+Archive commit: dcef5718b5a2cfa91143737617709511bb76ddaa
+Archived Git blob SHA: 841351a225482cb7926aeb4e97cced8db7ba2258
+
+Verification: upstream and archived Git blob SHAs are identical. This proves byte-for-byte identity of the STEP file stored for FA-05.
