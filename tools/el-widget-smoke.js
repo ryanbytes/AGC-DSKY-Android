@@ -57,15 +57,15 @@ req(layout,'android:layout_height="23dp"','register frame height');
 req(provider,'ACTIVE_W=106f,ACTIVE_H=4.060f*U','native active face size');
 req(provider,'ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U','native active face inset');
 req(provider,'PANEL_W=2.620f*U,PANEL_H=4.420f*U','native outer frame size');
-req(provider,'ACTIVE_X*scaleDp','live register X inset');
+req(provider,'(ACTIVE_X+FRAME_X)*scaleDp','live register X inset');
 req(provider,'(ACTIVE_Y+y[i])*scaleDp','live register Y inset');
-req(provider,'ACTIVE_W*scaleDp','live register active width');
+req(provider,'FRAME_W*scaleDp','live register overhang width');
 
-// In-app drawing geometry is the physical 106 x 182.356 active EL face.
-// No UI-only gutter is allowed to alter its aspect ratio or field placement.
+// In-app drawing coordinates remain the physical 106 x 182.356 active EL face.
+// The glass background may extend left to contain the drawing-backed sign overhang without changing the SVG viewBox or field datums.
 req(html,'viewBox="0 0 106 182.356"','physical WebView viewport');
 req(html,'preserveAspectRatio="xMidYMid meet"','WebView aspect preservation');
-req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','physical WebView glass');
+req(html,'class="el-glass-background" x="-1.537" y="0" width="107.537" height="182.356"','overhang-covering WebView glass');
 req(html,'<rect class="el-comp-bg" x="0" y="0" width="39.525" height="36.831"/>','1006315 COMP ACTY nominal 0.880 x 0.820-in EL area');
 no(html,'viewBox="0 0 107.5 182.356"','obsolete extended WebView viewport');
 no(html,'el-right-safety-gutter','segment-covering safety mask');
