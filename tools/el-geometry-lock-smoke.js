@@ -80,8 +80,7 @@ for(const marker of [
 ])req(screenOnly,marker,'screen-only accepted face geometry');
 
 const insetFaceWidth='width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important';
-if((screenOnly.match(new RegExp(insetFaceWidth.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\  'transform:translate(-50%,-50%)!important'
-])req(screenOnly,marker,'screen-only accepted face geometry');'),'g'))||[]).length!==2){
+if(screenOnly.split(insetFaceWidth).length-1!==2){
   fail('screen-only EL face and parallax backing must share the inset width');
 }
 
