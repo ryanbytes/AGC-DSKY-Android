@@ -61,3 +61,20 @@ The regression suite now tests both SCD dimensions and physical E/N identity, so
 - Prior app physical assignment: **PROVEN wrong** by coordinate/shape correspondence.
 - Corrected dimensional conformance: **PASS** in the source calculation.
 - Final branch acceptance: **PENDING** full CI and rendered/device verification.
+
+## Live rendered verification
+
+The final browser-runtime gate executes inside the same headless Chrome path used for PWA visual-golden capture. PWA run **#816** reports:
+
+- live glyph implementation: `apolloGlyph`;
+- live register implementation: `apolloRenderReg`;
+- five static Apollo register glyph slots and zero fallback/base glyph slots;
+- live logical `a` path exactly equal to the accepted physical E/top polygon;
+- live logical `d` path exactly equal to the accepted physical N/bottom polygon.
+
+The gate is now permanent in `tools/capture-visual-goldens.sh`; future visual captures fail if the runtime silently falls back or the accepted E/N paths change.
+
+Independent old/new artifact comparison between the pre-orientation golden capture and the corrected capture confirms a real rendered change. The normal full-panel capture differs in **2,608 pixels**, bounded to the EL display region (x 248–369, y 186–388 in the 412×915 golden). The lamp-test capture differs in **3,558 pixels**. This disproves the earlier local comparison result that mistakenly reported the captures as pixel-identical.
+
+The corrected golden was also inspected directly: digit strokes remain sharp, continuous, and unclipped while the asymmetric Apollo electrode contours move to the documented physical E/H/M/N/K/F/J identities.
+
