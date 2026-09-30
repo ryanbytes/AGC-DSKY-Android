@@ -6,6 +6,7 @@ on:
       - 'release-payload/**'
 
 permissions:
+  actions: read
   contents: write
 
 jobs:
@@ -14,6 +15,22 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+
+      - name: Reconstruct standalone-signed APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
+          PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
+          test "${VERSION_NAME}" = "1.1.55"
+          command -v zstd >/dev/null 2>&1 || { sudo apt-get update; sudo apt-get install -y zstd; }
+          rm -rf /tmp/agc-dsky-ci
+          mkdir -p /tmp/agc-dsky-ci
+          gh run download 36741367017 --repo "${GITHUB_REPOSITORY}" -n AGC-DSKY-Android-installable -D /tmp/agc-dsky-ci
+          zstd -d --patch-from=/tmp/agc-dsky-ci/regular/release/AGC-DSKY-regular.apk             "${PAYLOAD_DIR}/regular.zstpatch" -o "${PAYLOAD_DIR}/app-regular-release.apk"
+          zstd -d --patch-from=/tmp/agc-dsky-ci/fire/release/AGC-DSKY-fire.apk             "${PAYLOAD_DIR}/fire.zstpatch" -o "${PAYLOAD_DIR}/app-fire-release.apk"
 
       - name: Verify signed release payload
         shell: bash
@@ -51,9 +68,5 @@ jobs:
             gh release upload "${TAG}" "${ASSETS[@]}" --clobber
             gh release edit "${TAG}" --title "AGC DSKY ${TAG}" --target main --latest
           else
-            if test -f "${NOTES}"; then
-              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
-            else
-              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --generate-notes --latest
-            fi
+            gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
           fi

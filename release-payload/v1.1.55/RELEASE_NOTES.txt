@@ -1,0 +1,8 @@
+AGC DSKY v1.1.55
+
+- Publishes the audited EL corrections as a real updater-visible version.
+- Preserves black printed PROG/VERB/NOUN and COMP ACTY legends when EL excitation or NUMERICS brightness is off.
+- Removes the dormant COMP ACTY phosphor ghost in the Android widget path.
+- Corrects the COMP ACTY luminous plate to the drawing-backed nominal 0.880 x 0.820 inch geometry.
+- Includes the previously verified FA-05, FA-06, and FA-07 flight-fidelity fixes.
+- Android package org.apollo.agcdsky, versionCode 2026093002.
