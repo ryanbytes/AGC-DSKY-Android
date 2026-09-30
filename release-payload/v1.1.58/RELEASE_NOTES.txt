@@ -1,0 +1,8 @@
+AGC DSKY v1.1.58
+
+- Strengthens the EL geometry regression lock after the completed drawing audit.
+- Requires the screen-only EL face and parallax indicator-package rear to use the same accepted inset width.
+- Renderer geometry remains unchanged from v1.1.57.
+- Records drawing-audit measurements for the accepted 1006315G geometry.
+- Android version: 1.1.58 (versionCode 2026093005).
+- Release APKs use the established standalone signing identity for updater continuity.
