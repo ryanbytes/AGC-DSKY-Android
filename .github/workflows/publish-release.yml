@@ -71,15 +71,36 @@ jobs:
             sha256sum -c app-fire-release.apk.sha256
           )
           EXPECTED_CERT='409ad676e8052e50416a1bf69e095137ef639ac13ce4652160a19380a117fa1f'
+          grep -F '332bf1dc7eb47873ad4a6b460dfa40ea883d82cf31600b4d8c705965176ffc4f' "$PAYLOAD_DIR/app-regular-release.apk.sha256"
+          grep -F '17ec276b0f1b8db6d7a242091c93541fa2ec627977b54e101b41b94f08db6cde' "$PAYLOAD_DIR/app-fire-release.apk.sha256"
           for APK in "$PAYLOAD_DIR/app-regular-release.apk" "$PAYLOAD_DIR/app-fire-release.apk"; do
+            "$BT/zipalign" -c -v 4 "$APK"
             VERIFY="$($BT/apksigner verify --verbose --print-certs "$APK")"
+            echo "$VERIFY" | grep -F 'Verified using v1 scheme (JAR signing): false'
             echo "$VERIFY" | grep -F 'Verified using v2 scheme (APK Signature Scheme v2): true'
+            echo "$VERIFY" | grep -F 'Verified using v3 scheme (APK Signature Scheme v3): true'
             CERT="$(echo "$VERIFY" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':\r' | tr 'A-F' 'a-f')"
             test "$CERT" = "$EXPECTED_CERT"
             BADGE="$($BT/aapt dump badging "$APK")"
             echo "$BADGE" | grep -F "package: name='org.apollo.agcdsky' versionCode='2026093001' versionName='1.1.54'"
             echo "$BADGE" | grep -F "application-label:'AGC DSKY v1.1.54'"
           done
+          REG_U="$(find "$RUNNER_TEMP/unsigned" -type f -name app-regular-release-unsigned.apk -print -quit)"
+          FIRE_U="$(find "$RUNNER_TEMP/unsigned" -type f -name app-fire-release-unsigned.apk -print -quit)"
+          python3 - "$REG_U" "$PAYLOAD_DIR/app-regular-release.apk" "$FIRE_U" "$PAYLOAD_DIR/app-fire-release.apk" <<'PY'
+          import sys, zipfile
+          pairs=[("regular",sys.argv[1],sys.argv[2]),("fire",sys.argv[3],sys.argv[4])]
+          for label,unsigned,signed in pairs:
+              with zipfile.ZipFile(unsigned) as u, zipfile.ZipFile(signed) as s:
+                  unames=sorted(n for n in u.namelist() if not n.startswith("META-INF/"))
+                  snames=sorted(n for n in s.namelist() if not n.startswith("META-INF/"))
+                  if unames != snames:
+                      raise SystemExit(f"{label}: payload member list changed")
+                  for name in unames:
+                      if u.read(name) != s.read(name):
+                          raise SystemExit(f"{label}: payload bytes changed: {name}")
+                  print(f"{label}: {len(unames)} non-META-INF entries byte-identical")
+          PY
 
       - name: Create or refresh GitHub Release
         env:
@@ -89,6 +110,8 @@ jobs:
           set -euo pipefail
           VERSION_NAME="$(tr -d '\r\n' < VERSION)"
           TAG="v${VERSION_NAME}"
+          TARGET_SHA='1e05fe3efaa85e47e8dfa1410413885e1665a472'
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)" = "$TARGET_SHA"
           PAYLOAD_DIR="release-payload/${TAG}"
           NOTES="${PAYLOAD_DIR}/RELEASE_NOTES.txt"
           ASSETS=(
@@ -99,7 +122,36 @@ jobs:
           )
           if gh release view "${TAG}" >/dev/null 2>&1; then
             gh release upload "${TAG}" "${ASSETS[@]}" --clobber
-            gh release edit "${TAG}" --title "AGC DSKY ${TAG}" --target main --latest
+            gh release edit "${TAG}" --title "AGC DSKY ${TAG}" --target "${TARGET_SHA}" --latest
           else
-            gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
+            gh release create "${TAG}" "${ASSETS[@]}" --target "${TARGET_SHA}" --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
           fi
+
+      - name: Verify published release readback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG='v1.1.54'
+          EXPECTED_SOURCE='1e05fe3efaa85e47e8dfa1410413885e1665a472'
+          PUB="$RUNNER_TEMP/published-release"
+          rm -rf "$PUB"
+          mkdir -p "$PUB"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir "$PUB" --clobber
+          cmp release-payload/v1.1.54/app-regular-release.apk "$PUB/app-regular-release.apk"
+          cmp release-payload/v1.1.54/app-fire-release.apk "$PUB/app-fire-release.apk"
+          cmp release-payload/v1.1.54/app-regular-release.apk.sha256 "$PUB/app-regular-release.apk.sha256"
+          cmp release-payload/v1.1.54/app-fire-release.apk.sha256 "$PUB/app-fire-release.apk.sha256"
+          (
+            cd "$PUB"
+            sha256sum -c app-regular-release.apk.sha256
+            sha256sum -c app-fire-release.apk.sha256
+          )
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)" = "$TAG"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq .object.sha)" = "$EXPECTED_SOURCE"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq '.assets[].name' | LC_ALL=C sort > /tmp/published-assets.txt
+          printf '%s\n' app-fire-release.apk app-fire-release.apk.sha256 app-regular-release.apk app-regular-release.apk.sha256 | LC_ALL=C sort > /tmp/expected-assets.txt
+          diff -u /tmp/expected-assets.txt /tmp/published-assets.txt
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq '.assets[] | select(.name=="app-regular-release.apk") | .digest')" = 'sha256:332bf1dc7eb47873ad4a6b460dfa40ea883d82cf31600b4d8c705965176ffc4f'
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq '.assets[] | select(.name=="app-fire-release.apk") | .digest')" = 'sha256:17ec276b0f1b8db6d7a242091c93541fa2ec627977b54e101b41b94f08db6cde'
