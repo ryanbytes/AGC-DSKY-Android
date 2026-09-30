@@ -102,6 +102,16 @@ req(geometry,'const REGISTER_GAP_IN=.070;','bar-to-digit gap');
 req(html,'y1="79.949"','bar 1 center');
 req(html,'y1="114.085"','bar 2 center');
 req(html,'y1="148.220"','bar 3 center');
+// Un-dimensioned separator lengths come from the archived 1006315G STEP:
+// EL5 is the wider upper separator; EL6/EL7 are the shorter lower pair.
+// WebView and the native widget must preserve the same rectangular extents.
+req(html,'x1="0.020841" y1="79.949" x2="97.931964"','wide upper separator extent');
+req(html,'x1="9.726333" y1="114.085" x2="97.931964"','middle separator extent');
+req(html,'x1="9.726333" y1="148.220" x2="97.931964"','lower separator extent');
+req(finish,'stroke-linecap:butt','square WebView separator ends');
+req(provider,'rule(c,.020841f,78.602f,97.911123f,2.695f)','native wide upper separator');
+req(provider,'rule(c,9.726333f,112.737f,88.205631f,2.695f)','native middle separator');
+req(provider,'rule(c,9.726333f,146.873f,88.205631f,2.695f)','native lower separator');
 
 // Drawing-backed inch-datum digit geometry.  The current renderer uses the
 // 1006315G STEP intersections directly; no generic radius or anisotropic
