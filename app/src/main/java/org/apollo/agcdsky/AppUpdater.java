@@ -49,6 +49,7 @@ final class AppUpdater {
     private static final String FALLBACK_VERSION_URL = "https://raw.githubusercontent.com/ryanbytes/AGC-DSKY-Android/main/VERSION";
     private static final String RELEASE_DOWNLOAD_BASE = "https://github.com/ryanbytes/AGC-DSKY-Android/releases/download/v";
     private static final long CHECK_INTERVAL_MS = 12L * 60L * 60L * 1000L;
+    private static final long FOREGROUND_CHECK_INTERVAL_MS = 60L * 1000L;
     private static final long RETRY_INTERVAL_MS = 30L * 60L * 1000L;
     private static final String PREFS = "self_update";
     private static final String PREF_LAST_CHECK = "last_check_ms";
@@ -63,11 +64,13 @@ final class AppUpdater {
 
     private AppUpdater() {}
 
-    static void check(Context source) { check(source, false, null); }
+    static void check(Context source) { check(source, false, CHECK_INTERVAL_MS, null); }
 
-    static void checkNow(Context source) { check(source, true, null); }
+    static void checkNow(Context source) { check(source, true, 0L, null); }
 
-    static void checkNow(Context source, StatusListener listener) { check(source, true, listener); }
+    static void checkNow(Context source, StatusListener listener) { check(source, true, 0L, listener); }
+
+    private static void checkForeground(Context source) { check(source, false, FOREGROUND_CHECK_INTERVAL_MS, null); }
 
     private static void notifyStatus(StatusListener listener, String status) {
         if (listener == null) return;
@@ -77,7 +80,7 @@ final class AppUpdater {
     static void onForeground(Activity activity) {
         if (activity == null) return;
         foregroundActivity = new WeakReference<>(activity);
-        if (!resumePendingInstall(activity)) check(activity);
+        if (!resumePendingInstall(activity)) checkForeground(activity);
     }
 
     static void onBackground(Activity activity) {
@@ -85,7 +88,7 @@ final class AppUpdater {
         if (current == activity) foregroundActivity = new WeakReference<>(null);
     }
 
-    private static void check(Context source, boolean force, StatusListener listener) {
+    private static void check(Context source, boolean force, long minimumIntervalMs, StatusListener listener) {
         Context context = source.getApplicationContext();
         if (BuildConfig.DEBUG || (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             notifyStatus(listener, "UPDATE DISABLED IN DEBUG");
@@ -105,7 +108,7 @@ final class AppUpdater {
                 }
                 SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
                 long now = System.currentTimeMillis();
-                if (!force && now - prefs.getLong(PREF_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return;
+                if (!force && now - prefs.getLong(PREF_LAST_CHECK, 0L) < minimumIntervalMs) return;
                 if (!force && now - prefs.getLong(PREF_LAST_ATTEMPT, 0L) < RETRY_INTERVAL_MS) return;
                 prefs.edit().putLong(PREF_LAST_ATTEMPT, now).apply();
                 Release release = fetchLatestReleaseResilient();
@@ -303,6 +306,9 @@ final class AppUpdater {
         connection.setConnectTimeout(15_000);
         connection.setReadTimeout(30_000);
         connection.setInstanceFollowRedirects(true);
+        connection.setUseCaches(false);
+        connection.setRequestProperty("Cache-Control", "no-cache");
+        connection.setRequestProperty("Pragma", "no-cache");
         connection.setRequestProperty("Accept", "application/vnd.github+json");
         connection.setRequestProperty("User-Agent", "AGC-DSKY-Android/" + BuildConfig.VERSION_NAME);
         return connection;
