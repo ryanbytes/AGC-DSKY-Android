@@ -79,5 +79,10 @@ for(const marker of [
   'transform:translate(-50%,-50%)!important'
 ])req(screenOnly,marker,'screen-only accepted face geometry');
 
+const insetFaceWidth='width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important';
+if(screenOnly.split(insetFaceWidth).length-1!==2){
+  fail('screen-only EL face and parallax backing must share the inset width');
+}
+
 console.log('EL geometry lock: PASS');
 console.log('  1006315G digit/sign polygons, datums, generated frames, and screen-only aspect are frozen');
