@@ -198,8 +198,10 @@ req(generator,'REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010',
 req(provider,'R1_Y=83.992f,R2_Y=118.127f,R3_Y=152.263f','native Detail E register Y datums');
 req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),REGISTER_ROW_X,R1_Y)",'native register datum');
 
-req(generator,'android:viewportWidth="106"','generated viewport width');
+req(generator,'android:width="107.537dp"','generated frame width');
+req(generator,'android:viewportWidth="107.537"','generated viewport width');
 req(generator,'android:viewportHeight="23"','generated viewport height');
+req(generator,'android:translateX="1.537"','generated overhang translation');
 no(generator,'android:viewportWidth="100"','obsolete squeezed viewport');
 no(html,'viewBox="0 0 106 190"','obsolete stretched WebView');
 const versionCode=gradle.match(/\bversionCode\s+(\d+)/);
