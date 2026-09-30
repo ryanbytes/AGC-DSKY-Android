@@ -57,8 +57,22 @@ jobs:
           unzip -q /tmp/dsky-unsigned.zip -d /tmp/dsky-unsigned
           "$BT/zipalign" -p -f 4             /tmp/dsky-unsigned/regular/release/app-regular-release-unsigned.apk             /tmp/app-regular-release-aligned.apk
           "$BT/zipalign" -p -f 4             /tmp/dsky-unsigned/fire/release/app-fire-release-unsigned.apk             /tmp/app-fire-release-aligned.apk
-          base64 -d "$PAYLOAD_DIR/regular.zstpatch.b64" > /tmp/regular.zstpatch
-          base64 -d "$PAYLOAD_DIR/fire.zstpatch.b64" > /tmp/fire.zstpatch
+          cat \
+            "$PAYLOAD_DIR/regular.zstpatch.b64.part00a1" \
+            "$PAYLOAD_DIR/regular.zstpatch.b64.part00a2x" \
+            "$PAYLOAD_DIR/regular.zstpatch.b64.part00a2y" \
+            "$PAYLOAD_DIR/regular.zstpatch.b64.part00b" \
+            "$PAYLOAD_DIR/regular.zstpatch.b64.part01" \
+            "$PAYLOAD_DIR/regular.zstpatch.b64.part02" \
+            "$PAYLOAD_DIR/regular.zstpatch.b64.part03" \
+            | tr -d '\r\n' | base64 -d > /tmp/regular.zstpatch
+          cat \
+            "$PAYLOAD_DIR/fire.zstpatch.b64.part00a" \
+            "$PAYLOAD_DIR/fire.zstpatch.b64.part00b" \
+            "$PAYLOAD_DIR/fire.zstpatch.b64.part01" \
+            "$PAYLOAD_DIR/fire.zstpatch.b64.part02" \
+            "$PAYLOAD_DIR/fire.zstpatch.b64.part03" \
+            | tr -d '\r\n' | base64 -d > /tmp/fire.zstpatch
           zstd -d --patch-from=/tmp/app-regular-release-aligned.apk /tmp/regular.zstpatch -o "$PAYLOAD_DIR/app-regular-release.apk"
           zstd -d --patch-from=/tmp/app-fire-release-aligned.apk /tmp/fire.zstpatch -o "$PAYLOAD_DIR/app-fire-release.apk"
 
