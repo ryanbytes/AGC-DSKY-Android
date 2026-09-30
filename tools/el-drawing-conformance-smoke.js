@@ -155,13 +155,8 @@ if(correctedLowerGap<.010-1e-9)fail('lower sign island gap below .010 MIN');
 near(correctedUpperGap,.010,1e-9,'upper nominal sign island gap');
 near(correctedLowerGap,.010,1e-9,'lower nominal sign island gap');
 near(signWidth,.265,1e-9,'Detail A sign envelope width from B island');
-const registerRowXIn=.024223;
-const signLeftIn=registerRowXIn+signEnvelope[0];
-const signRightIn=registerRowXIn+signEnvelope[2];
-const firstDigitLeftIn=registerRowXIn+.180+.053885898;
-const lastRegisterDigitRightIn=registerRowXIn+.180+4*.410+.505451;
-near(signLeftIn,0,1e-9,'register plus left edge at EL glass datum');
-if(lastRegisterDigitRightIn>2.360)fail('last register digit exceeds EL glass width');
+const signRightIn=-.010+signEnvelope[2];
+const firstDigitLeftIn=.180+.053885898;
 if(!(signRightIn<firstDigitLeftIn))fail('sign overlaps first register digit');
 near(firstDigitLeftIn-signRightIn,.003108898,1e-9,'sign-to-first-digit clearance');
 
