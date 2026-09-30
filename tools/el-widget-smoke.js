@@ -66,6 +66,7 @@ req(provider,'ACTIVE_W*scaleDp','live register active width');
 req(html,'viewBox="0 0 106 182.356"','physical WebView viewport');
 req(html,'preserveAspectRatio="xMidYMid meet"','WebView aspect preservation');
 req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','physical WebView glass');
+req(html,'<rect class="el-comp-bg" x="0" y="0" width="39.525" height="36.831"/>','1006315 COMP ACTY nominal 0.880 x 0.820-in EL area');
 no(html,'viewBox="0 0 107.5 182.356"','obsolete extended WebView viewport');
 no(html,'el-right-safety-gutter','segment-covering safety mask');
 no(html,'el-frame-background','duplicate WebView outer frame');
