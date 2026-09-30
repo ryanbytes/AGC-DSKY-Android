@@ -1,0 +1,7 @@
+AGC DSKY v1.1.56
+
+- Corrects the register sign EL geometry to MIT/IL SCD 1006315G dimensions across the in-app WebView, Android home widget, and generated second frames.
+- Sign envelope: 0.338 in nominal; horizontal B island: 0.265 in; island thickness: 0.065 in; minimum inter-island gap: 0.010 in.
+- Updates EL conformance and geometry-lock coverage so the corrected dimensions are enforced.
+- Version: 1.1.56 (Android versionCode 2026093003).
+- Release APKs use the established standalone release signing identity for updater continuity.
