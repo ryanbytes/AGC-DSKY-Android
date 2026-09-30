@@ -57,15 +57,15 @@ req(layout,'android:layout_height="23dp"','register frame height');
 req(provider,'ACTIVE_W=106f,ACTIVE_H=4.060f*U','native active face size');
 req(provider,'ACTIVE_X=.130f*U,ACTIVE_Y=.180f*U','native active face inset');
 req(provider,'PANEL_W=2.620f*U,PANEL_H=4.420f*U','native outer frame size');
-req(provider,'ACTIVE_X*scaleDp','live register X inset');
+req(provider,'(ACTIVE_X+FRAME_X)*scaleDp','live register X inset');
 req(provider,'(ACTIVE_Y+y[i])*scaleDp','live register Y inset');
-req(provider,'ACTIVE_W*scaleDp','live register active width');
+req(provider,'FRAME_W*scaleDp','live register overhang width');
 
-// In-app drawing geometry is the physical 106 x 182.356 active EL face.
-// No UI-only gutter is allowed to alter its aspect ratio or field placement.
+// In-app drawing coordinates remain the physical 106 x 182.356 active EL face.
+// The glass background may extend left to contain the drawing-backed sign overhang without changing the SVG viewBox or field datums.
 req(html,'viewBox="0 0 106 182.356"','physical WebView viewport');
 req(html,'preserveAspectRatio="xMidYMid meet"','WebView aspect preservation');
-req(html,'class="el-glass-background" x="0" y="0" width="106" height="182.356"','physical WebView glass');
+req(html,'class="el-glass-background" x="-1.537" y="0" width="107.537" height="182.356"','overhang-covering WebView glass');
 req(html,'<rect class="el-comp-bg" x="0" y="0" width="39.525" height="36.831"/>','1006315 COMP ACTY nominal 0.880 x 0.820-in EL area');
 no(html,'viewBox="0 0 107.5 182.356"','obsolete extended WebView viewport');
 no(html,'el-right-safety-gutter','segment-covering safety mask');
@@ -89,9 +89,10 @@ no(finish,'height:54.9%','legacy oversized display-well height');
 req(screenOnly,'background:#696d67!important','screen-only gray field');
 req(screenOnly,'left:50%!important','screen-only centered X');
 req(screenOnly,'top:50%!important','screen-only centered Y');
-req(screenOnly,'width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important','screen-only aspect width');
-req(screenOnly,'height:min(100vh,calc((100vw - 16px) * 182.356 / 106))!important','screen-only aspect height');
+req(screenOnly,'width:min(calc(100vw - 32px),calc(100vh * 106 / 182.356))!important','screen-only aspect width');
+req(screenOnly,'height:min(100vh,calc((100vw - 32px) * 182.356 / 106))!important','screen-only aspect height');
 req(screenOnly,'transform:translate(-50%,-50%)!important','screen-only centering');
+req(screenOnly,'overflow:visible!important;','screen-only overhang visibility');
 no(screenOnly,'107.5 / 182.356','obsolete extended screen-only ratio');
 no(screenOnly,'182.356 / 107.5','obsolete extended screen-only ratio');
 
@@ -197,8 +198,10 @@ req(generator,'REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010',
 req(provider,'R1_Y=83.992f,R2_Y=118.127f,R3_Y=152.263f','native Detail E register Y datums');
 req(provider,"register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),REGISTER_ROW_X,R1_Y)",'native register datum');
 
-req(generator,'android:viewportWidth="106"','generated viewport width');
+req(generator,'android:width="107.537dp"','generated frame width');
+req(generator,'android:viewportWidth="107.537"','generated viewport width');
 req(generator,'android:viewportHeight="23"','generated viewport height');
+req(generator,'android:translateX="1.537"','generated overhang translation');
 no(generator,'android:viewportWidth="100"','obsolete squeezed viewport');
 no(html,'viewBox="0 0 106 190"','obsolete stretched WebView');
 const versionCode=gradle.match(/\bversionCode\s+(\d+)/);

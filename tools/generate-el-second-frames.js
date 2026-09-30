@@ -79,7 +79,7 @@ for (let sec=0; sec<60; sec++) {
     });
   });
   const body=paths.map(p=>`    <path android:fillColor="${EL_COLOR}" android:pathData="${p}" />`).join('\n');
-  const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="106dp"\n    android:height="23dp"\n    android:viewportWidth="106"\n    android:viewportHeight="23">\n${body}\n</vector>\n`;
+  const xml=`<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="107.537dp"\n    android:height="23dp"\n    android:viewportWidth="107.537"\n    android:viewportHeight="23">\n    <group android:translateX="1.537">\n${body}\n    </group>\n</vector>\n`;
   fs.writeFileSync(path.join(drawable,`el_sec_${String(sec).padStart(2,'0')}.xml`),xml);
 }
 console.log(`generated 60 physical-datum Apollo relay-matrix EL second frames in ${drawable}`);

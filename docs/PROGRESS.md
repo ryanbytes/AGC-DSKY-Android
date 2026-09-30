@@ -1,3 +1,11 @@
+## 2026-09-30 v1.1.60 complete EL symbol placement
+
+Carries the final drawing-backed EL symbol placement from the audit branch onto current main without replaying stale release metadata or losing the v1.1.59 updater repair.
+
+The register sign row remains at the accepted drawing-backed datum, while the EL glass and native/generated widget frame now extend left far enough to contain the full sign envelope. Screen-only mode reserves 16 CSS px per side (32 px total) and allows the EL panel overflow needed for the complete sign geometry. Native widget framing, generated second frames, WebView glass, and regression locks are aligned to the same overhang.
+
+Release candidate identifiers: 1.1.60 / Android versionCode 2026093007.
+
 ## 2026-09-30 v1.1.59 updater freshness repair
 
 Observed failure: a device process that had already completed an automatic update check could miss a release published afterward because foreground resumes reused the 12-hour background freshness window. That made a newly published release legitimately invisible until manual CHECK, process restart, or the next periodic alarm.

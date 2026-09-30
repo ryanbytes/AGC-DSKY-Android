@@ -11,6 +11,7 @@ const web=read('app/src/main/assets/dsky-geometry.js');
 const native=read('app/src/main/java/org/apollo/agcdsky/ElWidgetProvider.java');
 const generated=read('tools/generate-el-second-frames.js');
 const screenOnly=read('app/src/main/assets/screen-only.css');
+const index=read('app/src/main/assets/index.html');
 
 // Accepted 1006315G front-view geometry. Apollo identity is E/H/M/N/K/F/J -> a/b/c/d/e/f/g; any change requires new drawing-backed evidence.
 const webPaths=[
@@ -56,6 +57,10 @@ for(const marker of [
   'case 5: // f: physical F / upper left',
   '.187742000f,.284562891f,true);ml(p,ox,oy,.233934000f,.112425891f',
   'rawBox(ox,oy,-.024223f,.231536f,.265000f,.065000f)',
+  'FRAME_X=-1.537f,FRAME_W=107.537f,FRAME_H=23f;',
+  '(ACTIVE_X+FRAME_X)*scaleDp',
+  'ACTIVE_W-FRAME_X',
+  'setViewLayoutWidth(flippers[i],FRAME_W*scaleDp',
   'rawBox(ox,oy,.073794f,.306536f,.065000f,.126500f)',
   'rawBox(ox,oy,.073794f,.095036f,.065000f,.126500f)'
 ])req(native,marker,'native widget accepted geometry');
@@ -63,6 +68,9 @@ for(const marker of [
 for(const marker of [
   'const FACE_W_IN=2.360, U=106/FACE_W_IN, DIGIT_TOP_IN=.0322398905011428;',
   'const REG_ADV_IN=.410, FIRST_DIGIT_X_IN=.180, REGISTER_ROW_X_IN=-.010;',
+  'android:width="107.537dp"',
+  'android:viewportWidth="107.537"',
+  'android:translateX="1.537"',
   'px(ox,.199003944)', 'px(ox,.427798000)', 'py(.032239891)',
   'px(ox,.438152000)', 'px(ox,.505451000)', 'py(.284562891)',
   'px(ox,.435059000)', 'px(ox,.325740000)', 'py(.451148891)',
@@ -74,15 +82,21 @@ for(const marker of [
 ])req(generated,marker,'generated-seconds accepted geometry');
 
 for(const marker of [
-  'width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important',
-  'height:min(100vh,calc((100vw - 16px) * 182.356 / 106))!important',
+  'width:min(calc(100vw - 32px),calc(100vh * 106 / 182.356))!important',
+  'overflow:visible!important;',
+  'height:min(100vh,calc((100vw - 32px) * 182.356 / 106))!important',
   'transform:translate(-50%,-50%)!important'
 ])req(screenOnly,marker,'screen-only accepted face geometry');
 
-const insetFaceWidth='width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important';
+const insetFaceWidth='width:min(calc(100vw - 32px),calc(100vh * 106 / 182.356))!important';
 if(screenOnly.split(insetFaceWidth).length-1!==2){
   fail('screen-only EL face and parallax backing must share the inset width');
 }
 
+const U=106/2.360,signMin=(-.010-.024223)*U,rightMax=(1.434549+.420+.505451)*U;
+if(Math.abs(signMin+1.537)>.001||Math.abs(rightMax-106)>.001)fail('edge overhang changed unexpectedly');
+if(!index.includes('viewBox="0 0 106 182.356"'))fail('EL viewBox changed');
+if(!index.includes('x="-1.537" y="0" width="107.537" height="182.356"'))fail('EL glass does not cover sign overhang');
+if(!screenOnly.includes('overflow:visible!important;'))fail('screen-only viewport clips overhang');
 console.log('EL geometry lock: PASS');
 console.log('  1006315G digit/sign polygons, datums, generated frames, and screen-only aspect are frozen');
