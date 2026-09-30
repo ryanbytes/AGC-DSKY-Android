@@ -74,10 +74,16 @@ for(const marker of [
 ])req(generated,marker,'generated-seconds accepted geometry');
 
 for(const marker of [
-  'width:min(100vw,calc(100vh * 106 / 182.356))!important',
-  'height:min(100vh,calc(100vw * 182.356 / 106))!important',
+  'width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important',
+  'height:min(100vh,calc((100vw - 16px) * 182.356 / 106))!important',
   'transform:translate(-50%,-50%)!important'
 ])req(screenOnly,marker,'screen-only accepted face geometry');
+
+const insetFaceWidth='width:min(calc(100vw - 16px),calc(100vh * 106 / 182.356))!important';
+if((screenOnly.match(new RegExp(insetFaceWidth.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\  'transform:translate(-50%,-50%)!important'
+])req(screenOnly,marker,'screen-only accepted face geometry');'),'g'))||[]).length!==2){
+  fail('screen-only EL face and parallax backing must share the inset width');
+}
 
 console.log('EL geometry lock: PASS');
 console.log('  1006315G digit/sign polygons, datums, generated frames, and screen-only aspect are frozen');
