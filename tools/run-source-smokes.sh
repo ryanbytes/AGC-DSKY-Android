@@ -2,6 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+export TZ=UTC
 MANIFEST="$ROOT/tools/source-smoke-tests.txt"
 fail(){ printf 'SOURCE SMOKE FAIL: %s\n' "$*" >&2; exit 1; }
 [[ -f "$MANIFEST" ]] || fail "missing source smoke manifest: $MANIFEST"

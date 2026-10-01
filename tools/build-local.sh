@@ -4,7 +4,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)";cd "$ROOT"
 fail(){ printf 'BUILD FAIL: %s\n' "$*" >&2;exit 1; }
 version_ge(){ local lhs="$1" rhs="$2" l1=0 l2=0 l3=0 r1=0 r2=0 r3=0;IFS=. read -r l1 l2 l3<<<"$lhs";IFS=. read -r r1 r2 r3<<<"$rhs";l1="${l1:-0}";l2="${l2:-0}";l3="${l3:-0}";r1="${r1:-0}";r2="${r2:-0}";r3="${r3:-0}";((10#$l1>10#$r1))&&return 0;((10#$l1<10#$r1))&&return 1;((10#$l2>10#$r2))&&return 0;((10#$l2<10#$r2))&&return 1;((10#$l3>=10#$r3)); }
 is_stable_triplet(){ [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; }
-command -v git >/dev/null 2>&1||fail "git is required";command -v java >/dev/null 2>&1||fail "Java/JDK is required";command -v node >/dev/null 2>&1||fail "Node.js is required for source smoke tests"
+command -v git >/dev/null 2>&1||fail "git is required";command -v java >/dev/null 2>&1||fail "Java/JDK is required";command -v javac >/dev/null 2>&1||fail "JDK compiler javac is required for source smoke tests";command -v node >/dev/null 2>&1||fail "Node.js is required for source smoke tests"
 ROOT_HEAD="$(git rev-parse HEAD 2>/dev/null||true)";[[ "$ROOT_HEAD" =~ ^[0-9a-fA-F]{40}$ ]]||fail "repository HEAD could not be resolved";[[ -z "$(git status --porcelain --untracked-files=all)" ]]||fail "repository has uncommitted/untracked source changes"
 JAVA_VERSION="$(java -version 2>&1|awk -F '"' '/version/ {print $2;exit}')";JAVA_MAJOR="${JAVA_VERSION%%.*}";[[ "$JAVA_MAJOR" == "1" ]]&&JAVA_MAJOR="$(cut -d. -f2<<<"$JAVA_VERSION")";[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]]&&((JAVA_MAJOR>=17))||fail "JDK 17+ required; found $JAVA_VERSION"
 NODE_VERSION="$(node --version|sed 's/^v//')";NODE_MAJOR="${NODE_VERSION%%.*}";[[ "$NODE_MAJOR" =~ ^[0-9]+$ ]]&&((NODE_MAJOR>=18))||fail "Node 18+ required; found $NODE_VERSION"
