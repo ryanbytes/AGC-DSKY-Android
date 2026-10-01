@@ -1,0 +1,5 @@
+AGC DSKY v1.1.61
+
+- Replaces Android home-screen widget PROG, VERB, NOUN, COMP, and ACTY runtime-font labels with deterministic fixed vector outlines.
+- Preserves the accepted v1.1.60 EL geometry and updater freshness repair.
+- Android versionCode 2026093008.
