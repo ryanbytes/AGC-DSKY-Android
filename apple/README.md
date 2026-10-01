@@ -53,7 +53,7 @@ Using a WebKit scheme handler avoids fragile `file://` WebAssembly fetches while
 
 The existing JavaScript remains authoritative for DSKY relay behavior, V35, `COMP ACTY`, VERB/NOUN input, snapshots, and AGC timing. iOS also keeps the screen awake while the app is active; macOS uses a process activity assertion for the same purpose.
 
-The in-app Apollo checklist uses the same shared HTML/CSS/JavaScript as Android and the PWA. Its PRINT button is bridged into native Apple printing. The requested checklist media is 5.5 × 8 inches, matching the shared print stylesheet; iOS/iPadOS uses a custom `UIPrintPageRenderer` page rectangle and macOS uses an `NSPrintInfo` paper size of 5.5 × 8 inches.
+The in-app Apollo checklist uses the same shared HTML/CSS/JavaScript as Android and the PWA. Its PRINT button is bridged into native Apple printing. Printing uses US Letter paper in landscape orientation; the shared print stylesheet controls checklist layout within that page. iOS/iPadOS uses a custom `UIPrintPageRenderer` page rectangle and macOS uses an `NSPrintInfo` paper size of 8.5 × 11 inches.
 
 ## Current Apple-specific limitations
 
