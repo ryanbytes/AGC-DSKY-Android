@@ -98,5 +98,60 @@ req(html,'<script src="relay-visual-coupling.js"','single relay presentation-eve
 /* User explicitly rejected synthetic brightness/glare effects. */
 for(const token of ['brightness(','relay-flare','filter:']) forbid(show,token,'relay-show optical hack');
 
-console.log('Relay show smoke: PASS');
-console.log('  diagnostics-owned launch control, registry-backed service ownership, fixed show choreography, source-bounded relay event authority, checkpoint/restore sequencing, visibility-safe resume, and no synthetic package personality verified');
+async function verifyStopDuringPreflight() {
+  const timers = [], writes = [], errors = [];
+  let showService = null, coreRunning = true, coreStarts = 0, controlsShown = 0;
+  let lampTest = false;
+  const modeElement = {textContent:'AGC'};
+  const state = {mode:'agc',dream:false,appVisible:true,tickSound:true,verb:'16',noun:'65'};
+  const core = {get running(){return coreRunning;},stop(){coreRunning=false;},start(){coreRunning=true;coreStarts++;}};
+  const hardware = {snapshot(){return {latches:Object.fromEntries(Array.from({length:12},(_,i)=>[i+1,i+1]))};}};
+  const display = {
+    implementation(name){return value=>writes.push([name,value]);},
+    status(){return {relayWords:{},channels:{ch011:1,ch013:2,ch0163:3}};},
+    setChannelState(){}
+  };
+  const backing = {digits:{r1:['0'],r2:['0'],r3:['0']},relayWords:{}};
+  const clock = {
+    cancelLampTest(){},stopQueue(){},setLampTestActive(v){lampTest=v;},
+    snapshotBackingState(){return backing;},restoreBackingState(){},digitRelayCode(){return 21;},syncFace(){}
+  };
+  const shell = {element(id){return id==='mode'?modeElement:null;},show(){},clockTimeLabel(){return 'CLOCK';},showControls(){controlsShown++;}};
+  const context = {
+    window:null,console:{error(...args){errors.push(args);}},Promise,Set,Object,Array,Math,String,Number,
+    setTimeout(fn,ms){timers.push({fn,ms});return timers.length;},clearTimeout(){},
+    AGCDSKY_APP_STATE:state,AGCDSKY_CORE_SESSION:{core,pausedForVisibility:false},AGCDSKY_SHELL:shell,
+    AGCDSKY_AUDIO:{ensure(){},applySetting(){}},AGCDSKY_CLOCK:clock,AGCDSKY_DISPLAY:display,
+    AGCDSKY_SNAPSHOT:{save(){}},AGCDSKY_SERVICE_REGISTRY:{get(name){return name==='AGCDSKY_HARDWARE'?hardware:null;},publish(name,value){if(name==='AGCDSKY_RELAY_SHOW')showService=value;}}
+  };
+  context.window=context;
+  vm.createContext(context);
+  vm.runInContext(show,{filename:'relay-show.js'});
+  if(!showService) fail('relay-show service did not publish');
+
+  const run=showService.start();
+  showService.stop();
+  if(timers.length!==1||timers[0].ms!==28) fail('preflight did not enter its settle wait');
+  timers.shift().fn();
+  for(let i=0;i<8;i++) await Promise.resolve();
+  if(timers.length!==1||timers[0].ms!==40) {
+    fail(`stop during preflight continued choreography instead of restoring (next delay ${timers[0]?.ms})`);
+  }
+  for(let i=0;i<40&&showService.active();i++) {
+    for(let j=0;j<3;j++) await Promise.resolve();
+    if(timers.length) timers.shift().fn();
+  }
+  await run;
+  if(showService.active()||state.mode!=='agc'||!coreRunning||coreStarts!==1||lampTest||controlsShown!==1) {
+    fail('stopped preflight did not restore prior mode, AGC, lamp-test state, and controls');
+  }
+  if(errors.length) fail('stop during preflight produced an unexpected error');
+  if(writes.filter(([name])=>name==='decodeChannel10').length!==12) fail('relay-show did not restore all twelve saved relay latches');
+}
+
+(async()=>{
+  await verifyStopDuringPreflight();
+  console.log('Relay show smoke: PASS');
+  console.log('  diagnostics-owned launch, service ownership, fixed choreography, stop-during-preflight restore, visibility-safe resume, and no synthetic package personality verified');
+})().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
+
