@@ -163,7 +163,12 @@ for (const forbidden of ['AGCLifecycle', 'exportSnapshot', 'window.setTimeout ='
     }
     stop() { this.stopCount += 1; }
     snapshotFingerprint() {
-      return Array.from(new Uint8Array(this.memory.buffer)).reduce((a,b) => (a + b) >>> 0, 0).toString(16);
+      let hash = 0x811c9dc5;
+      for (const byte of new Uint8Array(this.memory.buffer)) {
+        hash ^= byte;
+        hash = Math.imul(hash, 0x01000193) >>> 0;
+      }
+      return hash.toString(16).padStart(8, '0');
     }
   }
   const context = {
@@ -196,6 +201,29 @@ for (const forbidden of ['AGCLifecycle', 'exportSnapshot', 'window.setTimeout ='
   assert(target.stopCount === 1, 'snapshot import did not stop core before restore');
   assert(Object.keys(target.channels).length === 0 && target.totalSteps === 0 && target.startTime === 1234,
     'snapshot import did not reset runtime accounting');
+
+  const corrupt = {...snapshot};
+  const corruptBytes = Buffer.from(snapshot.memoryB64, 'base64');
+  corruptBytes[0] ^= 1;
+  corrupt.memoryB64 = corruptBytes.toString('base64');
+  const rejectedTarget = new FakeCore();
+  const rejectedMemory = new Uint8Array(rejectedTarget.memory.buffer);
+  rejectedMemory.fill(0x5a);
+  const beforeRejectedImport = Buffer.from(rejectedMemory);
+  let rejected = false;
+  try {
+    rejectedTarget.importSnapshot(corrupt);
+  } catch (error) {
+    rejected = /fingerprint mismatch/.test(error.message);
+  }
+  assert(rejected, 'snapshot with a mismatched fingerprint was not rejected');
+  assert(Buffer.from(rejectedTarget.memory.buffer).equals(beforeRejectedImport),
+    'rejected snapshot changed live AGC memory');
+  assert(rejectedTarget.stopCount === 0,
+    'rejected snapshot stopped the live core before validation');
+  assert(rejectedTarget.channels.old === true && rejectedTarget.totalSteps === 77
+    && rejectedTarget.startTime === -1,
+    'rejected snapshot changed live runtime accounting');
 }
 
 // camera console classification behavior
