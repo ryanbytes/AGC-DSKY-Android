@@ -10,6 +10,7 @@ final class SntpClient {
     private static final int NTP_PORT = 123;
     private static final int PACKET_SIZE = 48;
     private static final long OFFSET_1900_TO_1970 = 2_208_988_800L;
+    private static final long ERA_SECONDS = 1L << 32;
 
     static final class Sample {
         final long offsetMs;
@@ -53,7 +54,7 @@ final class SntpClient {
             if (leap == 3 || (mode != 4 && mode != 5) || stratum == 0 || stratum > 15) {
                 throw new IOException("invalid NTP response");
             }
-            long serverMs = readTimestamp(response, 40);
+            long serverMs = readTimestamp(response, 40, receivedWallMs);
             if (serverMs <= 0) throw new IOException("missing NTP transmit timestamp");
             // SNTP's usual half-round-trip correction avoids treating receive time as server time.
             long offsetMs = serverMs + (rttMs / 2L) - receivedWallMs;
@@ -62,11 +63,19 @@ final class SntpClient {
     }
 
     static long readTimestamp(byte[] buffer, int offset) throws IOException {
+        return readTimestamp(buffer, offset, System.currentTimeMillis());
+    }
+
+    static long readTimestamp(byte[] buffer, int offset, long referenceTimeMs) throws IOException {
         if (buffer == null || offset < 0 || buffer.length - offset < 8) throw new IOException("malformed NTP timestamp");
         long seconds = readUnsignedInt(buffer, offset);
         long fraction = readUnsignedInt(buffer, offset + 4);
         if (seconds == 0L && fraction == 0L) return 0L;
-        return (seconds - OFFSET_1900_TO_1970) * 1000L + ((fraction * 1000L) >>> 32);
+        long unixSeconds = seconds - OFFSET_1900_TO_1970;
+        long referenceSeconds = Math.floorDiv(referenceTimeMs, 1000L);
+        long era = Math.floorDiv(referenceSeconds - unixSeconds + ERA_SECONDS / 2L, ERA_SECONDS);
+        unixSeconds += era * ERA_SECONDS;
+        return unixSeconds * 1000L + ((fraction * 1000L) >>> 32);
     }
 
     private static void writeTimestamp(byte[] buffer, int offset, long timeMs) {

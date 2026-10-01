@@ -1,5 +1,5 @@
 PRIVACY POLICY — AGC DSKY ANDROID
-Effective date: September 9, 2026
+Effective date: September 30, 2026
 
 AGC DSKY Android is an independent historical Apollo Guidance Computer / DSKY simulator.
 
@@ -10,14 +10,14 @@ DATA ACCESSED
 - App state and preferences: simulator state, settings, and related configuration may be stored locally so the app can restore its state.
 
 COLLECTION, TRANSMISSION, AND SHARING
-AGC DSKY Android declares Android INTERNET solely for a native UDP SNTP query to time.cloudflare.com. The app does not intentionally transmit camera imagery, location, sensor readings, simulator state, or other user data to the developer or to third parties.
+AGC DSKY Android uses Android INTERNET for native UDP SNTP queries to time.cloudflare.com and for HTTPS release checks and APK downloads from GitHub. Those network requests expose the device's IP address and an app-version User-Agent to the relevant network services. The app does not intentionally transmit camera imagery, location, sensor readings, simulator state, or other app content to the developer or to third parties.
 
 The app contains no advertising SDK, analytics SDK, user account system, cloud synchronization service, or developer-operated backend. The developer does not sell or share personal data obtained through the app.
 
 For Google Play Data safety purposes, information that is accessed and processed only on the device and is not transmitted off the device is not treated as collected by the developer.
 
 DATA SECURITY
-Sensitive inputs are processed locally within the Android application sandbox. WebView loads remain limited to packaged app assets; the native SNTP client sends no sensitive app data and is used only to calculate a clock offset.
+Sensitive inputs are processed locally within the Android application sandbox. WebView loads remain limited to packaged app assets. The native SNTP client sends time-query packets, and the updater sends HTTPS release requests and retrieves APK files; neither is designed to upload camera, location, sensor, or simulator data.
 
 RETENTION AND DELETION
 Camera, location, and motion data used by live features are processed locally. App preferences and saved simulator state may remain in the app's private local storage until overwritten, cleared through Android app-storage controls, or removed when the app is uninstalled.
@@ -37,7 +37,7 @@ PRIVACY INQUIRIES
 https://github.com/ryanbytes/AGC-DSKY-Android/issues
 
 PUBLIC PRIVACY POLICY
-https://github.com/ryanbytes/AGC-DSKY-Android/blob/release/1.0-commercial-1/PRIVACY.md
+https://github.com/ryanbytes/AGC-DSKY-Android/blob/main/PRIVACY.md
 
 Project repository:
 https://github.com/ryanbytes/AGC-DSKY-Android

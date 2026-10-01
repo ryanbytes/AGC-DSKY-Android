@@ -27,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
@@ -51,6 +52,7 @@ final class AppUpdater {
     private static final long CHECK_INTERVAL_MS = 12L * 60L * 60L * 1000L;
     private static final long FOREGROUND_CHECK_INTERVAL_MS = 60L * 1000L;
     private static final long RETRY_INTERVAL_MS = 30L * 60L * 1000L;
+    private static final long MAX_APK_BYTES = 128L * 1024L * 1024L;
     private static final String PREFS = "self_update";
     private static final String PREF_LAST_CHECK = "last_check_ms";
     private static final String PREF_LAST_ATTEMPT = "last_attempt_ms";
@@ -317,15 +319,28 @@ final class AppUpdater {
     private static void downloadToFile(String url, File destination) throws Exception {
         File temporary = new File(destination.getParentFile(), destination.getName() + ".part");
         HttpURLConnection connection = open(url);
-        if (connection.getResponseCode() != 200) throw new IllegalStateException("APK HTTP " + connection.getResponseCode());
-        try (InputStream input = new BufferedInputStream(connection.getInputStream()); FileOutputStream output = new FileOutputStream(temporary)) {
-            byte[] buffer = new byte[64 * 1024];
-            int count;
-            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
-            output.getFD().sync();
-        } finally { connection.disconnect(); }
-        if (destination.exists() && !destination.delete()) throw new IllegalStateException("cannot replace updater APK");
-        if (!temporary.renameTo(destination)) throw new IllegalStateException("cannot finalize updater APK");
+        try {
+            int status = connection.getResponseCode();
+            if (status != 200) throw new IllegalStateException("APK HTTP " + status);
+            int contentLength = connection.getContentLength();
+            if (contentLength > MAX_APK_BYTES) throw new IOException("APK response too large");
+            try (InputStream input = new BufferedInputStream(connection.getInputStream()); FileOutputStream output = new FileOutputStream(temporary)) {
+                byte[] buffer = new byte[64 * 1024];
+                int count;
+                long total = 0;
+                while ((count = input.read(buffer)) != -1) {
+                    total += count;
+                    if (total > MAX_APK_BYTES) throw new IOException("APK response too large");
+                    output.write(buffer, 0, count);
+                }
+                output.getFD().sync();
+            }
+            if (destination.exists() && !destination.delete()) throw new IllegalStateException("cannot replace updater APK");
+            if (!temporary.renameTo(destination)) throw new IllegalStateException("cannot finalize updater APK");
+        } finally {
+            connection.disconnect();
+            if (temporary.exists()) temporary.delete();
+        }
     }
 
     private static String downloadText(String url) throws Exception {

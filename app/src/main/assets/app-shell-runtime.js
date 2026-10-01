@@ -32,6 +32,7 @@ function show(v,n){
 
 const BROWSER_TIME_RESYNC_MS=10*60*1000;
 const BROWSER_TIME_STALE_MS=2*60*60*1000;
+const BROWSER_TIME_REQUEST_TIMEOUT_MS=5000;
 let browserTimeLastAttemptMs=0,browserTimeInFlight=null;
 function hasNativeTimeBridge(){return !!(window.TimeBridge&&typeof TimeBridge.getStatus==='function')}
 function accurateTime(){return Date.now()+(shellState.ntpStatus.state==='synced'?(Number(shellState.ntpStatus.offsetMs)||0):0)}
@@ -46,7 +47,17 @@ function loadNativeNtpStatus(){try{if(hasNativeTimeBridge()){updateNtpStatus(Tim
 function browserTimeUrl(){const url=new URL('manifest.webmanifest',location.href);url.searchParams.set('_agcdsky_time',String(Date.now()));return url.toString()}
 async function sampleBrowserNetworkTime(){
   const sent=Date.now();
-  const response=await fetch(browserTimeUrl(),{method:'HEAD',cache:'no-store',credentials:'same-origin'});
+  const controller=typeof AbortController==='function'?new AbortController():null;
+  let timeout=0;
+  let response;
+  try{
+    const options={method:'HEAD',cache:'no-store',credentials:'same-origin'};
+    if(controller)options.signal=controller.signal;
+    const request=fetch(browserTimeUrl(),options);
+    response=await Promise.race([request,new Promise((_,reject)=>{
+      timeout=setTimeout(()=>{if(controller)controller.abort();reject(new Error('network time request timed out'))},BROWSER_TIME_REQUEST_TIMEOUT_MS);
+    })]);
+  }finally{clearTimeout(timeout)}
   const received=Date.now();
   if(!response||!response.ok)throw new Error('network time HTTP failure');
   const serverMs=Date.parse(response.headers.get('date')||'');

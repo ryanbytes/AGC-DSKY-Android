@@ -168,5 +168,10 @@ public final class NtpTime {
                 prefs.getString(LAST_ERROR,""),IN_FLIGHT.get());
     }
 
-    private static void notifyListeners(Status status){for(Listener listener:LISTENERS)listener.onNtpStatusChanged(status);}
+    private static void notifyListeners(Status status){
+        for(Listener listener:LISTENERS){
+            try{listener.onNtpStatusChanged(status);}
+            catch(RuntimeException error){Log.w(TAG,"NTP status listener failed",error);}
+        }
+    }
 }

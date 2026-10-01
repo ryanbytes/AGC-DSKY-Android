@@ -45,6 +45,10 @@ assert(activity.includes('DebugReporter.install(this)'),
     'SensorMainActivity must install the native crash/error reporter');
 assert(compact(activity).includes('newDebugReporter.JsBridge(this),"DebugBridge"'),
     'SensorMainActivity must expose the local diagnostic bridge to packaged content');
+assert(compact(activity).includes('latitudeDeg<-90.0||latitudeDeg>90.0||longitudeDeg<-180.0||longitudeDeg>180.0'),
+    'native sky-location bridge must reject finite but geographically invalid coordinates');
+assert(compact(activity).includes('catch(RuntimeExceptionignored){magneticDeclinationDeg=0f;skyLocationKnown=false;}'),
+    'failed geomagnetic-field calculation must not report location as known');
 assert(activity.includes('AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)'),
     'SensorMainActivity resume must force a hidden transition before visible resume');
 

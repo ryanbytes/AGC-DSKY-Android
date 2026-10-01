@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const site = path.resolve(process.argv[2] || path.join(__dirname, '..', 'dist'));
 const fail = message => { console.error('PWA SMOKE FAIL: ' + message); process.exit(1); };
@@ -196,6 +197,8 @@ if (!sw.includes('.then(() => self.clients.claim())')) fail('service worker must
 for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-print-bridge.js', 'analytics.js']) {
   if (!sw.includes(`'./${required}'`)) fail('service worker does not pre-cache ' + required);
 }
+if (!sw.includes('event.waitUntil(cacheWrite)')) fail('service-worker cache writes must extend the fetch-event lifetime');
+if (!sw.includes('.catch(() => {})')) fail('service-worker cache-write failures must not become unhandled rejections');
 
 const refs = [];
 for (const regex of [/<script[^>]+src="([^"]+)"/g, /<link[^>]+href="([^"]+)"/g]) {
@@ -209,12 +212,55 @@ for (const rel of new Set(refs)) {
   if (rel !== 'sw.js' && !sw.includes(`'./${rel}'`)) fail('service worker does not pre-cache index dependency ' + rel);
 }
 
-console.log('PWA smoke: PASS');
-console.log('Site: ' + site);
-console.log('yaAGC.wasm: ' + wasm.length + ' bytes');
-console.log('Comanche055.bin: ' + rope.length + ' bytes');
-console.log('Android browser fullscreen touch fallback: PASS');
-console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
-console.log('Ambient-light / solar-location auto dimming: PASS');
-console.log('Analytics client: PASS');
-console.log('Apollo compact four-up model checklist + Android explicit-sheet imposition / dark EL + persistent COMP legend parity: PASS');
+(async () => {
+  const listeners = Object.create(null), waitUntilPromises = [], putErrors = [];
+  let rejectCacheWrite = false;
+  const self = {
+    location: {origin: 'https://example.test'},
+    addEventListener(name, listener) { listeners[name] = listener; },
+    skipWaiting() {},
+    clients: {claim: () => Promise.resolve()}
+  };
+  const response = {ok: true, status: 200, clone() { return {cachedCopy: true}; }};
+  const cache = {put() {
+    if (rejectCacheWrite) return Promise.reject(new Error('quota exceeded'));
+    return Promise.resolve();
+  }};
+  const caches = {
+    open: () => Promise.resolve(cache),
+    match: () => Promise.resolve(undefined),
+    keys: () => Promise.resolve([]),
+    delete: () => Promise.resolve(true)
+  };
+  vm.runInNewContext(sw, {self, caches, fetch: () => Promise.resolve(response), URL, Promise});
+
+  async function dispatchFetch(url) {
+    let responsePromise;
+    const event = {
+      request: {method: 'GET', mode: 'cors', url},
+      respondWith(promise) { responsePromise = promise; },
+      waitUntil(promise) { waitUntilPromises.push(promise); }
+    };
+    listeners.fetch(event);
+    const result = await responsePromise;
+    if (result !== response) fail('service worker changed the network response while caching');
+    if (!waitUntilPromises.length) fail('service worker did not retain cache write in waitUntil');
+    try { await waitUntilPromises.shift(); } catch (error) { putErrors.push(error); }
+  }
+
+  await dispatchFetch('https://example.test/verification.js');
+  rejectCacheWrite = true;
+  await dispatchFetch('https://example.test/large-payload.bin');
+  if (putErrors.length) fail('service-worker cache-write rejection escaped its handler');
+
+  console.log('PWA smoke: PASS');
+  console.log('Site: ' + site);
+  console.log('yaAGC.wasm: ' + wasm.length + ' bytes');
+  console.log('Comanche055.bin: ' + rope.length + ' bytes');
+  console.log('Android browser fullscreen touch fallback: PASS');
+  console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
+  console.log('Ambient-light / solar-location auto dimming: PASS');
+  console.log('Analytics client: PASS');
+  console.log('Service-worker cache lifetime and quota-failure handling: PASS');
+  console.log('Apollo compact four-up model checklist + Android explicit-sheet imposition / dark EL + persistent COMP legend parity: PASS');
+})().catch(error => fail('service-worker cache behavior test failed: ' + error.message));

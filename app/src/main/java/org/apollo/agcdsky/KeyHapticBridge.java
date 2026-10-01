@@ -30,6 +30,7 @@ final class KeyHapticBridge {
     private static final int RELAY_MIN_AMPLITUDE = 1;
     private static final int RELAY_MAX_AMPLITUDE = 3;
     private static final int RELAY_MAX_WAVEFORM_SEGMENTS = 192;
+    private static final int RELAY_MAX_WAVEFORM_TEXT_CHARS = 1024;
     private static final long RELAY_MAX_WAVEFORM_MS = 750L;
 
     private final WebView view;
@@ -140,6 +141,8 @@ final class KeyHapticBridge {
      */
     @JavascriptInterface public boolean relayWaveform(String timingsCsv, String amplitudesCsv) {
         if (timingsCsv == null || amplitudesCsv == null) return false;
+        if (timingsCsv.length() > RELAY_MAX_WAVEFORM_TEXT_CHARS
+                || amplitudesCsv.length() > RELAY_MAX_WAVEFORM_TEXT_CHARS) return false;
         String[] timingParts = timingsCsv.split(",");
         String[] amplitudeParts = amplitudesCsv.split(",");
         if (timingParts.length == 0 || timingParts.length != amplitudeParts.length

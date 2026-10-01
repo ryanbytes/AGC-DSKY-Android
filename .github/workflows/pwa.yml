@@ -122,6 +122,9 @@ jobs:
           print('Analytics schema: PASS')
           PY
 
+      - name: Analytics Worker request validation test
+        run: node analytics/cloudflare/worker-smoke.mjs
+
       - name: Shared AGC smoke tests
         run: |
           node tools/compat-boundary-smoke.js

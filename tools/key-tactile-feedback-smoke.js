@@ -64,6 +64,10 @@ for(const forbidden of ['VibrationEffect.createPredefined','import android.os.Vi
 assert(bridge.includes('@JavascriptInterface public boolean keyMake() {\n        return performOneShot(MAKE_MS, HapticFeedbackConstants.VIRTUAL_KEY);'),'key make no longer uses one-shot native cue');
 assert(bridge.includes('@JavascriptInterface public boolean keyRelease() {\n        return performOneShot(RELEASE_MS,'),'key release no longer uses one-shot native cue');
 assert(bridge.includes('@JavascriptInterface public boolean relayWaveform(String timingsCsv, String amplitudesCsv)'),'relay-only waveform endpoint missing');
+const waveformLengthGuard=bridge.indexOf('if (timingsCsv.length() > RELAY_MAX_WAVEFORM_TEXT_CHARS');
+const waveformSplit=bridge.indexOf('String[] timingParts = timingsCsv.split(",")');
+assert(bridge.includes('RELAY_MAX_WAVEFORM_TEXT_CHARS = 1024')&&waveformLengthGuard>=0&&waveformSplit>waveformLengthGuard,
+  'haptic CSV inputs must be bounded before split allocation');
 assert(manifest.includes('android.permission.VIBRATE'),'one-shot VibrationEffect path requires VIBRATE permission');
 
 for(const marker of [

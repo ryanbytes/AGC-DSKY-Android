@@ -57,18 +57,21 @@ self.addEventListener('activate', event => {
   );
 });
 
-function cacheResponse(request, response) {
+function cacheResponse(event, request, response) {
   if (!response || !response.ok) return response;
   const copy = response.clone();
-  caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+  const cacheWrite = caches.open(CACHE_NAME)
+    .then(cache => cache.put(request, copy))
+    .catch(() => {});
+  event.waitUntil(cacheWrite);
   return response;
 }
 
-function networkFirst(request, fallbackRequest = request) {
+function networkFirst(event, request, fallbackRequest = request) {
   return fetch(request)
     .then(response => {
       if (!response || !response.ok) throw new Error('HTTP ' + (response ? response.status : 'no response'));
-      return cacheResponse(request, response);
+      return cacheResponse(event, request, response);
     })
     .catch(() => caches.match(fallbackRequest).then(cached => cached || caches.match(request)));
 }
@@ -89,12 +92,12 @@ self.addEventListener('fetch', event => {
     || url.pathname.endsWith('.html');
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request, './index.html'));
+    event.respondWith(networkFirst(event, request, './index.html'));
     return;
   }
 
   if (isCodeAsset) {
-    event.respondWith(networkFirst(request));
+    event.respondWith(networkFirst(event, request));
     return;
   }
 
@@ -102,7 +105,7 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;
-      return fetch(request).then(response => cacheResponse(request, response));
+      return fetch(request).then(response => cacheResponse(event, request, response));
     })
   );
 });

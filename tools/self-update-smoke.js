@@ -88,6 +88,10 @@ const directInstall=java.indexOf('requestInstallPermissionOrInstall(context, can
 assert(pendingWrite>=0&&directInstall<0,'background release check must not directly launch install/permission UI');
 assert(java.includes('new WeakReference<>(activity)')&&java.includes('new Handler(Looper.getMainLooper()).post(() -> resumePendingInstall(activity))'),
   'verified pending update must be handed to the foreground activity');
+assert(java.includes('MAX_APK_BYTES = 128L * 1024L * 1024L')&&java.includes('if (total > MAX_APK_BYTES) throw new IOException("APK response too large")'),
+  'APK download must be bounded while streaming, even when Content-Length is absent or inaccurate');
+assert(java.includes('if (temporary.exists()) temporary.delete();'),
+  'failed or oversized APK downloads must remove their partial file');
 assert(java.includes('new Asset("app-fire-release.apk.sha256"')&&java.includes('new Asset("app-regular-release.apk.sha256"'),
   'fallback release discovery must retain sidecar integrity verification');
 

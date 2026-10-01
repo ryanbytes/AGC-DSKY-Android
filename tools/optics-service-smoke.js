@@ -17,6 +17,8 @@ assert(!source.includes('window.AGCDSKY = window.AGCDSKY || {}'),
   'optics must not recreate the root AGCDSKY facade');
 assert(source.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_OPTICS',Object.freeze({open,close,status})"),
   'optics must publish a frozen dedicated service explicitly through the registry');
+assert(source.includes('lat < -90||lat > 90||lon < -180||lon > 180'),
+  'saved or geolocation coordinates must be bounded to valid latitude/longitude ranges');
 for(const forbidden of ['api.openSextant =','api.closeSextant =','api.sextantStatus ='])
   assert(!source.includes(forbidden),`optics regained direct public-facade mutation: ${forbidden}`);
 for(const marker of [

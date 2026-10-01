@@ -6,4 +6,6 @@ https://github.com/ryanbytes/AGC-DSKY-Android
 Commercial release source snapshot:
 release/1.0-commercial-1
 
-The Android/frontend project is distributed under GNU GPL version 2. The release snapshot contains the source, build scripts, pinned submodule reference, and notices corresponding to version 1.0.
+The Android/frontend project is distributed under GNU GPL version 2. The current Android app source is published on the repository's main branch.
+
+The fixed release snapshot above is for the historical Version 1.0 commercial build; it is separate from the ongoing Android app releases.

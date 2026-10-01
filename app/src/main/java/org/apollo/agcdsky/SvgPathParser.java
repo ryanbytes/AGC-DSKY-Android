@@ -15,25 +15,20 @@ final class SvgPathParser {
         if (data == null || sink == null) throw new IllegalArgumentException("Path data and sink are required");
         int i = 0;
         char command = 0;
-        boolean awaitingArguments = false;
         while (i < data.length()) {
             char ch = data.charAt(i);
             if (isSeparator(ch)) { i++; continue; }
-            if (isLetter(ch)) {
-                if (!isSupportedCommand(ch)) {
-                    throw new IllegalArgumentException("Unsupported DSKY legend path command: " + ch);
-                }
-                if (awaitingArguments) {
-                    throw new IllegalArgumentException("Missing arguments for DSKY legend path command: " + command);
-                }
+            if (isCommand(ch)) {
                 command = ch;
                 i++;
-                if (command == 'Z') {
-                    sink.close();
-                    command = 0;
-                    awaitingArguments = false;
+                if (command == 'Z' || command == 'z') { sink.close(); command = 0; }
+                else if (command != 'M' && command != 'L' && command != 'C') {
+                    throw new IllegalArgumentException("Unsupported DSKY legend path command: " + command);
                 } else {
-                    awaitingArguments = true;
+                    int next = skipSeparators(data, i);
+                    if (next >= data.length() || isCommand(data.charAt(next))) {
+                        throw new IllegalArgumentException("Missing DSKY legend path coordinates for command: " + command);
+                    }
                 }
                 continue;
             }
@@ -43,14 +38,12 @@ final class SvgPathParser {
                     float y = readNumber(data, i); i = nextNumber(data, i);
                     sink.moveTo(x, y);
                     command = 'L';
-                    awaitingArguments = false;
                     break;
                 }
                 case 'L': {
                     float x = readNumber(data, i); i = nextNumber(data, i);
                     float y = readNumber(data, i); i = nextNumber(data, i);
                     sink.lineTo(x, y);
-                    awaitingArguments = false;
                     break;
                 }
                 case 'C': {
@@ -61,15 +54,11 @@ final class SvgPathParser {
                     float x = readNumber(data, i); i = nextNumber(data, i);
                     float y = readNumber(data, i); i = nextNumber(data, i);
                     sink.cubicTo(x1, y1, x2, y2, x, y);
-                    awaitingArguments = false;
                     break;
                 }
                 default:
                     throw new IllegalArgumentException("Unsupported DSKY legend path command: " + command);
             }
-        }
-        if (awaitingArguments) {
-            throw new IllegalArgumentException("Missing arguments for DSKY legend path command: " + command);
         }
     }
 
@@ -82,7 +71,11 @@ final class SvgPathParser {
     private static float readNumber(String data, int i) {
         int start = skipSeparators(data, i);
         int end = numberEnd(data, start);
-        return Float.parseFloat(data.substring(start, end));
+        float value = Float.parseFloat(data.substring(start, end));
+        if (Float.isNaN(value) || Float.isInfinite(value)) {
+            throw new IllegalArgumentException("Non-finite DSKY legend path coordinate at " + start);
+        }
+        return value;
     }
 
     private static int skipSeparators(String data, int i) {
@@ -94,12 +87,8 @@ final class SvgPathParser {
         return ch == ',' || ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
     }
 
-    private static boolean isLetter(char ch) {
+    private static boolean isCommand(char ch) {
         return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
-    }
-
-    private static boolean isSupportedCommand(char ch) {
-        return ch == 'M' || ch == 'L' || ch == 'C' || ch == 'Z';
     }
 
     private static int numberEnd(String data, int start) {

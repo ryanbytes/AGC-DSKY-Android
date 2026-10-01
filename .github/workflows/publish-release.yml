@@ -1,26 +1,43 @@
 name: Publish signed release payload
 
 on:
-  push:
-    branches:
-      - 'release-payload/**'
-
-permissions:
-  contents: write
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the v prefix (for example 1.1.62)
+        required: true
+        type: string
 
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Verify signed release payload
+      - name: Fetch and verify release payload
         shell: bash
+        env:
+          VERSION_NAME: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
-          PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
+          [[ "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]] || { echo 'Invalid release version'; exit 1; }
+          PAYLOAD_BRANCH="release-payload/v${VERSION_NAME}"
+          git fetch --no-tags origin "refs/heads/${PAYLOAD_BRANCH}"
+          PAYLOAD_COMMIT="$(git rev-parse FETCH_HEAD)"
+          BRANCH_VERSION="$(git show "${PAYLOAD_COMMIT}:VERSION" | tr -d '\r\n')"
+          test "$BRANCH_VERSION" = "$VERSION_NAME"
+          PAYLOAD_ROOT="${RUNNER_TEMP}/verified-payload"
+          mkdir -p "$PAYLOAD_ROOT"
+          git archive "$PAYLOAD_COMMIT" "release-payload/v${VERSION_NAME}" | tar -x -C "$PAYLOAD_ROOT"
+          PAYLOAD_DIR="${PAYLOAD_ROOT}/release-payload/v${VERSION_NAME}"
           test -f "${PAYLOAD_DIR}/app-regular-release.apk"
           test -f "${PAYLOAD_DIR}/app-fire-release.apk"
           test -f "${PAYLOAD_DIR}/app-regular-release.apk.sha256"
@@ -30,6 +47,10 @@ jobs:
             sha256sum -c app-regular-release.apk.sha256
             sha256sum -c app-fire-release.apk.sha256
           )
+          {
+            echo "VERSION_NAME=${VERSION_NAME}"
+            echo "PAYLOAD_DIR=${PAYLOAD_DIR}"
+          } >> "$GITHUB_ENV"
 
       - name: Create or refresh GitHub Release
         env:
@@ -37,9 +58,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
           TAG="v${VERSION_NAME}"
-          PAYLOAD_DIR="release-payload/${TAG}"
           NOTES="${PAYLOAD_DIR}/RELEASE_NOTES.txt"
           ASSETS=(
             "${PAYLOAD_DIR}/app-regular-release.apk"

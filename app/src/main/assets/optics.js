@@ -275,7 +275,7 @@
 
   function setSkyLocation(lat,lon,alt=0,accuracy=NaN){
     lat=Number(lat);lon=Number(lon);alt=Number(alt);
-    if(!Number.isFinite(lat)||!Number.isFinite(lon))return false;
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat > 90||lon < -180||lon > 180)return false;
     skyLocation={lat,lon,alt:Number.isFinite(alt)?alt:0,accuracy:Number(accuracy),timestamp:Date.now()};
     try{localStorage.setItem('sxtSkyLocation',JSON.stringify(skyLocation))}catch(_){ }
     try{if(window.SkyBridge&&typeof SkyBridge.setLocation==='function')SkyBridge.setLocation(lat,lon,skyLocation.alt)}catch(_){ }

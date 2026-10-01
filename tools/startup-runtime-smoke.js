@@ -160,10 +160,24 @@ for (const forbidden of ['AGCLifecycle', 'exportSnapshot', 'window.setTimeout ='
       this.totalSteps = 77;
       this.startTime = -1;
       this.stopCount = 0;
+      this.releaseCount = 0;
+      this.pendingNormalKeyCode = 0;
     }
     stop() { this.stopCount += 1; }
+    releaseExternalDskyInputs() {
+      const bytes = new Uint8Array(this.memory.buffer);
+      bytes[0] = 0;
+      bytes[3] |= 0x20;
+      this.pendingNormalKeyCode = 0;
+      this.releaseCount += 1;
+    }
     snapshotFingerprint() {
-      return Array.from(new Uint8Array(this.memory.buffer)).reduce((a,b) => (a + b) >>> 0, 0).toString(16);
+      let hash = 0x811c9dc5;
+      for (const byte of new Uint8Array(this.memory.buffer)) {
+        hash ^= byte;
+        hash = Math.imul(hash, 0x01000193) >>> 0;
+      }
+      return hash.toString(16).padStart(8, '0');
     }
   }
   const context = {
@@ -186,16 +200,67 @@ for (const forbidden of ['AGCLifecycle', 'exportSnapshot', 'window.setTimeout ='
   const source = new FakeCore();
   const sourceBytes = new Uint8Array(source.memory.buffer);
   for (let n = 0; n < sourceBytes.length; n++) sourceBytes[n] = (n * 37) & 0xff;
+  sourceBytes[0] = 0x15;
+  sourceBytes[3] &= ~0x20;
+  source.pendingNormalKeyCode = 0x15;
   const snapshot = source.exportSnapshot();
   assert(snapshot.schema === 1 && snapshot.byteLength === 96, 'snapshot metadata changed');
 
   const target = new FakeCore();
   assert(target.importSnapshot(snapshot) === true, 'snapshot import failed');
-  assert(Buffer.from(target.memory.buffer).equals(Buffer.from(source.memory.buffer)),
-    'snapshot round-trip changed AGC memory');
+  const expectedRestored = Buffer.from(source.memory.buffer);
+  expectedRestored[0] = 0;
+  expectedRestored[3] |= 0x20;
+  assert(Buffer.from(target.memory.buffer).equals(expectedRestored),
+    'snapshot import did not release physical DSKY controls');
+  assert(target.releaseCount === 1 && target.pendingNormalKeyCode === 0,
+    'snapshot import retained transient DSKY input state');
   assert(target.stopCount === 1, 'snapshot import did not stop core before restore');
   assert(Object.keys(target.channels).length === 0 && target.totalSteps === 0 && target.startTime === 1234,
     'snapshot import did not reset runtime accounting');
+
+  const corrupt = {...snapshot};
+  const corruptBytes = Buffer.from(snapshot.memoryB64, 'base64');
+  corruptBytes[0] ^= 1;
+  corrupt.memoryB64 = corruptBytes.toString('base64');
+  const rejectedTarget = new FakeCore();
+  const rejectedMemory = new Uint8Array(rejectedTarget.memory.buffer);
+  rejectedMemory.fill(0x5a);
+  const beforeRejectedImport = Buffer.from(rejectedMemory);
+  let rejected = false;
+  try {
+    rejectedTarget.importSnapshot(corrupt);
+  } catch (error) {
+    rejected = /fingerprint mismatch/.test(error.message);
+  }
+  assert(rejected, 'snapshot with a mismatched fingerprint was not rejected');
+  assert(Buffer.from(rejectedTarget.memory.buffer).equals(beforeRejectedImport),
+    'rejected snapshot changed live AGC memory');
+  assert(rejectedTarget.stopCount === 0,
+    'rejected snapshot stopped the live core before validation');
+  assert(rejectedTarget.releaseCount === 0,
+    'rejected snapshot changed physical DSKY controls');
+  assert(rejectedTarget.channels.old === true && rejectedTarget.totalSteps === 77
+    && rejectedTarget.startTime === -1,
+    'rejected snapshot changed live runtime accounting');
+
+  const missingFingerprint = {...snapshot};
+  delete missingFingerprint.fingerprint;
+  const missingFingerprintTarget = new FakeCore();
+  const missingFingerprintMemory = new Uint8Array(missingFingerprintTarget.memory.buffer);
+  missingFingerprintMemory.fill(0x6b);
+  const beforeMissingFingerprintImport = Buffer.from(missingFingerprintMemory);
+  rejected = false;
+  try {
+    missingFingerprintTarget.importSnapshot(missingFingerprint);
+  } catch (error) {
+    rejected = /fingerprint missing or invalid/.test(error.message);
+  }
+  assert(rejected, 'snapshot without a fingerprint was accepted');
+  assert(Buffer.from(missingFingerprintTarget.memory.buffer).equals(beforeMissingFingerprintImport),
+    'snapshot without a fingerprint changed live AGC memory');
+  assert(missingFingerprintTarget.stopCount === 0,
+    'snapshot without a fingerprint stopped the live core before rejection');
 }
 
 // camera console classification behavior
