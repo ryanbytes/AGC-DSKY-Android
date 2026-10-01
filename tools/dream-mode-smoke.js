@@ -24,6 +24,9 @@ requireText(dreamService, 'SCREEN_ORIENTATION_FULL_SENSOR', 'four-way sensor ori
 requireText(dreamService, 'if (window == null) return;', 'Android 17 pre-window guard');
 requireText(dreamService, 'current.requestLayout()', 'rotation relayout');
 requireText(dreamService, 'hideSystemBars()', 'immersive-mode restoration');
+requireText(dreamService, 'if (!Double.isFinite(value)) return;', 'non-finite native brightness input rejection');
+requireText(dreamService, 'webViewHandler.post(() -> {\n                if (webView != null) AgcDreamService.this.finish();\n            });', 'main-thread DreamService finish dispatch');
+forbid(dreamService, '}); else finish();', 'WebView bridge-thread finish fallback');
 
 // Register a distinct custom dream with Android instead of relying only on the
 // service intent filter. Explicitly reject Android's stock clock/complications
