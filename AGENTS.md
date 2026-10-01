@@ -99,10 +99,10 @@ Current policy:
 
 ## Code organization
 
-- `app/src/main/assets/app.js`: base DSKY UI/mode/lifecycle coordination, DREAM SOLAR astronomy, channel decoding, relay model and synthetic clock behavior.
-- `app/src/main/assets/app-refine.js`: narrow post-load source-backed refinements. Current responsibilities include relay-8 FULLDSP physical state, clock-V35 transition/acoustic timing, natural V16 N65 return, mission-change V35 ownership, raw/read-only diagnostics. Do not turn it into a second application implementation; fold mature behavior into `app.js` when a safe full-source edit path is available.
+- Frontend runtime is split across focused modules loaded by `app/src/main/assets/index.html`; `tools/asset-reference-smoke.js` enforces the current asset set and load order. Do not recreate the removed monolithic `app.js` / `app-refine.js` layers.
 - `app/src/main/assets/agc-core.js`: WASM/rope loading, CPU stepping, packet I/O, input masks, key/PRO injection.
-- `app/src/main/assets/runtime-debug.js`: early JavaScript/runtime/CSP diagnostics and debug-build frontend readiness.
+- `app/src/main/assets/hardware-fidelity.js` and `app/src/main/assets/diagnostics.js`: physical relay/channel state and read-only diagnostic presentation. Preserve raw channel words when decoded values alone would hide useful hardware state.
+- `app/src/main/assets/runtime-debug.js` is no longer present; debug readiness and runtime diagnostics live in the current modular startup/runtime files. Follow `index.html` and the asset-reference smoke for the actual ownership and order.
 - Native shell should remain small: `MainActivity`, `AgcDreamService`, `NetClient`, `DebugReporter` unless a native capability is genuinely required.
 - Never reintroduce the removed `TrafficStats` / `agcnet://poll` COMP surrogate or fallback network loading.
 - Preserve the strict offline CSP unless a demonstrated runtime incompatibility requires a narrowly justified change. Do not add ordinary `'unsafe-eval'` or `'unsafe-inline'`.
@@ -165,6 +165,8 @@ Toolchain contract:
 
 The Gradle bootstrap must remain local-only and verify the official distribution SHA-256.
 
+The canonical `tools/build-local.sh` path is a clean-tree **Regular + Fire debug APK** build. It runs the source gates below, then `:app:clean`, pinned-asset verification, both debug variants, and APK verification. To assemble all six Regular/Fire debug, installfix, and release variants, use the matching Gradle tasks documented in `docs/PROGRESS.md`; release variant outputs are unsigned until separately signed under the release process.
+
 The canonical build path must continue to run:
 
 - `bash -n` for every `tools/*.sh`
@@ -172,15 +174,15 @@ The canonical build path must continue to run:
 - manifest/network policy smoke
 - strict CSP smoke
 - frontend/source smoke
-- app-refinement behavioral smoke
+- modular runtime behavior smokes
 - device-V35 raw-channel policy smoke
 - display/crop geometry smoke
 - DREAM SOLAR/polar-regime smoke
 - AGC-wrapper smoke
-- runtime-debug/readiness smoke
+- native diagnostic and frontend readiness smoke
 - native diagnostic smoke
 - DSKY mapping smoke
-- effective V35 model smoke (`app.js` + complete `app-refine.js` VM load)
+- effective V35 model smoke against the current modular runtime
 - asset-reference smoke
 - real pinned yaAGC + both-rope runtime smoke, including `V37E00E` P00 proof and V35 FULLDSP/FULLDSP1/relay-12 semantics
 - clean Gradle build

@@ -72,7 +72,13 @@ Source smoke checks were executed against the modified source contents in the av
 
 # AGC DSKY Android progress
 
-Last updated: 2026-09-29
+## 2026-10-01 channel diagnostics and Mac build audit
+
+Retained the raw 15-bit channel `012` value alongside decoded selector-4 state and exposed it in diagnostics. Fixed `tools/verify-apk.sh` to ignore inline SVG `#fragment` suffixes when resolving local asset references; the asset-reference smoke covers the case. Updated the repository guidance and implementation/device-smoke notes to describe the current modular frontend and current build gates rather than the removed `app.js` / `app-refine.js` layout.
+
+Validation on macOS: `env TZ=UTC bash tools/run-source-smokes.sh` passed (91 Node smokes plus `ntp-time-smoke.sh`). `env TZ=UTC ANDROID_SDK_ROOT=<configured Android SDK path> bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:assemble` passed and produced all six Regular/Fire debug, installfix, and release variant APKs. Regular and Fire debug APKs passed `tools/verify-apk.sh`; package checks confirmed all six variants contain byte-for-byte current `index.html`, `diagnostics.js`, and `hardware-fidelity.js`. Release APKs are unsigned (`*-release-unsigned.apk`). No Android device smoke, release signing, or publication was performed.
+
+Last updated: 2026-10-01
 
 ## 2026-09-29 v1.1.53 terse Apollo-style panel nomenclature
 

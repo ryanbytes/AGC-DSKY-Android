@@ -71,11 +71,11 @@ The script performs these gates in order. The source smoke runner sets `TZ=UTC` 
 3. Verifies Android platform 37 and exact Build Tools 36.0.0, including `aapt2` and `apksigner`.
 4. Verifies `vendor/webAGC` is the exact pinned clean checkout and all three binary inputs are present.
 5. Syntax-checks every `tools/*.sh` with Bash and every `tools/*.js` with `node --check`.
-6. Runs policy/CSP/frontend/display/**EL-widget**/SOLAR/AGC-wrapper/runtime-debug/native-diagnostic source smokes.
+6. Runs the canonical source smoke manifest covering policy/CSP/frontend/display/**EL-widget**/SOLAR/AGC/runtime/native-diagnostic behavior.
    The EL widget label smoke compiles and executes the production Java path parser against the released crash input and all five embedded label outlines.
-7. Runs `tools/app-refine-smoke.js`, guarding V35 input isolation, RSET/transition cleanup, relay-8 FULLDSP physical state, and immutable relay diagnostics.
-8. Runs `tools/dsky-mapping-smoke.js` and `tools/v35-model-smoke.js`, including the effective `app.js` + `app-refine.js` relay model.
-9. Runs asset-reference checks.
+7. Runs the modular runtime behavior smokes, including V35 input isolation, RSET/transition cleanup, relay-8 FULLDSP physical state, and immutable relay diagnostics.
+8. Runs `tools/dsky-mapping-smoke.js` and `tools/v35-model-smoke.js` against the current modular runtime.
+9. Runs asset-reference checks, including current frontend load order and removed-file assertions.
 10. Runs `tools/wasm-runtime-smoke.js` against the **real pinned yaAGC WASM and both real ropes**. It requires the `V37E00E` P00 precondition to reach channel-010 PROG `00` / relay-11 low-11 `01265`, then requires a real `V35E` FULLDSP/FULLDSP1 relay response.
 11. Runs clean `:app:clean`, `:app:verifyPinnedAgcAssets`,
     `:app:assembleRegularDebug`, and `:app:assembleFireDebug` with stacktraces enabled.
@@ -139,9 +139,9 @@ The pre-build checks also guard:
 - top-level navigation restricted to packaged `/assets/` content
 - local WebView responses use explicit `200 OK`, `Cache-Control: no-store`, and MIME-sniffing protection
 - strict offline CSP with `'wasm-unsafe-eval'`, not ordinary `'unsafe-eval'` or inline script
-- required script order: `runtime-debug.js` -> `agc-core.js` -> `app.js` -> `app-refine.js`
+- frontend script order is defined by `app/src/main/assets/index.html` and guarded by `tools/asset-reference-smoke.js`; removed monolithic `app.js` / `app-refine.js` / `runtime-debug.js` files must not return
 - CSP violations and stack-bearing runtime failures reach the local private debug reporter
-- `FRONTEND READY` is withheld until EL glyphs, mission UI, and `app-refine.js` relay diagnostics are all initialized
+- `FRONTEND READY` is withheld until the packaged page initializes and EL rendering is complete
 - display-only crop/scaling geometry remains tied to the intended upper DSKY region
 - DREAM SOLAR sunrise/sunset, transition midpoint, polar day, and polar night behavior
 - only the exact three pinned upstream binary inputs are staged
@@ -181,7 +181,7 @@ It verifies:
 - no privileged clock-setting permission (`SET_TIME`)
 - exact size/Git blob of packaged `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin`
 - packaged `index.html` matches source
-- **every local `src=`/`href=` asset referenced by current `index.html` is discovered dynamically and byte-compared against the checkout**; this prevents a new required script such as `app-refine.js` from being silently omitted from the verifier's file list
+- **every local `src=`/`href=` asset referenced by current `index.html` is discovered dynamically and byte-compared against the checkout**; this prevents newly required modular scripts from being silently omitted from the verifier's file list
 - `BUILD_SOURCE.txt` matches source
 - known unused upstream vendor trees/files are absent
 - merged manifest contains `ElWidgetProvider`, `APPWIDGET_UPDATE`, and appwidget-provider metadata

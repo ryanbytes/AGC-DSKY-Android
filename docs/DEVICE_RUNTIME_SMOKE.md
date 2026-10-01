@@ -147,9 +147,9 @@ This proves Android process-death preference restoration and fresh core construc
 
 ## Build-time semantic counterparts
 
-`tools/v35-model-smoke.js` checks the effective clock-side relay model after `app-refine.js` is loaded. In particular it requires `FULLDSP` low-11 `01675` on every ordinary numeric row and `FULLDSP1` low-11 `03675` on the three plus-sign rows, including the unused C bank on relay 8. Its COMP exclusion applies only to the synthetic phone-clock convenience test.
+`tools/v35-model-smoke.js` checks the effective clock-side relay model against the current modular runtime. In particular it requires `FULLDSP` low-11 `01675` on every ordinary numeric row and `FULLDSP1` low-11 `03675` on the three plus-sign rows, including the unused C bank on relay 8. Its COMP exclusion applies only to the synthetic phone-clock convenience test.
 
-`tools/app-refine-smoke.js` additionally guards clock-to-V35-to-clock physical relay deltas, natural five-second return to canonical V16 N65, V35 key isolation, RSET/mission/AGC transition behavior, and immutable relay/raw-channel diagnostics.
+The modular runtime smokes in `tools/source-smoke-tests.txt` guard clock-to-V35-to-clock physical relay deltas, natural five-second return to canonical V16 N65, V35 key isolation, RSET/mission/AGC transition behavior, and immutable relay/raw-channel diagnostics.
 
 `tools/device-v35-policy-smoke.js` statically guards the live-device proof contract: raw channel `011` and `0163` must drive the discrete assertions, and a fixed COMP-off assertion is forbidden.
 

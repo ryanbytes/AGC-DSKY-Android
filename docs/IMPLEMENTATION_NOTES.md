@@ -137,17 +137,11 @@ yaAGC's hardware model uses a 1.28-second DSKY flash period with 75% duty cycle;
 
 Synthetic V35 now owns its display for the test duration: ordinary keys are ignored except RSET. RSET explicitly calls `cancelLampTest()` before base clock reset, and AGC/mission transitions use the same explicit cancellation barrier so neither the five-second timeout nor 320 ms interval can leak into another mode.
 
-### Refinement/diagnostic layer
+### Modular frontend runtime and diagnostics
 
-`app-refine.js` is a deliberately narrow post-load layer currently used for:
+The former monolithic `app.js` / `app-refine.js` implementation was replaced with focused runtime modules. `index.html` defines their load order, and `tools/asset-reference-smoke.js` rejects the removed files and locks required assets/order. Make changes in the owning module and update its focused smoke rather than adding another post-load patch layer.
 
-- selector-8 FULLDSP physical-state correction;
-- synthetic V35 key ownership and explicit timer cancellation on RSET/mode/mission transitions;
-- read-only `AGCDSKY.snapshotRelays()` / `snapshotDsky()` diagnostics used by device smokes.
-
-It must not grow into a second implementation of the app. Mature logic should be folded back into `app.js` when a safe full-source edit path is available.
-
-The debug frontend readiness marker now requires these diagnostic functions, so `FRONTEND READY` proves the full script stack—not only base `app.js`—initialized.
+Read-only AGC snapshots are exposed by the current snapshot/runtime modules and are used by device smokes. Raw channel words should remain available alongside decoded fields when they carry hardware state that diagnostics need to show. The current diagnostics page displays raw channel `012` octal in addition to the decoded selector-4 state.
 
 ### DSKY input
 
@@ -175,9 +169,9 @@ Per owner instruction:
 - never claim build/install/runtime success without observing it;
 - never substitute reconstructed/repacked DEX/APK surgery for the real Gradle application.
 
-`tools/build-local.sh` is the canonical source/build entrypoint. It syntax-checks helper scripts, runs policy/frontend/relay/refinement tests, runs the real-WASM host semantic gate, builds cleanly, and runs APK verification.
+`tools/build-local.sh` is the canonical source/build entrypoint. It syntax-checks helper scripts, runs the canonical modular source-smoke suite and real-WASM host semantic gate, builds cleanly, and runs APK verification for both debug variants.
 
-`tools/verify-apk.sh` independently verifies exact upstream binary blobs, APK metadata/permissions/signature, and dynamically discovers every local `src=`/`href=` frontend asset in current `index.html` for byte-for-byte source comparison. This prevents a required layer such as `app-refine.js` from being accidentally omitted from package verification.
+`tools/verify-apk.sh` independently verifies exact upstream binary blobs, APK metadata/permissions/signature, and dynamically discovers every local `src=`/`href=` frontend asset in current `index.html` for byte-for-byte source comparison. It also handles local SVG fragment references while verifying the referenced packaged asset.
 
 The preferred Android checkpoint is:
 
@@ -189,12 +183,10 @@ Its V35 semantic driver now proves a channel-driven P00 `PROG 00` precondition b
 
 ## Remaining high-value work
 
-1. Run `tools/build-local.sh` in a complete recursive checkout with Android SDK platform 37 / Build Tools 36.0.0 and record the exact results.
-2. Run `tools/device-full-smoke.sh` on the current APK and retain its evidence.
-3. If V35 fails, inspect `snapshotDsky()` to distinguish relay-output, annunciator/modulation, and SVG-rendering failures before weakening any gate.
-4. Exercise representative non-V35 Pinball semantics through real channel `015` input.
-5. Test long physical PRO behavior through channel `032`.
-6. Verify real OS screen-off/on lifecycle behavior in addition to direct bridge tests.
-7. Verify DreamService startup, non-interactivity, brightness modes, SOLAR permission behavior, and normal-app state after Dream exit.
-8. Perform physical portrait/landscape DISPLAY and pixel-level DSKY visual review.
-9. If exact CM peripheral mode becomes necessary, rebuild audited yaAGC with an explicit exported LM/CM setter rather than patching the pinned binary.
+1. Run the device smoke gates listed in `docs/DEVICE_RUNTIME_SMOKE.md` on current Regular and Fire builds and retain their evidence.
+2. Exercise representative non-V35 Pinball semantics through real channel `015` input.
+3. Test long physical PRO behavior through channel `032`.
+4. Verify real OS screen-off/on lifecycle behavior in addition to direct bridge tests.
+5. Verify DreamService startup, non-interactivity, brightness modes, SOLAR permission behavior, and normal-app state after Dream exit.
+6. Perform physical portrait/landscape DISPLAY and pixel-level DSKY visual review.
+7. If exact CM peripheral mode becomes necessary, rebuild audited yaAGC with an explicit exported LM/CM setter rather than patching the pinned binary.

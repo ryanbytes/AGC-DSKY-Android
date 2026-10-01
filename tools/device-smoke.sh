@@ -102,8 +102,8 @@ START_OUTPUT="$($ADB shell am start -W -n "$ACTIVITY" 2>&1)" || {
 printf '%s\n' "$START_OUTPUT"
 
 # Give WebView enough time to load the local page and execute the frontend. A
-# debug-only native marker emitted from runtime-debug.js proves initialization
-# got past script setup and EL rendering; process-alive alone is not sufficient.
+# debug-only native marker emitted by dream-agc.js after script setup and EL
+# rendering proves frontend initialization; process-alive alone is not enough.
 sleep 2
 PID="$($ADB shell pidof -s "$PACKAGE" 2>/dev/null | tr -d '\r' || true)"
 
