@@ -1,3 +1,11 @@
+## 2026-09-30 v1.1.61 fixed-vector widget labels
+
+Moves the Android home-screen widget PROG, VERB, NOUN, COMP, and ACTY legends from device-dependent runtime font rendering to fixed filled vector outlines. This keeps label shape and placement deterministic across Android devices while preserving the accepted EL geometry from v1.1.60.
+
+The release also updates the widget source-smoke contract for vector rendering and classifies the dedicated widget-label vector smoke in the canonical source suite.
+
+Release candidate identifiers: 1.1.61 / Android versionCode 2026093008.
+
 ## 2026-09-30 v1.1.60 complete EL symbol placement
 
 Carries the final drawing-backed EL symbol placement from the audit branch onto current main without replaying stale release metadata or losing the v1.1.59 updater repair.
