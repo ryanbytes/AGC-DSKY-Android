@@ -126,7 +126,7 @@ async function verifyStopDuringPreflight() {
   };
   context.window=context;
   vm.createContext(context);
-  vm.runInContext(show,{filename:'relay-show.js'});
+  vm.runInContext(show,context,{filename:'relay-show.js'});
   if(!showService) fail('relay-show service did not publish');
 
   const run=showService.start();
