@@ -1,3 +1,11 @@
+## 2026-09-30 v1.1.62 widget vector-path crash hotfix
+
+Device crash evidence from Pixel 9a / Android 17 on v1.1.61 showed ExceptionInInitializerError in ElWidgetProvider.ElRenderer caused by Float.parseFloat receiving ",9.2002" while initializing the fixed-vector widget labels. The parser's end-scanner skipped commas internally but readPathNumber still sliced from the pre-separator index.
+
+The parser now separates separator skipping from numeric-token scanning, slices only the numeric token, and supports leading signs, decimals, and exponent notation. The canonical widget-label smoke locks the exact crashing prefix M75.4402,9.2002 and validates every embedded label path through equivalent tokenization.
+
+Hotfix identifiers: 1.1.62 / Android versionCode 2026093009.
+
 ## 2026-09-30 v1.1.61 fixed-vector widget labels
 
 Moves the Android home-screen widget PROG, VERB, NOUN, COMP, and ACTY legends from device-dependent runtime font rendering to fixed filled vector outlines. This keeps label shape and placement deterministic across Android devices while preserving the accepted EL geometry from v1.1.60.
