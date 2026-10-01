@@ -43,6 +43,7 @@ runtime-transition-integration-smoke.js
 dsky-input-runtime-smoke.js
 app-input-boundary-smoke.js
 operation-authority-smoke.js
+sextant-tap-mark-smoke.js
 audio-recovery-smoke.js
 cheatsheet-smoke.js
 optics-service-smoke.js

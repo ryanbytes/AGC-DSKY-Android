@@ -217,6 +217,8 @@
 
   function close(){
     releaseNavContact();
+    const tapMark=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_SEXTANT_TAP_MARK');
+    if(tapMark&&typeof tapMark.cancel==='function')tapMark.cancel();
     const view = document.getElementById('sxt-view');
     if (view) view.classList.remove('open');
     document.body.classList.remove('sxt-combined');

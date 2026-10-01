@@ -80,7 +80,8 @@ for(const marker of [
 ])assert(css.includes(marker),`combined sextant/live DSKY layout missing: ${marker}`);
 assert(!source.includes('cloneNode('),'sextant must use the existing live DSKY, not a clone');
 assert(!source.includes('c.navKeyPulse(bit,90)'), 'flight-facing MARK controls must not synthesize a fixed 90 ms hold');
-assert(source.includes('releaseNavContact();\n    const view = document.getElementById(\'sxt-view\')'), 'closing sextant must release a held navigation contact');
+assert(source.includes('function close(){\n    releaseNavContact();'), 'closing sextant must release a held navigation contact');
+assert(source.includes("const tapMark=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_SEXTANT_TAP_MARK');\n    if(tapMark&&typeof tapMark.cancel==='function')tapMark.cancel();"), 'closing sextant must cancel an in-flight tap-to-mark operation');
 assert(source.includes('if (document.hidden) {\n      releaseNavContact();'), 'backgrounding sextant must release a held navigation contact');
 console.log('optics service smoke: PASS');
 console.log('  explicit sextant service publication, parser order, camera lifecycle, CDU/nav paths, autosave, and status telemetry retained');

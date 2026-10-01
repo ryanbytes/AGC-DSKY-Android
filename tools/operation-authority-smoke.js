@@ -112,8 +112,9 @@ for(const marker of [
   'NON-FLIGHT SIMULATOR AID: tap-to-mark',
   "mode:'non-flight-simulator-aid'",
   "inputPath:'screen tap -> simulated CDU pulses -> channel 016 MARK -> yaAGC'",
-  'writePulses(c, SHAFT_CH, shaftCounts)',
-  'writePulses(c, TRUNNION_CH, trunnionCounts)',
+  'writePulses(c, SHAFT_CH, shaftCounts, token)',
+  'writePulses(c, TRUNNION_CH, trunnionCounts, token)',
+  'if (token !== markToken) { reject(new Error(\\'tap mark cancelled\\')); return; }',
   'c.navKeyPulse(MARK_BIT, 90)'
 ]) assert(tapMark.includes(marker),'tap-to-mark provenance/path missing: '+marker);
 for(const forbidden of ['commitRelayWord(','setChannelState(','AGCDSKY_DISPLAY'])
