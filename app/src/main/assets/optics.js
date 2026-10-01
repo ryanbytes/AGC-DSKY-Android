@@ -231,11 +231,15 @@
     if (!view || !view.classList.contains('open')) return;
     if (document.hidden) {
       releaseNavContact();
+      lastPhoneAngles = null;
+      if (typeof api.setOpticsCaptureActive === 'function') api.setOpticsCaptureActive(false);
       releaseCamera();
       const status = document.getElementById('sxt-status');
       if (status) status.textContent = 'SXT · CAMERA PAUSED';
       return;
     }
+    lastPhoneAngles = null;
+    if (typeof api.setOpticsCaptureActive === 'function') api.setOpticsCaptureActive(true);
     acquireCamera();
   }
 
