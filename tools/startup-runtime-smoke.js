@@ -243,6 +243,24 @@ for (const forbidden of ['AGCLifecycle', 'exportSnapshot', 'window.setTimeout ='
   assert(rejectedTarget.channels.old === true && rejectedTarget.totalSteps === 77
     && rejectedTarget.startTime === -1,
     'rejected snapshot changed live runtime accounting');
+
+  const missingFingerprint = {...snapshot};
+  delete missingFingerprint.fingerprint;
+  const missingFingerprintTarget = new FakeCore();
+  const missingFingerprintMemory = new Uint8Array(missingFingerprintTarget.memory.buffer);
+  missingFingerprintMemory.fill(0x6b);
+  const beforeMissingFingerprintImport = Buffer.from(missingFingerprintMemory);
+  rejected = false;
+  try {
+    missingFingerprintTarget.importSnapshot(missingFingerprint);
+  } catch (error) {
+    rejected = /fingerprint missing or invalid/.test(error.message);
+  }
+  assert(rejected, 'snapshot without a fingerprint was accepted');
+  assert(Buffer.from(missingFingerprintTarget.memory.buffer).equals(beforeMissingFingerprintImport),
+    'snapshot without a fingerprint changed live AGC memory');
+  assert(missingFingerprintTarget.stopCount === 0,
+    'snapshot without a fingerprint stopped the live core before rejection');
 }
 
 // camera console classification behavior
