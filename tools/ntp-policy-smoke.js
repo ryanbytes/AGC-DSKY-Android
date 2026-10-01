@@ -33,6 +33,8 @@ for(const needle of [
   'usingNetworkTime',
   'syncInFlight'
 ]) requireText(ntp,needle,'NtpTime');
+if(!/for\(Listener listener:LISTENERS\)\{\s*try\{listener\.onNtpStatusChanged\(status\);\}\s*catch\(RuntimeException error\)\{Log\.w\(TAG,"NTP status listener failed",error\);\}\s*\}/.test(ntp))
+  fail('one NTP status listener must not prevent sync work or later listener notifications');
 
 for(const needle of [
   'DatagramSocket',
