@@ -60,7 +60,7 @@ Historical simulation; Apollo; computing history; educational simulator.
 
 ## Privacy policy URL
 
-https://github.com/ryanbytes/AGC-DSKY-Android/blob/release/1.0-commercial-1/PRIVACY.md
+https://github.com/ryanbytes/AGC-DSKY-Android/blob/main/PRIVACY.md
 
 ## Corresponding source
 
