@@ -29,7 +29,7 @@ The Sextant image is a real app capture with location redacted and a static demo
 - Resizable **EL-only** home-screen widget.
 - Optional Android **Home app** mode for dedicated boot-to-DSKY phones/tablets.
 - Separate Fire APK with the restored opt-in same-package boot/Home redirect.
-- `INTERNET` is used only by the native UDP SNTP client for `time.cloudflare.com`; WebView navigation remains restricted to packaged assets.
+- `INTERNET` is used by the native UDP SNTP client for `time.cloudflare.com` and by the updater for HTTPS GitHub release checks and APK downloads; WebView navigation remains restricted to packaged assets.
 
 ## Dedicated Home mode
 
