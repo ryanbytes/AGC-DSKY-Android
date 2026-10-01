@@ -38,6 +38,29 @@ assert(phone.includes("correctedRel = qNorm(qMul(qAxis('z', rad(magneticYawCorre
 assert(!phone.includes('e[2] += magneticYawCorrection'),
   'magnetic yaw correction must not be added directly to the Apollo middle-gimbal angle');
 
+const calibrationLoader=phone.match(/function loadSkyCalibration\(\)\{[\s\S]*?\n  \}/);
+assert(calibrationLoader,'saved camera calibration loader missing');
+function loadCalibration(value){
+  const state={cameraBoresightDevice:[0,0,-1],skyCalibration:null};
+  const context={
+    localStorage:{getItem:()=>JSON.stringify(value)},JSON,Number,Array,Math,
+    SKY_CAL_KEY:'sxtCameraBoresightV1',cameraBoresightDevice:state.cameraBoresightDevice,
+    skyCalibration:state.skyCalibration
+  };
+  vm.createContext(context);
+  vm.runInContext(`${calibrationLoader[0]};loadSkyCalibration()`,context);
+  return {boresight:Array.from(context.cameraBoresightDevice),calibration:context.skyCalibration};
+}
+const invalidCalibration=loadCalibration({schema:1,boresight:[0,0,0]});
+same(invalidCalibration.boresight,[0,0,-1],'zero-length saved boresight replaced the default camera direction');
+assert(invalidCalibration.calibration===null,'zero-length saved boresight was accepted');
+const oversizedCalibration=loadCalibration({schema:1,boresight:[1.7e308,1.7e308,1.7e308]});
+same(oversizedCalibration.boresight,[0,0,-1],'non-finite saved boresight magnitude replaced the default camera direction');
+assert(oversizedCalibration.calibration===null,'non-finite saved boresight magnitude was accepted');
+const validCalibration=loadCalibration({schema:1,boresight:[0,3,4]});
+same(validCalibration.boresight,[0,.6,.8],'valid saved boresight was not normalized');
+assert(validCalibration.calibration!==null,'valid saved camera calibration was rejected');
+
 const gimbalMatch=phone.match(/function apolloGimbals\(q\) \{[\s\S]*?\n  \}/);
 assert(gimbalMatch,'apolloGimbals implementation missing');
 const apolloGimbals=vm.runInNewContext(`(${gimbalMatch[0]})`,{
