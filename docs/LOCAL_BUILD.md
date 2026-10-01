@@ -99,7 +99,7 @@ The source gate requires:
 - the native renderer's `106 x 190` EL coordinate system;
 - `PROG`, `VERB`, `NOUN`, signed registers, and EL separator rules;
 - horizontally and vertically resizable AppWidget metadata;
-- native SNTP permissions (`INTERNET` and `ACCESS_NETWORK_STATE`) only; WebView loads remain blocked;
+- native SNTP and HTTPS updater permissions (`INTERNET` and `ACCESS_NETWORK_STATE`); WebView loads remain blocked;
 - a non-wakeup `AlarmManager.RTC` minute scheduler rather than an exact/wakeup alarm;
 - no `drawRect`, `drawRoundRect`, `drawCircle`, or `drawOval` primitives in the widget renderer, preventing a bezel/faceplate/fastener layer from being quietly reintroduced.
 
@@ -131,7 +131,7 @@ The V35 model also keeps:
 
 The pre-build checks also guard:
 
-- `android.permission.INTERNET` limited to native UDP SNTP; WebView network access remains blocked
+- `android.permission.INTERNET` used by native UDP SNTP and HTTPS GitHub updater traffic; WebView network access remains blocked
 - Android backup disabled for local-only app/WebView state
 - WebView metrics collection opted out
 - both WebViews explicitly block network loads and disable file/content access
