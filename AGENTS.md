@@ -6,7 +6,7 @@ This repository is an Android Apollo DSKY project. Read `docs/PROGRESS.md`, `doc
 
 - Keep the repository updated during substantial work. Prefer small, coherent commits.
 - Maintain `docs/PROGRESS.md` whenever architecture, blockers, verification gates, or next actions change materially.
-- Do **not** add or use GitHub Actions, Codespaces, or other GitHub-hosted build infrastructure unless the owner explicitly reverses this instruction.
+- Do **not** add or use GitHub Actions, Codespaces, or other GitHub-hosted infrastructure to compile, sign, or test APKs. Release publication may use the existing release-only workflow to publish a separately built and verified signed payload; it must not build or sign APKs.
 - Build, sign, inspect, and test APKs locally/manual when build tooling is available.
 - Every AGC DSKY APK handed to Ryan for installation or update must use the established standalone release signing key stored privately in Google Drive `AGC-DSKY-Private`; never hand off a CI-generated temporary/debug-key APK as an update. Before handoff, verify APK Signature Scheme v2 or newer and certificate SHA-256 `40:9A:D6:76:E8:05:2E:50:41:6A:1B:F6:9E:09:51:37:EF:63:9A:C1:3C:E4:65:21:60:A1:93:80:A1:17:FA:1F`. Do not copy the private key or passwords into this repository.
 - Never commit private signing keys, passwords, tokens, or other credentials.
@@ -22,7 +22,7 @@ The app has two deliberately separate purposes:
 
 Do not blur those modes. Phone-clock behavior may emulate DSKY hardware for presentation; AGC mode must be driven by authentic AGC I/O.
 
-The runtime must remain self-contained/offline. The only intended external runtime input is device location for DREAM SOLAR. The merged app must not request `android.permission.INTERNET`.
+WebView content must remain self-contained and offline: it may load only packaged assets, with device location as the only intended external runtime input to the page. The native shell may use `android.permission.INTERNET` only for UDP SNTP time correction; it must not enable general WebView network access or transmit app/user data.
 
 ## Pinned v0.7 runtime
 
@@ -186,7 +186,7 @@ The canonical build path must continue to run:
 - clean Gradle build
 - post-build APK verification
 
-`tools/verify-apk.sh` must continue checking package/version/SDK metadata, debuggable test status, location permissions, absence of INTERNET, exact pinned binary blobs, byte-for-byte current frontend assets discovered from `index.html`, absence of unused vendor trees, and APK signature validity.
+`tools/verify-apk.sh` must continue checking package/version/SDK metadata, debuggable test status, location permissions, the narrowly required native SNTP network permissions, exact pinned binary blobs, byte-for-byte current frontend assets discovered from `index.html`, absence of unused vendor trees, and APK signature validity.
 
 ## Device verification discipline
 

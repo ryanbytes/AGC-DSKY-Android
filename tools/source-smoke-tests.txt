@@ -1,7 +1,6 @@
-# Canonical source-level smoke suite.
+# Canonical local source-level smoke suite consumed by tools/build-local.sh.
 # Keep device/ADB-only smokes out of this manifest; every exclusion must be
-# documented in source-smoke-exclusions.txt. Both Android CI and build-local.sh
-# consume this file so source coverage cannot silently drift.
+# documented in source-smoke-exclusions.txt.
 
 source-smoke-manifest-smoke.js
 branding-smoke.js

@@ -170,7 +170,7 @@ Dream presentation must not cause MainActivity to inherit display-only/clock sta
 
 Per owner instruction:
 
-- no GitHub Actions/Codespaces/hosted builds;
+- no hosted APK builds, signing, or tests; the release-only workflow may publish an already built and verified signed payload;
 - build and test locally/manual;
 - never claim build/install/runtime success without observing it;
 - never substitute reconstructed/repacked DEX/APK surgery for the real Gradle application.

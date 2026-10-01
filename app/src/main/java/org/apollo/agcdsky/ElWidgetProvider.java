@@ -158,30 +158,14 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       }
       private static String five(int v){return String.format(Locale.US,"%05d",v);}
       private static Path labelPath(String d){
-        Path path=new Path();int i=0;char command=0;
-        while(i<d.length()){
-          char ch=d.charAt(i);
-          if(ch==' '||ch==','||ch=='\n'||ch=='\r'||ch=='\t'){i++;continue;}
-          if((ch>='A'&&ch<='Z')||(ch>='a'&&ch<='z')){command=ch;i++;if(command=='Z'||command=='z'){path.close();command=0;}continue;}
-          switch(command){
-            case 'M':case 'm':{float x=readPathNumber(d,i);i=nextPathNumber(d,i);float y=readPathNumber(d,i);i=nextPathNumber(d,i);path.moveTo(x,y);command=command=='m'?'l':'L';break;}
-            case 'L':case 'l':{float x=readPathNumber(d,i);i=nextPathNumber(d,i);float y=readPathNumber(d,i);i=nextPathNumber(d,i);path.lineTo(x,y);break;}
-            case 'C':case 'c':{float x1=readPathNumber(d,i);i=nextPathNumber(d,i);float y1=readPathNumber(d,i);i=nextPathNumber(d,i);float x2=readPathNumber(d,i);i=nextPathNumber(d,i);float y2=readPathNumber(d,i);i=nextPathNumber(d,i);float x=readPathNumber(d,i);i=nextPathNumber(d,i);float y=readPathNumber(d,i);i=nextPathNumber(d,i);path.cubicTo(x1,y1,x2,y2,x,y);break;}
-            default:throw new IllegalArgumentException("Unsupported DSKY legend path command: "+command);
-          }
-        }
+        Path path=new Path();
+        SvgPathParser.parse(d,new SvgPathParser.Sink(){
+          @Override public void moveTo(float x,float y){path.moveTo(x,y);}
+          @Override public void lineTo(float x,float y){path.lineTo(x,y);}
+          @Override public void cubicTo(float x1,float y1,float x2,float y2,float x,float y){path.cubicTo(x1,y1,x2,y2,x,y);}
+          @Override public void close(){path.close();}
+        });
         return path;
-      }
-      private static int skipPathSeparators(String d,int i){while(i<d.length()){char ch=d.charAt(i);if(ch==','||ch==' '||ch=='\n'||ch=='\r'||ch=='\t')i++;else break;}return i;}
-      private static float readPathNumber(String d,int i){int start=skipPathSeparators(d,i),end=pathNumberEnd(d,start);if(start>=end)throw new IllegalArgumentException("Missing DSKY legend path number at "+i);return Float.parseFloat(d.substring(start,end));}
-      private static int nextPathNumber(String d,int i){int start=skipPathSeparators(d,i),end=pathNumberEnd(d,start);return skipPathSeparators(d,end);}
-      private static int pathNumberEnd(String d,int start){
-        int i=start,n=d.length();if(i<n&&(d.charAt(i)=='+'||d.charAt(i)=='-'))i++;
-        boolean digit=false;while(i<n&&d.charAt(i)>='0'&&d.charAt(i)<='9'){digit=true;i++;}
-        if(i<n&&d.charAt(i)=='.'){i++;while(i<n&&d.charAt(i)>='0'&&d.charAt(i)<='9'){digit=true;i++;}}
-        if(!digit)throw new IllegalArgumentException("Invalid DSKY legend path number at "+start);
-        if(i<n&&(d.charAt(i)=='e'||d.charAt(i)=='E')){int exp=i++;if(i<n&&(d.charAt(i)=='+'||d.charAt(i)=='-'))i++;int expDigits=i;while(i<n&&d.charAt(i)>='0'&&d.charAt(i)<='9')i++;if(i==expDigits)throw new IllegalArgumentException("Invalid DSKY legend exponent at "+exp);}
-        return i;
       }
       private static void section(Canvas c,float x,float y,float w,float h,Paint p){c.drawPath(box(x,y,w,h),p);}
       private static void rule(Canvas c,float x,float y,float w,float h){c.drawPath(box(x,y,w,h),RULE_P);}

@@ -64,7 +64,7 @@ git submodule update --init --recursive
 bash tools/build-local.sh
 ```
 
-The script performs these gates in order:
+The script performs these gates in order. The source smoke runner sets `TZ=UTC` so fixed-time fixtures do not depend on the build host's local timezone:
 
 1. Requires a clean committed Git revision and verifies JDK 17+ / Node.js 18+.
 2. Uses an installed stable Gradle 9.5.0+ or checksum-verified local Gradle 9.5.1.
@@ -72,6 +72,7 @@ The script performs these gates in order:
 4. Verifies `vendor/webAGC` is the exact pinned clean checkout and all three binary inputs are present.
 5. Syntax-checks every `tools/*.sh` with Bash and every `tools/*.js` with `node --check`.
 6. Runs policy/CSP/frontend/display/**EL-widget**/SOLAR/AGC-wrapper/runtime-debug/native-diagnostic source smokes.
+   The EL widget label smoke compiles and executes the production Java path parser against the released crash input and all five embedded label outlines.
 7. Runs `tools/app-refine-smoke.js`, guarding V35 input isolation, RSET/transition cleanup, relay-8 FULLDSP physical state, and immutable relay diagnostics.
 8. Runs `tools/dsky-mapping-smoke.js` and `tools/v35-model-smoke.js`, including the effective `app.js` + `app-refine.js` relay model.
 9. Runs asset-reference checks.
@@ -130,7 +131,7 @@ The V35 model also keeps:
 
 The pre-build checks also guard:
 
-- no `android.permission.INTERNET`
+- `android.permission.INTERNET` limited to native UDP SNTP; WebView network access remains blocked
 - Android backup disabled for local-only app/WebView state
 - WebView metrics collection opted out
 - both WebViews explicitly block network loads and disable file/content access

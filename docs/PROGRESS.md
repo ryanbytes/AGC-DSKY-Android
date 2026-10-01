@@ -1,8 +1,12 @@
+## 2026-09-30 audit remediation
+
+Strengthened the EL widget label regression gate to compile and execute the same pure-Java path parser used by `ElWidgetProvider`, including the v1.1.61 comma-separated crash fixture, malformed inputs, and every embedded legend outline. The parser regression and all 90 canonical Node smokes plus the NTP shell smoke passed under OpenJDK 17; the runner now pins `TZ=UTC` so fixed-time fixtures are deterministic across developer machines. Corrected repository policy text so native UDP SNTP's narrow INTERNET permission is distinguished from offline WebView behavior. Disabled the obsolete hosted Android build workflow to match the local-only APK build policy. Clarified that the fixed Version 1.0 commercial source snapshot is historical and separate from current v1.1.x Android releases. Full Gradle/APK/device verification was not run because this environment lacks Android SDK platform 37 and Build Tools 36.0.0.
+
 ## 2026-09-30 v1.1.62 widget vector-path crash hotfix
 
 Device crash evidence from Pixel 9a / Android 17 on v1.1.61 showed ExceptionInInitializerError in ElWidgetProvider.ElRenderer caused by Float.parseFloat receiving ",9.2002" while initializing the fixed-vector widget labels. The parser's end-scanner skipped commas internally but readPathNumber still sliced from the pre-separator index.
 
-The parser now separates separator skipping from numeric-token scanning, slices only the numeric token, and supports leading signs, decimals, and exponent notation. The canonical widget-label smoke locks the exact crashing prefix M75.4402,9.2002 and validates every embedded label path through equivalent tokenization.
+The parser now separates separator skipping from numeric-token scanning, slices only the numeric token, and supports leading signs, decimals, and exponent notation. The canonical widget-label smoke locks the exact crashing prefix M75.4402,9.2002 and executes every embedded label through the production Java parser.
 
 Hotfix identifiers: 1.1.62 / Android versionCode 2026093009.
 
@@ -630,7 +634,7 @@ The canonical Android build was then attempted/preflighted in the current execut
 - there is no complete current recursive checkout in the build container;
 - shell network/DNS cannot resolve GitHub, so the Gradle bootstrap, repository clone/submodule initialization, and Android SDK package download cannot be completed here.
 
-Shortest next experiment: run `bash tools/build-local.sh` on a machine/container with the required Android SDK and exact recursive checkout. The repository still contains an older hosted workflow, but project policy explicitly forbids using GitHub-hosted builds unless the owner separately authorizes that exception; it is therefore not being treated as the build path for this revision.
+Shortest next experiment: run `bash tools/build-local.sh` on a machine/container with the required Android SDK and exact recursive checkout. The obsolete hosted Android build workflow has since been removed to enforce the local-only APK build policy.
 
 ## Verification status
 
@@ -666,7 +670,7 @@ Do not upgrade any unchecked item to verified without actual output from that ex
 
 ## Build policy
 
-Builds remain local/manual. Do not add or use GitHub Actions, Codespaces, or another hosted build service for this project unless the owner explicitly changes that policy. Never substitute APK surgery/repacking for a real Gradle build.
+APK builds, signing, and tests remain local/manual. Do not use hosted build infrastructure for them. The release-only workflow may publish an already built and verified signed payload. Never substitute APK surgery/repacking for a real Gradle build.
 
 ## 2026-09-18 checklist / EL cross-platform parity
 

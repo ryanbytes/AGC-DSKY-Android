@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const source = fs.readFileSync(path.resolve(__dirname, '../app/src/main/java/org/apollo/agcdsky/ElWidgetProvider.java'), 'utf8');
 function need(condition, message) { if (!condition) throw new Error(message); }
 const labels = ['PROG', 'VERB', 'NOUN', 'COMP', 'ACTY'];
@@ -29,31 +31,28 @@ for (const label of labels) {
 }
 
 need(source.includes('M75.4402,9.2002'), 'PROG regression fixture lost exact comma-separated crash prefix');
-need(source.includes('private static int skipPathSeparators(String d,int i)'), 'path parser separator skipper missing');
-need(source.includes('int start=skipPathSeparators(d,i),end=pathNumberEnd(d,start)'), 'path number reader must skip commas/whitespace before slicing');
-need(source.includes('return skipPathSeparators(d,end)'), 'path parser must advance past separators before the next coordinate');
-function parseNumbersLikeFixedParser(d) {
-  const out = [];
-  let i = 0;
-  while (i < d.length) {
-    while (i < d.length && /[\s,]/.test(d[i])) i++;
-    if (i >= d.length) break;
-    if (/[A-Za-z]/.test(d[i])) { i++; continue; }
-    const m = d.slice(i).match(/^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?/);
-    need(m, `parser regression: invalid numeric token at ${d.slice(i, i + 16)}`);
-    out.push(Number(m[0]));
-    i += m[0].length;
+need(source.includes('SvgPathParser.parse(d,new SvgPathParser.Sink()'), 'widget renderer must use the tested Java path parser');
+const parser = path.resolve(__dirname, '../app/src/main/java/org/apollo/agcdsky/SvgPathParser.java');
+const parserSource = fs.readFileSync(parser, 'utf8');
+need(parserSource.includes('sink.cubicTo('), 'Android SVG path parser does not support curved glyph outlines');
+for (const tool of ['javac', 'java']) {
+  try { execFileSync(tool, ['-version'], { stdio: 'ignore' }); }
+  catch (_) { throw new Error(`${tool} is required to run the actual Java widget path-parser regression`); }
+}
+const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'el-widget-parser-'));
+try {
+  const regression = path.resolve(__dirname, 'SvgPathParserRegressionTest.java');
+  try {
+    execFileSync('javac', ['-d', temp, parser, regression], { stdio: 'pipe' });
+  } catch (error) {
+    throw new Error(`javac failed for actual widget parser test: ${error.stderr?.toString() || error.message}`);
   }
-  return out;
+  execFileSync('java', ['-cp', temp, 'org.apollo.agcdsky.SvgPathParserRegressionTest', ...Object.values(labelPaths)], { stdio: 'inherit' });
+} finally {
+  fs.rmSync(temp, { recursive: true, force: true });
 }
-for (const label of labels) {
-  const parsed = parseNumbersLikeFixedParser(labelPaths[label]);
-  need(parsed.every(Number.isFinite), `${label}: parser regression produced a non-finite coordinate`);
-}
-const commaRegression = parseNumbersLikeFixedParser('M75.4402,9.2002L76.3346,9.2002');
-need(commaRegression.length === 4 && commaRegression[0] === 75.4402 && commaRegression[1] === 9.2002, 'comma-separated path parser regression');
 
 need(!/Typeface|drawText\s*\(/.test(source), 'runtime font or text draw remains in widget renderer');
-need(source.includes('private static Path labelPath(String d)') && source.includes('path.cubicTo('), 'Android SVG path parser does not support curved glyph outlines');
+need(source.includes('private static Path labelPath(String d)'), 'Android widget label path adapter is missing');
 console.log('EL widget static label outline smoke: PASS');
 console.log('  fixed filled paths for PROG, VERB, NOUN, COMP, ACTY; no runtime font or text rendering');

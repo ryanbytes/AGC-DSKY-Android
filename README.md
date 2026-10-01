@@ -64,6 +64,6 @@ The Android/frontend project is **GNU GPL version 2**. GPLv2 permits selling cop
 
 The app includes an offline **LEGAL / SOURCE** screen with the privacy policy, corresponding-source location, complete GPLv2 text, third-party notices, and NASA/U.S. Government non-endorsement statement.
 
-## Current commercial release
+## Version 1.0 commercial source snapshot
 
-**Version 1.0** uses `release/1.0-commercial-1` as the fixed corresponding-source branch. The Home-mode build keeps version name `1.0` and uses Android version code `20039`.
+The historical **Version 1.0 commercial build** uses `release/1.0-commercial-1` as its fixed corresponding-source branch. That snapshot is separate from the ongoing Android app releases (currently v1.1.62 on `main`). The Version 1.0 Home-mode build kept version name `1.0` and Android version code `20039`.
