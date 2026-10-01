@@ -2,11 +2,9 @@ import SwiftUI
 
 @main
 struct AGCDSKYApp: App {
-    @StateObject private var webModel = AGCWebViewModel()
-
     var body: some Scene {
         WindowGroup("AGC DSKY") {
-            ContentView(model: webModel)
+            ContentView()
         }
 #if os(macOS)
         .defaultSize(width: 760, height: 980)
@@ -15,7 +13,7 @@ struct AGCDSKYApp: App {
 }
 
 struct ContentView: View {
-    @ObservedObject var model: AGCWebViewModel
+    @StateObject private var model = AGCWebViewModel()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
