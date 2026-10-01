@@ -34,6 +34,9 @@
     if (!snapshot || snapshot.schema !== 1 || typeof snapshot.memoryB64 !== 'string') {
       throw new Error('Unsupported AGC snapshot');
     }
+    if (typeof snapshot.fingerprint !== 'string' || !/^[0-9a-f]{8}$/.test(snapshot.fingerprint)) {
+      throw new Error('AGC snapshot fingerprint missing or invalid');
+    }
     const bytes = new Uint8Array(this.memory.buffer);
     if (snapshot.byteLength !== bytes.length) {
       throw new Error('AGC snapshot memory size mismatch');
@@ -68,7 +71,7 @@
       fingerprint ^= restored[i];
       fingerprint = Math.imul(fingerprint, 0x01000193) >>> 0;
     }
-    if (snapshot.fingerprint && fingerprint.toString(16).padStart(8, '0') !== snapshot.fingerprint) {
+    if (fingerprint.toString(16).padStart(8, '0') !== snapshot.fingerprint) {
       throw new Error('AGC snapshot fingerprint mismatch');
     }
 
