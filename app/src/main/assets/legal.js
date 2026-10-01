@@ -2,7 +2,7 @@
 (() => {
   const SOURCE_REPO = 'https://github.com/ryanbytes/AGC-DSKY-Android';
   const SOURCE_SNAPSHOT = 'release/1.0-commercial-1';
-  const PRIVACY_URL = 'https://github.com/ryanbytes/AGC-DSKY-Android/blob/release/1.0-commercial-1/PRIVACY.md';
+  const PRIVACY_URL = 'https://github.com/ryanbytes/AGC-DSKY-Android/blob/main/PRIVACY.md';
   let panel = null;
   let loaded = false;
 
@@ -19,7 +19,7 @@
           <h2>AGC DSKY Android 1.0</h2>
           <p class="legal-note">Independent historical simulator. Not affiliated with, sponsored by, or endorsed by NASA or the United States Government.</p>
           <h3>Privacy</h3>
-          <p>The app processes camera, location, and motion-sensor inputs locally for simulator features. Android INTERNET is used only by the native SNTP client to query time.cloudflare.com; WebView loads remain local and the app does not intentionally transmit user data to the developer or third parties.</p>
+          <p>The app processes camera, location, and motion-sensor inputs locally for simulator features. Android INTERNET supports native SNTP queries to time.cloudflare.com and HTTPS GitHub release checks and APK downloads. These requests expose the device IP address and app-version User-Agent to the relevant services; the app does not intentionally upload camera, location, sensor, or simulator data. WebView loads remain local.</p>
           <p>Public privacy policy: <code>${PRIVACY_URL}</code></p>
           <details><summary>PRIVACY POLICY</summary><pre id="legal-privacy">Loading packaged privacy policy…</pre></details>
           <h3>Corresponding source</h3>
