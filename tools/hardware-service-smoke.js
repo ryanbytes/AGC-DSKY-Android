@@ -87,7 +87,7 @@ assert(hardware.snapshot().auxRelays.isswar===false,'channel 011 bit 1 state cha
 assert(hardware.snapshot().auxRelays.flash===false,'channel 011 flash command must not masquerade as the physical FLASH relay');
 assert(typeof externalChannelHandlers.get(0o12)==='function','channel 012 hardware relay handler was not registered');
 externalChannelHandlers.get(0o12)(0o30000);
-assert(hardware.snapshot().auxRelays.injseq===true&&hardware.snapshot().auxRelays.cutoff===true,'channel 012 INJ SEQ/CUTOFF physical relays did not follow real AGC output');
+assert(hardware.snapshot().channel012Output===0o30000&&hardware.snapshot().auxRelays.injseq===true&&hardware.snapshot().auxRelays.cutoff===true,'channel 012 raw output and INJ SEQ/CUTOFF relays did not follow real AGC output');
 display.implementation('decodeChannel163')(0o770);
 assert(channelState.some(item=>item.channel===0o163&&item.value===0o770&&item.render===false),'channel 0163 raw state must update without bypassing relay contacts');
 assert(lamps.get('temp')===true&&lamps.get('keyrel')===true&&lamps.get('oprerr')===true&&lamps.get('restart')===true&&lamps.get('stby')===true,'auxiliary relay fallback did not project channel 0163 lamps');

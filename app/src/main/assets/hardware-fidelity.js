@@ -41,6 +41,7 @@
   const hw={
     latches:Object.create(null),relayGeneration:Object.create(null),activeDrive:0,
     timers:new Set(),clockToken:0,lastWrite:null,
+    channel012Output:0,
     auxRelays:Object.assign(Object.create(null),Object.fromEntries(topology.nonLatchingNames.map(name=>[name,false])))
   };
   const snapshotExtensions=new Map();
@@ -147,7 +148,7 @@
   display.installImplementation('decodeChannel11',hardwareDecodeChannel11,'hardware auxiliary relays');
 
   function hardwareDecodeChannel12(value){
-    const word=Number(value)&0o77777;
+    const word=Number(value)&0o77777;hw.channel012Output=word;
     setAuxRelays({injseq:!!(word&0o10000),cutoff:!!(word&0o20000)},true);return true;
   }
   display.registerChannelHandler(0o12,hardwareDecodeChannel12,'hardware non-latching relays');
@@ -162,7 +163,7 @@
   const baseResetAgcFace=display.implementation('resetFace');
   function hardwareResetAgcFace(...args){
     const visual=window.DSKY_RELAY_VISUAL;if(visual&&typeof visual.resetPresentation==='function')visual.resetPresentation();
-    for(const key of Object.keys(hw.latches))delete hw.latches[key];for(const key of Object.keys(hw.relayGeneration))delete hw.relayGeneration[key];hw.activeDrive=0;for(const key of Object.keys(hw.auxRelays))hw.auxRelays[key]=false;return baseResetAgcFace.apply(this,args);
+    for(const key of Object.keys(hw.latches))delete hw.latches[key];for(const key of Object.keys(hw.relayGeneration))delete hw.relayGeneration[key];hw.activeDrive=0;hw.channel012Output=0;for(const key of Object.keys(hw.auxRelays))hw.auxRelays[key]=false;return baseResetAgcFace.apply(this,args);
   }
   display.installImplementation('resetFace',hardwareResetAgcFace,'hardware reset state');
 
@@ -220,7 +221,7 @@
   setInterval(()=>{try{if(fidelityState.mode==='clock'&&!getLampTestActive()&&!getRelayBusy())clock.tick()}catch(_){}},20);
 
   function baseSnapshot(){return{
-    t4Ms:T4_MS,relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,physicalRelayCount:topology.physicalRelayCount,latchingRelayCount:topology.latchingRelayCount,nonLatchingRelayCount:topology.nonLatchingRelayCount,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
+    t4Ms:T4_MS,relayDriveMs:RELAY_DRIVE_MS,dirtyRowStartMs:DIRTY_ROW_START_MS,physicalRelayCount:topology.physicalRelayCount,latchingRelayCount:topology.latchingRelayCount,nonLatchingRelayCount:topology.nonLatchingRelayCount,armatureSettleMs:ARMATURE_SETTLE_MS.slice(),clockRelayOrder:CLOCK_RELAY_ORDER.slice(),activeDrive:hw.activeDrive,latches:Object.assign({},hw.latches),channel012Output:hw.channel012Output,auxRelays:Object.assign({},hw.auxRelays),lastWrite:hw.lastWrite?Object.assign({},hw.lastWrite):null,lampTestActive:getLampTestActive()
   }}
   function snapshot(){
     let state=baseSnapshot();

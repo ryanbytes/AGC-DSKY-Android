@@ -109,7 +109,7 @@ Normal PHONE CLOCK hardware commits update physical/backing relay state at 20 ms
 - `yaAGC.wasm` and `Comanche055.bin` unchanged.
 - normal keys use channel `015` plus KEYRST.
 - PRO remains level-sensitive channel `032`.
-- channels `010`, `011`, `013`, `0163` retain their Block II mappings.
+- channels `010`, `011`, `013`, `0163` retain their Block II mappings; the raw channel `012` word is retained in the hardware snapshot and diagnostics alongside its decoded non-latching outputs.
 - snapshot schema remains schema 1.
 - CLOCK suspension saves resumable state and AGC return resumes the same loaded core when valid.
 - Dream mode never starts real AGC.

@@ -75,7 +75,7 @@ assert(diagnostics.includes("section('OPERATION AUTHORITY')"),'diagnostics does 
 for(const marker of [
   'CHANNEL 015 → yaAGC / COMANCHE',
   'CHANNEL 032 ACTIVE-LOW → yaAGC / COMANCHE',
-  'yaAGC → CHANNELS 010 / 011 / 013 / 0163 → HARDWARE / DISPLAY',
+  'yaAGC → CHANNELS 010 / 011 / 012 / 013 / 0163 → HARDWARE / DISPLAY',
   'PHONE CLOCK\',\'NON-FLIGHT',
   'Relay Show\',\'NON-FLIGHT',
   'NO SYNTHETIC AGC DISPLAY OUTPUT'
