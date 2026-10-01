@@ -1,0 +1,8 @@
+AGC DSKY v1.1.62
+
+- Fixes the native Android widget crash introduced in v1.1.61 fixed-vector labels.
+- Corrects SVG-style path parsing so comma-separated coordinates such as M75.4402,9.2002 are tokenized correctly.
+- Supports leading signs, decimals, and exponent notation in widget label path numbers.
+- Adds regression coverage for every embedded widget-label outline and the exact reported crash prefix.
+- Android version: 1.1.62 (versionCode 2026093009).
+- Release APKs use the established standalone signing identity for updater continuity.
