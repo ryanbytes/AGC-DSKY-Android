@@ -192,8 +192,9 @@ req(provider,'c.drawPath(COMP_LABEL,LABEL_P);c.drawPath(ACTY_LABEL,LABEL_P)','na
 req(provider,'section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P)','native PROG zone');
 req(provider,'section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native VERB zone');
 req(provider,'section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P)','native NOUN zone');
-req(provider,'c.drawText("VERB",19.763f,49.252f,LABEL_P)','native VERB legend baseline');
-req(provider,'c.drawText("NOUN",86.237f,49.252f,LABEL_P)','native NOUN legend baseline');
+req(provider,'c.drawPath(PROG_LABEL,LABEL_P)','native PROG fixed outline draw');
+req(provider,'c.drawPath(VERB_LABEL,LABEL_P)','native VERB fixed outline draw');
+req(provider,'c.drawPath(NOUN_LABEL,LABEL_P)','native NOUN fixed outline draw');
 req(provider,'digits(c,"00",RIGHT_FIELD_X,PROG_Y)','native PROG datum');
 req(provider,'digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y)','native VERB datum');
 req(provider,'digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y)','native NOUN datum');
