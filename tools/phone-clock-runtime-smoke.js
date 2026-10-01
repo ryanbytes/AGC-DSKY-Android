@@ -15,6 +15,20 @@ const clock=context.AGCDSKY_CLOCK,compat=context.AGCDSKY_COMPAT;assert(clock&&Ob
 assert(snapshot.clockDigits.r1.join('')==='00013','hour clock digits changed');assert(snapshot.clockDigits.r2.join('')==='00007','minute clock digits changed');assert(snapshot.clockDigits.r3.join('')==='00005','second clock digits changed');assert(Object.keys(snapshot.clockRelayWords).length===8,'clock relay rows were not fully initialized');assert(rendered.filter(row=>row[0]==='reg').length===3,'clock sync did not render all three registers');assert(vm.runInContext("DIGIT_RELAY['8']",context)===0o35,'digit 8 relay code changed from 035');
 const busyVersion=compat.describe().find(item=>item.name==='relayBusy').version;vm.runInContext('relayBusy=true',context);assert(clock.queueBusy()===true,'legacy relayBusy assignment did not update clock-owned state');assert(compat.describe().find(item=>item.name==='relayBusy').version===busyVersion+1,'clock state compatibility alias did not preserve version diagnostics');clock.setQueueBusy(false);
 let lampError=null;try{clock.lampTest()}catch(error){lampError=error}assert(lampError&&/AGC\/Comanche/.test(String(lampError.message||lampError)),'PHONE CLOCK must reject V35 instead of synthesizing it');assert(!rendered.some(row=>row[0]==='two'&&row[2]==='88'),'PHONE CLOCK V35 rejection must not manufacture display 88s');
+
+// A delayed relay callback from before stopQueue must not paint or advance a
+// newly started PHONE CLOCK queue after a fast CLOCK -> AGC -> CLOCK cycle.
+let wallDate=new Date('2026-09-14T13:07:05Z');shell.accurateDate=()=>new Date(wallDate);
+state.mode='clock';clock.syncFace();wallDate=new Date('2026-09-14T13:07:06Z');clock.tick();
+assert(clock.queueBusy()&&timers.length>=2,'clock relay transition did not start');
+const oldSettle=timers[timers.length-2],oldRun=timers[timers.length-1];
+state.mode='agc';clock.stopQueue();wallDate=new Date('2026-09-14T13:07:06Z');
+state.mode='clock';clock.syncFace();wallDate=new Date('2026-09-14T13:07:07Z');clock.tick();
+assert(clock.queueBusy(),'new clock transition did not start after return from AGC');
+const renderCountBeforeStale=rendered.length;oldSettle.fn();
+assert(rendered.length===renderCountBeforeStale,'stale pre-stop settle callback repainted the restarted clock');
+oldRun.fn();
+assert(clock.queueBusy(),'stale pre-stop runner changed the new clock queue state');
 const tickVersion=clock.compatibilityVersions().tick;vm.runInContext('tick=function(){compatTickCalls++}',context);clock.tick();assert(context.compatTickCalls===1&&clock.compatibilityVersions().tick===tickVersion+1,'clock service did not dispatch/version late tick replacement');
 for(const token of ['const clockState=window.AGCDSKY_APP_STATE;','const clockShell=window.AGCDSKY_SHELL;','const clockRenderer=window.AGCDSKY_RENDERER;','const clockAudio=window.AGCDSKY_AUDIO;','const compat=window.AGCDSKY_COMPAT;','const DIGIT_RELAY_VALUE=','const CLOCK_GROUPS_VALUE=[','function createImplementationSlot(name,initial,validate=null)','function createStateSlot(name,getter,setter)',"renderRegSlot=createImplementationSlot('renderClockReg'", "runQueueSlot=createImplementationSlot('runRelayQueue'", "tickSlot=createImplementationSlot('tick'", "lampTestSlot=createImplementationSlot('lampTest'", "digitsStateSlot=createStateSlot('clockDigits'", "busyStateSlot=createStateSlot('relayBusy'",'compat.alias(name,slot.get','window.AGCDSKY_CLOCK=Object.freeze({'])assert(source.includes(token),`clock runtime missing ${token}`);
 for(const token of ["compat.mutable('renderClockReg'","compat.mutable('syncClockFace'","compat.mutable('stopClockQueue'","compat.mutable('runRelayQueue'","compat.mutable('tick'","compat.mutable('cancelLampTest'","compat.mutable('lampTest'","compat.accessor('clockDigits'","compat.accessor('clockRelayWords'","compat.accessor('relayQueue'","compat.accessor('relayBusy'","compat.accessor('lampTestActive'","compat.accessor('lampTestTimer'"])assert(!source.includes(token),`compatibility registry still owns clock slot: ${token}`);
