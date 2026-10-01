@@ -22,7 +22,7 @@ The app has two deliberately separate purposes:
 
 Do not blur those modes. Phone-clock behavior may emulate DSKY hardware for presentation; AGC mode must be driven by authentic AGC I/O.
 
-WebView content must remain self-contained and offline: it may load only packaged assets, with device location as the only intended external runtime input to the page. The native shell may use `android.permission.INTERNET` only for UDP SNTP time correction; it must not enable general WebView network access or transmit app/user data.
+WebView content must remain self-contained and offline: it may load only packaged assets, with device location as the only intended external runtime input to the page. The native shell uses `android.permission.INTERNET` for UDP SNTP time correction and HTTPS GitHub release discovery/downloads. It must not enable general WebView network access or transmit camera, location, sensor, simulator, or other app content.
 
 ## Pinned v0.7 runtime
 
