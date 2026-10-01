@@ -3,6 +3,7 @@
 # documented in source-smoke-exclusions.txt.
 
 source-smoke-manifest-smoke.js
+release-publication-policy-smoke.js
 branding-smoke.js
 manifest-policy-smoke.js
 ntp-policy-smoke.js
