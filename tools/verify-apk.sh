@@ -83,6 +83,8 @@ verify_source_asset assets/index.html "$ASSET_SOURCE/index.html"
 reference_count=0
 while IFS= read -r ref; do
   [[ -n "$ref" ]] || continue
+  ref="${ref%%#*}"
+  [[ -n "$ref" ]] || continue
   reference_count=$((reference_count + 1))
   if [[ "$ref" == /* || "$ref" == *..* || "$ref" =~ ^[A-Za-z][A-Za-z0-9+.-]*: ]]; then
     fail "index.html contains non-local frontend reference: $ref"
