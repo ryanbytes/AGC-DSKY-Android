@@ -12,7 +12,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -114,17 +113,20 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       private static final float LEFT_FIELD_X=-.035451f*U,RIGHT_FIELD_X=1.434549f*U;
       private static final float PROG_Y=.315f*U,VERB_NOUN_Y=1.220f*U;
 
-      private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),PANEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),COMP_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG);
+      private static final Paint ON=new Paint(Paint.ANTI_ALIAS_FLAG),PANEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),LABEL_P=new Paint(Paint.ANTI_ALIAS_FLAG),RULE_P=new Paint(Paint.ANTI_ALIAS_FLAG),LEGEND_BG_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_STROKE_P=new Paint(Paint.ANTI_ALIAS_FLAG),HARDWARE_FILL_P=new Paint(Paint.ANTI_ALIAS_FLAG);
+      // Static outlines use the app's League Spartan Medium geometric-sans construction. The SCD specifies Futura Demibold; these paths keep rendering deterministic but are not exact Futura outlines.
+      private static final Path PROG_LABEL=labelPath("M75.4402,9.2002L76.3346,9.2002L76.3346,7.0175L77.1682,7.0175C78.2262,7.0175 79.0598,6.4293 79.0598,5.2670C79.0598,4.1024 78.2262,3.5858 77.1682,3.5858L75.4402,3.5858L75.4402,9.2002ZM76.3346,4.3162L76.9223,4.3162C77.5773,4.3162 78.1090,4.5478 78.1090,5.2864C78.1090,6.0226 77.5773,6.2870 76.9223,6.2870L76.3346,6.2870L76.3346,4.3162ZM80.1328,9.2002L81.0268,9.2002L81.0268,6.8721L81.7491,6.8721L83.0243,9.2002L84.0351,9.2002L82.6516,6.8048C83.1310,6.7642 83.8572,6.2871 83.8572,5.2392C83.8572,4.1875 83.1241,3.5858 82.1961,3.5858L80.1328,3.5858L80.1328,9.2002ZM81.0268,4.3162L81.8848,4.3162C82.4841,4.3162 82.9393,4.5807 82.9393,5.2643C82.9393,5.9479 82.4783,6.2263 81.8790,6.2263L81.0268,6.2263L81.0268,4.3162ZM87.7595,4.3282C88.8703,4.3282 89.6472,5.2299 89.6472,6.3887C89.6472,7.5495 88.8703,8.4539 87.7595,8.4539C86.6528,8.4539 85.8690,7.5495 85.8690,6.3887C85.8690,5.2299 86.6528,4.3282 87.7595,4.3282ZM87.7595,9.3023C89.3985,9.3023 90.5748,8.0305 90.5748,6.3887C90.5748,4.7512 89.3753,3.4837 87.7595,3.4837C86.1575,3.4837 84.9395,4.7512 84.9395,6.3887C84.9395,8.0305 86.1034,9.3023 87.7595,9.3023ZM94.1244,6.8292L95.9696,6.8292C95.9166,7.7456 95.2128,8.4539 94.1901,8.4539C93.0835,8.4539 92.2997,7.5124 92.2997,6.3887C92.2997,5.2670 93.0835,4.3282 94.1901,4.3282C94.8954,4.3282 95.3810,4.6592 95.6892,5.0961L96.5151,4.6785C96.1138,4.0738 95.3985,3.4837 94.1901,3.4837C92.5302,3.4837 91.3702,4.7883 91.3702,6.3887C91.3702,7.9934 92.5302,9.3023 94.1901,9.3023C95.8106,9.3023 96.9668,8.0236 96.9668,6.4444L96.9668,6.1247L94.1244,6.1247L94.1244,6.8292Z");
+      private static final Path VERB_LABEL=labelPath("M15.1026,44.2348L14.0953,44.2348L12.5432,48.7391L10.9958,44.2348L9.9885,44.2348L12.0259,49.8492L13.0606,49.8492L15.1026,44.2348ZM16.0433,49.8492L19.4452,49.8492L19.4452,49.0511L16.9331,49.0511L16.9331,47.4229L19.4012,47.4229L19.4012,46.6460L16.9331,46.6460L16.9331,45.0329L19.4452,45.0329L19.4452,44.2348L16.0433,44.2348L16.0433,49.8492ZM20.7603,49.8492L21.6543,49.8492L21.6543,47.5211L22.3766,47.5211L23.6518,49.8492L24.6625,49.8492L23.2790,47.4538C23.7585,47.4132 24.4847,46.9361 24.4847,45.8882C24.4847,44.8365 23.7516,44.2348 22.8236,44.2348L20.7603,44.2348L20.7603,49.8492ZM21.6543,44.9652L22.5123,44.9652C23.1116,44.9652 23.5667,45.2297 23.5667,45.9133C23.5667,46.5969 23.1058,46.8753 22.5065,46.8753L21.6543,46.8753L21.6543,44.9652ZM25.8253,49.8492L27.7907,49.8492C28.9518,49.8492 29.5365,49.1957 29.5365,48.2646C29.5365,47.3602 28.8645,46.9461 28.3881,46.8943C28.8084,46.8185 29.2794,46.2961 29.2794,45.5959C29.2794,44.5639 28.4306,44.2348 27.4995,44.2348L25.8253,44.2348L25.8253,49.8492ZM26.7169,47.3424L27.5985,47.3424C28.2427,47.3424 28.6019,47.6715 28.6019,48.2059C28.6019,48.7031 28.3726,49.1138 27.6449,49.1138L26.7169,49.1138L26.7169,47.3424ZM26.7169,44.9702L27.4346,44.9702C28.0161,44.9702 28.3908,45.1620 28.3908,45.7517C28.3908,46.2022 28.1089,46.6229 27.5274,46.6229L26.7169,46.6229L26.7169,44.9702Z");
+      private static final Path NOUN_LABEL=labelPath("M78.2936,49.8492L79.5449,49.8492L79.5449,44.2348L78.6529,44.2348L78.6529,49.0094L78.7112,48.9978L75.9965,44.2348L74.7510,44.2348L74.7510,49.8492L75.6454,49.8492L75.6454,45.0804L75.5847,45.0708L78.2936,49.8492ZM83.4402,44.9772C84.5511,44.9772 85.3279,45.8789 85.3279,47.0377C85.3279,48.1985 84.5511,49.1029 83.4402,49.1029C82.3335,49.1029 81.5498,48.1985 81.5498,47.0377C81.5498,45.8789 82.3335,44.9772 83.4402,44.9772ZM83.4402,49.9513C85.0793,49.9513 86.2555,48.6795 86.2555,47.0377C86.2555,45.4002 85.0561,44.1327 83.4402,44.1327C81.8382,44.1327 80.6202,45.4002 80.6202,47.0377C80.6202,48.6795 81.7841,49.9513 83.4402,49.9513ZM90.7273,47.6622C90.7273,48.5821 90.1910,49.1261 89.4447,49.1261C88.6923,49.1261 88.1513,48.5821 88.1513,47.6622L88.1513,44.2348L87.2593,44.2348L87.2593,47.7098C87.2593,49.0987 88.1451,49.9513 89.4447,49.9513C90.7401,49.9513 91.6217,49.0987 91.6217,47.7098L91.6217,44.2348L90.7273,44.2348L90.7273,47.6622ZM96.4047,49.8492L97.6560,49.8492L97.6560,44.2348L96.7640,44.2348L96.7640,49.0094L96.8223,48.9978L94.1076,44.2348L92.8621,44.2348L92.8621,49.8492L93.7565,49.8492L93.7565,45.0804L93.6958,45.0708L96.4047,49.8492Z");
+      private static final Path COMP_LABEL=labelPath("M9.4039,14.9030C9.4039,13.7677 10.2081,12.8818 11.4374,12.8818C12.0812,12.8818 12.5962,13.1088 12.8120,13.2809L13.1982,12.5168C12.9399,12.2914 12.2741,11.9979 11.3894,11.9979C9.7306,11.9979 8.4364,13.2728 8.4364,14.9157C8.4364,16.5544 9.7349,17.8165 11.3894,17.8165C12.2741,17.8165 12.9399,17.5230 13.1982,17.2976L12.8120,16.5335C12.5962,16.7056 12.0812,16.9326 11.4374,16.9326C10.2081,16.9326 9.4039,16.0467 9.4039,14.9030ZM16.8480,12.8424C17.9589,12.8424 18.7357,13.7441 18.7357,14.9030C18.7357,16.0637 17.9589,16.9681 16.8480,16.9681C15.7414,16.9681 14.9576,16.0637 14.9576,14.9030C14.9576,13.7441 15.7414,12.8424 16.8480,12.8424ZM16.8480,17.8165C18.4871,17.8165 19.6633,16.5447 19.6633,14.9030C19.6633,13.2654 18.4639,11.9979 16.8480,11.9979C15.2460,11.9979 14.0280,13.2654 14.0280,14.9030C14.0280,16.5447 15.1919,17.8165 16.8480,17.8165ZM24.8512,12.1000L23.4391,16.3042L23.3780,16.6387L23.3169,16.3042L21.9095,12.1000L20.6899,12.1000L20.6899,17.7144L21.5843,17.7144L21.5843,13.8918L21.5417,13.1734L21.7107,13.9788L22.9365,17.3556L23.8177,17.3556L25.0453,13.9788L25.2166,13.1734L25.1741,13.8918L25.1741,17.7144L26.0661,17.7144L26.0661,12.1000L24.8512,12.1000ZM27.4690,17.7144L28.3633,17.7144L28.3633,15.5317L29.1970,15.5317C30.2549,15.5317 31.0886,14.9436 31.0886,13.7812C31.0886,12.6166 30.2549,12.1000 29.1970,12.1000L27.4690,12.1000L27.4690,17.7144ZM28.3633,12.8304L28.9511,12.8304C29.6061,12.8304 30.1377,13.0620 30.1377,13.8006C30.1377,14.5368 29.6061,14.8013 28.9511,14.8013L28.3633,14.8013L28.3633,12.8304Z");
+      private static final Path ACTY_LABEL=labelPath("M9.6239,24.2868L10.5821,24.2868L11.0503,23.0043L13.3645,23.0043L13.8262,24.2868L14.7801,24.2868L12.6612,18.6724L11.7498,18.6724L9.6239,24.2868ZM12.2010,19.7621L12.2138,19.7621L13.0761,22.2062L11.3411,22.2062L12.2010,19.7621ZM16.3388,21.4754C16.3388,20.3401 17.1430,19.4543 18.3722,19.4543C19.0160,19.4543 19.5311,19.6812 19.7468,19.8533L20.1331,19.0892C19.8748,18.8638 19.2090,18.5703 18.3243,18.5703C16.6655,18.5703 15.3713,19.8452 15.3713,21.4881C15.3713,23.1268 16.6697,24.3889 18.3243,24.3889C19.2090,24.3889 19.8748,24.0954 20.1331,23.8700L19.7468,23.1059C19.5311,23.2780 19.0160,23.5050 18.3722,23.5050C17.1430,23.5050 16.3388,22.6191 16.3388,21.4754ZM22.3360,24.2868L23.2326,24.2868L23.2326,19.4705L24.6931,19.4705L24.6931,18.6724L20.8755,18.6724L20.8755,19.4705L22.3360,19.4705L22.3360,24.2868ZM27.1109,24.2868L28.0076,24.2868L28.0076,22.2665L29.9011,18.6724L28.8227,18.6724L27.5583,21.2325L26.2912,18.6724L25.2089,18.6724L27.1109,22.2665L27.1109,24.2868Z");
       static{
         ON.setStyle(Paint.Style.FILL);ON.setColor(CORE);
         PANEL_P.setStyle(Paint.Style.FILL);PANEL_P.setColor(PANEL);
-        // 1006315G calls for .125-in-high Futura Demibold legends. Android does
-        // not ship Futura, so use the broad system sans rather than the old
-        // condensed face; 7.42 panel units matches the WebView cap-height target.
-        Typeface tf=Typeface.create("sans-serif",Typeface.BOLD);
-        LABEL_P.setTypeface(tf);LABEL_P.setTextAlign(Paint.Align.CENTER);LABEL_P.setTextSize(7.42f);LABEL_P.setColor(INK);LABEL_P.setAlpha(245);
+        // Black display legends use fixed outlines, avoiding device-dependent fonts.
+        LABEL_P.setStyle(Paint.Style.FILL);LABEL_P.setColor(INK);
         RULE_P.setStyle(Paint.Style.FILL);RULE_P.setColor(RULE);RULE_P.setAlpha(224);
-        COMP_P.setTypeface(tf);COMP_P.setTextAlign(Paint.Align.CENTER);COMP_P.setTextSize(7.42f);COMP_P.setColor(INK);COMP_P.setAlpha(235);
+        
         LEGEND_BG_P.setStyle(Paint.Style.FILL);LEGEND_BG_P.setColor(CORE);LEGEND_BG_P.setAlpha(235);
         HARDWARE_STROKE_P.setStyle(Paint.Style.STROKE);HARDWARE_STROKE_P.setStrokeWidth(.48f);HARDWARE_STROKE_P.setColor(HARDWARE);HARDWARE_STROKE_P.setAlpha(184);
         HARDWARE_FILL_P.setStyle(Paint.Style.FILL);HARDWARE_FILL_P.setColor(HARDWARE);HARDWARE_FILL_P.setAlpha(224);
@@ -144,17 +146,34 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.949f,1.294f,1.369f);
         dot(c,100.863f,79.949f,1.294f,1.369f);dot(c,100.863f,114.085f,1.294f,1.369f);dot(c,100.863f,148.220f,1.294f,1.369f);
         dot(c,8.286f,148.220f,1.294f,1.369f);dot(c,8.286f,114.085f,1.294f,1.369f);dot(c,8.286f,79.949f,1.294f,1.369f);
-        section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P);c.drawText("PROG",86.237f,8.600f,LABEL_P);
-        section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawText("VERB",19.763f,49.252f,LABEL_P);
-        section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawText("NOUN",86.237f,49.252f,LABEL_P);
-        // COMP ACTY is not energized in the clock widget. Its black printed legend remains, but dormant EL phosphor is optically absent.
-        c.drawText("COMP",19.763f,17.900f,COMP_P);c.drawText("ACTY",19.763f,25.000f,COMP_P);
+        section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(PROG_LABEL,LABEL_P);
+        section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(VERB_LABEL,LABEL_P);
+        section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(NOUN_LABEL,LABEL_P);
+        // COMP ACTY stays printed; only its dormant EL phosphor is absent from the clock state.
+        c.drawPath(COMP_LABEL,LABEL_P);c.drawPath(ACTY_LABEL,LABEL_P);
         rule(c,.020841f,78.602f,97.911123f,2.695f);rule(c,9.726333f,112.737f,88.205631f,2.695f);rule(c,9.726333f,146.873f,88.205631f,2.695f);
         digits(c,"00",RIGHT_FIELD_X,PROG_Y);digits(c,"16",LEFT_FIELD_X,VERB_NOUN_Y);digits(c,"65",RIGHT_FIELD_X,VERB_NOUN_Y);
         if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),REGISTER_ROW_X,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),REGISTER_ROW_X,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),REGISTER_ROW_X,R3_Y);}
         c.restore();
       }
       private static String five(int v){return String.format(Locale.US,"%05d",v);}
+      private static Path labelPath(String d){
+        Path path=new Path();int i=0;char command=0;
+        while(i<d.length()){
+          char ch=d.charAt(i);
+          if(ch==' '||ch==','||ch=='\n'||ch=='\r'||ch=='\t'){i++;continue;}
+          if((ch>='A'&&ch<='Z')||(ch>='a'&&ch<='z')){command=ch;i++;if(command=='Z'||command=='z'){path.close();command=0;}continue;}
+          switch(command){
+            case 'M':case 'm':{float x=readPathNumber(d,i);i=nextPathNumber(d,i);float y=readPathNumber(d,i);i=nextPathNumber(d,i);path.moveTo(x,y);command=command=='m'?'l':'L';break;}
+            case 'L':case 'l':{float x=readPathNumber(d,i);i=nextPathNumber(d,i);float y=readPathNumber(d,i);i=nextPathNumber(d,i);path.lineTo(x,y);break;}
+            case 'C':case 'c':{float x1=readPathNumber(d,i);i=nextPathNumber(d,i);float y1=readPathNumber(d,i);i=nextPathNumber(d,i);float x2=readPathNumber(d,i);i=nextPathNumber(d,i);float y2=readPathNumber(d,i);i=nextPathNumber(d,i);float x=readPathNumber(d,i);i=nextPathNumber(d,i);float y=readPathNumber(d,i);i=nextPathNumber(d,i);path.cubicTo(x1,y1,x2,y2,x,y);break;}
+            default:throw new IllegalArgumentException("Unsupported DSKY legend path command: "+command);
+          }
+        }
+        return path;
+      }
+      private static float readPathNumber(String d,int i){int end=nextPathNumber(d,i);return Float.parseFloat(d.substring(i,end));}
+      private static int nextPathNumber(String d,int i){while(i<d.length()){char ch=d.charAt(i);if(ch==','||ch==' '||ch=='\n'||ch=='\r'||ch=='\t'){i++;continue;}if((ch>='A'&&ch<='Z')||(ch>='a'&&ch<='z'))return i;int start=i++;while(i<d.length()){ch=d.charAt(i);if((ch>='0'&&ch<='9')||ch=='.'||ch=='e'||ch=='E'||((ch=='-'||ch=='+')&&i>start&&(d.charAt(i-1)=='e'||d.charAt(i-1)=='E')))i++;else break;}return i;}return i;}
       private static void section(Canvas c,float x,float y,float w,float h,Paint p){c.drawPath(box(x,y,w,h),p);}
       private static void rule(Canvas c,float x,float y,float w,float h){c.drawPath(box(x,y,w,h),RULE_P);}
       private static void dot(Canvas c,float cx,float cy,float rx,float ry){Path p=new Path();for(int i=0;i<12;i++){double a=Math.PI*2d*i/12d;float x=cx+(float)Math.cos(a)*rx,y=cy+(float)Math.sin(a)*ry;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,HARDWARE_FILL_P);}
