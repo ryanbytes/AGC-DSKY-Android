@@ -13,6 +13,7 @@
       || typeof transitions.onBeforeClock !== 'function'
       || typeof input.ready !== 'function'
       || typeof input.keyMake !== 'function'
+      || typeof input.keyReset !== 'function'
       || typeof snapshot.scheduleAutosave !== 'function'
       || !AGC_KEY) return;
 
@@ -41,7 +42,7 @@
       while (pendingKeys.length && epoch === promotionEpoch && !transitions.clockRequested()) {
         const next = pendingKeys.shift();
         const code = AGC_KEY[next];
-        if (code !== undefined) input.keyMake(code);
+        if (code !== undefined && input.keyMake(code) > 0) input.keyReset();
       }
       if (epoch === promotionEpoch && !transitions.clockRequested()) {
         snapshot.scheduleAutosave('clock keypad handoff');
