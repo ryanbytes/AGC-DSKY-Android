@@ -1,7 +1,38 @@
 const DEFAULT_ORIGIN = 'https://ryanbytes.github.io';
 const DEVICE_VALUES = new Set(['iphone', 'ipad', 'android', 'mac', 'windows', 'linux', 'other']);
 const EVENT_VALUES = new Set(['launch', 'install']);
+const MAX_EVENT_BYTES = 2048;
 const encoder = new TextEncoder();
+
+class PayloadTooLargeError extends Error {}
+
+async function readLimitedBody(request) {
+  const reader = request.body?.getReader();
+  if (!reader) return '';
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_EVENT_BYTES) {
+        try { await reader.cancel(); } catch (_) {}
+        throw new PayloadTooLargeError('payload too large');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    try { reader.releaseLock(); } catch (_) {}
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+}
 
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
@@ -57,10 +88,10 @@ async function recordEvent(request, env) {
 
   let body;
   try {
-    const raw = await request.text();
-    if (raw.length > 2048) return json({error: 'payload too large'}, 413, cors);
+    const raw = await readLimitedBody(request);
     body = JSON.parse(raw);
-  } catch (_) {
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) return json({error: 'payload too large'}, 413, cors);
     return json({error: 'invalid JSON'}, 400, cors);
   }
 
