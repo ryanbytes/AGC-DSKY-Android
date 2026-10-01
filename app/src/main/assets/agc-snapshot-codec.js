@@ -46,23 +46,34 @@
       throw new Error('AGC snapshot base64 size/format mismatch');
     }
 
-    this.stop();
+    // Decode and validate off to the side. A corrupt saved snapshot must not
+    // partially or completely overwrite the live AGC before its fingerprint
+    // has been checked.
+    const restored = new Uint8Array(bytes.length);
     let offset = 0;
     for (let i = 0; i < encoded.length; i += DECODE_CHARS) {
       const binary = atob(encoded.slice(i, Math.min(encoded.length, i + DECODE_CHARS)));
-      if (offset + binary.length > bytes.length) {
+      if (offset + binary.length > restored.length) {
         throw new Error('AGC snapshot decoded length overflow');
       }
       for (let j = 0; j < binary.length; j++) {
-        bytes[offset++] = binary.charCodeAt(j) & 0xff;
+        restored[offset++] = binary.charCodeAt(j) & 0xff;
       }
     }
-    if (offset !== bytes.length) {
+    if (offset !== restored.length) {
       throw new Error('AGC snapshot decoded length mismatch');
     }
-    if (snapshot.fingerprint && this.snapshotFingerprint() !== snapshot.fingerprint) {
+    let fingerprint = 0x811c9dc5;
+    for (let i = 0; i < restored.length; i++) {
+      fingerprint ^= restored[i];
+      fingerprint = Math.imul(fingerprint, 0x01000193) >>> 0;
+    }
+    if (snapshot.fingerprint && fingerprint.toString(16).padStart(8, '0') !== snapshot.fingerprint) {
       throw new Error('AGC snapshot fingerprint mismatch');
     }
+
+    this.stop();
+    bytes.set(restored);
     this.channels = Object.create(null);
     this.totalSteps = 0;
     this.startTime = performance.now();
