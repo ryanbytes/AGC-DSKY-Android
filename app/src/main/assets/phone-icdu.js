@@ -118,7 +118,10 @@
     try{
       const c=JSON.parse(localStorage.getItem(SKY_CAL_KEY)||'null');
       if(c&&c.schema===1&&Array.isArray(c.boresight)&&c.boresight.length===3&&c.boresight.every(Number.isFinite)){
-        cameraBoresightDevice=unit3(c.boresight.map(Number));skyCalibration=c;
+        const boresight=c.boresight.map(Number),magnitude=Math.hypot(...boresight);
+        if(Number.isFinite(magnitude)&&magnitude>1e-9){
+          cameraBoresightDevice=boresight.map(value=>value/magnitude);skyCalibration={...c,boresight:cameraBoresightDevice.slice()};
+        }
       }
     }catch(_){ }
   }
