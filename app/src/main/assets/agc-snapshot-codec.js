@@ -74,6 +74,9 @@
 
     this.stop();
     bytes.set(restored);
+    if (typeof this.releaseExternalDskyInputs === 'function') {
+      this.releaseExternalDskyInputs();
+    }
     this.channels = Object.create(null);
     this.totalSteps = 0;
     this.startTime = performance.now();
