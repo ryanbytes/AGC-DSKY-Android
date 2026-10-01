@@ -1,3 +1,11 @@
+## 2026-09-30 line-by-line audit follow-up
+
+The first audit pass reproduced two parser-validation gaps: a trailing M/L/C command with no coordinates was silently accepted, and a large exponent could become an infinite float. The production parser now rejects missing command coordinates and non-finite values; its JVM regression includes these cases and unsupported relative commands.
+
+The same pass found a material privacy-documentation mismatch: the manifest and `AppUpdater` use HTTPS GitHub release metadata, checksum, and APK endpoints, while several policy files claimed INTERNET was SNTP-only or absent. Updated owner guidance, README, canonical/in-app privacy policy and legal text, Play Store copy, privacy links, and build notes to disclose GitHub updater traffic and the IP address/app-version User-Agent visible to those services. No camera, location, sensor, or simulator payload is sent by the updater.
+
+Verification for this follow-up: actual production-parser JVM regression PASS; widget-label, manifest-policy, NTP-policy, JavaScript syntax, and `git diff --check` smokes PASS. The full canonical source suite passed with 90 Node tests plus `ntp-time-smoke.sh`, including real pinned WASM and both ropes. Full Android APK/device verification remains blocked because this environment lacks Android SDK platform 37 and Build Tools 36.0.0.
+
 ## 2026-09-30 audit remediation
 
 Strengthened the EL widget label regression gate to compile and execute the same pure-Java path parser used by `ElWidgetProvider`, including the v1.1.61 comma-separated crash fixture, malformed inputs, and every embedded legend outline. The parser regression and all 90 canonical Node smokes plus the NTP shell smoke passed under OpenJDK 17; the runner now pins `TZ=UTC` so fixed-time fixtures are deterministic across developer machines. Corrected repository policy text so native UDP SNTP's narrow INTERNET permission is distinguished from offline WebView behavior. Disabled the obsolete hosted Android build workflow to match the local-only APK build policy. Clarified that the fixed Version 1.0 commercial source snapshot is historical and separate from current v1.1.x Android releases. Full Gradle/APK/device verification was not run because this environment lacks Android SDK platform 37 and Build Tools 36.0.0.
