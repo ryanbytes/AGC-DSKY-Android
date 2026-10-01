@@ -15,6 +15,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fetch verified signed release bundle
+        env:
+          PAYLOAD_URL: "https://sdmntprcentralus.oaiusercontent.com/files/00000000-64d0-81f5-a96f-991aeb060ab0/raw?se=2026-10-01T01%3A44%3A16Z&sp=r&sv=2026-02-06&sr=b&scid=e3e6a633-a012-5f0f-a266-9cb85c22b17f&skoid=38550de5-1fab-49d1-9ebb-83af5557cc43&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-01T00%3A59%3A51Z&ske=2026-10-02T00%3A59%3A51Z&sks=b&skv=2026-02-06&sig=0/zxxLxaIrM87YCXQI7NseZKuUlVtqB44prwPdo8500%3D"
+          PAYLOAD_ZIP_SHA256: "f776d2e4f4e76fd376e66194952e18b4a733be1fcbe7ab61902081309ea1d8ed"
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 2 --retry-delay 1 "${PAYLOAD_URL}" -o /tmp/agc-dsky-release.zip
+          echo "${PAYLOAD_ZIP_SHA256}  /tmp/agc-dsky-release.zip" | sha256sum -c -
+          rm -rf /tmp/agc-dsky-release
+          mkdir -p /tmp/agc-dsky-release release-payload
+          unzip -q /tmp/agc-dsky-release.zip -d /tmp/agc-dsky-release
+          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
+          cp -a "/tmp/agc-dsky-release/release-payload/v${VERSION_NAME}" release-payload/
+
       - name: Verify signed release payload
         shell: bash
         run: |
