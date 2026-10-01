@@ -5,6 +5,7 @@ const path = require('path');
 const source = fs.readFileSync(path.resolve(__dirname, '../app/src/main/java/org/apollo/agcdsky/ElWidgetProvider.java'), 'utf8');
 function need(condition, message) { if (!condition) throw new Error(message); }
 const labels = ['PROG', 'VERB', 'NOUN', 'COMP', 'ACTY'];
+const labelPaths = {};
 const bounds = {
   PROG: [66.441, 0.554, 105.966, 12.232],
   VERB: [0, 41.203, 39.525, 52.881],
@@ -15,6 +16,7 @@ const bounds = {
 for (const label of labels) {
   const match = source.match(new RegExp(`private static final Path ${label}_LABEL=labelPath\\("([^"]+)"\\);`));
   need(match, `${label}: fixed vector outline missing`);
+  labelPaths[label] = match[1];
   need(match[1].length > 300, `${label}: vector outline is incomplete`);
   need(source.includes(`c.drawPath(${label}_LABEL,LABEL_P)`), `${label}: renderer does not draw fixed outline`);
   const tokens = match[1].match(/[A-Z]|[-+]?(?:\d*\.\d+|\d+\.?\d*)/g);
@@ -45,8 +47,7 @@ function parseNumbersLikeFixedParser(d) {
   return out;
 }
 for (const label of labels) {
-  const match = source.match(new RegExp(`private static final Path ${label}_LABEL=labelPath\\\\("([^"]+)"\\\\);`));
-  const parsed = parseNumbersLikeFixedParser(match[1]);
+  const parsed = parseNumbersLikeFixedParser(labelPaths[label]);
   need(parsed.every(Number.isFinite), `${label}: parser regression produced a non-finite coordinate`);
 }
 const commaRegression = parseNumbersLikeFixedParser('M75.4402,9.2002L76.3346,9.2002');
