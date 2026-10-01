@@ -95,12 +95,14 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
 
     private final class SkyBridge {
         @JavascriptInterface public void setLocation(double latitudeDeg,double longitudeDeg,double altitudeM) {
-            if(!Double.isFinite(latitudeDeg)||!Double.isFinite(longitudeDeg))return;
+            if(!Double.isFinite(latitudeDeg)||!Double.isFinite(longitudeDeg)
+                    ||latitudeDeg < -90.0||latitudeDeg > 90.0
+                    ||longitudeDeg < -180.0||longitudeDeg > 180.0)return;
             skyLatitudeDeg=latitudeDeg;skyLongitudeDeg=longitudeDeg;skyAltitudeM=Double.isFinite(altitudeM)?altitudeM:0.0;
             try {
                 GeomagneticField field=new GeomagneticField((float)skyLatitudeDeg,(float)skyLongitudeDeg,(float)skyAltitudeM,System.currentTimeMillis());
                 magneticDeclinationDeg=field.getDeclination();skyLocationKnown=true;
-            } catch(RuntimeException ignored){magneticDeclinationDeg=0f;skyLocationKnown=true;}
+            } catch(RuntimeException ignored){magneticDeclinationDeg=0f;skyLocationKnown=false;}
         }
     }
 
