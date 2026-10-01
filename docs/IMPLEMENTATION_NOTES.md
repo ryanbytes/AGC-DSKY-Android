@@ -60,7 +60,7 @@ MainActivity and DreamService load:
 
 `https://appassets.androidplatform.net/assets/...`
 
-`NetClient` serves matching paths directly from Android `AssetManager`. It rejects traversal/separator tricks and uses URI path segments rather than substring arithmetic. WebView network loads remain blocked. The manifest's narrowly scoped `INTERNET` permission is used only by native UDP SNTP, never by WebView navigation.
+`NetClient` serves matching paths directly from Android `AssetManager`. It rejects traversal/separator tricks and uses URI path segments rather than substring arithmetic. WebView network loads remain blocked. The manifest's `INTERNET` permission is used by native UDP SNTP and HTTPS GitHub updater requests, never by WebView navigation.
 
 ### Minimal WASI wrapper
 
