@@ -156,14 +156,15 @@ public final class AgcDreamService extends DreamService {
 
     private final class DreamBridge {
         @JavascriptInterface public void setBrightness(final double value) {
+            if (!Double.isFinite(value)) return;
             if (webView != null) webViewHandler.post(() -> {
                 if (webView != null) setWindowBrightness((float) value);
             });
         }
         @JavascriptInterface public void finishDream() {
-            if (webView != null) webViewHandler.post(() -> {
+            webViewHandler.post(() -> {
                 if (webView != null) AgcDreamService.this.finish();
-            }); else finish();
+            });
         }
     }
 
