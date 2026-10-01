@@ -23,10 +23,10 @@ if (!/getUserMedia\s*\(\s*\{\s*audio\s*:\s*false/.test(assets)) {
 if (/INFOPLIST_KEY_NSMicrophoneUsageDescription/.test(project)) {
   throw new Error('Apple target unexpectedly declares microphone use');
 }
-if (!/struct ContentView: View\\s*\\{\\s*@StateObject private var model = AGCWebViewModel\\(\\)/.test(app)) {
+if (!/struct ContentView: View\s*\{\s*@StateObject private var model = AGCWebViewModel\(\)/.test(app)) {
   throw new Error('Each Apple window must own an independent WebView model');
 }
-if (/struct AGCDSKYApp: App\\s*\\{\\s*@StateObject private var webModel/.test(app)) {
+if (/struct AGCDSKYApp: App\s*\{\s*@StateObject private var webModel/.test(app)) {
   throw new Error('Apple WebView model must not be shared between WindowGroup windows');
 }
 if (!source.includes('Self.visibleSceneIDs') || !source.includes('!Self.visibleSceneIDs.isEmpty')) {
