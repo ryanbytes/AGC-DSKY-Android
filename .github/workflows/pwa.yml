@@ -12,6 +12,7 @@ on:
       - 'tools/public-facade-boundary-smoke.js'
       - 'tools/clock-mode-behavior-smoke.js'
       - 'tools/relay-show-smoke.js'
+      - 'tools/optics-lifecycle-smoke.js'
       - 'tools/flight-hardware-ui-smoke.js'
       - 'tools/relay-stretch-stability-smoke.js'
       - 'tools/dsky-render-stability-smoke.js'
@@ -32,6 +33,7 @@ on:
       - 'tools/public-facade-boundary-smoke.js'
       - 'tools/clock-mode-behavior-smoke.js'
       - 'tools/relay-show-smoke.js'
+      - 'tools/optics-lifecycle-smoke.js'
       - 'tools/flight-hardware-ui-smoke.js'
       - 'tools/relay-stretch-stability-smoke.js'
       - 'tools/dsky-render-stability-smoke.js'
@@ -89,6 +91,9 @@ jobs:
 
       - name: Relay show behavior test
         run: node tools/relay-show-smoke.js
+
+      - name: Sextant optics lifecycle test
+        run: node tools/optics-lifecycle-smoke.js
 
       - name: Flight hardware UI test
         run: node tools/flight-hardware-ui-smoke.js
