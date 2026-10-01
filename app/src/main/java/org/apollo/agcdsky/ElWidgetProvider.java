@@ -172,8 +172,17 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         }
         return path;
       }
-      private static float readPathNumber(String d,int i){int end=nextPathNumber(d,i);return Float.parseFloat(d.substring(i,end));}
-      private static int nextPathNumber(String d,int i){while(i<d.length()){char ch=d.charAt(i);if(ch==','||ch==' '||ch=='\n'||ch=='\r'||ch=='\t'){i++;continue;}if((ch>='A'&&ch<='Z')||(ch>='a'&&ch<='z'))return i;int start=i++;while(i<d.length()){ch=d.charAt(i);if((ch>='0'&&ch<='9')||ch=='.'||ch=='e'||ch=='E'||((ch=='-'||ch=='+')&&i>start&&(d.charAt(i-1)=='e'||d.charAt(i-1)=='E')))i++;else break;}return i;}return i;}
+      private static int skipPathSeparators(String d,int i){while(i<d.length()){char ch=d.charAt(i);if(ch==','||ch==' '||ch=='\n'||ch=='\r'||ch=='\t')i++;else break;}return i;}
+      private static float readPathNumber(String d,int i){int start=skipPathSeparators(d,i),end=pathNumberEnd(d,start);if(start>=end)throw new IllegalArgumentException("Missing DSKY legend path number at "+i);return Float.parseFloat(d.substring(start,end));}
+      private static int nextPathNumber(String d,int i){int start=skipPathSeparators(d,i),end=pathNumberEnd(d,start);return skipPathSeparators(d,end);}
+      private static int pathNumberEnd(String d,int start){
+        int i=start,n=d.length();if(i<n&&(d.charAt(i)=='+'||d.charAt(i)=='-'))i++;
+        boolean digit=false;while(i<n&&d.charAt(i)>='0'&&d.charAt(i)<='9'){digit=true;i++;}
+        if(i<n&&d.charAt(i)=='.'){i++;while(i<n&&d.charAt(i)>='0'&&d.charAt(i)<='9'){digit=true;i++;}}
+        if(!digit)throw new IllegalArgumentException("Invalid DSKY legend path number at "+start);
+        if(i<n&&(d.charAt(i)=='e'||d.charAt(i)=='E')){int exp=i++;if(i<n&&(d.charAt(i)=='+'||d.charAt(i)=='-'))i++;int expDigits=i;while(i<n&&d.charAt(i)>='0'&&d.charAt(i)<='9')i++;if(i==expDigits)throw new IllegalArgumentException("Invalid DSKY legend exponent at "+exp);}
+        return i;
+      }
       private static void section(Canvas c,float x,float y,float w,float h,Paint p){c.drawPath(box(x,y,w,h),p);}
       private static void rule(Canvas c,float x,float y,float w,float h){c.drawPath(box(x,y,w,h),RULE_P);}
       private static void dot(Canvas c,float cx,float cy,float rx,float ry){Path p=new Path();for(int i=0;i<12;i++){double a=Math.PI*2d*i/12d;float x=cx+(float)Math.cos(a)*rx,y=cy+(float)Math.sin(a)*ry;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.close();c.drawPath(p,HARDWARE_FILL_P);}
