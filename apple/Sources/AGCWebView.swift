@@ -329,7 +329,7 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
     ) {
         if origin.protocol.lowercased() == AGCAssetSchemeHandler.scheme,
            origin.host.lowercased() == AGCAssetSchemeHandler.host,
-           type == .camera || type == .cameraAndMicrophone {
+           type == .camera {
             decisionHandler(.grant)
         } else {
             decisionHandler(.deny)
