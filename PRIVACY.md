@@ -1,6 +1,6 @@
 # Privacy Policy — AGC DSKY Android
 
-**Effective date: September 9, 2026**
+**Effective date: September 30, 2026**
 
 AGC DSKY Android is an independent historical Apollo Guidance Computer / DSKY simulator. This policy explains the user and device data the app accesses and how that data is handled.
 
@@ -15,15 +15,15 @@ AGC DSKY Android may access the following data only when required for an app fea
 
 ## Collection, transmission, and sharing
 
-AGC DSKY Android does **not** declare the Android `INTERNET` permission. The app does not intentionally transmit camera imagery, location, sensor readings, simulator state, or other user data to the developer or to third parties.
+AGC DSKY Android uses Android `INTERNET` for native UDP SNTP queries to `time.cloudflare.com` and HTTPS release checks and APK downloads from GitHub. Those network requests expose the device's IP address and an app-version User-Agent to the relevant network services. The app does not intentionally transmit camera imagery, location, sensor readings, simulator state, or other app content to the developer or to third parties.
 
-The app contains no advertising SDK, analytics SDK, user account system, cloud synchronization service, or developer-operated backend. The developer does not sell or share personal data obtained through the app.
+The app contains no advertising SDK, analytics SDK, user account system, cloud synchronization service, or developer-operated user-data backend. The developer does not sell or share personal data obtained through the app.
 
 For purposes of Google Play's Data safety form, information that is accessed and processed only on the device and is not transmitted off the device is not treated as collected by the developer.
 
 ## Data security
 
-Sensitive inputs are processed locally within the Android application sandbox. Because the app has no Android Internet permission, it does not provide a direct network path for transmitting those inputs.
+Sensitive inputs are processed locally within the Android application sandbox. The WebView remains restricted to packaged app assets. Native SNTP sends time-query packets and the updater sends HTTPS release requests and downloads APK files; neither is designed to upload camera, location, sensor, or simulator data.
 
 ## Retention and deletion
 
