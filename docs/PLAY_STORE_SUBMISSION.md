@@ -40,7 +40,7 @@ Required graphic assets for this release package:
 
 Play Console privacy-policy URL:
 
-https://github.com/ryanbytes/AGC-DSKY-Android/blob/release/1.0-commercial-1/PRIVACY.md
+https://github.com/ryanbytes/AGC-DSKY-Android/blob/main/PRIVACY.md
 
 The same local-processing policy is packaged in the app under **LEGAL / SOURCE**; native SNTP is limited to `time.cloudflare.com` for phone-clock correction.
 
@@ -55,7 +55,7 @@ Based on version 1.0 as packaged:
 - User accounts: **None**.
 - Cloud/backend service: **None**.
 
-The app accesses camera, location, and motion/orientation sensors for on-device functionality. These inputs are processed locally and are not intentionally transmitted off the device. Android INTERNET is used only by native UDP SNTP to calculate a phone-clock offset from `time.cloudflare.com`.
+The app accesses camera, location, and motion/orientation sensors for on-device functionality. These inputs are processed locally and are not intentionally transmitted off the device. Android INTERNET supports native UDP SNTP time queries to `time.cloudflare.com` and HTTPS GitHub release checks/APK downloads. Network services receive the device IP address and app-version User-Agent; the app does not intentionally upload camera, location, sensor, or simulator data.
 
 When Play Console asks about individual data types, do not mark locally processed data as collected unless the final Play build is changed to transmit it off-device.
 
