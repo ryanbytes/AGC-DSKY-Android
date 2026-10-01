@@ -12,6 +12,7 @@ public final class NtpTimeSmoke {
         testSuccess();
         testMalformedResponse();
         testNetworkFailureThenRecovery();
+        testEraRollover();
         if (args.length > 0 && "--live".equals(args[0])) testLiveCloudflare();
         System.out.println("ntp time smoke: PASS");
         System.out.println("  local SNTP success, malformed packet rejection, timeout, and recovery verified");
@@ -50,6 +51,15 @@ public final class NtpTimeSmoke {
         testSuccess();
     }
 
+    private static void testEraRollover() throws Exception {
+        long rolloverUnixSeconds = (1L << 32) - NTP_EPOCH;
+        long expected = (rolloverUnixSeconds + 16L) * 1_000L;
+        byte[] timestamp = new byte[8];
+        writeUnsignedInt(timestamp, 0, 16L);
+        long decoded = SntpClient.readTimestamp(timestamp, 0, expected);
+        check(decoded == expected, "NTP era-1 timestamp decoded as " + decoded + " instead of " + expected);
+    }
+
     private static void testLiveCloudflare() throws Exception {
         SntpClient.Sample sample = SntpClient.query("time.cloudflare.com", 3_000);
         check(sample.roundTripMs >= 0, "live Cloudflare response has invalid RTT");
@@ -70,6 +80,9 @@ public final class NtpTimeSmoke {
     private static void writeTimestamp(byte[] buffer, int offset, long timeMs) {
         long seconds = timeMs / 1_000L + NTP_EPOCH, fraction = ((timeMs % 1_000L) << 32) / 1_000L;
         for (int i = 3; i >= 0; i--) { buffer[offset + i] = (byte) seconds; seconds >>>= 8; buffer[offset + 4 + i] = (byte) fraction; fraction >>>= 8; }
+    }
+    private static void writeUnsignedInt(byte[] buffer, int offset, long value) {
+        for (int i = 3; i >= 0; i--) { buffer[offset + i] = (byte) value; value >>>= 8; }
     }
     private static void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
 }
