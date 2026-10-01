@@ -6,6 +6,7 @@ on:
       - 'release-payload/**'
 
 permissions:
+  actions: read
   contents: write
 
 jobs:
@@ -15,18 +16,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify signed release payload
+      - name: Reconstruct standalone-signed APKs from tested unsigned artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(tr -d '\r\n' < VERSION)"
+          test "$VERSION_NAME" = "1.1.61"
+          PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
+          UNSIGNED="$RUNNER_TEMP/unsigned"
+          mkdir -p "$UNSIGNED"
+          gh run download 36795785683 -n AGC-DSKY-Android-unsigned-release -D "$UNSIGNED"
+
+          cat "$PAYLOAD_DIR"/chunks/regular.*.b64 | base64 -d | gzip -dc > "$RUNNER_TEMP/regular.tail"
+          cat "$PAYLOAD_DIR"/chunks/fire.*.b64 | base64 -d | gzip -dc > "$RUNNER_TEMP/fire.tail"
+
+          head -c 982229 "$UNSIGNED/regular/release/app-regular-release-unsigned.apk" > "$PAYLOAD_DIR/app-regular-release.apk"
+          cat "$RUNNER_TEMP/regular.tail" >> "$PAYLOAD_DIR/app-regular-release.apk"
+          head -c 984819 "$UNSIGNED/fire/release/app-fire-release-unsigned.apk" > "$PAYLOAD_DIR/app-fire-release.apk"
+          cat "$RUNNER_TEMP/fire.tail" >> "$PAYLOAD_DIR/app-fire-release.apk"
+
+      - name: Verify exact standalone-signed payload
         shell: bash
         run: |
           set -euo pipefail
           VERSION_NAME="$(tr -d '\r\n' < VERSION)"
           PAYLOAD_DIR="release-payload/v${VERSION_NAME}"
-          test -f "${PAYLOAD_DIR}/app-regular-release.apk"
-          test -f "${PAYLOAD_DIR}/app-fire-release.apk"
-          test -f "${PAYLOAD_DIR}/app-regular-release.apk.sha256"
-          test -f "${PAYLOAD_DIR}/app-fire-release.apk.sha256"
           (
-            cd "${PAYLOAD_DIR}"
+            cd "$PAYLOAD_DIR"
             sha256sum -c app-regular-release.apk.sha256
             sha256sum -c app-fire-release.apk.sha256
           )
@@ -51,9 +69,5 @@ jobs:
             gh release upload "${TAG}" "${ASSETS[@]}" --clobber
             gh release edit "${TAG}" --title "AGC DSKY ${TAG}" --target main --latest
           else
-            if test -f "${NOTES}"; then
-              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
-            else
-              gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --generate-notes --latest
-            fi
+            gh release create "${TAG}" "${ASSETS[@]}" --target main --title "AGC DSKY ${TAG}" --notes-file "${NOTES}" --latest
           fi
