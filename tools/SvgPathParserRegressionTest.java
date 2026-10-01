@@ -31,13 +31,12 @@ public final class SvgPathParserRegressionTest {
         expect(syntax.events.equals(List.of("M -1.25 2.5", "L 0.5 -0.75", "C 10.0 0.2 3.0 4.0 5.0 6.0", "Z")),
                 "signs, compact separators, decimals, exponents, curves, and close must parse");
 
-        for (String malformed : List.of(
-                "M", "M1,", "M1,2L", "M1,2L3", "M1,2C3,4,5,6,7",
-                "M1,2L3,4e", "Q", "M1,2Q3,4", "m1,2")) {
+        for (String malformed : List.of("M1,", "M1,2L3", "M1,2L", "M1,2C",
+                "M1,2L3,4ZL", "M1,2C3,4,5,6,7", "M1,2L3,4e", "M0,0L1e999,2", "m1,2")) {
             boolean rejected = false;
             try { SvgPathParser.parse(malformed, new RecordingSink()); }
             catch (IllegalArgumentException expected) { rejected = true; }
-            expect(rejected, "malformed or unsupported path must fail: " + malformed);
+            expect(rejected, "malformed path must fail: " + malformed);
         }
         for (String labelPath : args) {
             RecordingSink label = new RecordingSink();
