@@ -62,7 +62,7 @@
     update();
   }
   const SELF_TEST_ASSETS=Object.freeze([
-    Object.freeze({name:'yaAGC.wasm',size:132617,gitBlobSha1:'713685680492098d05437b99c26403f683d56009'}),
+    Object.freeze({name:'yaAGC.wasm',size:27270,gitBlobSha1:'04a24dd1df4a81738e138b3e9f048d2b10498439'}),
     Object.freeze({name:'Comanche055.bin',size:73728,gitBlobSha1:'9e4ec167dc99ac12b233df07b6b91fef585e5015'})
   ]);
   const SELF_TEST_KEYS=Object.freeze({'1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37});

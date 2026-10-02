@@ -1,6 +1,6 @@
 # AGC DSKY for iPhone, iPad, and Mac
 
-This Apple target wraps the same HTML/CSS/JavaScript DSKY, pinned `yaAGC.wasm`, and Apollo 11 CM `Comanche055.bin` used by the Android app. The AGC implementation is not rewritten in Swift.
+This Apple target wraps the same HTML/CSS/JavaScript DSKY, CM-configured `yaAGC.wasm`, and Apollo 11 CM `Comanche055.bin` used by the Android app. The AGC implementation is not rewritten in Swift. Core source and rebuild instructions are in `vendor/yaAGC-cm/README.md`.
 
 ## Requirements
 

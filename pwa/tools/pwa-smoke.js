@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const vm = require('vm');
 
 const site = path.resolve(process.argv[2] || path.join(__dirname, '..', 'dist'));
@@ -59,7 +60,9 @@ checkPng('icons/icon-192.png', 192);
 checkPng('icons/icon-512.png', 512);
 
 const wasm = read('yaAGC.wasm');
-if (wasm.length !== 132617) fail('yaAGC.wasm size mismatch: ' + wasm.length);
+if (wasm.length !== 27270) fail('yaAGC.wasm size mismatch: ' + wasm.length);
+const wasmBlob = crypto.createHash('sha1').update(Buffer.from('blob ' + wasm.length + '\0')).update(wasm).digest('hex');
+if (wasmBlob !== '04a24dd1df4a81738e138b3e9f048d2b10498439') fail('yaAGC.wasm Git blob mismatch: ' + wasmBlob);
 if (wasm.toString('hex', 0, 4) !== '0061736d') fail('yaAGC.wasm magic mismatch');
 const rope = read('Comanche055.bin');
 if (rope.length !== 73728) fail('Comanche055.bin size mismatch: ' + rope.length);

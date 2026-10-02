@@ -47,8 +47,15 @@ for(const marker of [
   'UpdateApkProvider.uriFor(activity, apk)'
 ])assert(java.includes(marker)||apkProvider.includes(marker),`missing updater safety marker: ${marker}`);
 const fetchIndex=java.indexOf('Release release = fetchLatestReleaseResilient();');
-const successIndex=java.indexOf('putLong(PREF_LAST_CHECK, System.currentTimeMillis())');
-assert(fetchIndex>=0&&successIndex>fetchIndex,'successful-check timestamp must be written only after the release request succeeds');
+const noUpdateIndex=java.indexOf('if (release == null || compareVersion(release.version, BuildConfig.VERSION_NAME) <= 0)');
+const noUpdateSuccessIndex=java.indexOf('putLong(PREF_LAST_CHECK, System.currentTimeMillis())',noUpdateIndex);
+const pendingIndex=java.indexOf('putString(PREF_PENDING, candidate.getAbsolutePath())');
+const updateSuccessIndex=java.indexOf('putLong(PREF_LAST_CHECK, System.currentTimeMillis())',pendingIndex);
+assert(fetchIndex>=0&&noUpdateIndex>fetchIndex&&noUpdateSuccessIndex>noUpdateIndex&&pendingIndex>noUpdateIndex&&updateSuccessIndex>pendingIndex,
+  'last-check timestamp must be written only for a successful no-update result or after the verified APK is saved');
+assert(java.indexOf('remove(PREF_LAST_ATTEMPT)',noUpdateIndex)<pendingIndex&&
+       java.indexOf('remove(PREF_LAST_ATTEMPT)',pendingIndex)>pendingIndex,
+  'failed update acquisition must retain its retry throttle until a successful result');
 assert(!java.includes('putLong(PREF_LAST_CHECK, now).apply()'),'updater must not consume the 12-hour check window before network success');
 assert(java.includes('if (isTransientNetworkFailure(error)) {')&&java.includes('scheduleRetry(context);')&&java.includes('notifyStatus(listener, "NETWORK ERROR")'),'transient updater network failures must schedule retry and report manual-check status');
 for(const marker of ['AppUpdater.checkNow(context)','AlarmManager.ELAPSED_REALTIME','setInexactRepeating','CHECK_INTERVAL_MS'])assert(provider.includes(marker),`startup provider missing periodic updater marker: ${marker}`);
@@ -119,5 +126,11 @@ assert(java.includes('Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.sig
        java.includes('signatures = info.signatures;'),
   'signer extraction must fall back to PackageInfo.signatures when archive SigningInfo is null');
 assert(!java.includes('http://'),'updater must not use cleartext endpoints');
+for(const method of ['fetchLatestRelease','downloadText']){
+  const start=java.indexOf(`private static ${method==='fetchLatestRelease'?'Release':'String'} ${method}(`);
+  const end=java.indexOf('\n    private static ',start+1);
+  assert(start>=0&&end>start&&java.slice(start,end).includes('finally')&&java.slice(start,end).includes('connection.disconnect();'),
+    `${method} must disconnect its HTTP connection on every response/error path`);
+}
 console.log('self update smoke: PASS');
 console.log('  forced startup discovery + periodic checks, manual CHECK FOR UPDATE status, API fallback, foreground direct APK installer handoff, phone/Fire selection, release integrity, signer/version checks, and Android 9 compatibility verified');

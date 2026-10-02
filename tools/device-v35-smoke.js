@@ -297,18 +297,41 @@ async function enterComanche(cdp) {
 }
 
 async function pointerKey(cdp, key, pointerId) {
-  const result = await cdp.evaluate(`(() => {
+  const down = await cdp.evaluate(`(() => {
     const b=document.querySelector('[data-key=${JSON.stringify(key)}]');
-    if(!b||typeof PointerEvent!=='function')return false;
+    if(!b||typeof PointerEvent!=='function')return null;
     b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:${pointerId},pointerType:'touch',isPrimary:true}));
-    document.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:${pointerId},pointerType:'touch',isPrimary:true}));
-    return true;
+    const c=AGCDSKY.getCore();
+    return {pressed:b.classList.contains('pressed'),keyboard:AGCDSKY.keyboardElectrical.state(),channel15:c.inputChannelBits(0o15,0o37)};
   })()`);
-  assert(result === true, `could not dispatch DSKY key ${key} through pointer handler`);
+  assert(down && down.pressed, `could not depress DSKY key ${key} through pointer handler`);
+  // Let the real AGC scheduler sample the electrical make before KEYRST.
   await delay(90);
+  const up = await cdp.evaluate(`(() => {
+    const b=document.querySelector('[data-key=${JSON.stringify(key)}]');
+    if(!b)return null;
+    document.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:${pointerId},pointerType:'touch',isPrimary:true}));
+    return {pressed:b.classList.contains('pressed'),keyboard:AGCDSKY.keyboardElectrical.state(),channel15:AGCDSKY.getCore().inputChannelBits(0o15,0o37)};
+  })()`);
+  assert(up && !up.pressed, `DSKY key ${key} did not release through pointer handler`);
+  await delay(90);
+  return {down,up};
 }
+const keySequenceTrace = [];
 async function keySequence(cdp, keys, basePointerId) {
-  for (let i = 0; i < keys.length; i++) await pointerKey(cdp, keys[i], basePointerId + i);
+  for (let i = 0; i < keys.length; i++) {
+    const input = await pointerKey(cdp, keys[i], basePointerId + i);
+    const state = await cdp.evaluate(dskyExpression());
+    keySequenceTrace.push({
+      key:keys[i],
+      keyCode:input.down.keyboard.electricalKeyCode,
+      channel15DuringMake:input.down.channel15,
+      relays:state.relays,
+      prog:state.display.prog,
+      verb:state.display.verb,
+      noun:state.display.noun
+    });
+  }
 }
 
 const PROGRAM00_LOW11 = 0o1265;
@@ -346,7 +369,7 @@ async function waitForP00(cdp) {
     if (last && last.modeText.includes('AGC ERROR')) throw new Error(`AGC stopped while entering P00: ${last.modeText}`);
     await delay(75);
   }
-  throw new Error(`V37E00E did not reach P00; last state: ${JSON.stringify(last)}`);
+  throw new Error(`V37E00E did not reach P00; last state: ${JSON.stringify(last)}; key trace: ${JSON.stringify(keySequenceTrace)}`);
 }
 
 function visibleV35State(state) {

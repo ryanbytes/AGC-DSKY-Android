@@ -23,6 +23,22 @@ assert(manifest.includes('android.permission.ACCESS_FINE_LOCATION'),
     'fine location permission missing for WebView geolocation compatibility');
 assert(manifest.includes('android:allowBackup="false"'),
     'application backup must remain disabled');
+assert(manifest.includes('android:fullBackupContent="@xml/backup_rules"') &&
+       manifest.includes('android:dataExtractionRules="@xml/data_extraction_rules"'),
+    'legacy and Android 12+ backup exclusions must both be installed');
+for (const file of ['backup_rules.xml','data_extraction_rules.xml']) {
+    const rules=fs.readFileSync(path.resolve(__dirname,`../app/src/main/res/xml/${file}`),'utf8');
+    for (const domain of ['root','file','database','sharedpref','external','device_root','device_file','device_database','device_sharedpref'])
+        assert(rules.includes(`<exclude domain="${domain}" path="."`),
+            `${file} must exclude app data domain ${domain}`);
+}
+assert(manifest.includes('android.hardware.camera" android:required="false"'),
+    'optional camera permission must not imply required camera hardware');
+assert(manifest.includes('android:supportsRtl="false"'),
+    'fixed DSKY face must not be automatically mirrored for RTL locales');
+for (const action of ['android.settings.MANAGE_UNKNOWN_APP_SOURCES','android.intent.action.INSTALL_PACKAGE','android.intent.action.VIEW'])
+    assert(manifest.includes(`<action android:name="${action}"`),
+        `package visibility must declare updater intent ${action}`);
 assert(manifest.includes('android:usesCleartextTraffic="false"'),
     'cleartext traffic must remain explicitly disabled');
 assert(manifest.includes('android:icon="@mipmap/ic_launcher_original"'),

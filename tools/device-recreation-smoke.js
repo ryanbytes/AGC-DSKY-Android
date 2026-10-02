@@ -323,6 +323,7 @@ function statusExpression() {
       mission: window.AGCDSKY && AGCDSKY.getMission ? AGCDSKY.getMission() : null,
       core: !!c,
       running: !!(c && c.running),
+      cmPeripheralMode: c && c.exports && typeof c.exports.get_cm_mode === 'function' ? c.exports.get_cm_mode() : null,
       version: c && c.version ? String(c.version()) : null,
       totalSteps: c && Number.isFinite(c.totalSteps) ? c.totalSteps : null,
       sentinel: c ? c.__deviceRecreationSentinel || null : null,
@@ -448,6 +449,7 @@ async function main() {
       && s.runMode === 'agc'
       && s.core
       && s.running
+      && s.cmPeripheralMode === 1
       && s.sentinel === null
       && typeof s.version === 'string'
       && s.version.length > 0
@@ -460,7 +462,7 @@ async function main() {
 
     console.log('Device page recreation smoke: PASS');
     console.log(`  before reload: ${before.mission}; ${before.version}; steps=${before.totalSteps}`);
-    console.log(`  after reload: ${after.mission}; ${after.version}; steps=${after.totalSteps}`);
+    console.log(`  after reload: ${after.mission}; ${after.version}; CM mode=${after.cmPeripheralMode}; steps=${after.totalSteps}`);
     console.log('  persistent state: CM mission + requested AGC mode restored');
     console.log('  core identity: fresh JS/yaAGC core object after page recreation');
   } finally {

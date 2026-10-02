@@ -1,0 +1,53 @@
+diff --git a/yaAGC/agc_engine.h b/yaAGC/agc_engine.h
+--- a/yaAGC/agc_engine.h
++++ b/yaAGC/agc_engine.h
+@@ -497,7 +497,7 @@
+ int DownlinkListBuffer[MAX_DOWNLINK_LIST];
+ int DownlinkListCount = 0, DownlinkListExpected = 0, DownlinkListZero = -1;
+ ProcessDownlinkList_t *ProcessDownlinkList = NULL;
+-int CmOrLm = 0;	// Default is 0 (LM); other choice is 1 (CM)
++int CmOrLm = 1;	// AGC DSKY build defaults to CM peripherals.
+ char Sbuffer[SHEIGHT][SWIDTH + 1];
+ int Sheight = DEFAULT_SHEIGHT, Swidth = DEFAULT_SWIDTH;
+ int LastRhcPitch = 0, LastRhcYaw = 0, LastRhcRoll = 0;
+diff --git a/yaAGC/wasm.c b/yaAGC/wasm.c
+--- a/yaAGC/wasm.c
++++ b/yaAGC/wasm.c
+@@ -90,10 +90,29 @@
+ }
+ 
+ 
++/* Select Command Module peripheral behavior before the first CPU operation. */
++static int CpuStarted = 0;
++
++export int
++configure_cm_mode ()
++{
++  if (CpuStarted)
++    return -1;
++  CmOrLm = 1;
++  return CmOrLm;
++}
++
++export int
++get_cm_mode ()
++{
++  return CmOrLm;
++}
++
+ /* Resets the CPU. */
+ export void
+ cpu_reset ()
+ {
++  CpuStarted = 1;
+   agc_engine_init (&State, NULL, NULL, 0);
+ }
+ 
+@@ -105,6 +124,7 @@
+ export void
+ cpu_step (uint32_t steps)
+ {
++  CpuStarted = 1;
+   for (uint32_t i = 0; i < steps; i++)
+     agc_engine (&State);
+ }

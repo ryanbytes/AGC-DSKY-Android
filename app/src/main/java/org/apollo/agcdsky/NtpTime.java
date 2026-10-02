@@ -77,7 +77,7 @@ public final class NtpTime {
         if(!STARTED.compareAndSet(false,true))return;
         registerConnectivity(app);
         requestSync(app,"startup");
-        SCHEDULER.scheduleAtFixedRate(()->requestSync(app,"periodic"),PERIOD_MS,PERIOD_MS,TimeUnit.MILLISECONDS);
+        SCHEDULER.scheduleWithFixedDelay(()->requestSync(app,"periodic"),PERIOD_MS,PERIOD_MS,TimeUnit.MILLISECONDS);
     }
 
     public static void addListener(Listener listener){if(listener!=null)LISTENERS.addIfAbsent(listener);}

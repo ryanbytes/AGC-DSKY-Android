@@ -49,12 +49,14 @@ The general live gate checks:
 - the interactive packaged frontend is initialized
 - Apollo 11 CM `Comanche055.bin` can enter AGC mode
 - the real yaAGC core is present, running, and reports a version
+- live WASM `get_cm_mode()` returns `1`, proving CM peripheral mode in the packaged WebView
 - real DSKY output channels are observed from the running core
 - VERB input is delivered through the actual DSKY pointer handler without stopping the core
 - PRO is asserted on pointer-down, remains visibly held, and releases on pointer-up
-- an in-memory AGC instance pauses and resumes through `AGCDSKY.setAppVisible(false/true)` without being replaced
+- a hidden/visible `visibilitychange` transition releases held PRO, pauses and resumes the same in-memory AGC instance without replacing it
 - the CM run produces real DSKY output without an AGC error
 - page recreation restores requested CM AGC mode and starts a new CM core
+- the new core reports CM peripheral mode after page recreation and Android process recreation
 - the pre-reload core tag does not survive page recreation, proving a new JavaScript/yaAGC core object is constructed rather than presenting the old in-memory core as serialized state
 
 The smoke snapshots the persistent run-mode setting and attempts to restore it afterward. If the pre-test state was an active AGC run, restoration starts a fresh CM AGC reset; exact CPU/erasable-memory state is not serialized by the app.
@@ -134,15 +136,16 @@ The process gate:
 1. launches the current app and finds its real process/WebView socket
 2. stores the user's original mission/run-mode preferences in temporary localStorage smoke keys
 3. selects `Comanche055` and enters AGC mode
-4. records the original PID
-5. performs `adb shell am force-stop "$PACKAGE"` on the isolated `.eltest` package
-6. requires `pidof` to become empty, proving the process actually disappeared rather than inferring death from a PID change
-7. relaunches the Activity and discovers the new process/WebView socket
-8. reconnects through CDP
-9. requires the persisted smoke nonce, CM mission, requested AGC mode, a running yaAGC version, and real DSKY output channels
-10. restores the user's original frontend mission/run-mode preferences and removes the temporary smoke keys
+4. waits two seconds for Android WebView's asynchronous localStorage commit
+5. records the original PID
+6. performs `adb shell am force-stop "$PACKAGE"` on the isolated `.eltest` package
+7. requires `pidof` to become empty, proving the process actually disappeared rather than inferring death from a PID change
+8. relaunches the Activity and discovers the new process/WebView socket
+9. reconnects through CDP
+10. requires the persisted smoke nonce, CM mission, requested AGC mode, a running yaAGC version, and real DSKY output channels
+11. restores the user's original frontend mission/run-mode preferences and removes the temporary smoke keys
 
-A numeric PID difference is reported but is not the proof boundary because Linux can theoretically reuse a PID. The observed no-process interval after `force-stop` is the relevant evidence.
+The two-second delay is needed because Android WebView writes localStorage to its origin store asynchronously; without it, an immediate force-stop can race the storage commit. A numeric PID difference is reported but is not the proof boundary because Linux can theoretically reuse a PID. The observed no-process interval after `force-stop` is the relevant evidence.
 
 This proves Android process-death run-mode restoration and fresh core construction. It still does **not** claim CPU/erasable-memory continuation across process death; the intended behavior is a fresh CM AGC reset with the requested AGC mode restored.
 
@@ -179,7 +182,7 @@ A passing full-device smoke does **not** by itself prove:
 - DREAM DIM / BRIGHT / SOLAR physical brightness behavior
 - first-use Android/GrapheneOS location permission behavior for SOLAR
 - portrait/landscape DISPLAY cropping on the target phone
-- full CM peripheral fidelity; the pinned upstream WASM still lacks an exported `CmOrLm` setter
+- the source-level CM configuration check has host real-WASM coverage; Android/WebView execution still needs device verification
 
 Those remain explicit acceptance gates. Do not upgrade them to verified status from this smoke alone.
 

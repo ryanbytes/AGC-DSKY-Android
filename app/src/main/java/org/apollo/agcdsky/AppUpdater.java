@@ -115,9 +115,9 @@ final class AppUpdater {
                 if (!force && now - prefs.getLong(PREF_LAST_ATTEMPT, 0L) < RETRY_INTERVAL_MS) return;
                 prefs.edit().putLong(PREF_LAST_ATTEMPT, now).apply();
                 Release release = fetchLatestReleaseResilient();
-                prefs.edit().putLong(PREF_LAST_CHECK, System.currentTimeMillis()).remove(PREF_LAST_ATTEMPT).apply();
-                cancelRetry(context);
                 if (release == null || compareVersion(release.version, BuildConfig.VERSION_NAME) <= 0) {
+                    prefs.edit().putLong(PREF_LAST_CHECK, System.currentTimeMillis()).remove(PREF_LAST_ATTEMPT).apply();
+                    cancelRetry(context);
                     notifyStatus(listener, "UP TO DATE · " + BuildConfig.VERSION_NAME);
                     return;
                 }
@@ -148,7 +148,9 @@ final class AppUpdater {
                     notifyStatus(listener, "UPDATE REJECTED");
                     return;
                 }
-                prefs.edit().putString(PREF_PENDING, candidate.getAbsolutePath()).putString(PREF_PENDING_SHA256, expectedSha256).apply();
+                prefs.edit().putString(PREF_PENDING, candidate.getAbsolutePath()).putString(PREF_PENDING_SHA256, expectedSha256)
+                        .putLong(PREF_LAST_CHECK, System.currentTimeMillis()).remove(PREF_LAST_ATTEMPT).apply();
+                cancelRetry(context);
                 notifyStatus(listener, "READY TO INSTALL · " + release.version);
                 if (userInitiated) offerPendingToForeground();
             } catch (Exception error) {
@@ -191,9 +193,7 @@ final class AppUpdater {
         if (alarm == null) return;
         long when = SystemClock.elapsedRealtime() + RETRY_INTERVAL_MS;
         PendingIntent pending = retryIntent(context);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME, when, pending);
-        else alarm.set(AlarmManager.ELAPSED_REALTIME, when, pending);
+        alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME, when, pending);
     }
 
     private static void cancelRetry(Context context) {
@@ -229,7 +229,7 @@ final class AppUpdater {
 
     private static void requestInstallPermissionOrInstall(Activity activity, File candidate) throws Exception {
         PackageManager pm = activity.getPackageManager();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !pm.canRequestPackageInstalls()) {
+        if (!pm.canRequestPackageInstalls()) {
             Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.getPackageName()));
             if (settings.resolveActivity(pm) == null) settings = new Intent(Settings.ACTION_SECURITY_SETTINGS);
             activity.startActivity(settings);
@@ -285,23 +285,26 @@ final class AppUpdater {
 
     private static Release fetchLatestRelease() throws Exception {
         HttpURLConnection connection = open(RELEASE_API);
-        int status = connection.getResponseCode();
-        if (status == 404) { connection.disconnect(); return null; }
-        if (status != 200) throw new IllegalStateException("release HTTP " + status);
-        String json = readAll(connection.getInputStream(), 2_000_000);
-        connection.disconnect();
-        JSONObject root = new JSONObject(json);
-        if (root.optBoolean("draft", false) || root.optBoolean("prerelease", false)) return null;
-        String version = normalizeVersion(root.optString("tag_name", ""));
-        if (version == null) return null;
-        JSONArray assetsJson = root.optJSONArray("assets");
-        if (assetsJson == null) return null;
-        Asset[] assets = new Asset[assetsJson.length()];
-        for (int i = 0; i < assetsJson.length(); i++) {
-            JSONObject item = assetsJson.getJSONObject(i);
-            assets[i] = new Asset(item.optString("name", ""), item.optString("browser_download_url", ""), item.optString("digest", ""));
+        try {
+            int status = connection.getResponseCode();
+            if (status == 404) return null;
+            if (status != 200) throw new IllegalStateException("release HTTP " + status);
+            String json = readAll(connection.getInputStream(), 2_000_000);
+            JSONObject root = new JSONObject(json);
+            if (root.optBoolean("draft", false) || root.optBoolean("prerelease", false)) return null;
+            String version = normalizeVersion(root.optString("tag_name", ""));
+            if (version == null) return null;
+            JSONArray assetsJson = root.optJSONArray("assets");
+            if (assetsJson == null) return null;
+            Asset[] assets = new Asset[assetsJson.length()];
+            for (int i = 0; i < assetsJson.length(); i++) {
+                JSONObject item = assetsJson.getJSONObject(i);
+                assets[i] = new Asset(item.optString("name", ""), item.optString("browser_download_url", ""), item.optString("digest", ""));
+            }
+            return new Release(version, assets);
+        } finally {
+            connection.disconnect();
         }
-        return new Release(version, assets);
     }
 
     private static HttpURLConnection open(String url) throws Exception {
@@ -346,9 +349,13 @@ final class AppUpdater {
 
     private static String downloadText(String url) throws Exception {
         HttpURLConnection connection = open(url);
-        if (connection.getResponseCode() != 200) throw new IllegalStateException("digest HTTP " + connection.getResponseCode());
-        try { return readAll(connection.getInputStream(), 16_384); }
-        finally { connection.disconnect(); }
+        try {
+            int status = connection.getResponseCode();
+            if (status != 200) throw new IllegalStateException("digest HTTP " + status);
+            return readAll(connection.getInputStream(), 16_384);
+        } finally {
+            connection.disconnect();
+        }
     }
 
     private static String readAll(InputStream input, int maxBytes) throws Exception {

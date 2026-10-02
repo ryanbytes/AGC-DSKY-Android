@@ -418,12 +418,31 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
   .app-controls .parallax-control{width:112px;min-height:34px;padding:3px 6px 4px}
 }
 @media (orientation:landscape){
-  .dsky,.dream .dsky{
-    width:auto!important;
-    height:calc(100vh - 66px - max(4px,env(safe-area-inset-bottom)));
-    max-width:92vw;
+  #app{
+    flex-direction:row;
+    justify-content:center;
+    align-items:flex-start;
+    gap:4px;
+    overflow:hidden;
+    padding: max(12px,env(safe-area-inset-top)) 2px max(8px,env(safe-area-inset-bottom));
   }
-  .app-controls{width:min(calc(100vw - 8px),1180px);max-height:28vh;gap:2px;padding:3px}
+  .dsky,.dream .dsky{
+    width:min(42vw,calc((100vh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))*320/372))!important;
+    height:auto!important;
+    max-width:none;
+  }
+  /* The options panel stays docked beside the DSKY and opens by sliding out
+     from its right edge. Its closed position overlaps the DSKY invisibly. */
+  .app-controls{
+    width:min(38vw,360px);
+    max-width:38vw;
+    max-height:none;
+    gap:2px;
+    padding:3px;
+    transform:translateX(calc(-100% - 4px));
+    transition:transform .22s ease,opacity .16s ease,visibility .16s ease;
+  }
+  .controls-visible .app-controls{transform:translateX(0)}
   .app-controls button{min-height:30px;font-size:6.9px;padding:12px 4px 3px}
   .app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}
 }

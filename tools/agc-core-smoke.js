@@ -52,6 +52,8 @@ function makeCoreHarness(options = {}) {
         malloc(size) { calls.push(['malloc', size]); return 256; },
         free(ptr) { calls.push(['free', ptr]); },
         set_fixed(ptr) { calls.push(['set_fixed', ptr]); },
+        configure_cm_mode() { calls.push(['configure_cm_mode']); return 1; },
+        get_cm_mode() { calls.push(['get_cm_mode']); return 1; },
         get_erasable_ptr() { return 1024; }
     };
     return { core, calls, setPacketWriteResult: (v) => { packetWriteResult = v; } };
@@ -289,6 +291,8 @@ async function testLoadPipeline() {
         malloc(size) { calls.push(['malloc', size]); return 1024; },
         free(ptr) { calls.push(['free', ptr]); },
         set_fixed(ptr) { calls.push(['set_fixed', ptr]); },
+        configure_cm_mode() { calls.push(['configure_cm_mode']); return 1; },
+        get_cm_mode() { calls.push(['get_cm_mode']); return 1; },
         cpu_reset() { calls.push(['reset']); },
         cpu_step(steps) { calls.push(['step', steps]); },
         packet_write(channel, value) { calls.push(['write', channel, value]); return 4; },
@@ -302,7 +306,7 @@ async function testLoadPipeline() {
             assert(module.fake, 'compiled module must reach instantiate');
             assert(imports.env.memory === memory, 'env.memory must use the allocated AGC memory');
             const wasi = imports.wasi_snapshot_preview1;
-            for (const name of ['fd_close', 'fd_fdstat_get', 'fd_seek', 'fd_write']) {
+            for (const name of ['fd_fdstat_get', 'fd_seek', 'fd_write']) {
                 assert(typeof wasi[name] === 'function', `missing WASI import ${name}`);
             }
             calls.push(['instantiate']);
@@ -334,6 +338,13 @@ async function testLoadPipeline() {
         'default load did not fetch Comanche055.bin');
     assert(calls.filter(([name]) => name === 'reset').length === 2,
         'load must prime transport state and then restore the true AGC reset vector');
+    const loadOrder = calls.map(([name]) => name);
+    assert(loadOrder.indexOf('set_fixed') < loadOrder.indexOf('configure_cm_mode') &&
+           loadOrder.indexOf('configure_cm_mode') < loadOrder.indexOf('reset'),
+        'CM peripheral mode must be configured after rope load and before the first CPU reset');
+    assert(calls.filter(([name]) => name === 'configure_cm_mode').length === 1 &&
+           calls.filter(([name]) => name === 'get_cm_mode').length === 1,
+        'load must configure and read back the core Command Module mode');
     assert(calls.filter(([name, count]) => name === 'step' && count === 1).length === 1,
         'load must initialize the ring buffer with exactly one CPU step');
     assert(calls.filter(([name]) => name === 'write').length === 3,

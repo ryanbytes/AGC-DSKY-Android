@@ -70,7 +70,7 @@ The documented spring rate and assembled stroke allow only the spring-force *inc
 - Source: https://github.com/michaelfranzl/webAGC
 - Pinned by this repository at commit `0575ea7a1231e3948bae7d2c22a6ac146da0c38d`.
 
-webAGC is both a behavioral reference and the source of the browser-oriented `yaAGC.wasm` build plus Apollo 11 rope binaries used by the Android v0.7 source. Its `src/webAGC.js` documents the `cpu_step`, `packet_read`, `packet_write`, fixed-memory loading, channel `011`, and channel `0163` flow used as an embedding reference.
+webAGC supplies the Comanche rope and a behavioral reference. The Android/Apple/PWA builds use the separately rebuilt CM-configured core documented in `vendor/yaAGC-cm/README.md`. Its `src/webAGC.js` documents the `cpu_step`, `packet_read`, `packet_write`, fixed-memory loading, channel `011`, and channel `0163` flow used as an embedding reference.
 
 The Android project does not require the online webAGC demo for onboard AGC mode.
 

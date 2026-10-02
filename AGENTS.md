@@ -34,15 +34,14 @@ Pinned `vendor/webAGC` revision:
 
 Required exact inputs:
 
-- `vendor/webAGC/src/yaAGC.wasm`
+- `vendor/yaAGC-cm/yaAGC.wasm`, rebuilt from audited VirtualAGC source commit `ddc65e7bed41f1301921b934fcbaaee93db99dda` with `vendor/yaAGC-cm/patches/001-cm-mode-api.patch`
 - `vendor/webAGC/demo/agc/Comanche055.bin`
 
-The build verifies exact size/Git-blob identities before packaging. Do not weaken those checks.
+The build verifies exact size/Git-blob identities before packaging. Rebuild the CM core with `tools/build-cm-wasm.sh` and the pinned toolchain described in `vendor/yaAGC-cm/README.md`. Do not weaken those checks.
 
-The pinned WASM imports exactly:
+The CM-configured WASM imports exactly:
 
 - `env.memory`
-- `wasi_snapshot_preview1.fd_close`
 - `wasi_snapshot_preview1.fd_fdstat_get`
 - `wasi_snapshot_preview1.fd_seek`
 - `wasi_snapshot_preview1.fd_write`
@@ -83,18 +82,17 @@ The live invariant is:
 
 Synthetic phone-clock V35 is different: no AGC/Executive exists there, so it does not invent COMP ACTY.
 
-## Command Module scope and emulator limitation
+## Command Module scope and core configuration
 
-The pinned WASM engine's upstream `CmOrLm` global defaults to LM (`0`) and its exported WASM API exposes no setter. Desktop yaAGC changes this through configuration code bypassed by the WebAssembly wrapper.
+The CM-specific rebuilt WASM defaults the upstream `CmOrLm` global to CM (`1`) and exports `configure_cm_mode()` plus `get_cm_mode()`. The wrapper configures and reads back CM mode after loading the rope and before the first CPU operation. The setter rejects changes after `cpu_reset()` or `cpu_step()` begins.
 
 Current product policy:
 
 - The Android app supports only the Command Module and packages only the exact pinned Comanche055 rope.
 - Do not package or expose a selectable LM rope.
-- Do **not** claim full CM peripheral-mode fidelity.
-- Known `CmOrLm`-dependent ring-buffer behavior includes LM rotational-hand-controller bookkeeping on channel `013`; this app supplies no RHC inputs.
-- Do not binary-patch the pinned WASM to change this flag.
-- If exact CM peripheral mode becomes required, rebuild audited yaAGC source with an explicit exported LM/CM API and pin/verify that new binary separately.
+- The AGC core is explicitly configured for CM mode; the app does not implement the spacecraft's other peripheral systems.
+- The source's mode-dependent ring-buffer includes RHC bookkeeping on channel `013`; this app supplies no RHC inputs.
+- CM mode selection is source-patched and reproducibly rebuilt from the pinned VirtualAGC source; it is not a binary patch.
 
 ## Code organization
 
@@ -220,7 +218,7 @@ Record actual evidence in `docs/PROGRESS.md`.
 
 Good examples:
 
-- `Pinned WASM import table inspected; exact imports are env.memory + four WASI fd functions.`
+- `CM-configured WASM import table inspected; exact imports are env.memory + three WASI fd functions.`
 - `Real pinned WASM instantiated under Node with Comanche055; semantic V35 gate passed.`
 - `Built APK passed verify-apk.sh and device-full-smoke.sh on GrapheneOS.`
 

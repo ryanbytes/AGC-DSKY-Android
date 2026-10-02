@@ -13,7 +13,7 @@ const { performance } = require('perf_hooks');
 
 const ROOT = path.resolve(__dirname, '..');
 const CORE_JS = path.join(ROOT, 'app/src/main/assets/agc-core.js');
-const WASM = path.join(ROOT, 'vendor/webAGC/src/yaAGC.wasm');
+const WASM = path.join(ROOT, 'vendor/yaAGC-cm/yaAGC.wasm');
 const ROPE_NAME = 'Comanche055.bin';
 const ROPE = path.join(ROOT, 'vendor/webAGC/demo/agc/Comanche055.bin');
 
@@ -51,7 +51,6 @@ function verifyBinaryImportContract(wasmBytes) {
         .sort();
     const expected = [
         'env.memory:memory',
-        'wasi_snapshot_preview1.fd_close:function',
         'wasi_snapshot_preview1.fd_fdstat_get:function',
         'wasi_snapshot_preview1.fd_seek:function',
         'wasi_snapshot_preview1.fd_write:function'
@@ -60,7 +59,7 @@ function verifyBinaryImportContract(wasmBytes) {
         `unexpected yaAGC WASM imports:\n  actual: ${actual.join(', ')}\n  expected: ${expected.join(', ')}`);
 
     const exported = new Set(WebAssembly.Module.exports(module).map((entry) => entry.name));
-    for (const name of ['malloc', 'free', 'set_fixed', 'cpu_reset', 'cpu_step', 'packet_write', 'packet_read']) {
+    for (const name of ['malloc', 'free', 'set_fixed', 'configure_cm_mode', 'get_cm_mode', 'cpu_reset', 'cpu_step', 'packet_write', 'packet_read']) {
         assert(exported.has(name), `yaAGC WASM missing required export: ${name}`);
     }
 }
@@ -303,7 +302,7 @@ function proveComancheNavigationKeyInterrupt(core, errors) {
 }
 
 async function main() {
-    const wasmBytes = requireFile(WASM, 132617);
+    const wasmBytes = requireFile(WASM, 27270);
     const ropeBytes = requireFile(ROPE, 73728);
     verifyBinaryImportContract(wasmBytes);
 
@@ -322,6 +321,10 @@ async function main() {
     assert(errors.length === 0, 'Comanche055: error during real WASM load');
     assert(core.instance && core.exports && core.memory,
         'Comanche055: real WASM instance did not initialize completely');
+    assert(core.exports.get_cm_mode() === 1,
+        'Comanche055: real yaAGC did not report Command Module peripheral mode');
+    assert(core.exports.configure_cm_mode() === -1 && core.exports.get_cm_mode() === 1,
+        'Comanche055: core allowed CM-mode reconfiguration after CPU startup');
     assert(core.totalSteps === 0,
         'Comanche055: load must begin mission accounting at the true reset vector');
 

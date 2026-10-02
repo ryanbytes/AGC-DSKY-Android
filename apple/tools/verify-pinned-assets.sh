@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WEBAGC="$ROOT/vendor/webAGC"
+CM_WASM="$ROOT/vendor/yaAGC-cm/yaAGC.wasm"
 PINNED_WEBAGC="0575ea7a1231e3948bae7d2c22a6ac146da0c38d"
 
 fail() {
@@ -37,7 +38,7 @@ verify_blob() {
   [[ "$blob" == "$expected_blob" ]] || fail "$label Git blob SHA-1 is $blob; expected $expected_blob"
 }
 
-verify_blob "$WEBAGC/src/yaAGC.wasm" 132617 713685680492098d05437b99c26403f683d56009 "yaAGC.wasm"
+verify_blob "$CM_WASM" 27270 04a24dd1df4a81738e138b3e9f048d2b10498439 "CM-configured yaAGC.wasm"
 verify_blob "$WEBAGC/demo/agc/Comanche055.bin" 73728 9e4ec167dc99ac12b233df07b6b91fef585e5015 "Comanche055.bin"
 
 printf 'Apple pinned AGC assets: PASS\n'

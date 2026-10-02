@@ -217,6 +217,17 @@ assert(CONTROLS.includes('100vh - 122px') && CONTROLS.includes('100vh - 136px'),
   'DSKY sizing must reserve room for the fixed option panel');
 assert(CONTROLS.includes('@media (orientation:landscape)'),
   'control strip landscape sizing override missing');
+assert(!HTML.includes('#app{padding:2px!important}'),
+  'inline solo-page padding must not override landscape safe-area spacing');
+assert(CONTROLS.includes('flex-direction:row;')
+       && CONTROLS.includes('align-items:flex-start;')
+       && CONTROLS.includes('padding: max(12px,env(safe-area-inset-top)) 2px max(8px,env(safe-area-inset-bottom));')
+       && CONTROLS.includes('width:min(42vw,calc((100vh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))*320/372))!important;'),
+  'landscape must top-anchor the height-fitted DSKY and auxiliary controls below the safe inset');
+assert(CONTROLS.includes('transform:translateX(calc(-100% - 4px));')
+       && CONTROLS.includes('.controls-visible .app-controls{transform:translateX(0)}')
+       && CONTROLS.includes('transition:transform .22s ease,opacity .16s ease,visibility .16s ease;'),
+  'landscape controls must slide out from the DSKY when opened');
 assert(CONTROLS.includes('.app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}'),
   'AUXILIARY submenu must open upward in landscape');
 assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}') &&

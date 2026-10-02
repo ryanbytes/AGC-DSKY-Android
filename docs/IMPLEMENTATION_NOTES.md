@@ -46,10 +46,11 @@ That implementation is obsolete and removed from v0.7. It must not be reintroduc
 0575ea7a1231e3948bae7d2c22a6ac146da0c38d
 ```
 
-Required upstream inputs are:
+Required upstream input is:
 
-- `src/yaAGC.wasm`
 - `demo/agc/Comanche055.bin`
+
+The Android/Apple/PWA builds use the CM-configured core at `vendor/yaAGC-cm/yaAGC.wasm`; see its README for exact source, patch, toolchain, and rebuild identities.
 
 A recursive checkout is required. The Android build does **not** package the whole upstream `src` or `demo/agc` trees: Gradle stages only the two required verified binaries into generated assets. The source/build/APK gates reject missing, changed, or stale copies and check the exact pinned Git blobs.
 
@@ -63,9 +64,8 @@ MainActivity and DreamService load:
 
 ### Minimal WASI wrapper
 
-The pinned `yaAGC.wasm` imports exactly `env.memory` plus WASI Preview 1:
+The CM-configured `yaAGC.wasm` imports exactly `env.memory` plus WASI Preview 1:
 
-- `fd_close`
 - `fd_fdstat_get`
 - `fd_seek`
 - `fd_write`
@@ -78,7 +78,7 @@ The canonical host preflight (`tools/wasm-runtime-smoke.js`) instantiates the **
 
 The app loads the pinned `Comanche055.bin` rope. The former mission selector and Luminary rope path have been removed; old `agcMission` values are normalized to `comanche055` on startup. The DSKY uses the CM face, including blank ALT/VEL positions. Phone PIPA scaling and sextant/navigation input follow the CM calibration.
 
-DreamService never starts yaAGC. The pinned WASM's internal `CmOrLm` global still defaults LM and is not exported. Comanche is the only supported rope, but full CM peripheral-mode fidelity is not claimed.
+DreamService never starts yaAGC. The rebuilt core defaults `CmOrLm` to CM and exposes a configuration/readback API that the wrapper invokes before CPU startup. Comanche is the only supported rope; this DSKY-focused app does not implement unrelated spacecraft peripherals.
 
 ### AGC clocking and lifecycle
 
@@ -183,4 +183,4 @@ Its V35 semantic driver now proves a channel-driven P00 `PROG 00` precondition b
 4. Verify real OS screen-off/on lifecycle behavior in addition to direct bridge tests.
 5. Verify DreamService startup, non-interactivity, brightness modes, SOLAR permission behavior, and normal-app state after Dream exit.
 6. Perform physical portrait/landscape DISPLAY and pixel-level DSKY visual review.
-7. If exact CM peripheral mode becomes necessary, rebuild audited yaAGC with an explicit exported LM/CM setter rather than patching the pinned binary.
+7. The CM-mode setter/readback has been added through the documented audited-source rebuild; retain live packaged-WebView mode readback in the Android device smoke so this is not inferred from host-only WASM tests.

@@ -64,7 +64,7 @@ android {
 
 // Package only the pinned WASM core and the Apollo Command Module rope.
 def pinnedAgcAssets = [
-        [label:'yaAGC.wasm', file:file('../vendor/webAGC/src/yaAGC.wasm'), size:132617L, gitBlobSha1:'713685680492098d05437b99c26403f683d56009'],
+        [label:'yaAGC.wasm', file:file('../vendor/yaAGC-cm/yaAGC.wasm'), size:27270L, gitBlobSha1:'04a24dd1df4a81738e138b3e9f048d2b10498439'],
         [label:'Comanche055.bin', file:file('../vendor/webAGC/demo/agc/Comanche055.bin'), size:73728L, gitBlobSha1:'9e4ec167dc99ac12b233df07b6b91fef585e5015']
 ]
 

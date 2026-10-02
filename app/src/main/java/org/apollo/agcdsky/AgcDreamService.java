@@ -126,6 +126,7 @@ public final class AgcDreamService extends DreamService {
         else hideLegacySystemBars(window.getDecorView());
     }
 
+    @android.annotation.TargetApi(Build.VERSION_CODES.R)
     @SuppressWarnings("deprecation")
     private static void hideModernSystemBars(Window window) {
         window.setDecorFitsSystemWindows(false);

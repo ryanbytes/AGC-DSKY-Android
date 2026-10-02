@@ -1,6 +1,6 @@
 # AGC DSKY PWA
 
-The PWA is the no-developer-account iPhone/iPad distribution path and the installable browser build for Android/desktop. It packages the same shared DSKY HTML/CSS/JavaScript, pinned `yaAGC.wasm`, and Apollo 11 CM `Comanche055.bin` used by the Android and Apple shells.
+The PWA is the no-developer-account iPhone/iPad distribution path and the installable browser build for Android/desktop. It packages the same shared DSKY HTML/CSS/JavaScript, CM-configured `yaAGC.wasm`, and Apollo 11 CM `Comanche055.bin` used by the Android and Apple shells. Core source and rebuild instructions are in `vendor/yaAGC-cm/README.md`.
 
 ## Build locally
 

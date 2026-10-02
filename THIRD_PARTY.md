@@ -14,7 +14,7 @@ The Android app executes the real `yaAGC` core through WebAssembly. VirtualAGC's
 - Pinned submodule revision: `0575ea7a1231e3948bae7d2c22a6ac146da0c38d`
 - License: GNU GPL version 2 or later for the upstream software.
 
-The pinned project supplies the browser-oriented yaAGC WebAssembly build and the Apollo 11 **Comanche 055** rope used by this CM-only app.
+The pinned project supplies the Apollo 11 **Comanche 055** rope. The CM-specific yaAGC WebAssembly binary is rebuilt from the VirtualAGC source revision and patch documented in `vendor/yaAGC-cm/README.md`.
 
 ## Apollo AGC flight software
 

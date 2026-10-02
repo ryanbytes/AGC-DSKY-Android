@@ -27,10 +27,6 @@
     }
 
     return {
-      fd_close(fd){
-        return 0;
-      },
-
       fd_fdstat_get(fd, statPtr){
         const bytes = new Uint8Array(memory.buffer);
         bytes.fill(0, statPtr, statPtr + 24);
@@ -109,7 +105,7 @@
       this.instance = result;
       this.exports = result.exports;
 
-      const required = ['malloc','free','set_fixed','cpu_reset','cpu_step','packet_write','packet_read'];
+      const required = ['malloc','free','set_fixed','configure_cm_mode','get_cm_mode','cpu_reset','cpu_step','packet_write','packet_read'];
       for (const name of required) {
         if (typeof this.exports[name] !== 'function') {
           throw new Error('yaAGC missing required export: ' + name);
@@ -118,6 +114,10 @@
 
       const ropeResponse = await requireOk(await fetch(ropeUrl), ropeUrl);
       await this.loadRope(await ropeResponse.arrayBuffer());
+      const configuredMode = this.exports.configure_cm_mode();
+      if (configuredMode !== 1 || this.exports.get_cm_mode() !== 1) {
+        throw new Error('yaAGC failed to select Command Module peripheral mode');
+      }
       this.reset();
       this.configureInputMasks();
       return this;
