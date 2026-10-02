@@ -136,7 +136,7 @@ The process gate:
 2. stores the user's original mission/run-mode preferences in temporary localStorage smoke keys
 3. selects `Comanche055` and enters AGC mode
 4. records the original PID
-5. performs `adb shell am force-stop org.apollo.agcdsky`
+5. performs `adb shell am force-stop "$PACKAGE"` on the isolated `.eltest` package
 6. requires `pidof` to become empty, proving the process actually disappeared rather than inferring death from a PID change
 7. relaunches the Activity and discovers the new process/WebView socket
 8. reconnects through CDP
