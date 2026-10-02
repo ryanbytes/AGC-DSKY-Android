@@ -438,21 +438,21 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
      DSKY invisibly. */
   .app-controls{
     position:absolute;
-    top:max(12px,env(safe-area-inset-top));
+    top:50%;
     left:calc(50% + min(21vw,calc((100vh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))*160/372)) + 4px);
     width:min(38vw,360px);
     max-width:38vw;
     max-height:none;
     gap:2px;
     padding:3px;
-    transform:translateX(calc(-100% - 4px));
+    transform:translateX(calc(-100% - 4px)) translateY(-50%);
     transition:transform .22s ease,opacity .16s ease,visibility .16s ease;
   }
   .controls-visible .dsky{
     transform:translateX(var(--landscape-control-panel-offset));
     transition:transform .22s ease;
   }
-  .controls-visible .app-controls{transform:translateX(var(--landscape-control-panel-offset))}
+  .controls-visible .app-controls{transform:translateX(var(--landscape-control-panel-offset)) translateY(-50%)}
   .app-controls button{min-height:30px;font-size:6.9px;padding:12px 4px 3px}
   .app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}
 }

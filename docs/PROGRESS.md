@@ -8,6 +8,12 @@ Created a client-downloadable Regular `.eltest` APK, SHA-256 `751b934bd82ed07067
 
 `adb devices -l` reported no attached device. `xcodebuild` logged that the installed CoreSimulator framework is older than Xcode, but both macOS and generic iOS target builds completed successfully. Live WebView/device behavior, Android lifecycle, and physical DSKY appearance remain open audit gates.
 
+## 2026-10-02 landscape controls vertical fit
+
+Follow-up to the landscape slide-out showed that the controls menu was still anchored at the top edge. The open DSKY/menu composition now keeps the menu vertically centered in the viewport, with the existing upward AUX DATA popup retained. The display-layout smoke checks the centered transform and safe vertical bounds for short landscape heights.
+
+Validation: `node tools/display-layout-smoke.js` PASS. A live landscape browser/device screenshot has not yet been captured for this adjustment.
+
 ## 2026-10-02 AUX menu viewport clipping
 
 The AUX DATA submenu could extend below the options panel's scrollport on short portrait screens, leaving PROCEDURES and TECH DATA partially hidden. The options panel now allows overflow and keeps the two-column submenu as a floating popup; landscape positions the popup above AUX DATA. The display-layout smoke locks the visible overflow and upward landscape placement.
