@@ -335,6 +335,10 @@ async function keySequence(cdp, keys, basePointerId) {
 }
 
 const PROGRAM00_LOW11 = 0o1265;
+// Comanche055 schedules V35 teardown after five seconds. Finish looking for
+// the settled display before that source-defined boundary so the timeout
+// cannot race a teardown snapshot and report a false miss.
+const V35_VISIBLE_DEADLINE_MS = 3500;
 const V35_RELAY_LOW11 = Object.freeze({
   1:0o1675,2:0o3675,3:0o1675,4:0o1675,5:0o3675,6:0o1675,
   7:0o3675,8:0o1675,9:0o1675,10:0o1675,11:0o1675,12:0o0650
@@ -385,7 +389,7 @@ function visibleV35State(state) {
 }
 
 async function waitForVisibleV35(cdp) {
-  const deadline = Date.now() + 5000;
+  const deadline = Date.now() + V35_VISIBLE_DEADLINE_MS;
   let last;
   while (Date.now() < deadline) {
     last = await cdp.evaluate(dskyExpression());

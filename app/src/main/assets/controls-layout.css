@@ -419,6 +419,7 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
 }
 @media (orientation:landscape){
   #app{
+    --landscape-control-panel-offset:calc(max(-19vw,-180px) - 2px);
     flex-direction:row;
     justify-content:center;
     align-items:flex-start;
@@ -447,7 +448,11 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
     transform:translateX(calc(-100% - 4px));
     transition:transform .22s ease,opacity .16s ease,visibility .16s ease;
   }
-  .controls-visible .app-controls{transform:translateX(0)}
+  .controls-visible .dsky{
+    transform:translateX(var(--landscape-control-panel-offset));
+    transition:transform .22s ease;
+  }
+  .controls-visible .app-controls{transform:translateX(var(--landscape-control-panel-offset))}
   .app-controls button{min-height:30px;font-size:6.9px;padding:12px 4px 3px}
   .app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}
 }

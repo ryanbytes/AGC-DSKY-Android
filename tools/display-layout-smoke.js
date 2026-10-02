@@ -225,9 +225,22 @@ assert(CONTROLS.includes('flex-direction:row;')
        && CONTROLS.includes('width:min(42vw,calc((100vh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))*320/372))!important;'),
   'landscape must top-anchor the height-fitted DSKY and auxiliary controls below the safe inset');
 assert(CONTROLS.includes('transform:translateX(calc(-100% - 4px));')
-       && CONTROLS.includes('.controls-visible .app-controls{transform:translateX(0)}')
+       && CONTROLS.includes('--landscape-control-panel-offset:calc(max(-19vw,-180px) - 2px);')
+       && CONTROLS.includes('.controls-visible .dsky{\n    transform:translateX(var(--landscape-control-panel-offset));')
+       && CONTROLS.includes('.controls-visible .app-controls{transform:translateX(var(--landscape-control-panel-offset))}')
        && CONTROLS.includes('transition:transform .22s ease,opacity .16s ease,visibility .16s ease;'),
-  'landscape controls must slide out from the DSKY when opened');
+  'landscape controls and DSKY must shift together so the open composition stays centered');
+for (const viewport of [{width:1280,height:720},{width:1024,height:600},{width:800,height:480},{width:720,height:360}]) {
+  const dskyWidth=Math.min(viewport.width*.42,(viewport.height-20)*320/372);
+  const panelWidth=Math.min(viewport.width*.38,360);
+  const offset=-(panelWidth/2)-2;
+  const dskyLeft=(viewport.width-dskyWidth)/2+offset;
+  const panelLeft=viewport.width/2+dskyWidth/2+4+offset;
+  const panelRight=panelLeft+panelWidth;
+  assert(dskyLeft>=0&&panelRight<=viewport.width
+         &&Math.abs((dskyLeft+panelRight)/2-viewport.width/2)<.01,
+    `open landscape composition must fit and center at ${viewport.width}x${viewport.height}`);
+}
 assert(/\.app-controls\{\s*position:absolute;\s*top:max\(12px,env\(safe-area-inset-top\)\);\s*left:calc\(50% \+ min\(21vw,calc\(\(100vh - max\(12px,env\(safe-area-inset-top\)\) - max\(8px,env\(safe-area-inset-bottom\)\)\)\*160\/372\)\) \+ 4px\);/.test(CONTROLS),
   'landscape controls must be removed from flex sizing and anchored to the centered DSKY right edge');
 assert(CONTROLS.includes('.app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}'),
