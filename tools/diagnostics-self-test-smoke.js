@@ -36,7 +36,7 @@ for(const marker of [
   'RUN NON-FLIGHT APP SELF-TEST',
   "document.getElementById('diag-full-test').onclick=runFullSelfTest",
   'SELF_TEST_ASSETS',
-  "gitBlobSha1:'713685680492098d05437b99c26403f683d56009'",
+  "gitBlobSha1:'04a24dd1df4a81738e138b3e9f048d2b10498439'",
   "gitBlobSha1:'9e4ec167dc99ac12b233df07b6b91fef585e5015'",
   "WebAssembly.compile(wasmBytes.slice(0))",
   "'Comanche 055 rope'",

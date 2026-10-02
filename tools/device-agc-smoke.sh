@@ -7,7 +7,7 @@ PACKAGE="${1:-org.apollo.agcdsky.eltest}"
   printf 'DEVICE AGC SMOKE FAIL: expected isolated debug package org.apollo.agcdsky.eltest; found %s\n' "$PACKAGE" >&2
   exit 1
 }
-ACTIVITY="$PACKAGE/.SensorMainActivity"
+ACTIVITY="$PACKAGE/org.apollo.agcdsky.SensorMainActivity"
 
 fail() {
   printf 'DEVICE AGC SMOKE FAIL: %s\n' "$*" >&2

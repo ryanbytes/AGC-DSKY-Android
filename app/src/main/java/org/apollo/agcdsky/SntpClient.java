@@ -35,14 +35,15 @@ final class SntpClient {
         request[0] = 0x23; // LI=0, VN=4, client mode=3.
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setSoTimeout(timeoutMs);
-            long startedNs = System.nanoTime();
             long requestWallMs = System.currentTimeMillis();
+            long requestElapsedNs = System.nanoTime();
             writeTimestamp(request, 40, requestWallMs);
             socket.send(new DatagramPacket(request, request.length, address, port));
             byte[] response = new byte[PACKET_SIZE];
             DatagramPacket packet = new DatagramPacket(response, response.length);
             socket.receive(packet);
-            long rttMs = Math.max(0L, (System.nanoTime() - startedNs) / 1_000_000L);
+            long receiveElapsedNs = System.nanoTime();
+            long rttMs = Math.max(0L, (receiveElapsedNs - requestElapsedNs) / 1_000_000L);
             if (!address.equals(packet.getAddress()) || packet.getPort() != port) {
                 throw new IOException("unexpected NTP response source");
             }
@@ -58,7 +59,7 @@ final class SntpClient {
             }
             // Use monotonic elapsed time for T4 so a wall-clock adjustment while
             // the request is in flight cannot corrupt the four-timestamp offset.
-            long receiveWallMs = requestWallMs + rttMs;
+            long receiveWallMs = receiveTimeMs(requestWallMs, requestElapsedNs, receiveElapsedNs);
             long serverReceiveMs = readTimestamp(response, 32, receiveWallMs);
             long serverTransmitMs = readTimestamp(response, 40, receiveWallMs);
             if (serverReceiveMs <= 0L || serverTransmitMs <= 0L) {
@@ -76,6 +77,10 @@ final class SntpClient {
 
     static long readTimestamp(byte[] buffer, int offset) throws IOException {
         return readTimestamp(buffer, offset, System.currentTimeMillis());
+    }
+
+    static long receiveTimeMs(long requestWallMs, long requestElapsedNs, long receiveElapsedNs) {
+        return requestWallMs + (receiveElapsedNs - requestElapsedNs) / 1_000_000L;
     }
 
     static long readTimestamp(byte[] buffer, int offset, long referenceTimeMs) throws IOException {

@@ -319,6 +319,7 @@ function statusExpression() {
       mission: window.AGCDSKY && AGCDSKY.getMission ? AGCDSKY.getMission() : null,
       core: !!c,
       running: !!(c && c.running),
+      cmPeripheralMode: c && c.exports && typeof c.exports.get_cm_mode === 'function' ? c.exports.get_cm_mode() : null,
       version: c && c.version ? String(c.version()) : null,
       channels: c ? Object.keys(c.channels || {}).map(Number).sort((a,b) => a-b) : [],
       modeText: document.getElementById('mode') ? document.getElementById('mode').textContent : '',
@@ -355,6 +356,7 @@ async function enterComanche(cdp) {
     s.mission === 'comanche055'
     && s.core
     && s.running
+    && s.cmPeripheralMode === 1
     && typeof s.version === 'string'
     && s.version.length > 0
     && !s.modeText.includes('AGC ERROR')
@@ -368,7 +370,10 @@ async function testKeyAndProceed(cdp) {
     b.dispatchEvent(new PointerEvent('pointerdown', {
       bubbles: true, pointerId: 901, pointerType: 'touch', isPrimary: true
     }));
-    return true;
+    document.dispatchEvent(new PointerEvent('pointerup', {
+      bubbles: true, pointerId: 901, pointerType: 'touch', isPrimary: true
+    }));
+    return !b.classList.contains('pressed');
   })()`);
   assert(verb === true, 'could not dispatch VERB through the DSKY pointer handler');
   await delay(250);
@@ -397,11 +402,14 @@ async function testKeyAndProceed(cdp) {
   assert(proStillHeld === true, 'PRO did not remain held for a two-second pointer press');
 
   const proUp = await cdp.evaluate(`(() => {
-    document.dispatchEvent(new PointerEvent('pointerup', {
+    const b = document.querySelector('[data-key="P"]');
+    if (!b) return false;
+    // Synthetic events do not perform native pointer-capture retargeting.
+    // Deliver the simulated release to the captured PRO button itself.
+    b.dispatchEvent(new PointerEvent('pointerup', {
       bubbles: true, pointerId: 902, pointerType: 'touch', isPrimary: true
     }));
-    const b = document.querySelector('[data-key="P"]');
-    return !!b && !b.classList.contains('pressed');
+    return !b.classList.contains('pressed');
   })()`);
   assert(proUp === true, 'PRO pointer-up did not release held/pressed state');
   await delay(250);
@@ -426,22 +434,33 @@ async function testPauseResume(cdp) {
   assert(proDown === true, 'could not hold PRO before visibility pause');
   await delay(250);
 
-  const paused = await cdp.evaluate(`(() => {
-    AGCDSKY.setAppVisible(false);
-    const c = AGCDSKY.getCore();
-    const b = document.querySelector('[data-key="P"]');
-    return !!c && !c.running && c === window.__agcDeviceSmokeCore
-      && !!b && !b.classList.contains('pressed');
-  })()`);
-  assert(paused === true,
-    'setAppVisible(false) did not release held PRO and pause the same AGC core');
+  try {
+    const paused = await cdp.evaluate(`(() => {
+      Object.defineProperty(document, 'hidden', {configurable:true, value:true});
+      document.dispatchEvent(new Event('visibilitychange'));
+      const c = AGCDSKY.getCore();
+      const b = document.querySelector('[data-key="P"]');
+      return document.hidden && !!c && !c.running && c === window.__agcDeviceSmokeCore
+        && !!b && !b.classList.contains('pressed');
+    })()`);
+    assert(paused === true,
+      'hidden-page transition did not release held PRO and pause the same AGC core');
 
-  const resumed = await cdp.evaluate(`(() => {
-    AGCDSKY.setAppVisible(true);
-    const c = AGCDSKY.getCore();
-    return !!c && c.running && c === window.__agcDeviceSmokeCore;
-  })()`);
-  assert(resumed === true, 'setAppVisible(true) did not resume the same AGC core');
+    const resumed = await cdp.evaluate(`(() => {
+      Object.defineProperty(document, 'hidden', {configurable:true, value:false});
+      document.dispatchEvent(new Event('visibilitychange'));
+      const c = AGCDSKY.getCore();
+      return !document.hidden && !!c && c.running && c === window.__agcDeviceSmokeCore;
+    })()`);
+    assert(resumed === true, 'visible-page transition did not resume the same AGC core');
+  } finally {
+    await cdp.evaluate(`(() => {
+      delete document.hidden;
+      AGCDSKY.setAppVisible(true);
+      delete window.__agcDeviceSmokeCore;
+      return true;
+    })()`);
+  }
 
   await cdp.evaluate(`(() => {
     document.dispatchEvent(new PointerEvent('pointercancel', {
@@ -495,7 +514,7 @@ async function main() {
     await testPauseResume(cdp);
 
     console.log('Device AGC runtime smoke: PASS');
-    console.log(`  CM: ${cm.version}; DSKY channels observed: ${cm.channels.map((n) => '0o' + n.toString(8)).join(', ')}`);
+    console.log(`  CM: ${cm.version}; yaAGC peripheral mode ${cm.cmPeripheralMode}; DSKY channels observed: ${cm.channels.map((n) => '0o' + n.toString(8)).join(', ')}`);
     console.log('  VERB pointer input: PASS');
     console.log('  two-second held PRO pointer input/release: PASS');
     console.log('  visibility pause releases held PRO before same-WebView resume: PASS');

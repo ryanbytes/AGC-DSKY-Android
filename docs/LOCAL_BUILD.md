@@ -51,8 +51,9 @@ The submodule gitlink is pinned to:
 
 `tools/build-local.sh` refuses to build if `vendor/webAGC` is at another revision or has local modifications. The pinned checkout must provide:
 
-- `vendor/webAGC/src/yaAGC.wasm`
 - `vendor/webAGC/demo/agc/Comanche055.bin`
+
+The CM-configured WASM is tracked at `vendor/yaAGC-cm/yaAGC.wasm`. Its source, patch, pinned toolchain, and reproducible rebuild command are documented in `vendor/yaAGC-cm/README.md`.
 
 ## Build
 
@@ -68,7 +69,7 @@ The script performs these gates in order. The source smoke runner sets `TZ=UTC` 
 1. Requires a clean committed Git revision and verifies JDK 17+ / Node.js 18+.
 2. Uses an installed stable Gradle 9.5.0+ or checksum-verified local Gradle 9.5.1.
 3. Verifies Android platform 37 and exact Build Tools 36.0.0, including `aapt2` and `apksigner`.
-4. Verifies `vendor/webAGC` is the exact pinned clean checkout and all three binary inputs are present.
+4. Verifies `vendor/webAGC` is the exact pinned clean checkout and the CM WASM plus Comanche rope inputs are present.
 5. Syntax-checks every `tools/*.sh` with Bash and every `tools/*.js` with `node --check`.
 6. Runs the canonical source smoke manifest covering policy/CSP/frontend/display/**EL-widget**/SOLAR/AGC/runtime/native-diagnostic behavior.
    The EL widget label smoke compiles and executes the production Java path parser against the released crash input and all five embedded label outlines.
@@ -150,22 +151,23 @@ The pre-build checks also guard:
 - rope load -> disposable I/O initialization -> final reset -> DSKY U-bit mask sequencing
 - DSKY packet-write failures route through the AGC error handler
 - PRO remains true press-and-hold and is released on cancel, visibility loss, mission switch, and mode exit
-- pinned WASM imports exactly `env.memory` plus WASI `fd_close`, `fd_fdstat_get`, `fd_seek`, and `fd_write`
+- CM-configured WASM imports exactly `env.memory` plus WASI `fd_fdstat_get`, `fd_seek`, and `fd_write`
+- real WASM load configures and reads back `CmOrLm == 1` before the first CPU operation; changing the mode after CPU startup is rejected
 - the Comanche055 rope is exercised through the pinned WASM in the host preflight
 
 These checks reduce source/packaging risk but do not substitute for Android WebView/device testing.
 
-## CM-only product scope and emulator-mode limitation
+## CM-only product scope and peripheral coverage
 
-The pinned webAGC/yaAGC WASM engine contains upstream `CmOrLm` with default value `0` (LM) and does not export a setter. Desktop VirtualAGC changes this through CLI/configuration code not used by this WebAssembly wrapper.
+The Android core is rebuilt from VirtualAGC source commit `ddc65e7bed41f1301921b934fcbaaee93db99dda` with the small documented patch in `vendor/yaAGC-cm/patches/001-cm-mode-api.patch`. It sets the default `CmOrLm` value to `1` (CM) and exports `configure_cm_mode()` and `get_cm_mode()`; the wrapper configures and checks the mode before CPU startup.
 
-The Android app supports only the CM and packages only Comanche055. The upstream engine still defaults `CmOrLm` to LM, and the wrapper cannot change it. For this DSKY-focused product:
+The Android app supports only the CM and packages only Comanche055. For this DSKY-focused product:
 
 - `Comanche055.bin` is the only supported rope and is exercised by the real-WASM smoke.
 - The known ring-buffer path mode-dependent behavior involves LM rotational-hand-controller bookkeeping on channel `013`; this app supplies no RHC inputs.
-- Therefore CM DSKY execution is retained, but **full CM peripheral-mode fidelity is not claimed**.
+- The DSKY runtime uses the explicit CM peripheral mode; other peripheral subsystems are outside this DSKY-focused app's scope.
 
-Do not binary-patch the pinned WASM to change the flag. If exact CM peripheral behavior becomes required, rebuild audited yaAGC source with an explicit exported LM/CM configuration API and pin/verify the resulting binary separately.
+Do not binary-patch the compiled WASM. Change the audited source patch, reproduce the binary with the pinned toolchain, and update all source/build/runtime identity gates together.
 
 ## APK verification
 

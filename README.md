@@ -39,7 +39,7 @@ See [docs/HOME_MODE.md](docs/HOME_MODE.md).
 
 ## Build
 
-Requirements: JDK 17, Node.js 18+, Android SDK 37 / Build Tools 36, and the pinned `vendor/webAGC` submodule.
+Requirements: JDK 17, Node.js 18+, Android SDK 37 / Build Tools 36, the pinned `vendor/webAGC` submodule, and the CM-specific yaAGC binary documented in `vendor/yaAGC-cm/README.md`.
 
 ```bash
 git clone --recurse-submodules https://github.com/ryanbytes/AGC-DSKY-Android.git
@@ -47,7 +47,7 @@ cd AGC-DSKY-Android
 bash tools/build-local.sh
 ```
 
-The build verifies the pinned webAGC revision and packaged `yaAGC.wasm` / `Comanche055.bin` identities before packaging.
+The build verifies the pinned webAGC rope source and exact packaged `yaAGC.wasm` / `Comanche055.bin` identities before packaging. The CM-specific core is reproducibly rebuilt from pinned VirtualAGC source with `bash tools/build-cm-wasm.sh /path/to/clean/virtualagc-checkout`.
 
 For the exhaustive relay topology and source-routing index, see [docs/RELAY_CODE_MAP.md](docs/RELAY_CODE_MAP.md).
 

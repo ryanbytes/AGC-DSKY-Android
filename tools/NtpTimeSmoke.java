@@ -10,6 +10,7 @@ public final class NtpTimeSmoke {
 
     public static void main(String[] args) throws Exception {
         testSuccess();
+        testMonotonicReceiveTimestamp();
         testServerProcessingDoesNotBiasOffset();
         testWrongPeerRejected();
         testMalformedResponse();
@@ -42,6 +43,15 @@ public final class NtpTimeSmoke {
             responder.join(2_000); check(failure.get() == null, "malformed responder failed");
             check(rejected, "malformed NTP response was accepted");
         }
+    }
+
+    private static void testMonotonicReceiveTimestamp() {
+        long requestWallMs = 1_800_000_000_000L;
+        long requestElapsedNs = 9_000_000_000_000L;
+        long receiveElapsedNs = requestElapsedNs + 375_000_000L;
+        check(SntpClient.receiveTimeMs(requestWallMs, requestElapsedNs, receiveElapsedNs)
+                        == requestWallMs + 375L,
+                "monotonic receive timestamp drifted from T1 after an in-flight wall-clock adjustment");
     }
 
     private static void testServerProcessingDoesNotBiasOffset() throws Exception {

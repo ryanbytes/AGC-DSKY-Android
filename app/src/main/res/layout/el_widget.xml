@@ -18,7 +18,7 @@
             android:layout_height="match_parent"
             android:padding="0dp"
             android:scaleType="fitXY"
-            android:contentDescription="Apollo DSKY electroluminescent display" />
+            android:contentDescription="@string/el_widget_display_description" />
 
         <AdapterViewFlipper
             android:id="@+id/el_hour_flipper"

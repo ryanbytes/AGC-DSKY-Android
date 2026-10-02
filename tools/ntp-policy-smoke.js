@@ -22,7 +22,7 @@ const dream=read('app/src/main/java/org/apollo/agcdsky/AgcDreamService.java');
 
 for(const needle of [
   'time.cloudflare.com',
-  'scheduleAtFixedRate',
+  'scheduleWithFixedDelay',
   'onAvailable(Network network)',
   'SystemClock.elapsedRealtime()',
   'Settings.Global.BOOT_COUNT',

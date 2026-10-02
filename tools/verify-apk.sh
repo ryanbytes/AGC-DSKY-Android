@@ -72,7 +72,7 @@ verify_source_asset() {
   trap - RETURN
 }
 
-verify_blob assets/yaAGC.wasm 132617 713685680492098d05437b99c26403f683d56009
+verify_blob assets/yaAGC.wasm 27270 04a24dd1df4a81738e138b3e9f048d2b10498439
 verify_blob assets/Comanche055.bin 73728 9e4ec167dc99ac12b233df07b6b91fef585e5015
 if unzip -Z1 "$APK" | grep -Fxq 'assets/Luminary099.bin'; then
   fail "unsupported LM rope is packaged: assets/Luminary099.bin"

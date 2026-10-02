@@ -7,7 +7,7 @@ PACKAGE="${1:-org.apollo.agcdsky.eltest}"
   printf 'DEVICE PROCESS RECREATION SMOKE FAIL: expected isolated debug package org.apollo.agcdsky.eltest; found %s\n' "$PACKAGE" >&2
   exit 1
 }
-ACTIVITY="$PACKAGE/.SensorMainActivity"
+ACTIVITY="$PACKAGE/org.apollo.agcdsky.SensorMainActivity"
 
 fail() {
   printf 'DEVICE PROCESS RECREATION SMOKE FAIL: %s\n' "$*" >&2
@@ -121,6 +121,9 @@ OLD_PORT="$(forward_socket "$OLD_SOCKET" || true)"
 # Set this before prepare so even a partially completed prepare gets cleanup.
 RESTORE_NEEDED=1
 node "$ROOT/tools/device-process-state-smoke.js" "$OLD_PORT" prepare
+# Android WebView persists localStorage asynchronously. Give its LevelDB-backed
+# origin storage time to reach disk before deliberately killing the process.
+sleep 2
 remove_forward "$OLD_PORT"
 OLD_PORT=""
 
@@ -129,7 +132,7 @@ $ADB shell am force-stop "$PACKAGE" >/dev/null 2>&1 \
 
 PROCESS_GONE=0
 for _ in {1..20}; do
-  PID_AFTER_STOP="$($ADB shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r' | awk '{print $1}')"
+  PID_AFTER_STOP="$($ADB shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r' | awk '{print $1}' || true)"
   if [[ -z "$PID_AFTER_STOP" ]]; then
     PROCESS_GONE=1
     break

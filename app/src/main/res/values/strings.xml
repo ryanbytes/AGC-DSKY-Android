@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="el_widget_seconds_description">Apollo DSKY seconds</string>
+    <string name="el_widget_display_description">Apollo DSKY electroluminescent display</string>
+</resources>

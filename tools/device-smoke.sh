@@ -170,4 +170,4 @@ printf '  no app-local debug report was produced\n'
 printf '  no obvious fatal event was found in captured logcat\n'
 printf '  log: %s\n' "$LOG_DIR/logcat.txt"
 printf '  provenance: %s\n' "$LOG_DIR/provenance.txt"
-printf '\nManual gates still required: enter CM AGC mode, exercise DSKY keys/hold PRO, confirm CM-only operation, screen off/on, and test DreamService/SOLAR.\n'
+printf '\nPhysical gates still required: screen off/on, display fit and orientation on the target phone, physical PRO standby hold, DreamService/non-interactivity, and DREAM DIM/BRIGHT/SOLAR/location permission.\n'

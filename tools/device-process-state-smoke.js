@@ -328,6 +328,7 @@ function statusExpression() {
       mission: window.AGCDSKY && AGCDSKY.getMission ? AGCDSKY.getMission() : null,
       core: !!c,
       running: !!(c && c.running),
+      cmPeripheralMode: c && c.exports && typeof c.exports.get_cm_mode === 'function' ? c.exports.get_cm_mode() : null,
       version: c && c.version ? String(c.version()) : null,
       channels: c ? Object.keys(c.channels || {}).map(Number).sort((a,b) => a-b) : [],
       runMode: localStorage.getItem('runMode'),
@@ -373,6 +374,7 @@ async function enterMission(cdp, mission) {
     && s.runMode === 'agc'
     && s.core
     && s.running
+    && s.cmPeripheralMode === 1
     && typeof s.version === 'string'
     && s.version.length > 0
     && !s.modeText.includes('AGC ERROR')
@@ -470,7 +472,7 @@ async function verify(cdp) {
     console.log('Device process recreation smoke: PASS');
     console.log(`  persisted nonce: ${markers.nonce}`);
     console.log(`  restored mission/run mode: ${state.mission} / ${state.runMode}`);
-    console.log(`  fresh process core: ${state.version}`);
+    console.log(`  fresh process core: ${state.version}; CM mode=${state.cmPeripheralMode}`);
   } finally {
     try {
       await restoreFromMarkers(cdp, markers);
