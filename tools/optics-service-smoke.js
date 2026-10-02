@@ -46,7 +46,7 @@ assert(!tap.includes('const COUNTS_PER_DEG = 32768 / 360'),
 assert(tap.includes("const comancheMissionSelected = () => typeof api.getMission === 'function' && api.getMission() === 'comanche055';"),
   'tap-to-mark must identify the active Comanche mission before sending CM-specific channel inputs');
 assert(tap.includes("if (!comancheMissionSelected()) {\n      status('SXT · COMANCHE 055 ONLY');\n      showMarker(point, 'busy');\n      return false;\n    }"),
-  'tap-to-mark must block CM CDU and MARK inputs in Luminary mode');
+  'tap-to-mark must block CM CDU and MARK inputs for unsupported mission state');
 for(const marker of [
   'async function open()',
   'function close()',

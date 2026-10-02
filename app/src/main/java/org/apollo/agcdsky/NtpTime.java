@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -28,6 +29,7 @@ public final class NtpTime {
     private static final String OFFSET = "offset_ms";
     private static final String SYNC_UTC = "sync_utc_ms";
     private static final String SYNC_ELAPSED = "sync_elapsed_ms";
+    private static final String SYNC_BOOT_COUNT = "sync_boot_count";
     private static final String RTT = "rtt_ms";
     private static final String LAST_ATTEMPT_UTC = "last_attempt_utc_ms";
     private static final String LAST_ATTEMPT_RESULT = "last_attempt_result";
@@ -135,7 +137,8 @@ public final class NtpTime {
         long offset=medianOfOffsets(accepted);
         long syncUtc=System.currentTimeMillis()+offset;
         SharedPreferences.Editor edit=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit();
-        edit.putLong(OFFSET,offset).putLong(SYNC_UTC,syncUtc).putLong(SYNC_ELAPSED,SystemClock.elapsedRealtime()).putLong(RTT,best.roundTripMs)
+        edit.putLong(OFFSET,offset).putLong(SYNC_UTC,syncUtc).putLong(SYNC_ELAPSED,SystemClock.elapsedRealtime())
+                .putInt(SYNC_BOOT_COUNT,bootCount(context)).putLong(RTT,best.roundTripMs)
                 .putLong(LAST_ATTEMPT_UTC,System.currentTimeMillis()).putString(LAST_ATTEMPT_RESULT,"success")
                 .putString(LAST_ATTEMPT_REASON,reason).putString(LAST_ERROR,"").apply();
         Log.i(TAG,"SNTP synchronized via "+SERVER+" offset="+offset+"ms rtt="+best.roundTripMs+"ms samples="+accepted.size());
@@ -160,12 +163,17 @@ public final class NtpTime {
         long syncUtc=prefs.getLong(SYNC_UTC,0L);
         long offset=prefs.getLong(OFFSET,0L);
         long elapsedAtSync=prefs.getLong(SYNC_ELAPSED,0L);
-        long age=syncUtc==0L?-1L:Math.max(0L,elapsedAtSync>0L&&SystemClock.elapsedRealtime()>=elapsedAtSync
-                ?SystemClock.elapsedRealtime()-elapsedAtSync:System.currentTimeMillis()+offset-syncUtc);
+        long age=NtpSyncAge.ageMs(syncUtc,offset,elapsedAtSync,SystemClock.elapsedRealtime(),
+                prefs.getInt(SYNC_BOOT_COUNT,-1),bootCount(context),System.currentTimeMillis());
         String state=syncUtc==0L?"unavailable":age>STALE_AFTER_MS?"stale":"synced";
         return new Status(offset,syncUtc,prefs.getLong(RTT,-1L),age,state,prefs.getLong(LAST_ATTEMPT_UTC,0L),
                 prefs.getString(LAST_ATTEMPT_RESULT,"never"),prefs.getString(LAST_ATTEMPT_REASON,""),
                 prefs.getString(LAST_ERROR,""),IN_FLIGHT.get());
+    }
+
+    private static int bootCount(Context context){
+        try{return Settings.Global.getInt(context.getContentResolver(),Settings.Global.BOOT_COUNT,-1);}
+        catch(RuntimeException error){return -1;}
     }
 
     private static void notifyListeners(Status status){

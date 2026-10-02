@@ -12,13 +12,7 @@
   if(!snapshotCore)throw new Error('Shared AGC core session unavailable');
   if(!snapshotShell)throw new Error('Application shell service unavailable');
   if(!snapshotDisplay)throw new Error('AGC display service unavailable');
-  function snapshotKeys(mission=snapshotState.selectedMission){
-    // Preserve the existing Comanche keys for upgrade compatibility. LM state
-    // gets a separate slot so switching ropes cannot restore the wrong core.
-    return mission==='comanche055'
-      ?{snapshot:'agcSnapshotV1',meta:'agcSnapshotMetaV1'}
-      :{snapshot:`agcSnapshotV1:${mission}`,meta:`agcSnapshotMetaV1:${mission}`};
-  }
+  function snapshotKeys(){return {snapshot:'agcSnapshotV1',meta:'agcSnapshotMetaV1'}}
   let lastSnapshotError='',lastSnapshotAction='none',lastSnapshotVerify=null,autosaveTimer=0,lastAutosaveAt=0;
 
   function savedSnapshotInfo(){
@@ -27,6 +21,7 @@
   function saveAgcState(reason='manual'){
     const core=snapshotCore.core;
     if(snapshotState.mode!=='agc'){lastSnapshotError='AGC mode required';lastSnapshotAction='save ignored';return false}
+    if(snapshotState.selectedMission!=='comanche055')return false;
     if(!core||snapshotCore.loadedMission!==snapshotState.selectedMission||typeof core.exportSnapshot!=='function')return false;
     try{
       const keys=snapshotKeys();
@@ -39,7 +34,7 @@
   }
   function restoreSavedAgcState(){
     const core=snapshotCore.core;
-    if(!core||typeof core.importSnapshot!=='function')return false;
+    if(snapshotState.selectedMission!=='comanche055'||!core||typeof core.importSnapshot!=='function')return false;
     const keys=snapshotKeys(),raw=snapshotShell.store.get(keys.snapshot);if(!raw)return false;
     try{
       const payload=JSON.parse(raw);
@@ -51,7 +46,7 @@
   function clearSavedAgcState(){const keys=snapshotKeys();snapshotShell.store.remove(keys.snapshot);snapshotShell.store.remove(keys.meta);lastSnapshotError='';lastSnapshotAction='cleared';return true}
   function verifySnapshotRoundTrip(){
     const core=snapshotCore.core;
-    if(!core||snapshotCore.loadedMission!==snapshotState.selectedMission||typeof core.exportSnapshot!=='function'||typeof core.importSnapshot!=='function')return {ok:false,error:'AGC core not ready'};
+    if(snapshotState.selectedMission!=='comanche055'||!core||snapshotCore.loadedMission!==snapshotState.selectedMission||typeof core.exportSnapshot!=='function'||typeof core.importSnapshot!=='function')return {ok:false,error:'AGC core not ready'};
     const wasRunning=!!core.running,ui=snapshotDisplay.snapshotUi();
     try{
       if(wasRunning)core.stop();

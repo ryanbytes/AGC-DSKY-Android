@@ -9,6 +9,7 @@ const requireText=(text,needle,label)=>{if(!text.includes(needle))fail(`${label}
 const forbid=(text,needle,label)=>{if(text.includes(needle))fail(`${label} must not contain ${needle}`)};
 
 const ntp=read('app/src/main/java/org/apollo/agcdsky/NtpTime.java');
+const ntpAge=read('app/src/main/java/org/apollo/agcdsky/NtpSyncAge.java');
 const client=read('app/src/main/java/org/apollo/agcdsky/SntpClient.java');
 const manifest=read('app/src/main/AndroidManifest.xml');
 const state=read('app/src/main/assets/app-state-runtime.js');
@@ -24,6 +25,8 @@ for(const needle of [
   'scheduleAtFixedRate',
   'onAvailable(Network network)',
   'SystemClock.elapsedRealtime()',
+  'Settings.Global.BOOT_COUNT',
+  'NtpSyncAge.ageMs(',
   'Math.abs(sample.offsetMs-median)<=2_000L',
   'status.usingNetworkTime?status.offsetMs:0L',
   'requestSyncNow(Context context)',
@@ -33,6 +36,8 @@ for(const needle of [
   'usingNetworkTime',
   'syncInFlight'
 ]) requireText(ntp,needle,'NtpTime');
+for(const needle of ['bootCountAtSync >= 0','bootCountNow == bootCountAtSync','wallNowMs + offsetMs - syncUtcMs'])
+  requireText(ntpAge,needle,'NtpSyncAge');
 if(!/for\(Listener listener:LISTENERS\)\{\s*try\{listener\.onNtpStatusChanged\(status\);\}\s*catch\(RuntimeException error\)\{Log\.w\(TAG,"NTP status listener failed",error\);\}\s*\}/.test(ntp))
   fail('one NTP status listener must not prevent sync work or later listener notifications');
 

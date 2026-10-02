@@ -6,6 +6,7 @@ command -v javac >/dev/null 2>&1 || { printf 'NTP TIME SMOKE FAIL: javac is requ
 temp_dir="$(mktemp -d)"
 trap 'rm -rf "$temp_dir"' EXIT
 javac -d "$temp_dir" \
+  "$ROOT/app/src/main/java/org/apollo/agcdsky/NtpSyncAge.java" \
   "$ROOT/app/src/main/java/org/apollo/agcdsky/SntpClient.java" \
   "$ROOT/tools/NtpTimeSmoke.java"
 java -cp "$temp_dir" org.apollo.agcdsky.NtpTimeSmoke "$@"

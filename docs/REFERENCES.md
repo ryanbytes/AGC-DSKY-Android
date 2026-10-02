@@ -1,5 +1,9 @@
 # References
 
+## Network time
+
+- IETF RFC 5905, section 8, NTP four-timestamp offset and round-trip-delay equations: https://datatracker.ietf.org/doc/html/rfc5905#section-8
+
 ## Apollo / VirtualAGC
 
 - Virtual AGC project: https://github.com/virtualagc/virtualagc
