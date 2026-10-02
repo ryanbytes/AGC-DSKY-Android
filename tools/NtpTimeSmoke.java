@@ -10,12 +10,13 @@ public final class NtpTimeSmoke {
 
     public static void main(String[] args) throws Exception {
         testSuccess();
+        testWrongPeerRejected();
         testMalformedResponse();
         testNetworkFailureThenRecovery();
         testEraRollover();
         if (args.length > 0 && "--live".equals(args[0])) testLiveCloudflare();
         System.out.println("ntp time smoke: PASS");
-        System.out.println("  local SNTP success, malformed packet rejection, timeout, and recovery verified");
+        System.out.println("  local SNTP success, wrong-peer/malformed rejection, timeout, and recovery verified");
     }
 
     private static void testSuccess() throws Exception {
@@ -38,6 +39,39 @@ public final class NtpTimeSmoke {
             catch (Exception expected) { rejected = true; }
             responder.join(2_000); check(failure.get() == null, "malformed responder failed");
             check(rejected, "malformed NTP response was accepted");
+        }
+    }
+
+    private static void testWrongPeerRejected() throws Exception {
+        try (DatagramSocket server = new DatagramSocket(0);
+             DatagramSocket unexpectedPeer = new DatagramSocket(0)) {
+            AtomicReference<Throwable> failure = new AtomicReference<>();
+            Thread responder = new Thread(() -> {
+                try {
+                    byte[] request = new byte[48];
+                    DatagramPacket incoming = new DatagramPacket(request, request.length);
+                    server.receive(incoming);
+                    byte[] response = new byte[48];
+                    response[0] = 0x24;
+                    response[1] = 1;
+                    System.arraycopy(request, 40, response, 24, 8);
+                    writeTimestamp(response, 40, System.currentTimeMillis() + 60_000L);
+                    unexpectedPeer.send(new DatagramPacket(response, response.length,
+                            incoming.getAddress(), incoming.getPort()));
+                } catch (Throwable error) {
+                    failure.set(error);
+                }
+            });
+            responder.start();
+            boolean rejected = false;
+            try { SntpClient.query("127.0.0.1", server.getLocalPort(), 1_000); }
+            catch (Exception expected) {
+                rejected = "unexpected NTP response source".equals(expected.getMessage());
+            }
+            responder.join(2_000);
+            check(!responder.isAlive(), "unexpected-peer responder did not finish");
+            check(failure.get() == null, "unexpected-peer responder failed");
+            check(rejected, "NTP response from an unexpected UDP port was accepted");
         }
     }
 

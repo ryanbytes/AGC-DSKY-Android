@@ -39,6 +39,7 @@ if(!/for\(Listener listener:LISTENERS\)\{\s*try\{listener\.onNtpStatusChanged\(s
 for(const needle of [
   'DatagramSocket',
   'short NTP response',
+  'unexpected NTP response source',
   'NTP originate timestamp mismatch',
   'invalid NTP response'
 ]) requireText(client,needle,'SntpClient');

@@ -44,6 +44,9 @@ final class SntpClient {
             socket.receive(packet);
             long receivedWallMs = System.currentTimeMillis();
             long rttMs = Math.max(0L, (System.nanoTime() - startedNs) / 1_000_000L);
+            if (!address.equals(packet.getAddress()) || packet.getPort() != port) {
+                throw new IOException("unexpected NTP response source");
+            }
             if (packet.getLength() < PACKET_SIZE) throw new IOException("short NTP response");
             for (int i = 0; i < 8; i++) if (response[24 + i] != request[40 + i]) {
                 throw new IOException("NTP originate timestamp mismatch");

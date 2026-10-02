@@ -73,7 +73,7 @@ The pinned `yaAGC.wasm` imports exactly `env.memory` plus WASI Preview 1:
 
 `agc-core.js` supplies these locally and uses yaAGC exports for fixed-memory loading, reset, stepping, packet I/O, and optional version reporting.
 
-The canonical host preflight (`tools/wasm-runtime-smoke.js`) is designed to instantiate the **actual pinned binary**, load both actual ropes, run CPU/input paths, and execute a real Pinball semantic sequence before Gradle starts. The current repository changes still require execution in a complete local checkout before this is claimed as passing for the current revision.
+The canonical host preflight (`tools/wasm-runtime-smoke.js`) instantiates the **actual pinned binary**, loads both actual ropes, and executes real Pinball input paths before Gradle starts. On the current audited revision, `env TZ=UTC bash tools/run-source-smokes.sh` passed with 92 Node tests plus `ntp-time-smoke.sh`; the real-WASM gate proved Comanche V16N65, P00, V35, and MARK/KEYRUPT2 consumption, plus Luminary V37E00E P00 and V35. This is host proof against the pinned WASM and ropes, not an Android/WebView runtime test.
 
 ### AGC mission selection
 
@@ -186,7 +186,7 @@ Its V35 semantic driver now proves a channel-driven P00 `PROG 00` precondition b
 ## Remaining high-value work
 
 1. Run the device smoke gates listed in `docs/DEVICE_RUNTIME_SMOKE.md` on current Regular and Fire builds and retain their evidence.
-2. Exercise representative non-V35 Pinball semantics through real channel `015` input.
+2. Exercise additional non-V35 Pinball semantics through real channel `015` input in the packaged Android WebView. The host real-WASM gate already covers Comanche V16N65 and P00 entry plus Luminary V37E00E P00 entry.
 3. Test long physical PRO behavior through channel `032`.
 4. Verify real OS screen-off/on lifecycle behavior in addition to direct bridge tests.
 5. Verify DreamService startup, non-interactivity, brightness modes, SOLAR permission behavior, and normal-app state after Dream exit.
