@@ -2,7 +2,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PACKAGE=org.apollo.agcdsky
+PACKAGE="${1:-org.apollo.agcdsky.eltest}"
+[[ "$PACKAGE" == 'org.apollo.agcdsky.eltest' ]] || {
+  printf 'DEVICE AGC SMOKE FAIL: expected isolated debug package org.apollo.agcdsky.eltest; found %s\n' "$PACKAGE" >&2
+  exit 1
+}
 ACTIVITY="$PACKAGE/.SensorMainActivity"
 
 fail() {

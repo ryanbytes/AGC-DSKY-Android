@@ -18,6 +18,8 @@ bash tools/device-full-smoke.sh app/build/outputs/apk/regular/debug/app-regular-
 
 This runs the immediate install/launch/frontend smoke, live AGC/WebView checks, page-recreation check, and finally an Android process force-stop/relaunch check.
 
+The aggregate gate derives the package ID from the APK and accepts only `org.apollo.agcdsky.eltest`, keeping these destructive-to-process test actions isolated from the production app. It passes that same package ID to each live stage; the standalone AGC and process-recreation drivers also default to and enforce `.eltest`.
+
 ### Immediate device smoke
 
 `tools/device-smoke.sh`:

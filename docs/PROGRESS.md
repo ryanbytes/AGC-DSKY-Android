@@ -78,6 +78,8 @@ Retained the raw 15-bit channel `012` value alongside decoded selector-4 state a
 
 Validation on macOS: `env TZ=UTC bash tools/run-source-smokes.sh` passed (91 Node smokes plus `ntp-time-smoke.sh`). `env TZ=UTC ANDROID_SDK_ROOT=<configured Android SDK path> bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:assemble` passed and produced all six Regular/Fire debug, installfix, and release variant APKs. Regular and Fire debug APKs passed `tools/verify-apk.sh`; package checks confirmed all six variants contain byte-for-byte current `index.html`, `diagnostics.js`, and `hardware-fidelity.js`. Release APKs are unsigned (`*-release-unsigned.apk`). No Android device smoke, release signing, or publication was performed.
 
+The next harness audit found that `device-full-smoke.sh` installed the isolated `.eltest` debug APK, but its later AGC and process-recreation stages hard-coded the production package ID. The full runner now derives the application ID from the APK, requires the isolated `.eltest` package, and passes that ID through; standalone live stages default to and require `.eltest`. Added `tools/device-package-policy-smoke.js` to lock this routing. The full host suite now passes with 92 Node smokes plus `ntp-time-smoke.sh`. No Android device was connected, so this change has host-policy coverage but no live Android verification.
+
 Last updated: 2026-10-01
 
 ## 2026-09-29 v1.1.53 terse Apollo-style panel nomenclature
