@@ -84,6 +84,8 @@ Continued source/doc audit corrected the stale preferred APK path and removed de
 
 The channel-012 test audit found that `hardware-service-smoke.js` invoked the registered callback directly, so it did not cover production `AGCDSKY_DISPLAY.onChannel()` dispatch or the AGC-mode gate. Added an isolated fixture loading the real display and hardware-fidelity services; it verifies mode gating, independent INJ SEQ/CUTOFF bits, 15-bit raw-word masking, and the both-relays state through the public dispatcher. `node tools/hardware-service-smoke.js`, `git diff --check`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed; the full source suite remains 92 Node smokes plus `ntp-time-smoke.sh`. No app runtime source changed. Device/WebView validation remains unavailable without an attached Android device.
 
+The rope-coverage audit then found that the documented canonical host preflight promised both real ropes, but `wasm-runtime-smoke.js` only instantiated Comanche055. The smoke now loads the exact pinned Luminary099 rope in a separate real WASM instance and proves V37E00E P00 relay-11 `01265` plus V35 FULLDSP/FULLDSP1 state and LM relay-12 `00674`; the existing CM V16N65/P00/V35 checks remain. `node tools/wasm-runtime-smoke.js` and the full canonical source suite passed (92 Node smokes plus `ntp-time-smoke.sh`). Scope mismatch for owner decision: the current Android shell/`cm-mode.js` hard-locks Comanche, while repository AGENT guidance describes Luminary as the default LM path and Comanche as selectable. No mission-selection behavior was changed pending resolution of that user-visible scope conflict.
+
 Last updated: 2026-10-01
 
 ## 2026-09-29 v1.1.53 terse Apollo-style panel nomenclature
