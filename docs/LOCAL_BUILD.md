@@ -146,6 +146,7 @@ The pre-build checks also guard:
 - DREAM SOLAR sunrise/sunset, transition midpoint, polar day, and polar night behavior
 - only the exact three pinned upstream binary inputs are staged
 - mission selection/requested AGC mode persistence
+- LM-default first-selector migration, mission-matched face annunciators, and isolated LM/CM snapshots
 - DreamService does not start yaAGC
 - Activity and DreamService remain in the same default process for shared same-origin WebStorage
 - rope load -> disposable I/O initialization -> final reset -> DSKY U-bit mask sequencing

@@ -22,7 +22,7 @@ for(const forbidden of [
   'function v35Low11(','function v35RelayState(','scheduleV35RelaySounds',
   'V35_ROW_MS','V35_TEST_MS',"querySelectorAll('[data-lamp]')"
 ]) assert(!clock.includes(forbidden),'PHONE CLOCK retained synthetic V35 machinery: '+forbidden);
-assert(clock.includes("throw new Error('V35 is an AGC/Comanche operation; PHONE CLOCK cannot synthesize it')"),
+assert(clock.includes("throw new Error('V35 is an AGC operation; PHONE CLOCK cannot synthesize it')"),
   'PHONE CLOCK must reject V35 explicitly');
 
 for(const forbidden of [

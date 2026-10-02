@@ -66,15 +66,15 @@ for(const forbidden of ['hardwareLampTest','scheduleSyntheticRows','scheduleSynt
 assert(visual.includes("const baseDecodeChannel10=display.implementation('decodeChannel10')"),'relay presentation lost underlying AGC output decoder');
 assert(visual.includes('return baseDecodeChannel10(value);'),'relay presentation no longer forwards the original AGC channel word');
 
-assert(clock.includes("throw new Error('V35 is an AGC/Comanche operation; PHONE CLOCK cannot synthesize it')"),
+assert(clock.includes("throw new Error('V35 is an AGC operation; PHONE CLOCK cannot synthesize it')"),
   'PHONE CLOCK can synthesize V35 again');
 for(const forbidden of ['function v35Low11(','function v35RelayState(','scheduleV35RelaySounds','V35_TEST_MS'])
   assert(!clock.includes(forbidden),'PHONE CLOCK retained synthetic V35 machinery: '+forbidden);
 
 assert(diagnostics.includes("section('OPERATION AUTHORITY')"),'diagnostics does not expose operation provenance');
 for(const marker of [
-  'CHANNEL 015 → yaAGC / COMANCHE',
-  'CHANNEL 032 ACTIVE-LOW → yaAGC / COMANCHE',
+  'CHANNEL 015 → yaAGC / ${mission}',
+  'CHANNEL 032 ACTIVE-LOW → yaAGC / ${mission}',
   'yaAGC → CHANNELS 010 / 011 / 012 / 013 / 0163 → HARDWARE / DISPLAY',
   'PHONE CLOCK\',\'NON-FLIGHT',
   'Relay Show\',\'NON-FLIGHT',

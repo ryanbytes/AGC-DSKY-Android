@@ -1,3 +1,11 @@
+## 2026-10-01 selectable LM/CM mission audit
+
+Restored the documented product policy that Luminary099 is the first-run/default rope while Comanche055 remains selectable. Added the Options mission selector, one-time migration from the old forced-Comanche storage value, mission-specific DSKY face annunciators, and separate LM/CM snapshot slots. Switching missions during AGC first returns through the shared CLOCK transition so the active mission snapshot is saved before changing ropes. The pinned engine still defaults its internal peripheral mode to LM; selectable Comanche rope execution does not claim full CM peripheral-mode fidelity.
+
+The first all-variant build revealed a packaging gap: Gradle and the APK verifier still staged/rejected the Luminary rope. Added Luminary to the exact size/Git-blob build gate and package set, updated APK verification to require both ropes, and added a source regression tying the Gradle asset list to APK verification. Both ropes now ship in all variants so either selector choice can load its actual rope.
+
+Validation: `env TZ=UTC bash tools/run-source-smokes.sh` passed (92 Node smokes plus `ntp-time-smoke.sh`), including real pinned-WASM execution with both ropes and the channel-012 dispatch path. `env TZ=UTC ANDROID_SDK_ROOT=/Users/ryan/Library/Android/sdk bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:verifyPinnedAgcAssets :app:assemble` built all six Regular/Fire debug, installfix, and unsigned release APKs with Gradle 9.5.1, JDK 25, SDK platform 37, and Build Tools 36.0.0. Regular and Fire debug APKs passed `tools/verify-apk.sh`; all six packages passed ZIP integrity, pinned WASM/rope Git-blob, package/version, and selected frontend byte-comparison checks. No ADB device is connected, so Android WebView/device interaction remains unverified. Release APKs are unsigned and are not installation handoff artifacts.
+
 ## 2026-09-30 line-by-line audit follow-up
 
 The first audit pass reproduced two parser-validation gaps: a trailing M/L/C command with no coordinates was silently accepted, and a large exponent could become an infinite float. The production parser now rejects missing command coordinates and non-finite values; its JVM regression includes these cases and unsupported relative commands.
@@ -453,15 +461,16 @@ These are source-level checks only. The current execution environment still cann
 
 ## Current scope
 
-The current Android app is the **CM / Comanche 055** configuration. It has two deliberately separate modes:
+The current Android app defaults to **LM / Luminary 099** and retains selectable CM / Comanche 055 AGC execution. It has two deliberately separate modes:
 
 1. a synthetic phone-clock / DreamService presentation; and
-2. a real AGC mode driven by the pinned `yaAGC` WebAssembly core and Apollo 11 Command Module `Comanche055.bin`.
+2. a real AGC mode driven by the pinned `yaAGC` WebAssembly core and the selected exact pinned `Luminary099.bin` or `Comanche055.bin` rope.
 
 The current Gradle package inputs are only:
 
 - `vendor/webAGC/src/yaAGC.wasm` — 132,617 bytes — Git blob `713685680492098d05437b99c26403f683d56009`;
-- `vendor/webAGC/demo/agc/Comanche055.bin` — 73,728 bytes — Git blob `9e4ec167dc99ac12b233df07b6b91fef585e5015`.
+- `vendor/webAGC/demo/agc/Comanche055.bin` — 73,728 bytes — Git blob `9e4ec167dc99ac12b233df07b6b91fef585e5015`;
+- `vendor/webAGC/demo/agc/Luminary099.bin` — 73,728 bytes — Git blob `cd2ec9992d5863e1c7234fa760020f68ef946202`.
 
 The pinned `vendor/webAGC` gitlink remains:
 
@@ -688,7 +697,7 @@ Do not upgrade any unchecked item to verified without actual output from that ex
 ## Remaining high-value fidelity work
 
 1. Continue transcribing absolute EL/key geometry from original MIT/NASA drawings where current values still depend on replica vector artwork.
-2. Keep CM and LM annunciator configurations distinct; this branch is CM/Comanche-only.
+2. Keep CM and LM annunciator configurations distinct while preserving the declared CM peripheral-mode limitation of the pinned WASM.
 3. Audit the remaining non-latching auxiliary-relay acoustic model against the available indicator-driver schematics; do not invent per-relay measured timings that the surviving documentation does not provide.
 4. Run the canonical local build and current-source device gates as soon as the required Android toolchain and recursive checkout are available.
 

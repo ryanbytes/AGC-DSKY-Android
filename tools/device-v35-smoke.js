@@ -2,7 +2,7 @@
 'use strict';
 
 /*
- * End-to-end semantic V35 gate for the current CM-only Android WebView.
+ * End-to-end semantic V35 gate for Comanche055 in the Android WebView.
  *
  * Path proven by this smoke:
  *   pointer events -> Pinball -> real yaAGC/Comanche055 -> channel 010/011/0163
@@ -285,9 +285,13 @@ async function pollStatus(cdp, label, predicate, timeoutMs = 20000) {
 
 async function enterComanche(cdp) {
   let status = await cdp.evaluate(statusExpression());
-  assert(status.mission === 'comanche055', `CM-only build reported unexpected mission ${status.mission}`);
+  if (status.mission !== 'comanche055') {
+    if (status.mode === 'agc') { await cdp.evaluate("document.getElementById('mode-toggle').click(); true"); await pollStatus(cdp,'return to CLOCK',s=>s.mode==='clock'&&!s.running); }
+    await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");
+    status=await pollStatus(cdp,'select Comanche055',s=>s.mission==='comanche055'&&s.mode==='clock');
+  }
   if (status.mode !== 'agc' || !status.running) {
-    await cdp.evaluate("document.getElementById('agc').click(); true");
+    await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
     status = await pollStatus(cdp, 'start Comanche055', (s) =>
       s.ready && s.mission === 'comanche055' && s.mode === 'agc' && s.core && s.running && !s.modeText.includes('AGC ERROR'));
   }
@@ -384,19 +388,21 @@ async function proveFlashPhase(cdp, initial) {
 }
 
 async function snapshotState(cdp) {
-  return cdp.evaluate(`(() => ({runMode:localStorage.getItem('runMode')}))()`);
+  return cdp.evaluate(`(() => ({mission:localStorage.getItem('agcMission'),missionPreference:localStorage.getItem('agcMissionPreferenceV1'),runMode:localStorage.getItem('runMode')}))()`);
 }
 async function restoreState(cdp, snapshot) {
   try {
-    const status = await cdp.evaluate(statusExpression());
-    if (snapshot.runMode === 'clock' && status.mode !== 'clock') {
-      await cdp.evaluate("document.getElementById('clock').click(); true");
-      await pollStatus(cdp, 'restore clock mode', (s) => s.mode === 'clock' && !s.running, 5000);
-    } else if (snapshot.runMode === 'agc' && (status.mode !== 'agc' || !status.running)) {
-      await enterComanche(cdp);
-    } else if (snapshot.runMode === null) {
-      await cdp.evaluate("localStorage.removeItem('runMode'); true");
+    let status = await cdp.evaluate(statusExpression());
+    if (status.mode === 'agc') {
+      await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
+      status=await pollStatus(cdp,'return to CLOCK for preference restore',s=>s.mode==='clock'&&!s.running,5000);
     }
+    const wanted=snapshot.mission==='comanche055'?'comanche055':'luminary099';
+    if(status.mission!==wanted){await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");status=await pollStatus(cdp,'restore selected mission',s=>s.mission===wanted&&s.mode==='clock',5000)}
+    if(snapshot.missionPreference===null)await cdp.evaluate("localStorage.removeItem('agcMissionPreferenceV1'); true");else await cdp.evaluate(`localStorage.setItem('agcMissionPreferenceV1', ${JSON.stringify(snapshot.missionPreference)}); true`);
+    if(snapshot.mission===null)await cdp.evaluate("localStorage.removeItem('agcMission'); true");
+    if(snapshot.runMode==='agc'){if(wanted==='comanche055')await enterComanche(cdp);else{await cdp.evaluate("document.getElementById('mode-toggle').click(); true");await pollStatus(cdp,'restore prior AGC mode',s=>s.mode==='agc'&&s.running,20000)}}
+    else if(snapshot.runMode===null)await cdp.evaluate("localStorage.removeItem('runMode'); true");
   } catch (error) {
     console.error(`warning: could not fully restore pre-smoke frontend state: ${error.message}`);
   }
@@ -409,7 +415,7 @@ async function main() {
   let snapshot;
   try {
     await cdp.call('Runtime.enable');
-    const ready = await cdp.evaluate("!!(window.AGCDSKY && typeof AGCDSKY.appStatus==='function' && typeof AGCDSKY.hardware==='function' && document.getElementById('agc'))");
+    const ready = await cdp.evaluate("!!(window.AGCDSKY && typeof AGCDSKY.appStatus==='function' && typeof AGCDSKY.hardware==='function' && document.getElementById('mode-toggle'))");
     assert(ready === true, 'AGC DSKY app/hardware diagnostic surface is not initialized');
     snapshot = await snapshotState(cdp);
     await enterComanche(cdp);

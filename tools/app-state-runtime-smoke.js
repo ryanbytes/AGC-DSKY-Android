@@ -11,7 +11,7 @@ assert(state&&Object.isSealed(state),'shared app state must exist and be sealed'
 assert(core&&Object.isSealed(core),'shared AGC core session must exist and be sealed');
 assert(compat&&Object.isFrozen(compat),'compatibility registry must exist and be frozen');
 assert(!('mutable' in compat)&&!('accessor' in compat),'compatibility registry must not expose mutable/accessor ownership primitives');
-assert(state.mode==='clock'&&state.selectedMission==='comanche055'&&state.verb==='16'&&state.noun==='65','shared app-state core defaults changed');
+assert(state.mode==='clock'&&state.selectedMission==='luminary099'&&state.verb==='16'&&state.noun==='65','shared app-state core defaults changed');
 assert(state.dream===false&&state.dreamMode==='dim'&&state.dim===false&&state.tickSound===true&&state.relayHaptics===true&&state.displayOnly===false&&state.appVisible===true,'shared presentation/visibility defaults changed');
 assert(state.ntpStatus&&state.ntpStatus.server==='time.cloudflare.com'&&state.ntpStatus.state==='unavailable','NTP state defaults changed');
 assert(core.core===null&&core.loadedMission===''&&core.suspendedForClock===false&&core.pausedForVisibility===false,'core-session defaults changed');

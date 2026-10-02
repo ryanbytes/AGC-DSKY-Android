@@ -3,8 +3,8 @@
 
 /*
  * Execute the real pinned yaAGC WebAssembly binary under Node using the same
- * agc-core.js wrapper loaded by Android. The current app is CM-only, so this
- * smoke exercises Comanche 055 only.
+ * agc-core.js wrapper loaded by Android. It exercises both pinned ropes using
+ * the same engine, with LM as the native/default rope.
  */
 const fs = require('fs');
 const path = require('path');
@@ -290,7 +290,7 @@ async function main() {
         onChannelUpdate(channel, value) { channelUpdates.push([channel, value]); }
     });
 
-    await core.load();
+    await core.load({ropeUrl:ROPE_NAME});
     assert(errors.length === 0, 'Comanche055: error during real WASM load');
     assert(core.instance && core.exports && core.memory,
         'Comanche055: real WASM instance did not initialize completely');

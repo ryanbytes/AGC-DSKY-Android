@@ -52,6 +52,7 @@ html,body,#app{background:#000!important}
     <path id="gorton-T" d="M95,60C95,27.319 122.282,0 155,0L629.824,0C662.505,0 689.824,27.282 689.824,60C689.824,92.718 662.505,120 629.824,120L453.024,120L453.024,860C453.024,892.718 425.705,920 393.024,920C360.344,920 333.024,892.718 333.024,860L333.024,120L155,120C122.282,120 95,92.681 95,60"/>
     <path id="gorton-U" d="M218.579,60.365L215.011,647.262C218.452,740.134 290.054,800 359.805,800C433.854,800 508.952,738.737 507.805,648.381L507.805,60C507.805,27.319 535.088,0 567.805,0C600.522,0 627.805,27.319 627.805,60L627.805,647.484C629.143,809.378 495.892,920 359.805,920C221.915,920 99.53,805.811 95,648.683L98.582,59.635C98.779,27.037 126.065,0 158.588,0C191.517,0 218.778,27.578 218.579,60.365"/>
     <path id="gorton-Y" d="M125.82,7.484C134.813,2.515 144.647,0.162 154.396,0.162C175.654,0.162 196.506,11.348 207.354,30.98L373.613,331.853L539.524,31.023C550.356,11.384 571.223,0.16 592.509,0.16C602.237,0.16 612.054,2.505 621.04,7.461C640.697,18.302 651.902,39.169 651.902,60.443C651.902,70.176 649.557,79.994 644.604,88.977L433.604,471.56L432.063,860.237C431.935,892.877 404.637,920 372.059,920C339.217,920 311.935,892.525 312.064,859.763L313.604,471.364L102.324,89.02C97.352,80.021 95,70.189 95,60.444C95,39.175 106.203,18.324 125.82,7.484"/>
+    <path id="gorton-V" d="M139.989257812 858.104492188C144.845703125 859.354492188 149.741210938 859.952148438 154.577148438 859.952148438C181.254882812 859.952148438 206.149414062 841.78515625 213.056640625 814.963867188L378.979492188 170.684570312L555.096679688 815.801757812C562.305664062 842.208984375 586.991210938 859.947265625 613.366210938 859.947265625C618.479492188 859.947265625 623.655273438 859.28125 628.780273438 857.881835938C655.21484375 850.665039062 672.924804688 825.96484375 672.924804688 799.607421875C672.924804688 794.495117188 672.258789062 789.3203125 670.860351562 784.198242188L452.459960938 -15.8017578125C446.4765625 -37.716796875 423.021484375 -60 394.578125 -60L377.268554688 -60L360.978515625 -60C337.146484375 -60 309.96875 -42.51171875 302.874023438 -14.9638671875L96.8486328125 785.036132812C95.59765625 789.896484375 95 794.791992188 95 799.62890625C95 826.325195312 113.1953125 851.204101562 139.989257812 858.104492188Z"/>
   </defs></svg>
   <!-- Gorton Normal fixed key legends. OTF outlines were converted to static SVG paths; no font file is bundled.
        Upstream SFD sources: source/Gorton-Normal-120.sfd blob 33028992cb971f4045b8c5e9ffac720f8307588c and
@@ -169,8 +170,8 @@ html,body,#app{background:#000!important}
       <use class="gorton-glyph" href="#gorton-E" transform="translate(4854.295 1209.503)"/>
       <use class="gorton-glyph" href="#gorton-R" transform="translate(5604.295 1209.503)"/>
     </svg></div>
-      <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
-      <div class="lamp white blank" aria-hidden="true"></div><div class="lamp yellow blank" aria-hidden="true"></div>
+      <div class="lamp white blank" aria-hidden="true"></div><div class="lamp white mission-lm-only" data-lamp="alt" aria-label="ALT"><svg class="lamp-legend" viewBox="0 0 7318.590 3339.007" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use class="gorton-glyph" href="#gorton-A" transform="translate(2110.295 1209.503)"/><use class="gorton-glyph" href="#gorton-L" transform="translate(2920.295 1209.503)"/><use class="gorton-glyph" href="#gorton-T" transform="translate(3670.295 1209.503)"/></svg></div>
+      <div class="lamp white blank" aria-hidden="true"></div><div class="lamp white mission-lm-only" data-lamp="vel" aria-label="VEL"><svg class="lamp-legend" viewBox="0 0 7318.590 3339.007" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use class="gorton-glyph" href="#gorton-V" transform="translate(2110.295 1209.503)"/><use class="gorton-glyph" href="#gorton-E" transform="translate(2920.295 1209.503)"/><use class="gorton-glyph" href="#gorton-L" transform="translate(3670.295 1209.503)"/></svg></div>
     </div>
 
     <svg id="elpanel" class="elpanel" viewBox="0 0 106 182.356" preserveAspectRatio="xMidYMid meet" aria-label="DSKY electroluminescent display">
@@ -208,6 +209,7 @@ html,body,#app{background:#000!important}
       <div class="options-tools-menu">
         <button id="cheat" data-panel-legend="PROCEDURES">QUICK REF</button>
         <button id="legal" data-panel-legend="TECH DATA">SOURCE</button>
+        <button id="mission" data-panel-legend="AGC MISSION" aria-label="AGC mission Luminary 099; tap to select Comanche 055">LM</button>
       </div>
     </details>
     <span id="mode">PHONE CLOCK · LOCAL WALL TIME</span>

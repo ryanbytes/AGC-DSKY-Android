@@ -102,7 +102,7 @@
     lampTestActiveValue=false;
   }
   function baseLampTest(){
-    throw new Error('V35 is an AGC/Comanche operation; PHONE CLOCK cannot synthesize it');
+    throw new Error('V35 is an AGC operation; PHONE CLOCK cannot synthesize it');
   }
 
   function cloneClockDigits(value=clockDigitsValue){

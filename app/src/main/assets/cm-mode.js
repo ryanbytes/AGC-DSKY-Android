@@ -1,15 +1,11 @@
 'use strict';
 
-// CM-only build: lock the mission and apply the mounted-CM DSKY finish.
-// CM hardware/presentation features are parser-ordered directly in index.html;
-// this module owns configuration only and performs no script injection.
+// Retained compatibility module for the shared Apollo Block II DSKY finish.
+// Mission selection and rope persistence belong to the application shell;
+// this parser-ordered module performs no script injection.
 (() => {
-  const shell=window.AGCDSKY_SHELL;
-  if(!shell||!shell.store||typeof shell.store.set!=='function')throw new Error('Application shell storage service unavailable');
-
   function applyCmMode() {
-    shell.store.set('agcMission','comanche055');
-    document.body.classList.add('spacecraft-cm');
+    document.body.classList.add('apollo-block-ii');
     return true;
   }
 

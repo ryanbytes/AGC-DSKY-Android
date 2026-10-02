@@ -29,6 +29,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535
 
 const KEY_ORIGINAL_MISSION = '__agcDeviceProcessSmokeOriginalMission';
 const KEY_ORIGINAL_RUN_MODE = '__agcDeviceProcessSmokeOriginalRunMode';
+const KEY_ORIGINAL_MISSION_PREFERENCE = '__agcDeviceProcessSmokeOriginalMissionPreference';
 const KEY_NONCE = '__agcDeviceProcessSmokeNonce';
 const NULL_TOKEN = '__NULL__';
 
@@ -331,8 +332,8 @@ function statusExpression() {
       channels: c ? Object.keys(c.channels || {}).map(Number).sort((a,b) => a-b) : [],
       runMode: localStorage.getItem('runMode'),
       storedMission: localStorage.getItem('agcMission'),
-      modeText: document.getElementById('mode') ? document.getElementById('mode').textContent : '',
-      agcButton: document.getElementById('agc') ? document.getElementById('agc').textContent.trim() : ''
+      mode: window.AGCDSKY && typeof AGCDSKY.appStatus==='function' ? AGCDSKY.appStatus().mode : null,
+      modeText: document.getElementById('mode') ? document.getElementById('mode').textContent : ''
     };
   })()`;
 }
@@ -350,9 +351,9 @@ async function poll(cdp, label, predicate, timeoutMs = 20000) {
 
 async function ensureClock(cdp) {
   const status = await cdp.evaluate(statusExpression());
-  if (status.agcButton === 'CLOCK') {
-    await cdp.evaluate("document.getElementById('agc').click(); true");
-    await poll(cdp, 'return to phone clock', (s) => s.agcButton === 'AGC' && !s.running, 5000);
+  if (status.mode === 'agc') {
+    await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
+    await poll(cdp, 'return to phone clock', (s) => s.mode === 'clock' && !s.running, 5000);
   }
 }
 
@@ -360,7 +361,7 @@ async function ensureMission(cdp, mission) {
   let status = await cdp.evaluate(statusExpression());
   if (status.mission === mission) return;
   await ensureClock(cdp);
-  await cdp.evaluate("document.getElementById('mission').click(); true");
+  await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");
   status = await poll(cdp, `select ${mission}`, (s) => s.mission === mission, 5000);
   assert(status.mission === mission, `failed to select ${mission}`);
 }
@@ -368,7 +369,7 @@ async function ensureMission(cdp, mission) {
 async function enterMission(cdp, mission) {
   await ensureClock(cdp);
   await ensureMission(cdp, mission);
-  await cdp.evaluate("document.getElementById('agc').click(); true");
+  await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
   return poll(cdp, `start ${mission}`, (s) =>
     s.mission === mission
     && s.storedMission === mission
@@ -385,6 +386,7 @@ async function readMarkers(cdp) {
   return cdp.evaluate(`(() => ({
     originalMission: localStorage.getItem(${JSON.stringify(KEY_ORIGINAL_MISSION)}),
     originalRunMode: localStorage.getItem(${JSON.stringify(KEY_ORIGINAL_RUN_MODE)}),
+    originalMissionPreference: localStorage.getItem(${JSON.stringify(KEY_ORIGINAL_MISSION_PREFERENCE)}),
     nonce: localStorage.getItem(${JSON.stringify(KEY_NONCE)})
   }))()`);
 }
@@ -393,6 +395,7 @@ async function clearMarkers(cdp) {
   await cdp.evaluate(`(() => {
     localStorage.removeItem(${JSON.stringify(KEY_ORIGINAL_MISSION)});
     localStorage.removeItem(${JSON.stringify(KEY_ORIGINAL_RUN_MODE)});
+    localStorage.removeItem(${JSON.stringify(KEY_ORIGINAL_MISSION_PREFERENCE)});
     localStorage.removeItem(${JSON.stringify(KEY_NONCE)});
     return true;
   })()`);
@@ -402,6 +405,7 @@ async function restoreFromMarkers(cdp, markers) {
   if (!markers || !markers.nonce) return false;
   const originalMission = markers.originalMission === NULL_TOKEN ? null : markers.originalMission;
   const originalRunMode = markers.originalRunMode === NULL_TOKEN ? null : markers.originalRunMode;
+  const originalMissionPreference = markers.originalMissionPreference === NULL_TOKEN ? null : markers.originalMissionPreference;
 
   await ensureClock(cdp);
   const wantedMission = originalMission === 'comanche055' ? 'comanche055' : 'luminary099';
@@ -409,9 +413,11 @@ async function restoreFromMarkers(cdp, markers) {
   if (originalMission === null) {
     await cdp.evaluate("localStorage.removeItem('agcMission'); true");
   }
+  if (originalMissionPreference === null) await cdp.evaluate("localStorage.removeItem('agcMissionPreferenceV1'); true");
+  else await cdp.evaluate(`localStorage.setItem('agcMissionPreferenceV1', ${JSON.stringify(originalMissionPreference)}); true`);
 
   if (originalRunMode === 'agc') {
-    await cdp.evaluate("document.getElementById('agc').click(); true");
+    await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
     await poll(cdp, 'restore prior AGC run mode', (s) => s.core && s.running, 20000);
   } else if (originalRunMode === null) {
     await cdp.evaluate("localStorage.removeItem('runMode'); true");
@@ -432,12 +438,14 @@ async function prepare(cdp) {
 
   const original = await cdp.evaluate(`(() => ({
     mission: localStorage.getItem('agcMission'),
+    missionPreference: localStorage.getItem('agcMissionPreferenceV1'),
     runMode: localStorage.getItem('runMode')
   }))()`);
   const nonce = crypto.randomBytes(16).toString('hex');
   await cdp.evaluate(`(() => {
     localStorage.setItem(${JSON.stringify(KEY_ORIGINAL_MISSION)}, ${JSON.stringify(original.mission === null ? NULL_TOKEN : original.mission)});
     localStorage.setItem(${JSON.stringify(KEY_ORIGINAL_RUN_MODE)}, ${JSON.stringify(original.runMode === null ? NULL_TOKEN : original.runMode)});
+    localStorage.setItem(${JSON.stringify(KEY_ORIGINAL_MISSION_PREFERENCE)}, ${JSON.stringify(original.missionPreference === null ? NULL_TOKEN : original.missionPreference)});
     localStorage.setItem(${JSON.stringify(KEY_NONCE)}, ${JSON.stringify(nonce)});
     return true;
   })()`);
