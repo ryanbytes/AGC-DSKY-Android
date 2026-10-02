@@ -8,6 +8,14 @@ Created a client-downloadable Regular `.eltest` APK, SHA-256 `751b934bd82ed07067
 
 `adb devices -l` reported no attached device. `xcodebuild` logged that the installed CoreSimulator framework is older than Xcode, but both macOS and generic iOS target builds completed successfully. Live WebView/device behavior, Android lifecycle, and physical DSKY appearance remain open audit gates.
 
+## 2026-10-02 landscape menu clipping and live V35 consistency
+
+Follow-up to the landscape slide-out showed that the controls menu was still anchored at the top edge. The open DSKY/menu composition now keeps the menu vertically centered in the viewport, with the existing upward AUX DATA popup retained. The display-layout smoke checks the centered transform and safe vertical bounds for short landscape heights.
+
+The first full device smoke on the new panel build found a real auxiliary-relay race: a rapid channel 011 transition could leave an older delayed COMP contact callback eligible to overwrite the latest state. Auxiliary relay presentation now tracks the requested target and invalidates superseded callbacks. Added a deterministic rapid-on/rapid-off regression.
+
+Validation: `node tools/display-layout-smoke.js`, `node tools/relay-visual-coupling-smoke.js`, `env TZ=UTC bash tools/run-source-smokes.sh` (92 Node smokes plus `ntp-time-smoke.sh`), and `ANDROID_SDK_ROOT=<configured SDK> bash tools/build-local.sh` passed at commit `0206d918a82601c96eee89ba8fc2be6a12dcd04d`. Regular and Fire debug APKs passed verification. Regular APK SHA-256 `be3a90b92f2809f5512c595b50fdf712e9c0b62187b44c8a3dd3f6c0e98191c1` passed `tools/device-full-smoke.sh`, including pointer-driven V37E00E/P00, real Comanche055 V35 latches and raw-channel annunciators, WebView reload, and process recreation. A local Chromium landscape screenshot confirmed the complete panel at 1280x720 and at 720x360 with AUX open; at 720x360 the DSKY bounds were x=75..367, controls x=371..645/y=108..252, and both AUX submenu buttons x=375..643/y=163..193. Physical handset fit remains unverified.
+
 ## 2026-10-02 AUX menu viewport clipping
 
 The AUX DATA submenu could extend below the options panel's scrollport on short portrait screens, leaving PROCEDURES and TECH DATA partially hidden. The options panel now allows overflow and keeps the two-column submenu as a floating popup; landscape positions the popup above AUX DATA. The display-layout smoke locks the visible overflow and upward landscape placement.
