@@ -29,7 +29,7 @@ This runs the immediate install/launch/frontend smoke, live AGC/WebView checks, 
 - requires the debug-only `FRONTEND READY app` marker
 - rejects obvious fatal Android/WebView events
 
-A process that merely stays alive with a blank or partially initialized WebView is not a pass. The readiness marker now also requires the final refinement layer to expose `snapshotRelays()`, `snapshotChannels()`, and `snapshotDsky()`; a page that loaded only the base frontend cannot pass readiness.
+A process that merely stays alive with a blank or partially initialized WebView is not a pass. The marker is emitted by the final script in `index.html` only after all packaged frontend scripts have evaluated and `AGCDSKY.appStatus` is available. The immediate smoke also rejects a saved app-local debug report and obvious fatal Android/WebView events. This startup marker does not exercise the AGC runtime or prove the diagnostic snapshot methods; those are checked by the separate live AGC drivers.
 
 ### Live AGC runtime smoke
 

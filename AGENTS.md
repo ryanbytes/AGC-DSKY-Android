@@ -192,7 +192,7 @@ The canonical build path must continue to run:
 
 ## Device verification discipline
 
-`tools/device-smoke.sh` is the immediate ADB install/launch gate. It preserves app data, clears only stale private debug evidence, captures APK/source provenance, launches the Activity, and requires `FRONTEND READY app`. Readiness now requires `snapshotRelays`, `snapshotChannels`, and `snapshotDsky` as well as rendered frontend state.
+`tools/device-smoke.sh` is the immediate ADB install/launch gate. It preserves app data, clears only stale private debug evidence, captures APK/source provenance, launches the Activity, and requires `FRONTEND READY app`. `dream-agc.js` emits this marker after the packaged scripts evaluate and `AGCDSKY.appStatus` exists; this startup marker alone does not exercise the AGC runtime or prove snapshot methods.
 
 `tools/device-agc-smoke.sh` uses the app process's real WebView DevTools socket and dependency-free CDP drivers against the actual packaged WebView. Do not replace the real `AgcCore` with mocks.
 
