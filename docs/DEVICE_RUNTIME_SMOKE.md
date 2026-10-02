@@ -24,6 +24,7 @@ The aggregate gate derives the package ID from the APK and accepts only `org.apo
 
 `tools/device-smoke.sh`:
 
+- accepts only the isolated `org.apollo.agcdsky.eltest` debug package, rejecting production before install
 - calculates the APK SHA-256 and records the source commit
 - installs/updates the APK without intentionally clearing app data
 - launches the interactive Activity
