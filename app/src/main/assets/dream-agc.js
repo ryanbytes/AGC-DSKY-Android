@@ -35,7 +35,10 @@
     // data that helper deletes the user's saved snapshot. A dream is read-only
     // with respect to the interactive app's state.
     try {
-      const raw = dreamShell.store.get('agcSnapshotV1');
+      const snapshotKey = dreamState.selectedMission === 'comanche055'
+        ? 'agcSnapshotV1'
+        : `agcSnapshotV1:${dreamState.selectedMission}`;
+      const raw = dreamShell.store.get(snapshotKey);
       if (!raw) return false;
       const payload = JSON.parse(raw);
       if (!payload || payload.schema !== 1 || payload.mission !== dreamState.selectedMission || !payload.core) {

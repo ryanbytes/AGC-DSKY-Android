@@ -35,10 +35,9 @@ for(const feature of features){
   no(cm,`script.src = '${feature}.js'`,'CM configuration module');
 }
 no(cm,"createElement('script')",'CM configuration module');
-req(cm,"const shell=window.AGCDSKY_SHELL",'CM shell storage owner');
-req(cm,"shell.store.set('agcMission','comanche055')",'CM mission lock');
+no(cm,"shell.store.set('agcMission'",'presentation module mission persistence');
 no(cm,"localStorage.",'CM configuration storage ownership');
-req(cm,"document.body.classList.add('spacecraft-cm')",'CM body mode');
+req(cm,"document.body.classList.add('apollo-block-ii')",'Block II body mode');
 for(const feature of ['flight-hardware-ui','lighting-rheostat-stop','key-mechanical-spec','key-electrical-spec','key-tactile-feedback','keyboard-electrical-interlock'])req(sw,`'./${feature}.js'`,'offline PWA cache');
 
 for(const marker of ["const MIN_LIGHT_LEVEL = 0.25","const MAX_LIGHT_LEVEL = 1.00","dskyNumericsValue","dskyIntegralValue","--numerics-level","--integral-level","function setLightingLevel(","function makeLightingKnob(","className = 'lighting-control'","class=\"lighting-knob\"","pointerdown","pointermove","pixelsForFullRange = 180","aria-valuemin=\"25\"","aria-valuemax=\"100\"","setNumerics: value => setLightingLevel('numerics', value)","setIntegral: value => setLightingLevel('integral', value)"])req(ui,marker,'continuous independent lighting model');
@@ -71,4 +70,4 @@ for(const forbidden of ['translateY(var(--key-travel','--key-travel'])no(finish+
 req(ui,"oldDim.hidden = true",'retired whole-panel dimmer');req(ui,"document.body.classList.remove('dim')",'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');
-console.log('  parser-loaded CM features, shell-owned CM persistence, continuous vertical-swipe rotary lighting rheostats, explicit registry-backed presentation/mechanics/keyboard services, centralized normal-key/PRO input, source-backed key mechanics, and three-bulb annunciators gated');
+console.log('  parser-loaded Block II features, shell-owned mission selection, continuous vertical-swipe rotary lighting rheostats, explicit registry-backed presentation/mechanics/keyboard services, centralized normal-key/PRO input, source-backed key mechanics, and three-bulb annunciators gated');

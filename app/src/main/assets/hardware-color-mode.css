@@ -1,14 +1,14 @@
 /* FS-595-inspired hardware palette plus EL cover-glass material. */
-body.authentic-colors.spacecraft-cm:not(.dream):not(.screen-only) .dsky{
+body.authentic-colors.apollo-block-ii:not(.dream):not(.screen-only) .dsky{
   background:
     radial-gradient(ellipse at 22% 8%,rgba(255,255,255,.10) 0%,rgba(255,255,255,.025) 24%,transparent 46%),
     radial-gradient(ellipse at 83% 92%,rgba(0,0,0,.13) 0%,transparent 48%),
     repeating-linear-gradient(101deg,rgba(255,255,255,.008) 0 .06vmin,rgba(0,0,0,.010) .06vmin .14vmin),
     linear-gradient(148deg,#8d9294 0%,#7c8183 30%,#6d7275 68%,#797e80 100%)!important;
 }
-body.authentic-colors.spacecraft-cm .el-glass-background{fill:#4e535a!important}
-body.authentic-colors.spacecraft-cm .el-ito-dot{fill:#91999c!important;opacity:.68!important}
-body.authentic-colors.spacecraft-cm .lamp:not(.on){
+body.authentic-colors.apollo-block-ii .el-glass-background{fill:#4e535a!important}
+body.authentic-colors.apollo-block-ii .el-ito-dot{fill:#91999c!important;opacity:.68!important}
+body.authentic-colors.apollo-block-ii .lamp:not(.on){
   background:linear-gradient(112deg,rgba(255,255,255,.075),transparent 31%),linear-gradient(180deg,#858a8c 0%,#7c8183 58%,#707578 100%)!important;
 }
 body.authentic-colors.screen-only,
@@ -18,7 +18,7 @@ body.authentic-colors.screen-only .elpanel{background:#4e535a!important}
 
 /* Recovered v1.1.23/v1.1.24 cover-glass finish. Motion and physical depth are
    intentionally left to parallax-3d.css / parallax-3d.js. */
-body.spacecraft-cm:not(.dream) .el-glass-sheen{
+body.apollo-block-ii:not(.dream) .el-glass-sheen{
   overflow:hidden;
   box-sizing:border-box;
   background:transparent!important;
@@ -30,13 +30,13 @@ body.spacecraft-cm:not(.dream) .el-glass-sheen{
     inset .05vmin .05vmin .10vmin rgba(255,255,255,.10),
     inset -.08vmin -.08vmin .18vmin rgba(0,0,0,.20)!important;
 }
-body.spacecraft-cm:not(.dream) .el-glass-sheen::before,
-body.spacecraft-cm:not(.dream) .el-glass-sheen::after{
+body.apollo-block-ii:not(.dream) .el-glass-sheen::before,
+body.apollo-block-ii:not(.dream) .el-glass-sheen::after{
   content:"";
   position:absolute;
   pointer-events:none;
 }
-body.spacecraft-cm:not(.dream) .el-glass-sheen::before{
+body.apollo-block-ii:not(.dream) .el-glass-sheen::before{
   inset:1.2%;
   background:
     radial-gradient(ellipse 23% 12% at var(--dsky-light-x,52%) var(--dsky-light-y,44%),rgba(248,255,252,.17),rgba(235,248,242,.035) 52%,transparent 78%),
@@ -44,7 +44,7 @@ body.spacecraft-cm:not(.dream) .el-glass-sheen::before{
   opacity:.46;
   filter:blur(.08vmin);
 }
-body.spacecraft-cm:not(.dream) .el-glass-sheen::after{
+body.apollo-block-ii:not(.dream) .el-glass-sheen::after{
   inset:.65%;
   border:.045vmin solid rgba(4,10,8,.22);
   border-radius:.12vmin;
@@ -69,8 +69,8 @@ body.parallax-3d.screen-only:not(.dream) .el-glass-sheen::after{opacity:.58}
 /* Screen-only is a borderless view of the active EL face. Do not let the
    physical cover-glass edge treatment become an internal one-pixel seam when
    the transparent overlay is centered/scaled by a mobile browser. */
-body.spacecraft-cm.screen-only:not(.dream) .el-glass-rear,
-body.spacecraft-cm.screen-only:not(.dream) .el-glass-sheen{
+body.apollo-block-ii.screen-only:not(.dream) .el-glass-rear,
+body.apollo-block-ii.screen-only:not(.dream) .el-glass-sheen{
   border:0!important;
   box-shadow:none!important;
 }

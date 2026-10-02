@@ -174,7 +174,7 @@ assert(CM.includes('--numerics-level:1') && CM.includes('--integral-level:1'),
   'independent lighting variables missing');
 assert(CM.includes('.el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level))}'),
   'NUMERICS feed must scale energized EL segments only');
-assert(CM.includes('body.spacecraft-cm .key .key-legend') &&
+assert(CM.includes('body.apollo-block-ii .key .key-legend') &&
        CM.includes('fill:var(--key-el-color)') &&
        CM.includes('filter:var(--key-el-filter)'),
   'white EL key vector legend illumination missing');
@@ -282,8 +282,8 @@ for (const marker of [
   'radial-gradient(ellipse 23% 12%',
   'border:.045vmin solid rgba(220,232,227,.18)'
 ]) assert(HARDWARE_COLORS.includes(marker), 'recovered FS595/glass marker missing: ' + marker);
-assert(HARDWARE_COLORS.includes('body.spacecraft-cm.screen-only:not(.dream) .el-glass-rear') &&
-       HARDWARE_COLORS.includes('body.spacecraft-cm.screen-only:not(.dream) .el-glass-sheen') &&
+assert(HARDWARE_COLORS.includes('body.apollo-block-ii.screen-only:not(.dream) .el-glass-rear') &&
+       HARDWARE_COLORS.includes('body.apollo-block-ii.screen-only:not(.dream) .el-glass-sheen') &&
        HARDWARE_COLORS.includes('border:0!important') &&
        HARDWARE_COLORS.includes('box-shadow:none!important'),
   'screen-only cover-glass overlays must not draw internal border/shadow seams');
@@ -295,9 +295,17 @@ assert(HARDWARE_COLOR_MODE.includes("body.classList.add('authentic-colors')"),
   'forced FS595 module no longer enables authentic colors');
 assert(HARDWARE_COLOR_MODE.includes("localStorage.removeItem('dskyHardwareColorMode')"),
   'forced FS595 module no longer clears the obsolete palette preference');
-assert(CM_MODE.includes("document.body.classList.add('spacecraft-cm')") &&
+assert(CM_MODE.includes("document.body.classList.add('apollo-block-ii')") &&
        !CM_MODE.includes("document.body.classList.add('authentic-colors')"),
   'CM mode must own configuration while hardware-color-mode owns the palette');
+assert((HTML.match(/data-lamp="alt"/g)||[]).length===1&&(HTML.match(/data-lamp="vel"/g)||[]).length===1&&
+       HTML.includes('class="lamp white mission-lm-only" data-lamp="alt"')&&HTML.includes('class="lamp white mission-lm-only" data-lamp="vel"'),
+  'LM-only ALT/VEL annunciators must occupy the LM face slots');
+assert(STYLE.includes('.lamp.mission-lm-only{visibility:hidden}')&&STYLE.includes('body.spacecraft-lm .lamp.mission-lm-only{visibility:visible}'),
+  'ALT/VEL annunciators must show only on the LM face');
+assert(APP_SHELL.includes("document.body.classList.toggle('spacecraft-lm',shellState.selectedMission==='luminary099')")&&
+       APP_SHELL.includes("document.body.classList.toggle('spacecraft-cm',shellState.selectedMission==='comanche055')"),
+  'mission selection must toggle LM/CM face identity');
 for (const forbidden of ['.el-glass-back{','.el-glass-back,','--dsky-el-parallax-x','translate3d(calc(var(--dsky-el-parallax-x)'])
   assert(!HARDWARE_COLORS.includes(forbidden), 'color layer must not override physical glass/parallax geometry: ' + forbidden);
 

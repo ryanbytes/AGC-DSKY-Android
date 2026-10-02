@@ -70,7 +70,7 @@ body:not(.dream):not(.screen-only):not(.display-only) .dsky{
 }
 
 /* Apollo Block II DSKY external finish: FS 36231 Dark Gull Gray. */
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky{
+body.apollo-block-ii:not(.dream):not(.screen-only):not(.display-only) .dsky{
   background:
     radial-gradient(circle at 18% 12%,rgba(255,255,255,.065) 0 1px,transparent 1.4px),
     radial-gradient(circle at 74% 38%,rgba(0,0,0,.075) 0 1px,transparent 1.5px),
@@ -83,22 +83,22 @@ body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky{
     inset 0 0 1.7vmin rgba(0,0,0,.42),
     0 .35vmin .7vmin rgba(0,0,0,.72);
 }
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .dsky:before{
+body.apollo-block-ii:not(.dream):not(.screen-only):not(.display-only) .dsky:before{
   border-color:rgba(38,41,39,.72);
   box-shadow:inset 0 .1vmin .22vmin rgba(255,255,255,.24),0 .08vmin .12vmin rgba(255,255,255,.09);
 }
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .ann-well{
+body.apollo-block-ii:not(.dream):not(.screen-only):not(.display-only) .ann-well{
   background:#30312f;
   border-color:#484944;
   outline-color:#1a1b19;
   box-shadow:inset .35vmin .35vmin .7vmin rgba(0,0,0,.68),inset -.2vmin -.18vmin .35vmin rgba(255,255,255,.09),0 .13vmin .16vmin rgba(255,255,255,.07);
 }
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .display-well{
+body.apollo-block-ii:not(.dream):not(.screen-only):not(.display-only) .display-well{
   border-color:#494a46;
   outline-color:#181917;
   box-shadow:inset .4vmin .45vmin 1.1vmin #020302,inset -.18vmin -.18vmin .35vmin rgba(255,255,255,.07),0 .13vmin .16vmin rgba(255,255,255,.06);
 }
-body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
+body.apollo-block-ii:not(.dream):not(.screen-only):not(.display-only) .fastener{
   border-color:#70716c;
 }
 
@@ -112,7 +112,7 @@ body.spacecraft-cm:not(.dream):not(.screen-only):not(.display-only) .fastener{
  * and no leakage into an adjacent unlit legend.  Keep all simulated lamp light
  * clipped inside its own legend cell; there is intentionally no exterior glow.
  */
-body.spacecraft-cm .lamp{
+body.apollo-block-ii .lamp{
   position:relative;
   overflow:hidden;
   background:#74756f;
@@ -121,14 +121,14 @@ body.spacecraft-cm .lamp{
   box-shadow:inset 0 0 .18vmin rgba(255,255,255,.10),inset 0 0 .34vmin rgba(0,0,0,.28);
   text-shadow:none;
 }
-body.spacecraft-cm .lamp:not(.on),
-body.spacecraft-cm .lamp:not(.on):nth-child(even){
+body.apollo-block-ii .lamp:not(.on),
+body.apollo-block-ii .lamp:not(.on):nth-child(even){
   background:#74756f;
   color:#11120f;
 }
 
 /* Fallback for first paint / script-disabled rendering. */
-body.spacecraft-cm .lamp.on.white{
+body.apollo-block-ii .lamp.on.white{
   background:
     radial-gradient(ellipse at 18% 52%,rgba(255,252,224,.98) 0 10%,rgba(255,247,207,.76) 24%,rgba(245,235,193,.30) 48%,transparent 70%),
     radial-gradient(ellipse at 50% 48%,rgba(255,253,229,.94) 0 11%,rgba(255,247,208,.70) 25%,rgba(244,233,190,.26) 49%,transparent 71%),
@@ -137,7 +137,7 @@ body.spacecraft-cm .lamp.on.white{
   color:#10110e;
   box-shadow:inset 0 0 .22vmin rgba(255,255,244,.62),inset 0 0 .42vmin rgba(88,82,62,.18);
 }
-body.spacecraft-cm .lamp.on.yellow{
+body.apollo-block-ii .lamp.on.yellow{
   background:
     radial-gradient(ellipse at 18% 52%,rgba(255,238,91,.98) 0 10%,rgba(252,216,54,.78) 24%,rgba(233,183,25,.34) 48%,transparent 70%),
     radial-gradient(ellipse at 50% 48%,rgba(255,241,101,.94) 0 11%,rgba(252,218,56,.72) 25%,rgba(231,181,24,.30) 49%,transparent 71%),
@@ -150,33 +150,33 @@ body.spacecraft-cm .lamp.on.yellow{
 /* Separate Block II lighting feeds. NUMERICS changes only energized EL output;
    the gray glass, printed black legends, relay words and AGC task remain
    unchanged. Preserve each phosphor element's nominal full-bright opacity. */
-body.spacecraft-cm .el-legend-bg{opacity:calc(.92 * var(--numerics-level))}
-body.spacecraft-cm .el-rule{opacity:calc(.88 * var(--numerics-level))}
-body.spacecraft-cm .el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level))}
-body.spacecraft-cm .comp-el.on .el-comp-bg{opacity:calc(.92 * var(--numerics-level))}
+body.apollo-block-ii .el-legend-bg{opacity:calc(.92 * var(--numerics-level))}
+body.apollo-block-ii .el-rule{opacity:calc(.88 * var(--numerics-level))}
+body.apollo-block-ii .el-field .el-seg.on{opacity:calc(.92 * var(--numerics-level))}
+body.apollo-block-ii .comp-el.on .el-comp-bg{opacity:calc(.92 * var(--numerics-level))}
 
 /* Channel-0163 EL excitation loss overrides the NUMERICS rheostat without
    hiding the separate black printed legends. This block follows the rheostat
    rules so it also wins in the CM stylesheet cascade. */
-body.spacecraft-cm.el-off .el-legend-bg,
-body.spacecraft-cm.el-off .el-rule,
-body.spacecraft-cm.el-off .el-field .el-seg.on,
-body.spacecraft-cm.el-off .comp-el.on .el-comp-bg{opacity:0}
+body.apollo-block-ii.el-off .el-legend-bg,
+body.apollo-block-ii.el-off .el-rule,
+body.apollo-block-ii.el-off .el-field .el-seg.on,
+body.apollo-block-ii.el-off .comp-el.on .el-comp-bg{opacity:0}
 
 /* R-700 §3.10.1.5: the cap housing moves about 3/16 in along the panel normal
    to actuate the switch, then may move another 1/16 in before bottoming.  The
    straight-on 2-D projection therefore keeps the key face on its exact X/Y
    center.  Depression is shown by collapse of the raised relief/shadow only;
    no invented screen-plane travel or fixed mechanical transition time is used. */
-body.spacecraft-cm .key{
+body.apollo-block-ii .key{
   transition:none;
 }
-body.spacecraft-cm .key .key-legend{
+body.apollo-block-ii .key .key-legend{
   fill:var(--key-el-color);
   filter:var(--key-el-filter);
   transition:fill 90ms linear,filter 90ms linear;
 }
-body.spacecraft-cm .key.pressed{
+body.apollo-block-ii .key.pressed{
   transform:none;
   background:linear-gradient(#171816,#111210);
   box-shadow:inset .10vmin .18vmin .18vmin rgba(0,0,0,.82),inset 0 0 .25vmin rgba(255,255,255,.05);
@@ -186,8 +186,8 @@ body.spacecraft-cm .key.pressed{
    keep the legend in front and let each bulb carry its own stable brightness
    and thermal timing personality.  The nominal rise/fall values are best
    engineering estimates, not values claimed by SCD 1006387 or MS24367. */
-body.spacecraft-cm.lamp-hardware-ready .lamp.on.white,
-body.spacecraft-cm.lamp-hardware-ready .lamp.on.yellow{
+body.apollo-block-ii.lamp-hardware-ready .lamp.on.white,
+body.apollo-block-ii.lamp-hardware-ready .lamp.on.yellow{
   background:#74756f;
   color:#10110e;
   box-shadow:inset 0 0 .18vmin rgba(255,255,255,.10),inset 0 0 .34vmin rgba(0,0,0,.28);
@@ -200,7 +200,7 @@ body.spacecraft-cm.lamp-hardware-ready .lamp.on.yellow{
    .0300 in on the .156/920 construction scale; the SVG viewBox preserves the
    annunciator-cell aspect ratio. */
 .gorton-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
-body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-legend{
+body.apollo-block-ii.lamp-hardware-ready .lamp .lamp-legend{
   position:absolute;
   inset:0;
   z-index:2;
@@ -210,7 +210,7 @@ body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-legend{
   overflow:hidden;
   pointer-events:none;
 }
-body.spacecraft-cm .lamp .lamp-legend .gorton-glyph{
+body.apollo-block-ii .lamp .lamp-legend .gorton-glyph{
   fill:#10110e;
   stroke:#10110e;
   stroke-width:56.9;
@@ -218,7 +218,7 @@ body.spacecraft-cm .lamp .lamp-legend .gorton-glyph{
   stroke-linejoin:round;
   paint-order:stroke fill;
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-source{
+body.apollo-block-ii.lamp-hardware-ready .lamp .lamp-source{
   position:absolute;
   inset:0;
   z-index:1;
@@ -228,25 +228,25 @@ body.spacecraft-cm.lamp-hardware-ready .lamp .lamp-source{
   transition-duration:var(--lamp-fall,52ms);
   transition-timing-function:cubic-bezier(.22,.61,.36,1);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source{
+body.apollo-block-ii.lamp-hardware-ready .lamp.on .lamp-source{
   opacity:calc(var(--integral-level) * var(--lamp-gain,1));
   transition-duration:var(--lamp-rise,36ms);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.white .lamp-source-1{
+body.apollo-block-ii.lamp-hardware-ready .lamp.white .lamp-source-1{
   background:radial-gradient(ellipse at 18% 52%,rgba(255,252,224,.98) 0 10%,rgba(255,247,207,.76) 24%,rgba(245,235,193,.30) 48%,transparent 70%);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.white .lamp-source-2{
+body.apollo-block-ii.lamp-hardware-ready .lamp.white .lamp-source-2{
   background:radial-gradient(ellipse at 50% 48%,rgba(255,253,229,.94) 0 11%,rgba(255,247,208,.70) 25%,rgba(244,233,190,.26) 49%,transparent 71%);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.white .lamp-source-3{
+body.apollo-block-ii.lamp-hardware-ready .lamp.white .lamp-source-3{
   background:radial-gradient(ellipse at 82% 53%,rgba(255,250,219,.96) 0 10%,rgba(255,244,201,.74) 24%,rgba(243,230,184,.28) 48%,transparent 70%);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.yellow .lamp-source-1{
+body.apollo-block-ii.lamp-hardware-ready .lamp.yellow .lamp-source-1{
   background:radial-gradient(ellipse at 18% 52%,rgba(255,238,91,.98) 0 10%,rgba(252,216,54,.78) 24%,rgba(233,183,25,.34) 48%,transparent 70%);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.yellow .lamp-source-2{
+body.apollo-block-ii.lamp-hardware-ready .lamp.yellow .lamp-source-2{
   background:radial-gradient(ellipse at 50% 48%,rgba(255,241,101,.94) 0 11%,rgba(252,218,56,.72) 25%,rgba(231,181,24,.30) 49%,transparent 71%);
 }
-body.spacecraft-cm.lamp-hardware-ready .lamp.yellow .lamp-source-3{
+body.apollo-block-ii.lamp-hardware-ready .lamp.yellow .lamp-source-3{
   background:radial-gradient(ellipse at 82% 53%,rgba(255,235,82,.96) 0 10%,rgba(250,211,48,.76) 24%,rgba(229,176,21,.32) 48%,transparent 70%);
 }

@@ -61,7 +61,7 @@
     style.id = STYLE_ID;
     style.textContent = `
 /* INTEGRAL drives the 5-VAC incandescent branch separately from key EL. */
-body.spacecraft-cm.lamp-hardware-ready .lamp.on .lamp-source {
+body.apollo-block-ii.lamp-hardware-ready .lamp.on .lamp-source {
   opacity:calc(var(--integral-incandescent-level, var(--integral-level)) * var(--lamp-gain,1));
 }
 `;

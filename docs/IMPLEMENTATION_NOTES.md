@@ -77,11 +77,13 @@ The canonical host preflight (`tools/wasm-runtime-smoke.js`) is designed to inst
 
 ### AGC mission selection
 
-Apollo 11 LM `Luminary099.bin` is the default rope. Hidden controls also select CM `Comanche055.bin`.
+Apollo 11 LM `Luminary099.bin` is the first-run rope. The **Options → AGC MISSION** control selects CM `Comanche055.bin` or returns to LM. The earlier shell forced CM on every start without recording a user choice; the first-selector migration therefore changes that implicit legacy value to LM once, while later explicit selections persist.
 
 - Mission choice persists locally.
-- Changing mission during AGC mode stops the current core and starts the selected rope from reset.
+- Changing mission during AGC mode saves and suspends the current core, then changes the selected mission while returning to CLOCK. Guidance starts the selected rope from its reset state or restores that mission's own snapshot.
 - Changing mission in phone-clock mode changes only the next selected AGC mission.
+- The DSKY face follows the selected mission. The LM layout lights ALT and VEL in positions 26 and 27; those positions remain blank on the CM face. The saved LM/CM annunciator maps remain distinct.
+- Comanche keeps the legacy `agcSnapshotV1` keys. Luminary uses `agcSnapshotV1:luminary099` and its matching metadata key, preventing one rope's saved core from being imported into the other.
 - DreamService never starts yaAGC.
 
 The pinned WASM's internal `CmOrLm` global defaults LM and is not exported. Comanche remains a real/selectable CM rope for DSKY execution, but full CM peripheral-mode fidelity is not claimed.

@@ -77,7 +77,7 @@ for(const marker of [
 ])req(css,marker,'key vector CSS');
 for(const marker of [
  '--key-el-filter:drop-shadow(',
- 'body.spacecraft-cm .key .key-legend',
+ 'body.apollo-block-ii .key .key-legend',
  'fill:var(--key-el-color)',
  'filter:var(--key-el-filter)'
 ])req(finish,marker,'key integral-light styling');

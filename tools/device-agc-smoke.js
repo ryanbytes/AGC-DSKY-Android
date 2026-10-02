@@ -322,7 +322,7 @@ function statusExpression() {
       version: c && c.version ? String(c.version()) : null,
       channels: c ? Object.keys(c.channels || {}).map(Number).sort((a,b) => a-b) : [],
       modeText: document.getElementById('mode') ? document.getElementById('mode').textContent : '',
-      agcButton: document.getElementById('agc') ? document.getElementById('agc').textContent.trim() : ''
+      mode: window.AGCDSKY && typeof AGCDSKY.appStatus==='function' ? AGCDSKY.appStatus().mode : null
     };
   })()`;
 }
@@ -340,9 +340,9 @@ async function poll(cdp, label, predicate, timeoutMs = 20000) {
 
 async function ensureClock(cdp) {
   const status = await cdp.evaluate(statusExpression());
-  if (status.agcButton === 'CLOCK') {
-    await cdp.evaluate("document.getElementById('agc').click(); true");
-    await poll(cdp, 'return to phone clock', (s) => s.agcButton === 'AGC' && !s.running, 5000);
+  if (status.mode === 'agc') {
+    await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
+    await poll(cdp, 'return to phone clock', (s) => s.mode === 'clock' && !s.running, 5000);
   }
 }
 
@@ -350,7 +350,7 @@ async function ensureMission(cdp, mission) {
   let status = await cdp.evaluate(statusExpression());
   if (status.mission === mission) return;
   await ensureClock(cdp);
-  await cdp.evaluate("document.getElementById('mission').click(); true");
+  await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");
   status = await poll(cdp, `select ${mission}`, (s) => s.mission === mission, 5000);
   assert(status.mission === mission, `failed to select ${mission}`);
 }
@@ -358,7 +358,7 @@ async function ensureMission(cdp, mission) {
 async function enterMission(cdp, mission) {
   await ensureClock(cdp);
   await ensureMission(cdp, mission);
-  await cdp.evaluate("document.getElementById('agc').click(); true");
+  await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
   const expectedLabel = mission === 'luminary099' ? 'LUMINARY099' : 'COMANCHE055';
   return poll(cdp, `start ${expectedLabel}`, (s) =>
     s.mission === mission
@@ -464,6 +464,7 @@ async function testPauseResume(cdp) {
 async function snapshotState(cdp) {
   return cdp.evaluate(`(() => ({
     mission: localStorage.getItem('agcMission'),
+    missionPreference: localStorage.getItem('agcMissionPreferenceV1'),
     runMode: localStorage.getItem('runMode')
   }))()`);
 }
@@ -476,8 +477,10 @@ async function restoreState(cdp, snapshot) {
     if (snapshot.mission === null) {
       await cdp.evaluate("localStorage.removeItem('agcMission'); true");
     }
+    if (snapshot.missionPreference === null) await cdp.evaluate("localStorage.removeItem('agcMissionPreferenceV1'); true");
+    else await cdp.evaluate(`localStorage.setItem('agcMissionPreferenceV1', ${JSON.stringify(snapshot.missionPreference)}); true`);
     if (snapshot.runMode === 'agc') {
-      await cdp.evaluate("document.getElementById('agc').click(); true");
+      await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
       await poll(cdp, 'restore prior AGC run mode', (s) => s.core && s.running, 20000);
     } else {
       if (snapshot.runMode === null) {
@@ -498,7 +501,7 @@ async function main() {
   let snapshot;
   try {
     await cdp.call('Runtime.enable');
-    const ready = await cdp.evaluate("!!(window.AGCDSKY && document.getElementById('agc'))");
+    const ready = await cdp.evaluate("!!(window.AGCDSKY && document.getElementById('mode-toggle'))");
     assert(ready === true, 'AGC DSKY frontend is not initialized in the interactive WebView');
     snapshot = await snapshotState(cdp);
 
