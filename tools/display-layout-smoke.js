@@ -228,6 +228,8 @@ assert(CONTROLS.includes('transform:translateX(calc(-100% - 4px));')
        && CONTROLS.includes('.controls-visible .app-controls{transform:translateX(0)}')
        && CONTROLS.includes('transition:transform .22s ease,opacity .16s ease,visibility .16s ease;'),
   'landscape controls must slide out from the DSKY when opened');
+assert(/\.app-controls\{\s*position:absolute;\s*top:max\(12px,env\(safe-area-inset-top\)\);\s*left:calc\(50% \+ min\(21vw,calc\(\(100vh - max\(12px,env\(safe-area-inset-top\)\) - max\(8px,env\(safe-area-inset-bottom\)\)\)\*160\/372\)\) \+ 4px\);/.test(CONTROLS),
+  'landscape controls must be removed from flex sizing and anchored to the centered DSKY right edge');
 assert(CONTROLS.includes('.app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}'),
   'AUXILIARY submenu must open upward in landscape');
 assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}') &&
