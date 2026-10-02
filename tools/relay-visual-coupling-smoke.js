@@ -123,6 +123,11 @@ assert(renders.length===0,'renderContact=false leaked transient relay words into
 // FLASH is the real yaAGC channel-0163 hardware-phase relay. Its crew-visible
 // blank/unblank contact edge must be the same modeled event that emits relay
 // sound and the light tactile cue; channel 011 is only the flash request.
+visual.presentAux({flash:true},{render:true,commit:(name,on)=>{hardwareState.auxRelays[name]=!!on}});
+visual.presentAux({flash:false},{render:true,commit:(name,on)=>{hardwareState.auxRelays[name]=!!on}});
+runAllTimers();
+assert(hardwareState.auxRelays.flash===false,'cancelled auxiliary relay contact applied a stale prior state');
+assert(!auxCommits.some(x=>x.name==='flash'&&x.on===true),'cancelled auxiliary relay transition leaked a stale visible contact');
 const flashStart=now;
 visual.presentAux({flash:true},{render:true,commit:(name,on,render)=>{
   hardwareState.auxRelays[name]=!!on;auxCommits.push({name,on:!!on,render:!!render,at:now});

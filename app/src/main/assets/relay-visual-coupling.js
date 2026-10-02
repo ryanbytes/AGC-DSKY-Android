@@ -31,7 +31,7 @@
   const STORAGE_KEY='relayVisualTimingV1',MODE_AUTHENTIC='authentic',MODE_STRETCHED='stretched',FINAL_SETTLE_MS=20;
   const STRETCH_FIRST_BASE_MS=20,STRETCH_MIN_GAP_MS=18,STRETCH_MAX_GAP_MS=28,STRETCH_RELEASE_HOLD_MS=24;
   const RELAY_AUDIO_OVERLAP_WINDOW_MS=11.5,RELAY_AUDIO_OVERLAP_STEP=.04,RELAY_AUDIO_OVERLAP_MAX_MULTIPLIER=1.12;
-  const generation=Object.create(null),auxGeneration=Object.create(null),presentation=Object.create(null),settledWordOverride=Object.create(null);
+  const generation=Object.create(null),auxGeneration=Object.create(null),auxTarget=Object.create(null),presentation=Object.create(null),settledWordOverride=Object.create(null);
   const listeners=new Set();
   let frameLoopRunning=false,lastPresentationClick=null;
 
@@ -168,8 +168,11 @@
     const snapshot=hardware.snapshot(),prior=snapshot&&snapshot.auxRelays?snapshot.auxRelays:{};
     for(const [name,requested] of Object.entries(next||{})){
       if(!audioModel.auxiliaryNames?.includes(name)){commit(name,!!requested,render);continue}
-      const on=!!requested,before=!!prior[name];if(before===on){commit(name,on,render);continue}
+      const on=!!requested,before=!!prior[name],target=Object.prototype.hasOwnProperty.call(auxTarget,name)?auxTarget[name]:before;
+      if(target===on){if(before===on)commit(name,on,render);continue}
       const token=(auxGeneration[name]||0)+1;auxGeneration[name]=token;
+      auxTarget[name]=on;
+      if(before===on){commit(name,on,render);continue}
       const p=audioModel.auxiliaryProfileFor(name),trace=audioModel.auxiliaryContactTraceFor(name,on),armature=trace.find(item=>item.kind==='armature')||trace[0],travel=Number(armature&&armature.atMs)||(on?p.setTravelMs:p.resetTravelMs);
       emit({type:'aux-drive',name,id:`AUX:${name.toUpperCase()}`,fromOn:before,targetOn:on,durationMs:travel,physicalMs:travel,stableMs:on?p.setStableMs:p.resetStableMs,poleSkewUs:p.poleSkewUs,bounceCount:trace.filter(item=>item.kind==='bounce').length});
       for(const item of trace)setTimeout(()=>{
@@ -181,7 +184,7 @@
     return true;
   }
 
-  function cancelPendingVisuals(){for(let row=1;row<=12;row++){generation[row]=(generation[row]||0)+1;if(presentation[row])presentation[row].active=false}for(const name of Object.keys(auxGeneration))auxGeneration[name]++}
+  function cancelPendingVisuals(){for(let row=1;row<=12;row++){generation[row]=(generation[row]||0)+1;if(presentation[row])presentation[row].active=false}for(const name of Object.keys(auxGeneration)){auxGeneration[name]++;delete auxTarget[name]}}
   function resetPresentation(){cancelPendingVisuals();emit({type:'reset'})}
   function syncSettledVisuals(){for(let row=1;row<=12;row++)renderWord(row,currentSettledWord(row))}
   function setTimingMode(next,persist=true){const normalized=next===MODE_STRETCHED?MODE_STRETCHED:MODE_AUTHENTIC;if(normalized===timingMode){updateButton();return timingMode}cancelPendingVisuals();timingMode=normalized;if(persist)saveMode(timingMode);syncSettledVisuals();emit({type:'timing-mode',mode:timingMode});updateButton();return timingMode}
