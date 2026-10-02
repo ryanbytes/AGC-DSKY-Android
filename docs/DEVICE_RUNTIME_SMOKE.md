@@ -175,7 +175,7 @@ A passing full-device smoke does **not** by itself prove:
 - pixel-perfect DSKY appearance on the physical display
 - real OS screen-off/screen-on behavior rather than the direct lifecycle bridge check
 - Activity recreation caused by Android configuration/lifecycle events beyond page reload and explicit process force-stop/relaunch
-- Pinball semantics beyond the automated V35E light-test sequence
+- live packaged-WebView Pinball semantics beyond the automated V35E light-test sequence. The host real-WASM gate separately covers Comanche V16N65/P00 and Luminary V37E00E/P00 sequences through actual channel-015 input.
 - PRO standby semantics for a long physical hold
 - DreamService selection/startup and non-interactivity
 - DREAM DIM / BRIGHT / SOLAR physical brightness behavior

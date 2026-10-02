@@ -100,6 +100,10 @@ The relay haptics audit also corrected unsupported implementation comments: the 
 
 Validation on macOS: `env TZ=UTC bash tools/run-source-smokes.sh` passed (92 Node tests plus `ntp-time-smoke.sh`); `env TZ=UTC ANDROID_SDK_ROOT=/Users/ryan/Library/Android/sdk bash tools/gradle-bootstrap.sh --no-daemon --stacktrace :app:verifyPinnedAgcAssets :app:assemble` built all six Regular/Fire debug, installfix, and unsigned release APKs. Both debug APKs passed `tools/verify-apk.sh`. Device interaction, release signing, and publication remain unverified.
 
+The current implementation/device notes were reconciled against that evidence: the pinned real-WASM host gate and non-V35 Pinball sequences have passed, while live packaged-WebView and physical-device semantics remain separate unverified gates.
+
+The native-time audit found that `SntpClient` checked the NTP originate timestamp but did not check the datagram source. It now rejects packets whose source address or port differs from the configured endpoint; `NtpTimeSmoke` sends a valid-looking response from the wrong local UDP port to lock the rejection. The focused time smoke and `env TZ=UTC bash tools/run-source-smokes.sh` passed, all six APK variants rebuilt, and both Regular/Fire debug APKs passed `tools/verify-apk.sh`.
+
 Last updated: 2026-10-01
 
 ## 2026-09-29 v1.1.53 terse Apollo-style panel nomenclature
