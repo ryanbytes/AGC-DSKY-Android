@@ -80,6 +80,8 @@ Validation on macOS: `env TZ=UTC bash tools/run-source-smokes.sh` passed (91 Nod
 
 The next harness audit found that `device-full-smoke.sh` installed the isolated `.eltest` debug APK, but its later AGC and process-recreation stages hard-coded the production package ID. The full runner now derives the application ID from the APK, requires the isolated `.eltest` package, and passes that ID through; standalone live stages default to and require `.eltest`. The immediate install stage also rejects production APKs before installing. Added `tools/device-package-policy-smoke.js` to lock the routing and pre-install check order. The full host suite passes with 92 Node smokes plus `ntp-time-smoke.sh`. No Android device was connected, so this change has host-policy coverage but no live Android verification.
 
+Continued source/doc audit corrected the stale preferred APK path and removed device-only frontend readiness from the canonical host-smoke checklist in `AGENTS.md`.
+
 Last updated: 2026-10-01
 
 ## 2026-09-29 v1.1.53 terse Apollo-style panel nomenclature

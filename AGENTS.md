@@ -179,8 +179,7 @@ The canonical build path must continue to run:
 - display/crop geometry smoke
 - DREAM SOLAR/polar-regime smoke
 - AGC-wrapper smoke
-- native diagnostic and frontend readiness smoke
-- native diagnostic smoke
+- native diagnostic and diagnostics-page self-test smokes
 - DSKY mapping smoke
 - effective V35 model smoke against the current modular runtime
 - asset-reference smoke
@@ -213,7 +212,7 @@ The same-process live gate currently:
 Preferred current debug checkpoint:
 
 ```bash
-bash tools/device-full-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+bash tools/device-full-smoke.sh app/build/outputs/apk/regular/debug/app-regular-debug.apk
 ```
 
 ## Verification discipline
