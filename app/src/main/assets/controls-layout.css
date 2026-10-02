@@ -28,7 +28,7 @@
   gap:3px;
   padding:4px;
   margin:0;
-  overflow-y:auto;
+  overflow:visible;
   background:
     radial-gradient(circle at 18% 18%,rgba(255,255,255,.035) 0 1px,transparent 1.4px),
     repeating-linear-gradient(94deg,rgba(255,255,255,.012) 0 1px,rgba(0,0,0,.014) 1px 3px),
@@ -165,6 +165,8 @@
 .app-controls .options-tools summary:focus-visible{outline:2px solid rgba(245,247,237,.72);outline-offset:2px}
 .app-controls .options-tools-menu{
   display:none;
+  /* Float the submenu above adjacent controls, outside the panel's box. The
+     panel must keep overflow visible so phone-sized viewports do not clip it. */
   position:absolute;
   left:0;
   top:100%;
@@ -423,6 +425,7 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
   }
   .app-controls{width:min(calc(100vw - 8px),1180px);max-height:28vh;gap:2px;padding:3px}
   .app-controls button{min-height:30px;font-size:6.9px;padding:12px 4px 3px}
+  .app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}
 }
 body.dream #app,body.display-only #app,body.screen-only #app{gap:0}
 body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}

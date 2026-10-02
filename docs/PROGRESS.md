@@ -1,3 +1,9 @@
+## 2026-10-02 AUX menu viewport clipping
+
+The AUX DATA submenu could extend below the options panel's scrollport on short portrait screens, leaving PROCEDURES and TECH DATA partially hidden. The options panel now allows overflow and keeps the two-column submenu as a floating popup; landscape positions the popup above AUX DATA. The display-layout smoke locks the visible overflow and upward landscape placement.
+
+Validation: `node tools/display-layout-smoke.js` and `env TZ=UTC bash tools/run-source-smokes.sh` passed (92 Node smokes plus `ntp-time-smoke.sh`). Playwright Chromium at 576x1280 showed both popup buttons fully inside the viewport, and tapping TECH DATA opened its dialog; at 1280x576 the upward popup remained inside the viewport. Gradle 9.5.1 built all six Regular/Fire debug, installfix, and unsigned release APKs. Both debug APKs passed `tools/verify-apk.sh`, all six archives passed ZIP integrity checks, and the Regular `.eltest` debug APK signed with the standalone release key passed APK verification and the required signer fingerprint check. No Android device is connected, so on-device touch/layout behavior remains unverified.
+
 ## 2026-10-02 SNTP accuracy audit
 
 The native SNTP client validated the echoed client timestamp but estimated clock offset from the server transmit time plus half the measured round trip. That approximation includes half of the server's own processing time and can bias the display-clock correction. Updated `SntpClient` to use RFC 5905's four-timestamp offset formula (T1 client send, T2 server receive, T3 server transmit, T4 client receive) and to subtract server processing time from measured RTT when ranking network delay. T4 is derived from monotonic elapsed time so a wall-clock change during one request does not distort the sample. Added a localhost regression with a known 600 ms offset and 120 ms server processing delay.
