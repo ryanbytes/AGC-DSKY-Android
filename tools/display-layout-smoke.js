@@ -200,8 +200,8 @@ for (const marker of [
   '.options-tools{\n  grid-column:1;\n  grid-row:3',
   '> .software-update-control{\n  grid-column:3;\n  grid-row:3'
 ]) assert(CONTROLS.includes(marker), 'fixed option-panel position missing: ' + marker);
-assert(CONTROLS.includes('max-height:26vh') && CONTROLS.includes('overflow-y:auto'),
-  'portrait option panel must stay vertically bounded and scroll if necessary');
+assert(CONTROLS.includes('max-height:26vh') && CONTROLS.includes('overflow:visible'),
+  'AUXILIARY submenu must escape the panel clip on phone-sized viewports');
 assert(CONTROLS.includes('width:100%') && CONTROLS.includes('min-width:0'),
   'fixed-grid control cells must size to their assigned panel positions');
 assert(CONTROLS.includes('text-overflow:clip') && CONTROLS.includes('white-space:nowrap'),
@@ -217,10 +217,13 @@ assert(CONTROLS.includes('100vh - 122px') && CONTROLS.includes('100vh - 136px'),
   'DSKY sizing must reserve room for the fixed option panel');
 assert(CONTROLS.includes('@media (orientation:landscape)'),
   'control strip landscape sizing override missing');
+assert(CONTROLS.includes('.app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}'),
+  'AUXILIARY submenu must open upward in landscape');
 assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}') &&
+       /\.options-tools-menu\s*\{[^}]*position:absolute/s.test(CONTROLS) &&
        CONTROLS.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&
        CONTROLS.includes('width:calc(300% + 6px)'),
-  'AUXILIARY submenu must span the row for REFERENCE and DOCUMENTS after SOFTWARE moves out');
+  'AUXILIARY submenu must float over the row for PROCEDURES and TECH DATA');
 assert(CONTROLS.includes('.options-tools-menu #cheat{grid-column:1;grid-row:1}') &&
        CONTROLS.includes('.options-tools-menu #legal{grid-column:2;grid-row:1}'),
   'AUXILIARY submenu controls must remain fixed in two columns');
