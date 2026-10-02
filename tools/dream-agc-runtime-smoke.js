@@ -13,7 +13,7 @@ for(const marker of [
   "dreamDisplay.implementation('decodeChannel11')(value)",
   "dreamDisplay.implementation('decodeChannel13')(value)",
   "dreamDisplay.implementation('decodeChannel163')(value)",
-  "dreamShell.store.get(snapshotKey)",
+  "dreamShell.store.get('agcSnapshotV1')",
   'dreamDisplay.applySnapshotUi(payload.ui)',
   'dreamClock.cancelLampTest()',
   'dreamClock.stopQueue()',
@@ -29,11 +29,11 @@ assert(!source.includes('localStorage.'),'Dream AGC retained direct localStorage
 assert(!/new\s+AgcCore\s*\(/.test(source),'Dream AGC retained ambient AgcCore constructor');
 assert(!source.includes('AGCDSKY_COMPAT')&&!source.includes('compat.'),'Dream AGC depends on compatibility registry');
 
-function makeEnv(search,mission='comanche055'){
+function makeEnv(search){
   const calls={clockCancel:0,clockStop:0,reset:0,apply:0,render:0,imports:[],starts:[],stops:0,loads:[],channels:[],storeGets:[],debug:[]};
   const status={textContent:''},documentListeners={},windowListeners={};
-  const payload={schema:1,mission,ui:{relayWords:{10:123},ch11:2,ch13:3,ch163:4},core:{memoryB64:'snapshot'}};
-  const state=Object.seal({mode:'clock',selectedMission:mission}),session=Object.seal({core:null,loadedMission:'',suspendedForClock:false,pausedForVisibility:false});
+  const payload={schema:1,mission:'comanche055',ui:{relayWords:{10:123},ch11:2,ch13:3,ch163:4},core:{memoryB64:'snapshot'}};
+  const state=Object.seal({mode:'clock',selectedMission:'comanche055'}),session=Object.seal({core:null,loadedMission:'',suspendedForClock:false,pausedForVisibility:false});
   class FakeCore{
     constructor(options){this.options=options;this.running=false;calls.core=this}
     async load(options){calls.loads.push({...options})}
@@ -43,9 +43,9 @@ function makeEnv(search,mission='comanche055'){
     stop(){this.running=false;calls.stops++}
   }
   const shell={
-    store:{get(key){calls.storeGets.push(key);const expected=mission==='comanche055'?'agcSnapshotV1':`agcSnapshotV1:${mission}`;return key===expected?JSON.stringify(payload):null}},
+    store:{get(key){calls.storeGets.push(key);return key==='agcSnapshotV1'?JSON.stringify(payload):null}},
     element:id=>id==='mode'?status:null,
-    missionSpec:()=>mission==='comanche055'?({label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}):({label:'LUMINARY099',short:'LM',rope:'Luminary099.bin'})
+    missionSpec:()=>({label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'})
   };
   const clock={cancelLampTest(){calls.clockCancel++},stopQueue(){calls.clockStop++}};
   const decoders=Object.fromEntries(['decodeChannel10','decodeChannel11','decodeChannel13','decodeChannel163'].map(name=>[name,value=>{calls.channels.push({name,value});return true}]));
@@ -81,13 +81,9 @@ async function flush(){for(let i=0;i<8;i++)await Promise.resolve()}
   document.hidden=false;documentListeners.visibilitychange();assert(core.running&&calls.starts.length===2,'visible Dream AGC did not resume');
   windowListeners.pagehide();assert(!core.running&&calls.stops===2,'Dream pagehide did not stop core');
 
-  const lm=makeEnv('?dream=1&agc=1','luminary099');await flush();
-  assert(lm.calls.loads[0].ropeUrl==='Luminary099.bin','Dream AGC did not load the selected LM rope');
-  assert(lm.calls.storeGets.length===1&&lm.calls.storeGets[0]==='agcSnapshotV1:luminary099','Dream LM clone read the wrong mission snapshot slot');
-
   const inert=makeEnv('?dream=1&clock=1&display=1');await flush();
   assert(inert.session.core===null&&inert.state.mode==='clock','clock DreamService URL started Dream AGC');
   assert(inert.calls.clockCancel===0&&inert.calls.clockStop===0&&inert.calls.reset===0&&inert.calls.storeGets.length===0,'inert Dream AGC gate touched services');
   console.log('Dream AGC runtime smoke: PASS');
-  console.log('  explicit shell/clock/display/core ownership, read-only snapshot clone, dynamic channel implementations, lifecycle pause/resume, and clock-Dream isolation verified');
+  console.log('  CM-only rope/snapshot ownership, read-only snapshot clone, dynamic channel implementations, lifecycle pause/resume, and clock-Dream isolation verified');
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});

@@ -33,16 +33,15 @@ final class SntpClient {
         InetAddress address = InetAddress.getByName(host);
         byte[] request = new byte[PACKET_SIZE];
         request[0] = 0x23; // LI=0, VN=4, client mode=3.
-        long requestWallMs = System.currentTimeMillis();
-        writeTimestamp(request, 40, requestWallMs);
-        long startedNs = System.nanoTime();
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setSoTimeout(timeoutMs);
+            long startedNs = System.nanoTime();
+            long requestWallMs = System.currentTimeMillis();
+            writeTimestamp(request, 40, requestWallMs);
             socket.send(new DatagramPacket(request, request.length, address, port));
             byte[] response = new byte[PACKET_SIZE];
             DatagramPacket packet = new DatagramPacket(response, response.length);
             socket.receive(packet);
-            long receivedWallMs = System.currentTimeMillis();
             long rttMs = Math.max(0L, (System.nanoTime() - startedNs) / 1_000_000L);
             if (!address.equals(packet.getAddress()) || packet.getPort() != port) {
                 throw new IOException("unexpected NTP response source");
@@ -57,11 +56,21 @@ final class SntpClient {
             if (leap == 3 || (mode != 4 && mode != 5) || stratum == 0 || stratum > 15) {
                 throw new IOException("invalid NTP response");
             }
-            long serverMs = readTimestamp(response, 40, receivedWallMs);
-            if (serverMs <= 0) throw new IOException("missing NTP transmit timestamp");
-            // SNTP's usual half-round-trip correction avoids treating receive time as server time.
-            long offsetMs = serverMs + (rttMs / 2L) - receivedWallMs;
-            return new Sample(offsetMs, rttMs, serverMs);
+            // Use monotonic elapsed time for T4 so a wall-clock adjustment while
+            // the request is in flight cannot corrupt the four-timestamp offset.
+            long receiveWallMs = requestWallMs + rttMs;
+            long serverReceiveMs = readTimestamp(response, 32, receiveWallMs);
+            long serverTransmitMs = readTimestamp(response, 40, receiveWallMs);
+            if (serverReceiveMs <= 0L || serverTransmitMs <= 0L) {
+                throw new IOException("missing NTP server timestamp");
+            }
+            long serverProcessingMs = serverTransmitMs - serverReceiveMs;
+            if (serverProcessingMs < 0L) throw new IOException("invalid NTP server timestamp order");
+            long networkDelayMs = Math.max(0L, rttMs - serverProcessingMs);
+            // RFC 5905 section 8: theta = ((T2 - T1) + (T3 - T4)) / 2.
+            long offsetMs = ((serverReceiveMs - requestWallMs)
+                    + (serverTransmitMs - receiveWallMs)) / 2L;
+            return new Sample(offsetMs, networkDelayMs, serverTransmitMs);
         }
     }
 

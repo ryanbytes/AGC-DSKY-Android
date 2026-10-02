@@ -35,10 +35,8 @@
     // data that helper deletes the user's saved snapshot. A dream is read-only
     // with respect to the interactive app's state.
     try {
-      const snapshotKey = dreamState.selectedMission === 'comanche055'
-        ? 'agcSnapshotV1'
-        : `agcSnapshotV1:${dreamState.selectedMission}`;
-      const raw = dreamShell.store.get(snapshotKey);
+      if (dreamState.selectedMission !== 'comanche055') return false;
+      const raw = dreamShell.store.get('agcSnapshotV1');
       if (!raw) return false;
       const payload = JSON.parse(raw);
       if (!payload || payload.schema !== 1 || payload.mission !== dreamState.selectedMission || !payload.core) {
@@ -70,6 +68,7 @@
     dreamDisplay.resetFace();
 
     try {
+      if (dreamState.selectedMission !== 'comanche055') throw new Error('Unsupported AGC mission');
       const selected = dreamShell.missionSpec();
       // The dream owns this page's core session. It may clone the last saved
       // interactive AGC state, but it never saves back or changes runMode.

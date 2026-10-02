@@ -5,9 +5,9 @@
  *
  * This deliberately does NOT write Noun 20, erasable memory, or DSKY fields.
  * The handset orientation is converted into physical-style incremental CDU
- * pulses through VirtualAGC unprogrammed-increment packets for counters
- * 032/033/034. The selected CM or LM rope then sees CDUX/CDUY/CDUZ as it would
- * see the spacecraft IMU CDU counters.
+ * pulses through VirtualAGC unprogrammed-increment packets for Command Module
+ * counters 032/033/034. Comanche 055 sees CDUX/CDUY/CDUZ as spacecraft IMU CDU
+ * counter updates.
  *
  * Axis nomenclature from the flight software:
  *   CDUX = outer gimbal (phi)

@@ -66,13 +66,13 @@ final class AppUpdater {
 
     private AppUpdater() {}
 
-    static void check(Context source) { check(source, false, CHECK_INTERVAL_MS, null); }
+    static void check(Context source) { check(source, false, CHECK_INTERVAL_MS, null, false); }
 
-    static void checkNow(Context source) { check(source, true, 0L, null); }
+    static void checkNow(Context source) { check(source, true, 0L, null, false); }
 
-    static void checkNow(Context source, StatusListener listener) { check(source, true, 0L, listener); }
+    static void checkNow(Context source, StatusListener listener) { check(source, true, 0L, listener, true); }
 
-    private static void checkForeground(Context source) { check(source, false, FOREGROUND_CHECK_INTERVAL_MS, null); }
+    private static void checkForeground(Context source) { check(source, false, FOREGROUND_CHECK_INTERVAL_MS, null, false); }
 
     private static void notifyStatus(StatusListener listener, String status) {
         if (listener == null) return;
@@ -82,7 +82,7 @@ final class AppUpdater {
     static void onForeground(Activity activity) {
         if (activity == null) return;
         foregroundActivity = new WeakReference<>(activity);
-        if (!resumePendingInstall(activity)) checkForeground(activity);
+        checkForeground(activity);
     }
 
     static void onBackground(Activity activity) {
@@ -90,7 +90,8 @@ final class AppUpdater {
         if (current == activity) foregroundActivity = new WeakReference<>(null);
     }
 
-    private static void check(Context source, boolean force, long minimumIntervalMs, StatusListener listener) {
+    private static void check(Context source, boolean force, long minimumIntervalMs,
+                              StatusListener listener, boolean userInitiated) {
         Context context = source.getApplicationContext();
         if (BuildConfig.DEBUG || (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             notifyStatus(listener, "UPDATE DISABLED IN DEBUG");
@@ -105,7 +106,7 @@ final class AppUpdater {
                 notifyStatus(listener, "CHECKING");
                 if (hasValidPending(context)) {
                     notifyStatus(listener, "READY TO INSTALL");
-                    offerPendingToForeground();
+                    if (userInitiated) offerPendingToForeground();
                     return;
                 }
                 SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -149,7 +150,7 @@ final class AppUpdater {
                 }
                 prefs.edit().putString(PREF_PENDING, candidate.getAbsolutePath()).putString(PREF_PENDING_SHA256, expectedSha256).apply();
                 notifyStatus(listener, "READY TO INSTALL · " + release.version);
-                offerPendingToForeground();
+                if (userInitiated) offerPendingToForeground();
             } catch (Exception error) {
                 if (isTransientNetworkFailure(error)) {
                     scheduleRetry(context);

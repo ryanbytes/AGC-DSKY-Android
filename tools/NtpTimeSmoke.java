@@ -10,13 +10,15 @@ public final class NtpTimeSmoke {
 
     public static void main(String[] args) throws Exception {
         testSuccess();
+        testServerProcessingDoesNotBiasOffset();
         testWrongPeerRejected();
         testMalformedResponse();
         testNetworkFailureThenRecovery();
         testEraRollover();
+        testPersistedSyncAgeAcrossBoots();
         if (args.length > 0 && "--live".equals(args[0])) testLiveCloudflare();
         System.out.println("ntp time smoke: PASS");
-        System.out.println("  local SNTP success, wrong-peer/malformed rejection, timeout, and recovery verified");
+        System.out.println("  four-timestamp offset, reboot-aware freshness, server-processing correction, wrong-peer/malformed rejection, timeout, and recovery verified");
     }
 
     private static void testSuccess() throws Exception {
@@ -39,6 +41,40 @@ public final class NtpTimeSmoke {
             catch (Exception expected) { rejected = true; }
             responder.join(2_000); check(failure.get() == null, "malformed responder failed");
             check(rejected, "malformed NTP response was accepted");
+        }
+    }
+
+    private static void testServerProcessingDoesNotBiasOffset() throws Exception {
+        final long expectedOffsetMs = 600L;
+        try (DatagramSocket server = new DatagramSocket(0)) {
+            AtomicReference<Throwable> failure = new AtomicReference<>();
+            Thread responder = new Thread(() -> {
+                try {
+                    byte[] request = new byte[48];
+                    DatagramPacket incoming = new DatagramPacket(request, request.length);
+                    server.receive(incoming);
+                    byte[] response = new byte[48];
+                    response[0] = 0x24;
+                    response[1] = 1;
+                    System.arraycopy(request, 40, response, 24, 8);
+                    writeTimestamp(response, 32, System.currentTimeMillis() + expectedOffsetMs);
+                    Thread.sleep(120L);
+                    writeTimestamp(response, 40, System.currentTimeMillis() + expectedOffsetMs);
+                    server.send(new DatagramPacket(response, response.length,
+                            incoming.getAddress(), incoming.getPort()));
+                } catch (Throwable error) {
+                    failure.set(error);
+                }
+            });
+            responder.start();
+            SntpClient.Sample sample = SntpClient.query("127.0.0.1", server.getLocalPort(), 1_000);
+            responder.join(2_000);
+            check(!responder.isAlive(), "server-processing responder did not finish");
+            check(failure.get() == null, "server-processing responder failed");
+            check(Math.abs(sample.offsetMs - expectedOffsetMs) < 35L,
+                    "server processing biased offset: " + sample.offsetMs + "ms");
+            check(sample.roundTripMs < 100L,
+                    "server processing time was counted as network delay: " + sample.roundTripMs + "ms");
         }
     }
 
@@ -94,6 +130,21 @@ public final class NtpTimeSmoke {
         check(decoded == expected, "NTP era-1 timestamp decoded as " + decoded + " instead of " + expected);
     }
 
+    private static void testPersistedSyncAgeAcrossBoots() {
+        long syncUtc = 1_800_000_000_000L;
+        check(NtpSyncAge.ageMs(syncUtc, 400L, 20_000L, 80_000L, 12, 12,
+                syncUtc - 400L) == 60_000L,
+                "same-boot freshness did not use monotonic elapsed time");
+        check(NtpSyncAge.ageMs(syncUtc, 400L, 500_000_000L, 520_000_000L, 12, 13,
+                syncUtc - 400L + 3_600_000L) == 3_600_000L,
+                "post-reboot freshness reused the prior boot's uptime");
+        check(NtpSyncAge.ageMs(syncUtc, 400L, 500_000_000L, 520_000_000L, -1, -1,
+                syncUtc - 400L + 3_600_000L) == 3_600_000L,
+                "legacy sync record did not use corrected wall time");
+        check(NtpSyncAge.ageMs(0L, 0L, 0L, 0L, -1, -1, 0L) == -1L,
+                "missing sync was not reported as unavailable");
+    }
+
     private static void testLiveCloudflare() throws Exception {
         SntpClient.Sample sample = SntpClient.query("time.cloudflare.com", 3_000);
         check(sample.roundTripMs >= 0, "live Cloudflare response has invalid RTT");
@@ -105,7 +156,7 @@ public final class NtpTimeSmoke {
             try {
                 byte[] request = new byte[48]; DatagramPacket incoming = new DatagramPacket(request, request.length);
                 server.receive(incoming); byte[] response = new byte[malformed ? 12 : 48];
-                if (!malformed) { response[0] = 0x24; response[1] = 1; System.arraycopy(request, 40, response, 24, 8); writeTimestamp(response, 40, System.currentTimeMillis()); }
+                if (!malformed) { response[0] = 0x24; response[1] = 1; System.arraycopy(request, 40, response, 24, 8); writeTimestamp(response, 32, System.currentTimeMillis()); writeTimestamp(response, 40, System.currentTimeMillis()); }
                 server.send(new DatagramPacket(response, response.length, incoming.getAddress(), incoming.getPort()));
             } catch (Throwable error) { failure.set(error); }
         });
