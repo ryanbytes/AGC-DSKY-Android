@@ -432,8 +432,13 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
     max-width:none;
   }
   /* The options panel stays docked beside the DSKY and opens by sliding out
-     from its right edge. Its closed position overlaps the DSKY invisibly. */
+     from its right edge. Keep it out of the flex row so the DSKY remains
+     centered while the panel is closed. Its closed position overlaps the
+     DSKY invisibly. */
   .app-controls{
+    position:absolute;
+    top:max(12px,env(safe-area-inset-top));
+    left:calc(50% + min(21vw,calc((100vh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))*160/372)) + 4px);
     width:min(38vw,360px);
     max-width:38vw;
     max-height:none;
