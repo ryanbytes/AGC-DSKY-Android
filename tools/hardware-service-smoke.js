@@ -6,7 +6,7 @@ const {installServiceRegistry}=require('./test-service-registry');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 
-const stateSource=read('app-state-runtime.js'),topologySource=read('dsky-relay-topology.js'),hardwareSource=read('hardware-fidelity.js');
+const stateSource=read('app-state-runtime.js'),topologySource=read('dsky-relay-topology.js'),displaySource=read('agc-display-runtime.js'),hardwareSource=read('hardware-fidelity.js');
 const timers=new Map();let timerId=0,now=0;
 const commits=[],renders=[],lamps=new Map(),channelState=[],classStates=new Map();
 const document={hidden:false,body:{classList:{toggle(name,on){classStates.set(name,!!on)},remove(...names){for(const name of names)classStates.set(name,false)}}}};
@@ -121,5 +121,35 @@ assert(hardwareSource.includes('display.commitRelayWord(relay,low11,{render:pain
 assert(hardwareSource.includes("visual.presentDrive(relay,prior,low11,{renderContact:!!render})"),'clock no-paint policy is not propagated into relay contact presentation');
 assert(hardwareSource.includes('beginRelayDrive(relay,low11,false);relayWords[relay]=low11;'),'PHONE CLOCK queue must retain no-transient-display relay drive');
 
+// Exercise the real public output path, not only the handler captured from
+// registerChannelHandler. This catches a mismatch between channel dispatch,
+// mode gating, and the hardware service's channel-012 registration.
+const dispatchTimers=new Map();let dispatchTimerId=0,dispatchNow=0;
+const dispatchContext={console,window:null,document,performance:{now:()=>dispatchNow},setTimeout(fn,ms=0){const id=++dispatchTimerId;dispatchTimers.set(id,{fn,due:dispatchNow+Math.max(0,Number(ms)||0)});return id},clearTimeout(id){dispatchTimers.delete(id)},setInterval(){return 1},clearInterval(){},Object,Map,Set,Number,String,Math,TypeError,Promise};
+dispatchContext.window=dispatchContext;installServiceRegistry(dispatchContext);vm.createContext(dispatchContext);
+new vm.Script(stateSource,{filename:'app-state-runtime.js'}).runInContext(dispatchContext);
+new vm.Script(topologySource,{filename:'dsky-relay-topology.js'}).runInContext(dispatchContext);
+dispatchContext.AGCDSKY_RENDERER={setLamp(){},set2(){},setReg(){},clearLamps(){}};
+dispatchContext.AGCDSKY_AUDIO={playBurst(){}};
+const dispatchClockSlots={stopQueue(){},runQueue(){},cancelLampTest(){},lampTest(){}};
+dispatchContext.AGCDSKY_CLOCK={relayGroups:()=>[],desiredDigits:()=>({}),relayWord:()=>0,digitRelayCode:()=>0,digits:()=>({}),relayWords:()=>({}),queue:()=>[],queueBusy:()=>false,setQueueBusy(){},lampTestActive:()=>false,setLampTestActive(){},lampTestTimer:()=>0,setLampTestTimer(){},implementation:name=>dispatchClockSlots[name],installImplementation(name,next){dispatchClockSlots[name]=next;return next},cancelLampTest(){},stopQueue(){},runQueue(){},lampTest(){},renderReg(){},syncFace(){},tick(){}};
+dispatchContext.AGCDSKY_SHELL={element:()=>({textContent:''})};
+new vm.Script(displaySource,{filename:'agc-display-runtime.js'}).runInContext(dispatchContext);
+new vm.Script(hardwareSource,{filename:'hardware-fidelity.js'}).runInContext(dispatchContext);
+const dispatchDisplay=dispatchContext.AGCDSKY_DISPLAY,dispatchHardware=dispatchContext.AGCDSKY_HARDWARE;
+assert(dispatchDisplay&&dispatchHardware,'real channel-012 dispatch fixture failed to initialize');
+dispatchDisplay.onChannel(0o12,0o30000);
+assert(dispatchHardware.snapshot().channel012Output===0,'AGC output dispatch must ignore channel 012 outside AGC/loading mode');
+dispatchContext.AGCDSKY_APP_STATE.mode='agc';
+dispatchDisplay.onChannel(0o12,0o10000);
+let channel012=dispatchHardware.snapshot();
+assert(channel012.channel012Output===0o10000&&channel012.auxRelays.injseq===true&&channel012.auxRelays.cutoff===false,'channel 012 bit 010000 must independently drive INJ SEQ through the real dispatcher');
+dispatchDisplay.onChannel(0o12,0o20000);
+channel012=dispatchHardware.snapshot();
+assert(channel012.channel012Output===0o20000&&channel012.auxRelays.injseq===false&&channel012.auxRelays.cutoff===true,'channel 012 bit 020000 must independently drive CUTOFF through the real dispatcher');
+dispatchDisplay.onChannel(0o12,0o130000);
+channel012=dispatchHardware.snapshot();
+assert(channel012.channel012Output===0o30000&&channel012.auxRelays.injseq===true&&channel012.auxRelays.cutoff===true,'real channel-012 dispatch must preserve masked raw output and both relays');
+
 console.log('hardware service smoke: PASS');
-console.log('  explicit hardware-service publication, normal clock queue hooks, no synthetic V35 hook, clock no-transient-EL relay presentation, 20-ms settled commit, paint-policy suppression, latch diagnostics, and diagnostic extension composition verified');
+console.log('  explicit hardware-service publication, normal clock queue hooks, no synthetic V35 hook, clock no-transient-EL relay presentation, 20-ms settled commit, paint-policy suppression, latch diagnostics, diagnostic extension composition, and real channel-012 dispatch verified');

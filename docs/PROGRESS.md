@@ -82,6 +82,8 @@ The next harness audit found that `device-full-smoke.sh` installed the isolated 
 
 Continued source/doc audit corrected the stale preferred APK path and removed device-only frontend readiness from the canonical host-smoke checklist in `AGENTS.md`.
 
+The channel-012 test audit found that `hardware-service-smoke.js` invoked the registered callback directly, so it did not cover production `AGCDSKY_DISPLAY.onChannel()` dispatch or the AGC-mode gate. Added an isolated fixture loading the real display and hardware-fidelity services; it verifies mode gating, independent INJ SEQ/CUTOFF bits, 15-bit raw-word masking, and the both-relays state through the public dispatcher. `node tools/hardware-service-smoke.js`, `git diff --check`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed; the full source suite remains 92 Node smokes plus `ntp-time-smoke.sh`. No app runtime source changed. Device/WebView validation remains unavailable without an attached Android device.
+
 Last updated: 2026-10-01
 
 ## 2026-09-29 v1.1.53 terse Apollo-style panel nomenclature
