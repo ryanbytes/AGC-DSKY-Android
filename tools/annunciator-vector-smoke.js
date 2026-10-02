@@ -24,7 +24,7 @@ req(html,'viewBox="0 0 7318.590 3339.007"','physical annunciator cell viewBox');
 const labels={
   uplink:'UPLINK ACTY',temp:'TEMP',noatt:'NO ATT',gimbal:'GIMBAL LOCK',
   stby:'STBY',prog:'PROG',keyrel:'KEY REL',restart:'RESTART',
-  oprerr:'OPR ERR',tracker:'TRACKER',alt:'ALT',vel:'VEL'
+  oprerr:'OPR ERR',tracker:'TRACKER'
 };
 for(const [name,label] of Object.entries(labels)){
   const marker=`data-lamp="${name}" aria-label="${label}"><svg class="lamp-legend"`;
@@ -34,17 +34,17 @@ for(const raw of ['>UPLINK<br>ACTY<','>GIMBAL<br>LOCK<','>KEY REL<','>RESTART<',
 
 const vectorCount=(html.match(/<svg class="lamp-legend"/g)||[]).length;
 const legendBlocks=[...html.matchAll(/<svg class="lamp-legend"[\s\S]*?<\/svg>/g)].map(m=>m[0]);
-if(legendBlocks.length!==12)fail('expected 12 mission-aware vector legend blocks, found '+legendBlocks.length);
+if(legendBlocks.length!==10)fail('expected 10 CM vector legend blocks, found '+legendBlocks.length);
 for(const [i,legend] of legendBlocks.entries())no(legend,'scale(1 -1)','legend '+(i+1)+' vertical inversion');
 const legendTransforms=[...legendBlocks.join('\n').matchAll(/transform="translate\(([-0-9.]+)\s+([-0-9.]+)\)"/g)];
-if(legendTransforms.length!==69)fail('expected 69 Gorton glyph transforms, found '+legendTransforms.length);
+if(legendTransforms.length!==63)fail('expected 63 Gorton glyph transforms, found '+legendTransforms.length);
 const uprightY=new Set(['619.504','1209.503','1799.503']);
 for(const m of legendTransforms){if(!uprightY.has(m[2]))fail('unexpected upright legend Y offset '+m[2]);}
 req(html,'id="gorton-T" d="M95,60','pre-oriented Gorton SVG outline');
-if(vectorCount!==12)fail('expected 12 mission-aware vector legends, found '+vectorCount);
+if(vectorCount!==10)fail('expected 10 CM vector legends, found '+vectorCount);
 const blankCount=(html.match(/class="lamp (?:white|yellow) blank"/g)||[]).length;
-if(blankCount!==2)fail('expected two structurally blank shared cells, found '+blankCount);
-const missionOnlyCount=(html.match(/class="lamp white mission-lm-only"/g)||[]).length;if(missionOnlyCount!==2)fail('expected two LM-only positions blanked on CM, found '+missionOnlyCount);
+if(blankCount!==4)fail('expected four structurally blank CM cells, found '+blankCount);
+if(html.includes('mission-lm-only')||html.includes('data-lamp="alt"')||html.includes('data-lamp="vel"'))fail('CM face retained LM annunciator support');
 for(const ch of ['A','B','C','E','G','I','K','L','M','N','O','P','R','S','T','U','V','Y'])req(html,`id="gorton-${ch}"`,'required Gorton glyph');
 
 const strokeMatch=finish.match(/\.gorton-glyph\{[\s\S]*?stroke-width:\s*([0-9.]+);/);
@@ -84,5 +84,5 @@ for(const marker of [
 ])req(third+'\n'+notices,marker,'Gorton attribution');
 
 console.log('annunciator fixed-vector smoke: PASS');
-console.log('  twelve mission-aware Gorton legends, LM ALT/VEL vectors, four CM visual blanks, OFL attribution, and deterministic vector construction are source-gated');
+console.log('  ten CM Gorton legends, four blank CM cells, OFL attribution, and deterministic vector construction are source-gated');
 console.log('  derived nominal straight-stem width: '+effectiveStraightStemIn.toFixed(6)+' in at .156-in character height');

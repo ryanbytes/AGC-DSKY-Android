@@ -6,7 +6,7 @@
  *
  * Connects to the already-forwarded debuggable WebView DevTools socket, starts
  * Comanche055 in AGC mode, reloads the actual packaged page, and requires the
- * selected mission + requested AGC mode to return while the JS/yaAGC core is a
+ * CM-only AGC mode to return while the JS/yaAGC core is a
  * newly constructed object. This proves preference restoration without falsely
  * treating CPU/erasable-memory state as serialized across page recreation.
  *
@@ -361,13 +361,13 @@ async function ensureClock(cdp) {
   }
 }
 
-async function ensureMission(cdp, mission) {
+async function ensureMission(cdp, mission='comanche055') {
   let status = await cdp.evaluate(statusExpression());
-  if (status.mission === mission) return;
-  await ensureClock(cdp);
-  await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");
-  status = await poll(cdp, `select ${mission}`, (s) => s.mission === mission, 5000);
-  assert(status.mission === mission, `failed to select ${mission}`);
+  assert(mission === 'comanche055', `unsupported mission requested by device smoke: ${mission}`);
+  if (status.mission !== 'comanche055') {
+    await ensureClock(cdp);
+    status = await poll(cdp, 'normalize CM-only app state', (s) => s.mission === 'comanche055', 5000);
+  }
 }
 
 async function enterMission(cdp, mission) {
@@ -397,13 +397,7 @@ async function snapshotState(cdp) {
 async function restoreState(cdp, snapshot) {
   try {
     await ensureClock(cdp);
-    const wantedMission = snapshot.mission === 'comanche055' ? 'comanche055' : 'luminary099';
-    await ensureMission(cdp, wantedMission);
-    if (snapshot.mission === null) {
-      await cdp.evaluate("localStorage.removeItem('agcMission'); true");
-    }
-    if (snapshot.missionPreference === null) await cdp.evaluate("localStorage.removeItem('agcMissionPreferenceV1'); true");
-    else await cdp.evaluate(`localStorage.setItem('agcMissionPreferenceV1', ${JSON.stringify(snapshot.missionPreference)}); true`);
+    await cdp.evaluate("localStorage.setItem('agcMission','comanche055'); localStorage.removeItem('agcMissionPreferenceV1'); true");
     if (snapshot.runMode === 'agc') {
       await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
       await poll(cdp, 'restore prior AGC run mode', (s) => s.core && s.running, 20000);

@@ -741,3 +741,11 @@ Verification performed in this environment:
 - [ ] iPhone/iPad/macOS native print flow has been exercised on-device.
 
 The File Store contains Android SDK/build-tools/signing material used for test-package work, but there is still no complete current recursive checkout plus offline Android Gradle Plugin 9.3.0 cache in the execution container. Do not call this a canonical source build until `bash tools/build-local.sh` succeeds from the exact branch HEAD.
+
+## 2026-10-02 CM-only product scope
+
+Ryan clarified that the Android app is Command Module only. This supersedes the 2026-10-01 selectable LM/CM behavior: removed the mission selector and LM face, force-normalize old mission preference storage to Comanche055, default the core to Comanche055, use the CM-only PIPA scale, and keep CM sextant/navigation inputs available. Gradle and APK verification now stage/require only pinned `yaAGC.wasm` + `Comanche055.bin` and reject a packaged Luminary rope. Diagnostics, host runtime coverage, device-smoke contracts, and current build guidance now describe CM-only behavior. The upstream WASM's `CmOrLm` default remains an emulator limitation; full CM peripheral-mode fidelity is still not claimed.
+
+Validation so far: `env TZ=UTC bash tools/run-source-smokes.sh` passed (92 Node smokes plus `ntp-time-smoke.sh`). `node tools/wasm-runtime-smoke.js` passed against the real pinned WASM and Comanche rope: V16N65, P00 relay 11 `01265`, V35 relay 12 `00650`, and MARK/KEYRUPT2 consumption. All six Android variants and packaged APK verification are pending.
+
+CM-only verification completed: local Gradle 9.5.1 `:app:verifyPinnedAgcAssets :app:assemble` succeeded for all six Regular/Fire debug, installfix, and unsigned release variants. Regular and Fire debug APKs passed `tools/verify-apk.sh`; `unzip -t` passed on all six APKs, and each contained Comanche055 while none contained Luminary099. The canonical `bash tools/build-local.sh` guard was attempted and stopped before Gradle because it requires a clean working tree; the equivalent pinned Gradle build and the full `env TZ=UTC bash tools/run-source-smokes.sh` both succeeded against the current source. `adb devices -l` reported no attached devices, so packaged Android/WebView behavior remains unverified. The unsigned release APKs are build outputs only, not signed update artifacts.

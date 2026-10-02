@@ -358,12 +358,9 @@ async function ensureClock(cdp) {
 }
 
 async function ensureMission(cdp, mission) {
-  let status = await cdp.evaluate(statusExpression());
-  if (status.mission === mission) return;
-  await ensureClock(cdp);
-  await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");
-  status = await poll(cdp, `select ${mission}`, (s) => s.mission === mission, 5000);
-  assert(status.mission === mission, `failed to select ${mission}`);
+  const status = await cdp.evaluate(statusExpression());
+  assert(mission === 'comanche055' && status.mission === 'comanche055',
+    `CM-only app did not report Comanche 055: ${JSON.stringify(status)}`);
 }
 
 async function enterMission(cdp, mission) {
@@ -408,13 +405,7 @@ async function restoreFromMarkers(cdp, markers) {
   const originalMissionPreference = markers.originalMissionPreference === NULL_TOKEN ? null : markers.originalMissionPreference;
 
   await ensureClock(cdp);
-  const wantedMission = originalMission === 'comanche055' ? 'comanche055' : 'luminary099';
-  await ensureMission(cdp, wantedMission);
-  if (originalMission === null) {
-    await cdp.evaluate("localStorage.removeItem('agcMission'); true");
-  }
-  if (originalMissionPreference === null) await cdp.evaluate("localStorage.removeItem('agcMissionPreferenceV1'); true");
-  else await cdp.evaluate(`localStorage.setItem('agcMissionPreferenceV1', ${JSON.stringify(originalMissionPreference)}); true`);
+  await cdp.evaluate("localStorage.setItem('agcMission','comanche055'); localStorage.removeItem('agcMissionPreferenceV1'); true");
 
   if (originalRunMode === 'agc') {
     await cdp.evaluate("document.getElementById('mode-toggle').click(); true");

@@ -35,7 +35,6 @@ Pinned `vendor/webAGC` revision:
 Required exact inputs:
 
 - `vendor/webAGC/src/yaAGC.wasm`
-- `vendor/webAGC/demo/agc/Luminary099.bin`
 - `vendor/webAGC/demo/agc/Comanche055.bin`
 
 The build verifies exact size/Git-blob identities before packaging. Do not weaken those checks.
@@ -48,7 +47,7 @@ The pinned WASM imports exactly:
 - `wasi_snapshot_preview1.fd_seek`
 - `wasi_snapshot_preview1.fd_write`
 
-`agc-core.js` supplies that minimal WASI shim. The verified build path must continue to instantiate the **real pinned WASM with both real ropes under Node** before Gradle; do not replace this with mock-only testing.
+`agc-core.js` supplies that minimal WASI shim. The verified build path must continue to instantiate the **real pinned WASM with the real Comanche rope under Node** before Gradle; do not replace this with mock-only testing.
 
 ## Authenticity rules
 
@@ -66,13 +65,13 @@ The pinned WASM imports exactly:
 - Preserve the Block II selector/sign/two-5-bit-character matrix.
 - Unsupported five-bit character codes are invalid, not alternate blanks.
 - Plus/minus sign latches remain independent; rendering gives plus priority if both are asserted, matching VirtualAGC.
-- Luminary V35 `FULLDSP`/`FULLDSP1` physically drives both five-relay character banks on every numeric row. Relay 8 renders only its D bank, but its visually unused C bank is still driven to code `035` during V35 and must remain in the physical relay/click model.
+- Comanche V35 `FULLDSP`/`FULLDSP1` physically drives both five-relay character banks on every numeric row. Relay 8 renders only its D bank, but its visually unused C bank is still driven to code `035` during V35 and must remain in the physical relay/click model.
 - Source-backed low-11 V35 words are `01675` on ordinary numeric rows and `03675` on plus rows 7/5/2.
-- V35 relay-12 differs by rope: Luminary099 `00674`, Comanche055 `00650`.
+- Comanche055 V35 relay-12 is `00650`.
 
 ### Real V35 COMP rule
 
-Do **not** assert that real Luminary V35 requires COMP ACTY off. V35's own test mask does not force channel 011 bit 2, but Luminary's Executive normally controls COMP while jobs run/idle and V35 executes as an Executive job.
+Real Comanche V35 must not assert COMP ACTY off as a fixed requirement. The live invariant compares the output to raw channel `011` bit `00002`.
 
 The live invariant is:
 
@@ -84,14 +83,14 @@ The live invariant is:
 
 Synthetic phone-clock V35 is different: no AGC/Executive exists there, so it does not invent COMP ACTY.
 
-## CM/LM limitation
+## Command Module scope and emulator limitation
 
 The pinned WASM engine's upstream `CmOrLm` global defaults to LM (`0`) and its exported WASM API exposes no setter. Desktop yaAGC changes this through configuration code bypassed by the WebAssembly wrapper.
 
-Current policy:
+Current product policy:
 
-- Luminary099 is the native/default LM path.
-- Comanche055 remains an exact pinned selectable CM rope for DSKY execution/testing.
+- The Android app supports only the Command Module and packages only the exact pinned Comanche055 rope.
+- Do not package or expose a selectable LM rope.
 - Do **not** claim full CM peripheral-mode fidelity.
 - Known `CmOrLm`-dependent ring-buffer behavior includes LM rotational-hand-controller bookkeeping on channel `013`; this app supplies no RHC inputs.
 - Do not binary-patch the pinned WASM to change this flag.
@@ -183,7 +182,7 @@ The canonical build path must continue to run:
 - DSKY mapping smoke
 - effective V35 model smoke against the current modular runtime
 - asset-reference smoke
-- real pinned yaAGC + both-rope runtime smoke, including `V37E00E` P00 proof and V35 FULLDSP/FULLDSP1/relay-12 semantics
+- real pinned yaAGC + Comanche-rope runtime smoke, including P00 proof and V35 FULLDSP/FULLDSP1/relay-12 semantics
 - clean Gradle build
 - post-build APK verification
 
@@ -197,11 +196,11 @@ The canonical build path must continue to run:
 
 The same-process live gate currently:
 
-- enters Luminary099 and Comanche055 with real yaAGC output/version evidence
+- enters Comanche055 with real yaAGC output/version evidence
 - exercises VERB pointer input and held PRO
 - verifies same-WebView pause/resume preserves the core object
-- enters Luminary P00 using pointer-driven `V37E00E` and requires actual channel-010 PROG `00` / low-11 `01265`
-- executes `V35E` and requires exact Luminary channel-010 V35 relay latches, rendered `88` / `+88888`, source-backed annunciators, and real yaAGC V/N + KEY REL/OPR ERR modulation
+- enters CM P00 using pointer-driven `V37E00E` and requires actual channel-010 PROG `00` / low-11 `01265`
+- executes `V35E` and requires exact Comanche channel-010 V35 relay latches, rendered `88` / `+88888`, source-backed annunciators, and real yaAGC V/N + KEY REL/OPR ERR modulation
 - validates channel-011/channel-0163-rendered discretes against the raw captured channel words rather than assuming COMP state
 - reloads the packaged page in CM AGC mode and requires persisted mission/run-mode restoration on a newly constructed core
 
@@ -222,7 +221,7 @@ Record actual evidence in `docs/PROGRESS.md`.
 Good examples:
 
 - `Pinned WASM import table inspected; exact imports are env.memory + four WASI fd functions.`
-- `Real pinned WASM instantiated under Node with both ropes; semantic V35 gate passed.`
+- `Real pinned WASM instantiated under Node with Comanche055; semantic V35 gate passed.`
 - `Built APK passed verify-apk.sh and device-full-smoke.sh on GrapheneOS.`
 
 Bad examples:

@@ -10,22 +10,16 @@ shellState.dream=q.get('dream')==='1';
 const $=x=>document.getElementById(x);
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}},remove(k){try{localStorage.removeItem(k);return true}catch(e){return false}}};
 const oldDreamBright=store.get('dreamBright')==='1';
-const MISSIONS=Object.freeze({
-  luminary099:{label:'LUMINARY099',short:'LM',rope:'Luminary099.bin'},
-  comanche055:{label:'COMANCHE055',short:'CM C55',rope:'Comanche055.bin'}
-});
-const storedMission=store.get('agcMission');
-const hasMissionPreference=store.get('agcMissionPreferenceV1')==='1';
-shellState.selectedMission=hasMissionPreference&&Object.prototype.hasOwnProperty.call(MISSIONS,storedMission)?storedMission:'luminary099';
+const MISSION=Object.freeze({label:'COMANCHE055',short:'CM',rope:'Comanche055.bin'});
+shellState.selectedMission='comanche055';
 store.set('agcMission',shellState.selectedMission);
-store.set('agcMissionPreferenceV1','1');
+store.remove('agcMissionPreferenceV1');
 shellState.dreamMode=store.get('dreamMode')||(oldDreamBright?'bright':'dim');
 shellState.dim=store.get('dim')==='1';
 shellState.tickSound=store.get('audioTickV4')!=='0';
 shellState.relayHaptics=store.get('relayHapticsV1')!=='0';
 shellState.displayOnly=shellState.dream||store.get('displayOnly')==='1';
 const restoreAgcOnLoad=!shellState.dream&&store.get('runMode')!=='clock';
-let missionChangePending=false;
 
 function shellCore(){const session=window.AGCDSKY_CORE_SESSION;return session?session.core:null}
 function show(v,n){
@@ -123,23 +117,14 @@ function requestNetworkTimeSync(){
 }
 function refreshTimeStatus(){if(loadNativeNtpStatus())return true;refreshBrowserTimeAge();void syncBrowserNetworkTime(false);return false}
 
-function missionSpec(){return MISSIONS[shellState.selectedMission]||MISSIONS.luminary099}
-function applyMissionButton(){const b=$('mission'),mission=missionSpec();document.body.classList.toggle('spacecraft-lm',shellState.selectedMission==='luminary099');document.body.classList.toggle('spacecraft-cm',shellState.selectedMission==='comanche055');if(!b)return;b.textContent=mission.short;b.disabled=missionChangePending||shellState.mode==='agc-loading'||shellState.mode==='relay-show';b.setAttribute('aria-label',`AGC mission ${mission.label}; tap to select ${mission.short==='LM'?'Comanche 055':'Luminary 099'}`);b.title=`${mission.label} · TAP TO SELECT ${mission.short==='LM'?'CM C55':'LM 099'}`}
+function missionSpec(){return MISSION}
+function applyMissionButton(){document.body.classList.add('spacecraft-cm')}
 function rememberRunMode(next){if(!shellState.dream)store.set('runMode',next)}
-function cycleMission(){
-  if(missionChangePending||shellState.mode==='agc-loading'||shellState.mode==='relay-show')return Promise.resolve(false);
-  const next=shellState.selectedMission==='luminary099'?'comanche055':'luminary099';
-  const apply=()=>{shellState.selectedMission=next;store.set('agcMission',next);store.set('agcMissionPreferenceV1','1');applyMissionButton();const status=$('mode');if(status&&shellState.mode==='clock')status.textContent=`${missionSpec().label} SELECTED · TAP GUIDANCE TO LOAD`;return next};
-  if(shellState.mode!=='agc')return apply();
-  const api=window.AGCDSKY;if(!api||typeof api.enterClock!=='function')return Promise.reject(new Error('AGC mode transition service unavailable'));
-  missionChangePending=true;updateModeButton();applyMissionButton();
-  return Promise.resolve(api.enterClock()).then(apply).finally(()=>{missionChangePending=false;updateModeButton();applyMissionButton()});
-}
 function updateModeButton(){
   const b=$('mode-toggle');if(!b)return;
   const mode=String(shellState.mode||'clock');
-  const busy=missionChangePending||mode==='agc-loading'||mode==='relay-show';
-  b.textContent=mode==='agc'?missionSpec().short:(mode==='agc-loading'?`${missionSpec().short} LOAD`:(mode==='relay-show'?'RLY TEST':'CLOCK'));
+  const busy=mode==='agc-loading'||mode==='relay-show';
+  b.textContent=mode==='agc'?'CM':(mode==='agc-loading'?'CM LOAD':(mode==='relay-show'?'RLY TEST':'CLOCK'));
   b.disabled=busy;
   b.setAttribute('aria-pressed',mode==='agc'?'true':'false');
 }
@@ -235,7 +220,6 @@ function initializeAppShell(api,services){
     updateModeButton();
     Promise.resolve(request).catch(error=>console.error('Mode transition failed',error)).finally(()=>{updateModeButton();showControls()});
   });
-  const missionButton=$('mission');if(missionButton)missionButton.addEventListener('click',()=>{Promise.resolve(cycleMission()).catch(error=>console.error('Mission switch failed',error)).finally(()=>showControls())});
   const updateButton=$('update');if(updateButton){
     const releaseUpdateCheck=()=>{if(!updateButtonHeld)return;updateButtonHeld=false;renderUpdateStatus()};
     updateButton.addEventListener('pointerdown',event=>{
@@ -292,7 +276,6 @@ window.AGCDSKY_SHELL=Object.freeze({
   requestNetworkTimeSync,
   missionSpec,
   rememberRunMode,
-  cycleMission,
   updateModeControl:updateModeButton,
   updateHapticsControl:updateHapticsButton,
   nativeUpdateStatus,

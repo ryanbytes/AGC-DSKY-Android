@@ -330,10 +330,8 @@ async function testLoadPipeline() {
 
     assert(fetched.includes('yaAGC.wasm'),
         'default load did not fetch yaAGC.wasm');
-    assert(fetched.includes('Luminary099.bin'),
-        'default load did not fetch Luminary099.bin');
-    assert(!fetched.includes('Comanche055.bin'),
-        'default LM load unexpectedly fetched Comanche055.bin');
+    assert(fetched.includes('Comanche055.bin'),
+        'default load did not fetch Comanche055.bin');
     assert(calls.filter(([name]) => name === 'reset').length === 2,
         'load must prime transport state and then restore the true AGC reset vector');
     assert(calls.filter(([name, count]) => name === 'step' && count === 1).length === 1,

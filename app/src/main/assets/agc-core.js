@@ -94,7 +94,7 @@
 
     async load(options={}){
       const wasmUrl = options.wasmUrl || 'yaAGC.wasm';
-      const ropeUrl = options.ropeUrl || 'Luminary099.bin';
+      const ropeUrl = options.ropeUrl || 'Comanche055.bin';
 
       this.memory = new WebAssembly.Memory({initial:5});
       const wasmResponse = await requireOk(await fetch(wasmUrl), 'yaAGC.wasm');

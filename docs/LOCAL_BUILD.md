@@ -52,7 +52,6 @@ The submodule gitlink is pinned to:
 `tools/build-local.sh` refuses to build if `vendor/webAGC` is at another revision or has local modifications. The pinned checkout must provide:
 
 - `vendor/webAGC/src/yaAGC.wasm`
-- `vendor/webAGC/demo/agc/Luminary099.bin`
 - `vendor/webAGC/demo/agc/Comanche055.bin`
 
 ## Build
@@ -76,7 +75,7 @@ The script performs these gates in order. The source smoke runner sets `TZ=UTC` 
 7. Runs the modular runtime behavior smokes, including V35 input isolation, RSET/transition cleanup, relay-8 FULLDSP physical state, and immutable relay diagnostics.
 8. Runs `tools/dsky-mapping-smoke.js` and `tools/v35-model-smoke.js` against the current modular runtime.
 9. Runs asset-reference checks, including current frontend load order and removed-file assertions.
-10. Runs `tools/wasm-runtime-smoke.js` against the **real pinned yaAGC WASM and both real ropes**. It requires the `V37E00E` P00 precondition to reach channel-010 PROG `00` / relay-11 low-11 `01265`, then requires a real `V35E` FULLDSP/FULLDSP1 relay response.
+10. Runs `tools/wasm-runtime-smoke.js` against the **real pinned yaAGC WASM and Comanche055 rope**. It requires the `V37E00E` P00 precondition to reach channel-010 PROG `00` / relay-11 low-11 `01265`, then requires a real `V35E` FULLDSP/FULLDSP1 relay response.
 11. Runs clean `:app:clean`, `:app:verifyPinnedAgcAssets`,
     `:app:assembleRegularDebug`, and `:app:assembleFireDebug` with stacktraces enabled.
 12. Builds and verifies separate regular and Fire APKs, including merged HOME,
@@ -111,11 +110,11 @@ The source and Node smokes now guard more than rendered appearance.
 
 Channel `010` uses the Block II selector/B-sign/C/D five-relay matrix. The synthetic clock encoder and authentic AGC decoder share one topology. Invalid five-bit character patterns are rejected rather than converted to blank.
 
-Luminary V35 source constants imply these channel-010 low-11 states:
+Comanche V35 source constants imply these channel-010 low-11 states:
 
 - ordinary numeric selectors: `01675`
 - R1/R2/R3 plus selectors 7/5/2: `03675`
-- relay 12 Apollo-11 LM condition lights: `00674`
+- relay 12 CM condition lights: `00650`
 
 `FULLDSP` drives both physical five-relay character banks to digit code `035` even on selector 8, although selector 8's C bank is not connected to a visible numerical position. The model and semantic gates retain that physical state.
 
@@ -144,27 +143,25 @@ The pre-build checks also guard:
 - `FRONTEND READY` is withheld until the packaged page initializes and EL rendering is complete
 - display-only crop/scaling geometry remains tied to the intended upper DSKY region
 - DREAM SOLAR sunrise/sunset, transition midpoint, polar day, and polar night behavior
-- only the exact three pinned upstream binary inputs are staged
-- mission selection/requested AGC mode persistence
-- LM-default first-selector migration, mission-matched face annunciators, and isolated LM/CM snapshots
+- only the exact pinned WASM and Comanche055 upstream binaries are staged; Luminary is rejected from APKs
+- CM-only AGC loading and requested run-mode persistence
 - DreamService does not start yaAGC
 - Activity and DreamService remain in the same default process for shared same-origin WebStorage
 - rope load -> disposable I/O initialization -> final reset -> DSKY U-bit mask sequencing
 - DSKY packet-write failures route through the AGC error handler
 - PRO remains true press-and-hold and is released on cancel, visibility loss, mission switch, and mode exit
 - pinned WASM imports exactly `env.memory` plus WASI `fd_close`, `fd_fdstat_get`, `fd_seek`, and `fd_write`
-- Luminary099 and Comanche055 use separate real WASM instances/memories in the host preflight
+- the Comanche055 rope is exercised through the pinned WASM in the host preflight
 
 These checks reduce source/packaging risk but do not substitute for Android WebView/device testing.
 
-## Known CM/LM emulator-mode limitation
+## CM-only product scope and emulator-mode limitation
 
 The pinned webAGC/yaAGC WASM engine contains upstream `CmOrLm` with default value `0` (LM) and does not export a setter. Desktop VirtualAGC changes this through CLI/configuration code not used by this WebAssembly wrapper.
 
-For the current DSKY-focused Android scope:
+The Android app supports only the CM and packages only Comanche055. The upstream engine still defaults `CmOrLm` to LM, and the wrapper cannot change it. For this DSKY-focused product:
 
-- `Luminary099.bin` runs with the native/default LM mode.
-- `Comanche055.bin` is still the exact pinned CM rope and is exercised by the real-WASM smoke.
+- `Comanche055.bin` is the only supported rope and is exercised by the real-WASM smoke.
 - The known ring-buffer path mode-dependent behavior involves LM rotational-hand-controller bookkeeping on channel `013`; this app supplies no RHC inputs.
 - Therefore CM DSKY execution is retained, but **full CM peripheral-mode fidelity is not claimed**.
 
@@ -180,7 +177,7 @@ It verifies:
 - debuggable status required by the ADB `run-as`/WebView inspection path
 - required coarse/fine location permissions for SOLAR
 - no privileged clock-setting permission (`SET_TIME`)
-- exact size/Git blob of packaged `yaAGC.wasm`, `Luminary099.bin`, and `Comanche055.bin`
+- exact size/Git blob of packaged `yaAGC.wasm` and `Comanche055.bin`; Luminary must be absent
 - packaged `index.html` matches source
 - **every local `src=`/`href=` asset referenced by current `index.html` is discovered dynamically and byte-compared against the checkout**; this prevents newly required modular scripts from being silently omitted from the verifier's file list
 - `BUILD_SOURCE.txt` matches source
@@ -208,16 +205,16 @@ The first layer, `tools/device-smoke.sh`:
 
 The subsequent WebView/AGC layers use the real app process and real `AgcCore`; no mock core is injected. Current checks include:
 
-- real Luminary099 and Comanche055 startup with yaAGC version/output evidence
+- real Comanche055 startup with yaAGC version/output evidence
 - ordinary VERB pointer input
 - held PRO pointer-down/release
 - same-WebView pause/resume core identity
-- Luminary `V37E00E` through actual pointer handlers, with a required channel-driven PROG `00` / relay-11 low-11 `01265` precondition
-- real `V35E` exact relay-latch state: `01675` ordinary numeric rows, `03675` plus rows, relay 8 `01675`, relay 12 `00674`
+- CM `V37E00E` through actual pointer handlers, with a required channel-driven PROG `00` / relay-11 low-11 `01265` precondition
+- real `V35E` exact relay-latch state: `01675` ordinary numeric rows, `03675` plus rows, relay 8 `01675`, relay 12 `00650`
 - rendered PROG/VERB/NOUN `88` and R1/R2/R3 `+88888`
 - V35 steady annunciators checked against the actual decoded relay/channel state, including COMP ACTY == contemporaneous channel `011` bit `00002`
 - observed yaAGC-modulated V/N + KEY REL/OPR ERR off phase while V35 relay latches/steady lamps persist
-- packaged-page reload restoring CM mission/requested AGC mode on a newly constructed core
+- packaged-page reload restoring CM-only AGC/requested run mode on a newly constructed core
 - actual process destruction with `adb shell am force-stop`, observed no-process interval, relaunch, and persisted CM/AGC preferences on a fresh process/core
 - best-effort restoration of the user's pre-smoke mission/run-mode preferences
 

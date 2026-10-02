@@ -177,7 +177,6 @@
 .app-controls .options-tools[open] .options-tools-menu{display:grid}
 .app-controls .options-tools-menu #cheat{grid-column:1;grid-row:1}
 .app-controls .options-tools-menu #legal{grid-column:2;grid-row:1}
-.app-controls .options-tools-menu #mission{grid-column:1 / span 2;grid-row:2}
 .app-controls > .software-update-control{
   grid-column:3;
   grid-row:3;

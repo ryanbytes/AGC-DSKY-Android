@@ -286,9 +286,7 @@ async function pollStatus(cdp, label, predicate, timeoutMs = 20000) {
 async function enterComanche(cdp) {
   let status = await cdp.evaluate(statusExpression());
   if (status.mission !== 'comanche055') {
-    if (status.mode === 'agc') { await cdp.evaluate("document.getElementById('mode-toggle').click(); true"); await pollStatus(cdp,'return to CLOCK',s=>s.mode==='clock'&&!s.running); }
-    await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");
-    status=await pollStatus(cdp,'select Comanche055',s=>s.mission==='comanche055'&&s.mode==='clock');
+    throw new Error(`CM-only app reported unsupported mission state: ${status.mission}`);
   }
   if (status.mode !== 'agc' || !status.running) {
     await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
@@ -397,11 +395,8 @@ async function restoreState(cdp, snapshot) {
       await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
       status=await pollStatus(cdp,'return to CLOCK for preference restore',s=>s.mode==='clock'&&!s.running,5000);
     }
-    const wanted=snapshot.mission==='comanche055'?'comanche055':'luminary099';
-    if(status.mission!==wanted){await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");status=await pollStatus(cdp,'restore selected mission',s=>s.mission===wanted&&s.mode==='clock',5000)}
-    if(snapshot.missionPreference===null)await cdp.evaluate("localStorage.removeItem('agcMissionPreferenceV1'); true");else await cdp.evaluate(`localStorage.setItem('agcMissionPreferenceV1', ${JSON.stringify(snapshot.missionPreference)}); true`);
-    if(snapshot.mission===null)await cdp.evaluate("localStorage.removeItem('agcMission'); true");
-    if(snapshot.runMode==='agc'){if(wanted==='comanche055')await enterComanche(cdp);else{await cdp.evaluate("document.getElementById('mode-toggle').click(); true");await pollStatus(cdp,'restore prior AGC mode',s=>s.mode==='agc'&&s.running,20000)}}
+    await cdp.evaluate("localStorage.setItem('agcMission','comanche055'); localStorage.removeItem('agcMissionPreferenceV1'); true");
+    if(snapshot.runMode==='agc'){await enterComanche(cdp)}
     else if(snapshot.runMode===null)await cdp.evaluate("localStorage.removeItem('runMode'); true");
   } catch (error) {
     console.error(`warning: could not fully restore pre-smoke frontend state: ${error.message}`);

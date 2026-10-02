@@ -298,14 +298,12 @@ assert(HARDWARE_COLOR_MODE.includes("localStorage.removeItem('dskyHardwareColorM
 assert(CM_MODE.includes("document.body.classList.add('apollo-block-ii')") &&
        !CM_MODE.includes("document.body.classList.add('authentic-colors')"),
   'CM mode must own configuration while hardware-color-mode owns the palette');
-assert((HTML.match(/data-lamp="alt"/g)||[]).length===1&&(HTML.match(/data-lamp="vel"/g)||[]).length===1&&
-       HTML.includes('class="lamp white mission-lm-only" data-lamp="alt"')&&HTML.includes('class="lamp white mission-lm-only" data-lamp="vel"'),
-  'LM-only ALT/VEL annunciators must occupy the LM face slots');
-assert(STYLE.includes('.lamp.mission-lm-only{visibility:hidden}')&&STYLE.includes('body.spacecraft-lm .lamp.mission-lm-only{visibility:visible}'),
-  'ALT/VEL annunciators must show only on the LM face');
-assert(APP_SHELL.includes("document.body.classList.toggle('spacecraft-lm',shellState.selectedMission==='luminary099')")&&
-       APP_SHELL.includes("document.body.classList.toggle('spacecraft-cm',shellState.selectedMission==='comanche055')"),
-  'mission selection must toggle LM/CM face identity');
+assert((HTML.match(/class="lamp white blank"/g)||[]).length===4,
+  'CM face must retain four structural blank annunciator positions');
+assert(!STYLE.includes('mission-lm-only')&&!APP_SHELL.includes('spacecraft-lm'),
+  'CM-only face must not retain LM visibility switching');
+assert(APP_SHELL.includes("document.body.classList.add('spacecraft-cm')"),
+  'CM-only face identity must be applied by the shell');
 for (const forbidden of ['.el-glass-back{','.el-glass-back,','--dsky-el-parallax-x','translate3d(calc(var(--dsky-el-parallax-x)'])
   assert(!HARDWARE_COLORS.includes(forbidden), 'color layer must not override physical glass/parallax geometry: ' + forbidden);
 
