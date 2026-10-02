@@ -35,6 +35,7 @@
   let attachedEye = null;
 
   const core = () => typeof api.getCore === 'function' ? api.getCore() : null;
+  const comancheMissionSelected = () => typeof api.getMission === 'function' && api.getMission() === 'comanche055';
 
   function status(text) {
     const el = document.getElementById('sxt-status');
@@ -119,6 +120,11 @@
   }
 
   async function tapToMark(point) {
+    if (!comancheMissionSelected()) {
+      status('SXT · COMANCHE 055 ONLY');
+      showMarker(point, 'busy');
+      return false;
+    }
     const c = core();
     if (!c || !c.running || typeof c.writeIo !== 'function' || typeof c.navKeyPulse !== 'function') {
       status('SXT · AGC NOT RUNNING');

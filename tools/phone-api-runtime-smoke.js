@@ -31,6 +31,15 @@ assert(phone.includes('const api = Object.create(app);'),'phone-icdu must define
 assert(phone.includes("phoneService.installImplementations(api,'phone-icdu module registration');"),'phone-icdu explicit batch registration missing');
 assert(!phone.includes('const api = window.AGCDSKY;'),'phone-icdu regained direct root-facade alias');
 assert(phone.includes('const e = apolloGimbals(correctedRel);'),'flight IMU path must decompose the corrected attitude with Apollo gimbal geometry');
+assert(phone.includes('const CM_PIPA_DV_PER_PULSE = 0.0585;')&&phone.includes('const LM_PIPA_DV_PER_PULSE = 0.01;'),
+  'phone PIPA input must use the vehicle-specific CM and LM pulse scales');
+const pipaScaleMatch=phone.match(/function pipaDvPerPulse\([\s\S]*?\n  \}/);
+assert(pipaScaleMatch,'mission-specific phone PIPA scale selector missing');
+const pipaScale=vm.runInNewContext(`(()=>{const CM_PIPA_DV_PER_PULSE=0.0585,LM_PIPA_DV_PER_PULSE=0.01,app={getMission:()=> 'luminary099'};${pipaScaleMatch[0]};return pipaDvPerPulse})()`);
+assert(pipaScale('luminary099')===0.01,'Luminary PIPA input must use 1 cm/s per pulse');
+assert(pipaScale('comanche055')===0.0585,'Comanche PIPA input must retain its 5.85 cm/s per pulse scale');
+assert(phone.includes('if(mission!==pipaMission){\n      pipaMission=mission;\n      pipaLastTimestamp=null;\n      pipaFraction=[0,0,0];\n      pipaPending=[0,0,0];\n    }'),
+  'switching missions must discard PIPA counts accumulated under the prior vehicle scale');
 assert(phone.includes('opticsAngles = eulerXYZ(opticalRel);'),'camera aiming must retain conventional device Euler decomposition');
 assert(phone.includes('const gameRelYaw = eulerXYZ(rel)[2];'),'magnetic drift estimator must compare conventional device yaw, not Apollo middle-gimbal angle');
 assert(phone.includes("correctedRel = qNorm(qMul(qAxis('z', rad(magneticYawCorrection)), rel));"),
