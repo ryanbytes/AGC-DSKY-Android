@@ -30,6 +30,7 @@
   const MAX_PULSES_PER_PUMP = 8;
   let opticsWriteRejected=0,lastOpticsAccept=0;
   let navHeld=null;
+  let opticsCaptured=false;
 
   let stream = null;
   let track = null;
@@ -52,6 +53,13 @@
   const CENTER_TOL_DEG = 0.08;
 
   function core(){ return typeof api.getCore === 'function' ? api.getCore() : null; }
+  function comancheMissionSelected(){ return typeof api.getMission === 'function' && api.getMission() === 'comanche055'; }
+  function setOpticsCapture(active){
+    const next=!!active;
+    if(opticsCaptured===next)return;
+    if(typeof api.setOpticsCaptureActive==='function')api.setOpticsCaptureActive(next);
+    opticsCaptured=next;
+  }
 
   function buildUi(){
     if (document.getElementById('sxt-view')) return;
@@ -205,10 +213,18 @@
   async function open(){
     buildUi();
     const view = document.getElementById('sxt-view');
-    document.body.classList.add('sxt-combined');
     view.classList.add('open');
+    if(!comancheMissionSelected()){
+      document.body.classList.remove('sxt-combined');
+      setOpticsCapture(false);
+      const st=document.getElementById('sxt-status');if(st)st.textContent='SXT · COMANCHE 055 ONLY';
+      updateReadout();
+      if (!readoutTimer) readoutTimer = setInterval(updateReadout, 100);
+      return false;
+    }
+    document.body.classList.add('sxt-combined');
     lastPhoneAngles = null;
-    if (typeof api.setOpticsCaptureActive === 'function') api.setOpticsCaptureActive(true);
+    setOpticsCapture(true);
     requestSkyLocation();
     updateReadout();
     if (!readoutTimer) readoutTimer = setInterval(updateReadout, 100);
@@ -223,7 +239,7 @@
     releaseCamera();
     if (readoutTimer) { clearInterval(readoutTimer); readoutTimer = 0; }
     lastPhoneAngles = null;
-    if (typeof api.setOpticsCaptureActive === 'function') api.setOpticsCaptureActive(false);
+    setOpticsCapture(false);
   }
 
   function handleVisibilityChange(){
@@ -301,6 +317,10 @@
   }
 
   function toggleStarFinder(){
+    if(!comancheMissionSelected()){
+      const st=document.getElementById('sxt-status'); if(st) st.textContent='STAR FINDER · COMANCHE 055 ONLY';
+      return;
+    }
     finderEnabled=!finderEnabled;
     const box=document.getElementById('sxt-starbox'),b=document.getElementById('sxt-star-toggle');
     if(box)box.classList.toggle('visible',finderEnabled);
@@ -347,6 +367,11 @@
 
   function updateStarFinder(){
     const box=document.getElementById('sxt-starbox');if(!box)return;
+    if(!comancheMissionSelected()){
+      finderEnabled=false;box.classList.remove('visible');
+      const b=document.getElementById('sxt-star-toggle');if(b)b.textContent='STAR FINDER · CM ONLY';
+      return;
+    }
     box.classList.toggle('visible',finderEnabled);if(!finderEnabled)return;
     const loc=document.getElementById('sxt-star-location'),pairEl=document.getElementById('sxt-star-pair'),cond=document.getElementById('sxt-star-conditions'),buttons=document.getElementById('sxt-star-buttons');
     const targ=document.getElementById('sxt-star-target'),err=document.getElementById('sxt-star-error'),arrow=document.getElementById('sxt-star-arrow'),cmd=document.getElementById('sxt-star-command'),cal=document.getElementById('sxt-star-cal');
@@ -449,6 +474,22 @@
   }
 
   function pump(){
+    if(!comancheMissionSelected()){
+      if(navHeld)releaseNavContact();
+      if(opticsCaptured){
+        setOpticsCapture(false);
+        const st=document.getElementById('sxt-status');if(st)st.textContent='SXT · COMANCHE 055 ONLY';
+      }
+      pending=[0,0];fraction=[0,0];lastPhoneAngles=null;
+      return;
+    }
+    if(!opticsCaptured&&document.getElementById('sxt-view')?.classList.contains('open')){
+      document.body.classList.add('sxt-combined');
+      setOpticsCapture(true);
+      lastPhoneAngles=null;
+      requestSkyLocation();
+      if(!stream)acquireCamera();
+    }
     updateFromPhone();
     const c=core();
     if(!c || !c.running) return;
@@ -472,6 +513,10 @@
   // the button is released. Do not invent a fixed software hold interval here.
   function pressNavContact(bit){
     if(navHeld) return false;
+    if(!comancheMissionSelected()){
+      const st=document.getElementById('sxt-status'); if(st) st.textContent='SXT · COMANCHE 055 ONLY';
+      return false;
+    }
     const c=core();
     if(!c || !c.running || typeof c.navKeyPress!=='function' || typeof c.navKeyRelease!=='function') {
       const st=document.getElementById('sxt-status'); if(st) st.textContent='SXT · AGC NOT RUNNING';
@@ -541,6 +586,11 @@
   function trunnionDegrees(word){ return signed15(word) / TRUNNION_COUNTS_PER_DEG + TRUNNION_ZERO_BIAS_DEG; }
   function updateReadout(){
     const el=document.getElementById('sxt-readout'); if(!el) return;
+    if(!comancheMissionSelected()){
+      el.textContent='CM OPTICS ONLY';
+      updateStarFinder();
+      return;
+    }
     const c=core();
     if(!c || typeof c.readErasable!=='function'){el.innerHTML='SHAFT ---<br>TRUNNION ---';return;}
     const shaft=c.readErasable(0,0o36), trun=c.readErasable(0,0o35);

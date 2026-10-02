@@ -17,6 +17,8 @@ assert(!source.includes('window.AGCDSKY = window.AGCDSKY || {}'),
   'optics must not recreate the root AGCDSKY facade');
 assert(source.includes("window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_OPTICS',Object.freeze({open,close,status})"),
   'optics must publish a frozen dedicated service explicitly through the registry');
+assert(source.includes("function comancheMissionSelected(){ return typeof api.getMission === 'function' && api.getMission() === 'comanche055'; }"),
+  'CM optics must identify the active Comanche mission before sending CM-specific channel inputs');
 assert(source.includes('lat < -90||lat > 90||lon < -180||lon > 180'),
   'saved or geolocation coordinates must be bounded to valid latitude/longitude ranges');
 for(const forbidden of ['api.openSextant =','api.closeSextant =','api.sextantStatus ='])
@@ -41,6 +43,10 @@ for(const marker of [
 ])assert(tap.includes(marker),`tap-to-mark CDU scale marker missing: ${marker}`);
 assert(!tap.includes('const COUNTS_PER_DEG = 32768 / 360'),
   'tap-to-mark must not use one 360-degree scale for both optical CDUs');
+assert(tap.includes("const comancheMissionSelected = () => typeof api.getMission === 'function' && api.getMission() === 'comanche055';"),
+  'tap-to-mark must identify the active Comanche mission before sending CM-specific channel inputs');
+assert(tap.includes("if (!comancheMissionSelected()) {\n      status('SXT · COMANCHE 055 ONLY');\n      showMarker(point, 'busy');\n      return false;\n    }"),
+  'tap-to-mark must block CM CDU and MARK inputs in Luminary mode');
 for(const marker of [
   'async function open()',
   'function close()',
@@ -49,8 +55,14 @@ for(const marker of [
   "document.body.classList.remove('sxt-combined')",
   "combinedDsky:document.body.classList.contains('sxt-combined')",
   'setInterval(pump,4)',
-  "api.setOpticsCaptureActive(true)",
-  "api.setOpticsCaptureActive(false)",
+  "if(!comancheMissionSelected()){\n      document.body.classList.remove('sxt-combined');\n      setOpticsCapture(false);\n      const st=document.getElementById('sxt-status');if(st)st.textContent='SXT · COMANCHE 055 ONLY';\n      updateReadout();",
+  "if(!comancheMissionSelected()){\n      el.textContent='CM OPTICS ONLY';\n      updateStarFinder();\n      return;\n    }",
+  "if(!comancheMissionSelected()){\n      const st=document.getElementById('sxt-status'); if(st) st.textContent='STAR FINDER · COMANCHE 055 ONLY';\n      return;\n    }",
+  "if(!comancheMissionSelected()){\n      finderEnabled=false;box.classList.remove('visible');\n      const b=document.getElementById('sxt-star-toggle');if(b)b.textContent='STAR FINDER · CM ONLY';\n      return;\n    }",
+  'if(!comancheMissionSelected()){\n      if(navHeld)releaseNavContact();\n      if(opticsCaptured){\n        setOpticsCapture(false);',
+  "if(!opticsCaptured&&document.getElementById('sxt-view')?.classList.contains('open')){\n      document.body.classList.add('sxt-combined');\n      setOpticsCapture(true);",
+  "if(!comancheMissionSelected()){\n      const st=document.getElementById('sxt-status'); if(st) st.textContent='SXT · COMANCHE 055 ONLY';\n      return false;\n    }",
+  "if(opticsCaptured===next)return;\n    if(typeof api.setOpticsCaptureActive==='function')api.setOpticsCaptureActive(next);",
   'c.writeIo(ch[axis],sign>0?PCDU:MCDU)',
   'bindNavContact(\'sxt-mark\',MARK_BIT)',
   'bindNavContact(\'sxt-reject\',REJECT_BIT)',

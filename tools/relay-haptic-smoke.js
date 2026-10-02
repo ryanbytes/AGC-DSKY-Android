@@ -39,6 +39,10 @@ for(const marker of [
   'vibrator.hasAmplitudeControl()'
 ])assert(bridge.includes(marker),'native relay waveform bridge missing: '+marker);
 assert(bridge.includes('performRelayOneShot'),'minimum relay one-shot path missing');
+assert(bridge.includes('not measured or')&&bridge.includes('production haptic measurements and tactile differences are not claimed'),
+  'native haptics must not claim relay-specific measured or manufacturing profiles');
+assert(identity.includes('No bounce is modeled')&&identity.includes('none is sent to the vibrator'),
+  'haptic documentation must match the empty source-bounded contact bounce traces');
 assert(!bridge.includes('amplitudes[i] == 0 ? 0 : 255'),'relay waveform must not promote tiny pulses to full-strength 255 fallback');
 
 const waveformCalls=[],impactCalls=[];let browserCalls=0;

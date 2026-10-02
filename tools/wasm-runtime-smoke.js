@@ -272,6 +272,38 @@ function proveV35LightTest(core, errors, channelUpdates) {
     };
 }
 
+function proveComancheNavigationKeyInterrupt(core, errors) {
+    core.reset();
+    core.configureInputMasks();
+    errors.length = 0;
+    core.step(100000);
+
+    const ERASABLE_TO_INTERRUPT_REQUESTS = 92196;
+    const KEYRUPT1_REQUEST = 5;
+    const KEYRUPT2_REQUEST = 6;
+    const base = core.exports.get_erasable_ptr() >>> 0;
+    const requests = new Uint8Array(core.memory.buffer, base + ERASABLE_TO_INTERRUPT_REQUESTS);
+
+    assert(core.navKeyPress(0o40), 'Comanche055: real MARK navigation key was rejected');
+    assert(core.inputChannelBits(0o16, 0o177) === 0o40,
+        'Comanche055: MARK did not reach NAVKEYIN on channel 016');
+    const input = core.inputChannelBits(0o16, 0o177);
+    assert(requests[KEYRUPT1_REQUEST] === 0,
+        'Comanche055: MARK incorrectly asserted the normal DSKY KEYRUPT1 request');
+    assert(requests[KEYRUPT2_REQUEST] === 1,
+        'Comanche055: MARK did not assert the real WASM KEYRUPT2 request');
+
+    core.step(1);
+    assert(requests[KEYRUPT2_REQUEST] === 1,
+        'Comanche055: KEYRUPT2 was not retained through the first MCT after NAVKEYIN delivery');
+    core.step(1);
+    assert(requests[KEYRUPT2_REQUEST] === 0,
+        'Comanche055: the real yaAGC CPU did not consume KEYRUPT2');
+    assert(errors.length === 0, 'Comanche055: error while executing real MARK KEYRUPT2');
+
+    return {input, consumed: true};
+}
+
 async function main() {
     const wasmBytes = requireFile(WASM, 132617);
     const ropeBytes = requireFile(ROPE, 73728);
@@ -303,6 +335,7 @@ async function main() {
 
     const v16n65 = proveV16N65Monitor(core, errors, channelUpdates);
     const v35 = proveV35LightTest(core, errors, channelUpdates);
+    const mark = proveComancheNavigationKeyInterrupt(core, errors);
 
     core.reset();
     core.configureInputMasks();
@@ -363,6 +396,7 @@ async function main() {
     console.log(`  V16N65E monitor: PASS (V=0o${v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${v16n65.nounRelay.toString(8).padStart(4, '0')}; selectors ${v16n65.responseRelays.join(',')}; within ${v16n65.responseSteps} steps)`);
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
+    console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);
     console.log(`real yaAGC ${LUMINARY_ROPE_NAME}: PASS (${luminary.version()})`);
     console.log('  V37E00E P00 relay 11: 0o01265');
     console.log(`  V35E relay 12 low-11: 0o${(luminaryRelays.get(12)&0o3777).toString(8).padStart(4,'0')} within ${luminaryResponseSteps} steps`);

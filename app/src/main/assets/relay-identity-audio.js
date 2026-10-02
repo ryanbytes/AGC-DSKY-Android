@@ -109,9 +109,8 @@
   }
   function hapticPatternFromProfile(p,engaging,atMs=0){
     const on=!!engaging,signature=hapticSignatureFromProfile(p,on),baseAt=Math.max(0,Number(atMs)||0);
-    // One tactile indication per physical armature movement. Contact bounce remains
-    // modeled in sound/visual contact behavior, but is intentionally not sent to
-    // the handset vibrator.
+    // One tactile indication per physical armature movement. No bounce is modeled
+    // in the current source-bounded profile, and none is sent to the vibrator.
     const pulses=Object.freeze([Object.freeze({atMs:baseAt,durationMs:signature.durationMs,amplitude:signature.amplitude,kind:'armature'})]);
     return Object.freeze({id:p.id,engaging:on,pulses});
   }

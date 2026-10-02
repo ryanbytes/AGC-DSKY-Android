@@ -122,10 +122,11 @@ final class KeyHapticBridge {
     }
 
     /**
-     * Relay armature cue. Duration and amplitude are supplied by the shared
-     * deterministic per-relay manufacturing profile, not by random input. The
-     * native bounds intentionally stay in a micro-switch range: short, low-energy
-     * impulses rather than notification-like vibration.
+     * Uniform relay-class armature cue. Duration and amplitude are supplied by
+     * the bounded source-level presentation model; they are not measured or
+     * individualized by production relay. The native bounds intentionally stay
+     * in a micro-switch range: short, low-energy impulses rather than
+     * notification-like vibration.
      */
     @JavascriptInterface public boolean relayImpact(int durationMs, int amplitude) {
         long clampedDuration = Math.max(RELAY_MIN_MS, Math.min(RELAY_MAX_MS, durationMs));
@@ -136,8 +137,8 @@ final class KeyHapticBridge {
     /**
      * Plays one already-composed relay-bank waveform. This avoids the Android
      * behavior where a later vibrate() call replaces an earlier relay pulse.
-     * JavaScript composes all relay armature/rebound contributions for the bank
-     * from the same deterministic relay profiles that drive sound/contact state.
+     * JavaScript composes the timed armature cues for the bank; relay-specific
+     * production haptic measurements and tactile differences are not claimed.
      */
     @JavascriptInterface public boolean relayWaveform(String timingsCsv, String amplitudesCsv) {
         if (timingsCsv == null || amplitudesCsv == null) return false;
