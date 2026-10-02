@@ -60,7 +60,7 @@ const context = {
   document:{body:{classList:{add(name){ classes.add(name); }}}},
   localStorage:{setItem(){ throw new Error('cm-mode.js bypassed AGCDSKY_SHELL storage ownership'); }},
   AGCDSKY,
-  AGCDSKY_SHELL:{missionSpec(){return{label:'LUMINARY099'}}},
+  AGCDSKY_SHELL:{missionSpec(){return{label:'COMANCHE055'}}},
   window:null
 };
 context.window = context;

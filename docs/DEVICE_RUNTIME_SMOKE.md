@@ -38,32 +38,30 @@ A process that merely stays alive with a blank or partially initialized WebView 
 
 `tools/device-agc-smoke.sh` waits for the actual `webview_devtools_remote_*` socket belonging to the app process, forwards it with `adb`, and runs three dependency-free Chrome DevTools Protocol drivers against that same packaged WebView:
 
-1. `tools/device-agc-smoke.js` checks core startup, both pinned missions, basic pointer input, held PRO behavior, and same-WebView pause/resume identity.
+1. `tools/device-agc-smoke.js` checks CM core startup, basic pointer input, held PRO behavior, and same-WebView pause/resume identity.
 2. `tools/device-v35-smoke.js` performs the source-backed semantic Pinball light-test gate described below.
-3. `tools/device-recreation-smoke.js` selects Comanche055 in AGC mode, tags the live core object, reloads the actual packaged page with DevTools `Page.reload`, and requires the persisted CM mission + requested AGC mode to re-enter on a newly constructed core object.
+3. `tools/device-recreation-smoke.js` enters CM AGC mode, tags the live core object, reloads the actual packaged page with DevTools `Page.reload`, and requires CM AGC mode to re-enter on a newly constructed core object.
 
 None of these drivers injects a mock `AgcCore`.
 
 The general live gate checks:
 
 - the interactive packaged frontend is initialized
-- Apollo 11 LM `Luminary099.bin` can enter AGC mode
+- Apollo 11 CM `Comanche055.bin` can enter AGC mode
 - the real yaAGC core is present, running, and reports a version
 - real DSKY output channels are observed from the running core
 - VERB input is delivered through the actual DSKY pointer handler without stopping the core
 - PRO is asserted on pointer-down, remains visibly held, and releases on pointer-up
 - an in-memory AGC instance pauses and resumes through `AGCDSKY.setAppVisible(false/true)` without being replaced
-- Apollo 11 CM `Comanche055.bin` can enter AGC mode in a separate mission run
-- the CM run also produces real DSKY output without an AGC error
-- page recreation restores the persisted `Comanche055` mission selection
-- page recreation restores requested AGC mode and starts the selected mission again
+- the CM run produces real DSKY output without an AGC error
+- page recreation restores requested CM AGC mode and starts a new CM core
 - the pre-reload core tag does not survive page recreation, proving a new JavaScript/yaAGC core object is constructed rather than presenting the old in-memory core as serialized state
 
-The smoke snapshots the persistent mission/run-mode settings and attempts to restore them afterward. If the pre-test state was an active AGC run, restoration necessarily starts that mission from a fresh AGC reset; exact CPU/erasable-memory state is not serialized by the app.
+The smoke snapshots the persistent run-mode setting and attempts to restore it afterward. If the pre-test state was an active AGC run, restoration starts a fresh CM AGC reset; exact CPU/erasable-memory state is not serialized by the app.
 
 ## Relay- and channel-aware V35 semantic gate
 
-`tools/device-v35-smoke.js` selects Luminary099, enters P00 through the real pointer sequence `V37E00E`, waits until channel-010 selector 11 actually carries PROG `00` low-11 `01265`, then enters `V35E` through the same on-screen pointer handlers.
+`tools/device-v35-smoke.js` enters CM P00 through the real pointer sequence `V37E00E`, waits until channel-010 selector 11 actually carries PROG `00` low-11 `01265`, then enters `V35E` through the same on-screen pointer handlers.
 
 The frontend exposes read-only diagnostics:
 
@@ -82,9 +80,9 @@ A V35 pass requires all of the following at the same visible/on phase:
 - R2 `+88888`
 - R3 `+88888`
 - channel-010 selectors 1 through 11 contain the source-backed `FULLDSP`/`FULLDSP1` low-11 relay words
-- selector 8 is specifically `01675`, including the visually unused C five-relay bank that Luminary still drives during V35
-- relay 12 is `00674` for the six Apollo-11 LM condition lights
-- UPLINK, TEMP, NO ATT, GIMBAL LOCK, STBY, PROG, RESTART, TRACKER, ALT, and VEL are on
+- selector 8 is specifically `01675`, including the visually unused C five-relay bank driven during V35
+- relay 12 is `00650` for the CM condition lights
+- UPLINK, TEMP, NO ATT, GIMBAL LOCK, STBY, PROG, RESTART, and TRACKER are on
 - KEY REL and OPR ERR are on during the visible phase
 - EL power-off is not asserted
 - the frontend synthetic clock-test flag is false, proving this state came from the real AGC path rather than the phone-clock V35 convenience path
@@ -92,7 +90,7 @@ A V35 pass requires all of the following at the same visible/on phase:
 
 ### COMP ACTY is channel-derived, not hard-coded
 
-The real V35 gate deliberately does **not** require COMP ACTY to be off. V35's own `TSTCON1` mask does not force channel 011 bit 2, but Luminary's Executive normally controls COMP ACTY while jobs run or idle, and the V35 test executes as a job. Therefore either COMP state can be legitimate at the instant sampled.
+The real V35 gate deliberately does **not** require COMP ACTY to be off. Its assertion is checked against contemporaneous channel `011` bit `00002`.
 
 The invariant is stricter and simpler:
 
@@ -117,13 +115,13 @@ The driver then waits for yaAGC's hardware-model modulation and requires an obse
 
 That proves the path:
 
-`pointer input -> Pinball/Luminary099 -> yaAGC raw channels/relay words -> frontend decoders -> annunciators/SVG`
+`pointer input -> Pinball/Comanche055 -> yaAGC raw channels/relay words -> frontend decoders -> annunciators/SVG`
 
 It is intentionally stronger than decoding the SVG and seeing a collection of 8s.
 
 ### Why relay 8 is `01675`
 
-Luminary 99 `VBTSTLTS` writes `FULLDSP = 05675` into every numeric `DSPTAB` entry. T4 strips the upper dirty/selector portion before channel-010 output, leaving low-11 `01675`: C=`035`, D=`035`.
+Comanche `VBTSTLTS` writes `FULLDSP = 05675` into every numeric `DSPTAB` entry. T4 strips the upper dirty/selector portion before channel-010 output, leaving low-11 `01675`: C=`035`, D=`035`.
 
 Relay selector 8 connects only D to visible R1D1, so ordinary display decoding ignores its C field. V35 still energizes that unused five-relay bank. Both the synthetic relay model and the real-WASM/device semantic gates retain this physical distinction.
 
@@ -146,7 +144,7 @@ The process gate:
 
 A numeric PID difference is reported but is not the proof boundary because Linux can theoretically reuse a PID. The observed no-process interval after `force-stop` is the relevant evidence.
 
-This proves Android process-death preference restoration and fresh core construction. It still does **not** claim CPU/erasable-memory continuation across process death; the intended behavior is a fresh AGC reset with the selected mission and requested AGC mode restored.
+This proves Android process-death run-mode restoration and fresh core construction. It still does **not** claim CPU/erasable-memory continuation across process death; the intended behavior is a fresh CM AGC reset with the requested AGC mode restored.
 
 ## Build-time semantic counterparts
 
@@ -156,9 +154,9 @@ The modular runtime smokes in `tools/source-smoke-tests.txt` guard clock-to-V35-
 
 `tools/device-v35-policy-smoke.js` statically guards the live-device proof contract: raw channel `011` and `0163` must drive the discrete assertions, and a fixed COMP-off assertion is forbidden.
 
-`tools/wasm-runtime-smoke.js`, also part of `tools/build-local.sh`, drives the exact pinned yaAGC WASM and both pinned rope images. It explicitly enters P00 with `V37E00E`, proves the channel-010 PROG `00` relay state, executes `V35E`, and requires both physical five-relay banks on selectors 1 through 11 to carry the digit-8 code, plus signs on R1/R2/R3, and exact mission-specific relay-12 low-11 state (`00674` for Luminary099, `00650` for Comanche055).
+`tools/wasm-runtime-smoke.js`, also part of `tools/build-local.sh`, drives the exact pinned yaAGC WASM and Comanche rope. It enters P00 with `V37E00E`, proves the channel-010 PROG `00` relay state, executes `V35E`, and requires both physical five-relay banks on selectors 1 through 11 to carry the digit-8 code, plus signs on R1/R2/R3, and CM relay-12 low-11 state `00650`.
 
-These tests prove source/model and real rope/WASM semantics before Gradle packages the APK, but they are still not Android/WebView tests. The live V35 driver is the corresponding end-to-end device gate.
+These tests prove source/model and real Comanche-rope/WASM semantics before Gradle packages the APK, but they are still not Android/WebView tests. The live V35 driver is the corresponding end-to-end device gate.
 
 `tools/build-local.sh` runs `bash -n` over every `tools/*.sh` file and `node --check` over every `tools/*.js` file before functional source smokes or Gradle work. Device-only helpers therefore remain syntax-gated even on a build host with no attached phone.
 
@@ -175,7 +173,7 @@ A passing full-device smoke does **not** by itself prove:
 - pixel-perfect DSKY appearance on the physical display
 - real OS screen-off/screen-on behavior rather than the direct lifecycle bridge check
 - Activity recreation caused by Android configuration/lifecycle events beyond page reload and explicit process force-stop/relaunch
-- live packaged-WebView Pinball semantics beyond the automated V35E light-test sequence. The host real-WASM gate separately covers Comanche V16N65/P00 and Luminary V37E00E/P00 sequences through actual channel-015 input.
+- live packaged-WebView Pinball semantics beyond the automated V35E light-test sequence. The host real-WASM gate covers Comanche V16N65/P00 through actual channel-015 input.
 - PRO standby semantics for a long physical hold
 - DreamService selection/startup and non-interactivity
 - DREAM DIM / BRIGHT / SOLAR physical brightness behavior

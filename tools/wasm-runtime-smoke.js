@@ -3,8 +3,8 @@
 
 /*
  * Execute the real pinned yaAGC WebAssembly binary under Node using the same
- * agc-core.js wrapper loaded by Android. It exercises both pinned ropes using
- * the same engine, with LM as the native/default rope.
+ * agc-core.js wrapper loaded by Android. It exercises the pinned CM rope using
+ * the same engine and requires no LM assets.
  */
 const fs = require('fs');
 const path = require('path');
@@ -14,8 +14,6 @@ const { performance } = require('perf_hooks');
 const ROOT = path.resolve(__dirname, '..');
 const CORE_JS = path.join(ROOT, 'app/src/main/assets/agc-core.js');
 const WASM = path.join(ROOT, 'vendor/webAGC/src/yaAGC.wasm');
-const LUMINARY_ROPE_NAME = 'Luminary099.bin';
-const LUMINARY_ROPE = path.join(ROOT, 'vendor/webAGC/demo/agc/Luminary099.bin');
 const ROPE_NAME = 'Comanche055.bin';
 const ROPE = path.join(ROOT, 'vendor/webAGC/demo/agc/Comanche055.bin');
 
@@ -307,13 +305,11 @@ function proveComancheNavigationKeyInterrupt(core, errors) {
 async function main() {
     const wasmBytes = requireFile(WASM, 132617);
     const ropeBytes = requireFile(ROPE, 73728);
-    const luminaryRopeBytes = requireFile(LUMINARY_ROPE, 73728);
     verifyBinaryImportContract(wasmBytes);
 
     const context = makeContext(new Map([
         ['yaAGC.wasm', wasmBytes],
-        [ROPE_NAME, ropeBytes],
-        [LUMINARY_ROPE_NAME, luminaryRopeBytes]
+        [ROPE_NAME, ropeBytes]
     ]));
     const errors = [];
     const channelUpdates = [];
@@ -357,49 +353,11 @@ async function main() {
     assert(core.totalSteps === 0,
         'Comanche055: reset + peripheral setup must return to true-reset mission accounting');
 
-    // Luminary099 uses the same pinned engine in its native/default LM mode.
-    // Exercise the exact LM rope independently and keep its source-backed V35
-    // relay-12 word distinct from Comanche055's CM value.
-    const luminaryErrors = [];
-    const luminaryUpdates = [];
-    const luminary = new context.AgcCore({
-        onError(error) { luminaryErrors.push(error); },
-        onChannelUpdate(channel, value) { luminaryUpdates.push([channel, value]); }
-    });
-    await luminary.load({wasmUrl:'yaAGC.wasm',ropeUrl:LUMINARY_ROPE_NAME});
-    assert(luminaryErrors.length === 0, 'Luminary099: error during real WASM load');
-    assert(luminary.version() === version, 'Luminary099: pinned yaAGC version differs from Comanche055');
-    luminary.reset();
-    luminary.configureInputMasks();
-    luminary.step(100000);
-    const luminaryP00 = enterProgram00(luminary, luminaryErrors, luminaryUpdates);
-    assert(luminaryP00.get(11) !== undefined && (luminaryP00.get(11) & 0o3777) === PROGRAM00_LOW11,
-        'Luminary099: V37E00E did not reach channel-driven PROG 00 / relay-11 low-11 01265');
-    sendKeys(luminary, [0o21, 0o03, 0o05]);
-    luminaryUpdates.length = 0;
-    luminary.keyPress(0o34);
-    const luminaryRelays = new Map();
-    let luminaryEventIndex = 0;
-    let luminaryResponseSteps = 0;
-    while (luminaryResponseSteps < 350000 && !completeV35RelayState(luminaryRelays, 0o674)) {
-        luminary.step(10000);
-        luminaryResponseSteps += 10000;
-        for (; luminaryEventIndex < luminaryUpdates.length; luminaryEventIndex++) {
-            const [channel, value] = luminaryUpdates[luminaryEventIndex];
-            if (channel === CHANNEL_DSKY) updateRelayState(luminaryRelays, value);
-        }
-    }
-    assert(luminaryErrors.length === 0, 'Luminary099: error while executing real V35E');
-    assert(completeV35RelayState(luminaryRelays, 0o674), 'Luminary099: V35E did not produce the source-backed FULLDSP/FULLDSP1 relay state');
-
     console.log(`real yaAGC ${ROPE_NAME}: PASS (${version})`);
     console.log(`  V16N65E monitor: PASS (V=0o${v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${v16n65.nounRelay.toString(8).padStart(4, '0')}; selectors ${v16n65.responseRelays.join(',')}; within ${v16n65.responseSteps} steps)`);
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);
-    console.log(`real yaAGC ${LUMINARY_ROPE_NAME}: PASS (${luminary.version()})`);
-    console.log('  V37E00E P00 relay 11: 0o01265');
-    console.log(`  V35E relay 12 low-11: 0o${(luminaryRelays.get(12)&0o3777).toString(8).padStart(4,'0')} within ${luminaryResponseSteps} steps`);
     console.log('real yaAGC WASM runtime smoke: PASS');
 }
 

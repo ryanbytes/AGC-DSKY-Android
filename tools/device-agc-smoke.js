@@ -4,8 +4,8 @@
 /*
  * Drive a debuggable AGC-DSKY Android WebView through the Chrome DevTools
  * Protocol forwarded by tools/device-agc-smoke.sh. This is a device/runtime
- * check: it exercises the packaged frontend, real yaAGC WASM, both pinned
- * ropes, DSKY key/PRO handlers, and same-WebView pause/resume.
+ * check: it exercises the packaged frontend, real yaAGC WASM, the pinned CM
+ * rope, DSKY key/PRO handlers, and same-WebView pause/resume.
  *
  * No npm packages are used. Node 18+ is sufficient.
  */
@@ -346,22 +346,13 @@ async function ensureClock(cdp) {
   }
 }
 
-async function ensureMission(cdp, mission) {
-  let status = await cdp.evaluate(statusExpression());
-  if (status.mission === mission) return;
+async function enterComanche(cdp) {
   await ensureClock(cdp);
-  await cdp.evaluate("document.querySelector('details.options-tools').open=true; document.getElementById('mission').click(); true");
-  status = await poll(cdp, `select ${mission}`, (s) => s.mission === mission, 5000);
-  assert(status.mission === mission, `failed to select ${mission}`);
-}
-
-async function enterMission(cdp, mission) {
-  await ensureClock(cdp);
-  await ensureMission(cdp, mission);
+  const before = await cdp.evaluate(statusExpression());
+  assert(before.mission === 'comanche055', 'app did not normalize mission state to Comanche 055');
   await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
-  const expectedLabel = mission === 'luminary099' ? 'LUMINARY099' : 'COMANCHE055';
-  return poll(cdp, `start ${expectedLabel}`, (s) =>
-    s.mission === mission
+  return poll(cdp, 'start COMANCHE055', (s) =>
+    s.mission === 'comanche055'
     && s.core
     && s.running
     && typeof s.version === 'string'
@@ -472,13 +463,7 @@ async function snapshotState(cdp) {
 async function restoreState(cdp, snapshot) {
   try {
     await ensureClock(cdp);
-    const wantedMission = snapshot.mission === 'comanche055' ? 'comanche055' : 'luminary099';
-    await ensureMission(cdp, wantedMission);
-    if (snapshot.mission === null) {
-      await cdp.evaluate("localStorage.removeItem('agcMission'); true");
-    }
-    if (snapshot.missionPreference === null) await cdp.evaluate("localStorage.removeItem('agcMissionPreferenceV1'); true");
-    else await cdp.evaluate(`localStorage.setItem('agcMissionPreferenceV1', ${JSON.stringify(snapshot.missionPreference)}); true`);
+    await cdp.evaluate("localStorage.setItem('agcMission','comanche055'); localStorage.removeItem('agcMissionPreferenceV1'); true");
     if (snapshot.runMode === 'agc') {
       await cdp.evaluate("document.getElementById('mode-toggle').click(); true");
       await poll(cdp, 'restore prior AGC run mode', (s) => s.core && s.running, 20000);
@@ -505,15 +490,11 @@ async function main() {
     assert(ready === true, 'AGC DSKY frontend is not initialized in the interactive WebView');
     snapshot = await snapshotState(cdp);
 
-    const lm = await enterMission(cdp, 'luminary099');
+    const cm = await enterComanche(cdp);
     await testKeyAndProceed(cdp);
     await testPauseResume(cdp);
 
-    const cm = await enterMission(cdp, 'comanche055');
-    await testKeyAndProceed(cdp);
-
     console.log('Device AGC runtime smoke: PASS');
-    console.log(`  LM: ${lm.version}; DSKY channels observed: ${lm.channels.map((n) => '0o' + n.toString(8)).join(', ')}`);
     console.log(`  CM: ${cm.version}; DSKY channels observed: ${cm.channels.map((n) => '0o' + n.toString(8)).join(', ')}`);
     console.log('  VERB pointer input: PASS');
     console.log('  two-second held PRO pointer input/release: PASS');

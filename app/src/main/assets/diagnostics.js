@@ -63,12 +63,11 @@
   }
   const SELF_TEST_ASSETS=Object.freeze([
     Object.freeze({name:'yaAGC.wasm',size:132617,gitBlobSha1:'713685680492098d05437b99c26403f683d56009'}),
-    Object.freeze({name:'Luminary099.bin',size:73728,gitBlobSha1:'cd2ec9992d5863e1c7234fa760020f68ef946202'}),
     Object.freeze({name:'Comanche055.bin',size:73728,gitBlobSha1:'9e4ec167dc99ac12b233df07b6b91fef585e5015'})
   ]);
   const SELF_TEST_KEYS=Object.freeze({'1':0o01,'2':0o02,'3':0o03,'4':0o04,'5':0o05,'6':0o06,'7':0o07,'8':0o10,'9':0o11,'0':0o20,V:0o21,R:0o22,K:0o31,'+':0o32,'-':0o33,E:0o34,C:0o36,N:0o37});
   const SELF_TEST_RELAY_CODES=Object.freeze({'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31});
-  const SELF_TEST_TOTAL=16;
+  const SELF_TEST_TOTAL=15;
   function selfTestResult(name,ok,detail){return Object.freeze({name:String(name),ok:!!ok,detail:String(detail||'')})}
   function hex(bytes){return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('')}
   async function gitBlobSha1(bytes){
@@ -98,7 +97,7 @@
       }
       update();
     };
-    let wasmBytes=null,luminaryBytes=null,ropeBytes=null;
+    let wasmBytes=null,ropeBytes=null;
     await run('Core services',async()=>{
       const required=[['renderer',window.AGCDSKY_RENDERER],['display',window.AGCDSKY_DISPLAY],['clock',window.AGCDSKY_CLOCK],['snapshot',window.AGCDSKY_SNAPSHOT],['shell',window.AGCDSKY_SHELL]];
       const missing=required.filter(([,value])=>!value).map(([name])=>name);
@@ -111,12 +110,8 @@
       await WebAssembly.compile(wasmBytes.slice(0));
       return SELF_TEST_ASSETS[0].size+' bytes · pinned Git blob SHA-1 verified · compiles';
     });
-    await run('Luminary 099 rope',async()=>{
-      luminaryBytes=await fetchCheckedAsset(SELF_TEST_ASSETS[1]);
-      return SELF_TEST_ASSETS[1].size+' bytes · pinned Git blob SHA-1 verified';
-    });
     await run('Comanche 055 rope',async()=>{
-      ropeBytes=await fetchCheckedAsset(SELF_TEST_ASSETS[2]);
+      ropeBytes=await fetchCheckedAsset(SELF_TEST_ASSETS[1]);
       return SELF_TEST_ASSETS[2].size+' bytes · pinned Git blob SHA-1 verified';
     });
     await run('Relay-to-digit matrix',async()=>{
@@ -224,8 +219,8 @@
       return 'AudioContext '+ctx.state+' · '+Math.round(ctx.sampleRate||0)+' Hz';
     });
     await run('Packaged assets',async()=>{
-      if(!wasmBytes||!luminaryBytes||!ropeBytes)throw new Error('pinned AGC assets did not verify');
-      const required=['index.html','diagnostics.js','dsky-geometry.js','Luminary099.bin','Comanche055.bin','yaAGC.wasm'];
+      if(!wasmBytes||!ropeBytes)throw new Error('pinned AGC assets did not verify');
+      const required=['index.html','diagnostics.js','dsky-geometry.js','Comanche055.bin','yaAGC.wasm'];
       for(const name of required){const response=await fetch(name,{cache:'no-store'});if(!response.ok)throw new Error(name+' HTTP '+response.status)}
       return required.length+' critical packaged assets readable';
     });
@@ -242,7 +237,7 @@
     if(!runtime||!input||appState.mode!=='agc'||!core||!core.running||!input.ready()){
       dskyTest={ok:false,message:'AGC MUST BE RUNNING · V35 IS NOT AVAILABLE IN PHONE CLOCK',timestamp:Date.now()};update();return;
     }
-    dskyTest={ok:true,message:'USE THE DSKY KEYS: VERB 3 5 ENTR · SELECTED MISSION OUTPUT IS AUTHORITATIVE',timestamp:Date.now()};
+    dskyTest={ok:true,message:'USE THE DSKY KEYS: VERB 3 5 ENTR · COMANCHE 055 OUTPUT IS AUTHORITATIVE',timestamp:Date.now()};
     update();
     close();
   }
@@ -309,7 +304,7 @@
     h+=row('Mode',String(app.mode||'---').toUpperCase());
     h+=row('Core',app.coreLoaded?`${app.coreVersion||'---'} · ${app.coreRunning?'RUNNING':'SUSPENDED'}`:'not loaded');
     h+=section('OPERATION AUTHORITY');
-    const mission=window.AGCDSKY_SHELL&&window.AGCDSKY_SHELL.missionSpec?window.AGCDSKY_SHELL.missionSpec().label:'SELECTED MISSION';
+    const mission=window.AGCDSKY_SHELL&&window.AGCDSKY_SHELL.missionSpec?window.AGCDSKY_SHELL.missionSpec().label:'COMANCHE055';
     h+=row('Normal DSKY keys',`AGC MODE · CHANNEL 015 → yaAGC / ${mission}`);
     h+=row('PRO',`AGC MODE · CHANNEL 032 ACTIVE-LOW → yaAGC / ${mission}`);
     h+=row('DSKY outputs','yaAGC → CHANNELS 010 / 011 / 012 / 013 / 0163 → HARDWARE / DISPLAY');

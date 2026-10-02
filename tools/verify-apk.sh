@@ -73,8 +73,10 @@ verify_source_asset() {
 }
 
 verify_blob assets/yaAGC.wasm 132617 713685680492098d05437b99c26403f683d56009
-verify_blob assets/Luminary099.bin 73728 cd2ec9992d5863e1c7234fa760020f68ef946202
 verify_blob assets/Comanche055.bin 73728 9e4ec167dc99ac12b233df07b6b91fef585e5015
+if unzip -Z1 "$APK" | grep -Fxq 'assets/Luminary099.bin'; then
+  fail "unsupported LM rope is packaged: assets/Luminary099.bin"
+fi
 
 # Prove that the APK contains the frontend/metadata from this checkout rather
 # than stale assets from an older build tree. Verify index.html first, then
@@ -100,8 +102,8 @@ verify_source_asset assets/BUILD_SOURCE.txt "$ASSET_SOURCE/BUILD_SOURCE.txt"
 
 apk_entries="$(unzip -Z1 "$APK")"
 
-# Both supported mission ropes are staged; unrelated upstream helper/demo
-# assets must not leak into the packaged application.
+# Only the supported CM rope is staged; unrelated upstream helper/demo assets
+# must not leak into the packaged application.
 for forbidden in \
   assets/Validation.bin \
   assets/webAGC.js \
@@ -279,7 +281,7 @@ printf '  %s\n' "$APK"
 printf '  variant: %s\n' "$VARIANT"
 printf '  package/version/minSdk/targetSdk match source (%s / %s)\n' "$EXPECTED_VERSION_CODE" "$EXPECTED_VERSION_NAME"
 printf '  APK is debuggable for the ADB smoke/report workflow\n'
-printf '  pinned yaAGC/WASM + Luminary 099 and Comanche 055 ropes match exact Git blobs\n'
+printf '  pinned yaAGC/WASM + Comanche 055 rope match exact Git blobs; LM rope absent\n'
 printf '  index.html and every referenced frontend asset match the current checkout byte-for-byte\n'
 printf '  SensorMainActivity has packaged MAIN/LAUNCHER and MAIN/HOME/DEFAULT handling\n'
 printf '  SensorMainActivity and EL AppWidget classes/resources are packaged\n'

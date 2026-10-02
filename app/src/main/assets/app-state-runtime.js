@@ -9,7 +9,7 @@
   if (!window.AGCDSKY_APP_STATE) {
     window.AGCDSKY_APP_STATE = Object.seal({
       mode:'clock',
-      selectedMission:'luminary099',
+      selectedMission:'comanche055',
       verb:'16',
       noun:'65',
       dream:false,

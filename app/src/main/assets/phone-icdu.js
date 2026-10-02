@@ -36,13 +36,11 @@
   const COUNTS_PER_DEG = COUNTS_PER_REV / 360;
   const MAX_PULSES_PER_AXIS_PER_PUMP = 24; // 24 * 250 Hz = 6000 cps, below 6400-cps CDU high rate.
 
-  // PIPAs use counters 037/040/041 and socket t-bit PINC/MINC sequences in
-  // both ropes. Their vehicle-specific delta-V per pulse is selected below.
+  // CM PIPAs use counters 037/040/041 and socket t-bit PINC/MINC sequences.
   const PIPA_CHANNEL = [0o200 | 0o37, 0o200 | 0o40, 0o200 | 0o41];
   const PINC = 0o00;
   const MINC = 0o02;
   const CM_PIPA_DV_PER_PULSE = 0.0585; // m/s per pulse, Comanche/CM scale.
-  const LM_PIPA_DV_PER_PULSE = 0.01; // m/s per pulse, 1 cm/s Luminary/LM scale.
   const MAX_PIPA_PULSES_PER_AXIS_PER_PUMP = 16;
   const PIPA_CAL_SAMPLES = 60;
 
@@ -100,7 +98,6 @@
   const SKY_CAL_KEY = 'sxtCameraBoresightV1';
   let cameraBoresightDevice = [0,0,-1];
   let skyCalibration = null;
-  let pipaMission = typeof app.getMission === 'function' ? app.getMission() : null;
 
   // Phone-side sensor health only. These counters never affect the AGC.
   const health = {
@@ -109,9 +106,7 @@
     pipa:{last:0,hz:0,count:0,windowStart:performance.now()}
   };
   let cduWriteRejected=0,pipaWriteRejected=0,lastCduAccept=0,lastPipaAccept=0;
-  function pipaDvPerPulse(mission=typeof app.getMission === 'function' ? app.getMission() : null){
-    return mission === 'luminary099' ? LM_PIPA_DV_PER_PULSE : CM_PIPA_DV_PER_PULSE;
-  }
+  function pipaDvPerPulse(){return CM_PIPA_DV_PER_PULSE}
   function sampleHealth(k){
     const h=health[k],now=performance.now(); if(!h)return;
     h.last=Date.now(); h.count++;
@@ -480,13 +475,6 @@
   }
 
   function pump() {
-    const mission=typeof app.getMission === 'function' ? app.getMission() : null;
-    if(mission!==pipaMission){
-      pipaMission=mission;
-      pipaLastTimestamp=null;
-      pipaFraction=[0,0,0];
-      pipaPending=[0,0,0];
-    }
     const core = typeof api.getCore === 'function' ? api.getCore() : null;
     if (!core || !core.running || !sensorSeen) return;
     if (opticsCapture) return;

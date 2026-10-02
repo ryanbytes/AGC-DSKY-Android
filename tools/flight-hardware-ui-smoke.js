@@ -70,4 +70,4 @@ for(const forbidden of ['translateY(var(--key-travel','--key-travel'])no(finish+
 req(ui,"oldDim.hidden = true",'retired whole-panel dimmer');req(ui,"document.body.classList.remove('dim')",'separate lighting feed enforcement');
 
 console.log('Flight hardware UI smoke: PASS');
-console.log('  parser-loaded Block II features, shell-owned mission selection, continuous vertical-swipe rotary lighting rheostats, explicit registry-backed presentation/mechanics/keyboard services, centralized normal-key/PRO input, source-backed key mechanics, and three-bulb annunciators gated');
+console.log('  parser-loaded Block II features, CM-only shell identity, continuous vertical-swipe rotary lighting rheostats, explicit registry-backed presentation/mechanics/keyboard services, centralized normal-key/PRO input, source-backed key mechanics, and three-bulb annunciators gated');

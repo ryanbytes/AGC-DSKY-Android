@@ -49,10 +49,9 @@ That implementation is obsolete and removed from v0.7. It must not be reintroduc
 Required upstream inputs are:
 
 - `src/yaAGC.wasm`
-- `demo/agc/Luminary099.bin`
 - `demo/agc/Comanche055.bin`
 
-A recursive checkout is required. The Android build does **not** package the whole upstream `src` or `demo/agc` trees: Gradle stages only the three required verified binaries into generated assets. The source/build/APK gates reject missing, changed, or stale copies and check the exact pinned Git blobs.
+A recursive checkout is required. The Android build does **not** package the whole upstream `src` or `demo/agc` trees: Gradle stages only the two required verified binaries into generated assets. The source/build/APK gates reject missing, changed, or stale copies and check the exact pinned Git blobs.
 
 ### Synthetic HTTPS asset origin
 
@@ -73,20 +72,13 @@ The pinned `yaAGC.wasm` imports exactly `env.memory` plus WASI Preview 1:
 
 `agc-core.js` supplies these locally and uses yaAGC exports for fixed-memory loading, reset, stepping, packet I/O, and optional version reporting.
 
-The canonical host preflight (`tools/wasm-runtime-smoke.js`) instantiates the **actual pinned binary**, loads both actual ropes, and executes real Pinball input paths before Gradle starts. On the current audited revision, `env TZ=UTC bash tools/run-source-smokes.sh` passed with 92 Node tests plus `ntp-time-smoke.sh`; the real-WASM gate proved Comanche V16N65, P00, V35, and MARK/KEYRUPT2 consumption, plus Luminary V37E00E P00 and V35. This is host proof against the pinned WASM and ropes, not an Android/WebView runtime test.
+The canonical host preflight (`tools/wasm-runtime-smoke.js`) instantiates the **actual pinned binary**, loads the Comanche rope, and executes real Pinball input paths before Gradle starts. The gate proves Comanche V16N65, P00, V35, and MARK/KEYRUPT2 consumption. This is host proof against the pinned WASM and rope, not an Android/WebView runtime test.
 
-### AGC mission selection
+### Command Module only
 
-Apollo 11 LM `Luminary099.bin` is the first-run rope. The **Options → AGC MISSION** control selects CM `Comanche055.bin` or returns to LM. The earlier shell forced CM on every start without recording a user choice; the first-selector migration therefore changes that implicit legacy value to LM once, while later explicit selections persist.
+The app loads the pinned `Comanche055.bin` rope. The former mission selector and Luminary rope path have been removed; old `agcMission` values are normalized to `comanche055` on startup. The DSKY uses the CM face, including blank ALT/VEL positions. Phone PIPA scaling and sextant/navigation input follow the CM calibration.
 
-- Mission choice persists locally.
-- Changing mission during AGC mode saves and suspends the current core, then changes the selected mission while returning to CLOCK. Guidance starts the selected rope from its reset state or restores that mission's own snapshot.
-- Changing mission in phone-clock mode changes only the next selected AGC mission.
-- The DSKY face follows the selected mission. The LM layout lights ALT and VEL in positions 26 and 27; those positions remain blank on the CM face. The saved LM/CM annunciator maps remain distinct.
-- Comanche keeps the legacy `agcSnapshotV1` keys. Luminary uses `agcSnapshotV1:luminary099` and its matching metadata key, preventing one rope's saved core from being imported into the other.
-- DreamService never starts yaAGC.
-
-The pinned WASM's internal `CmOrLm` global defaults LM and is not exported. Comanche remains a real/selectable CM rope for DSKY execution, but full CM peripheral-mode fidelity is not claimed.
+DreamService never starts yaAGC. The pinned WASM's internal `CmOrLm` global still defaults LM and is not exported. Comanche is the only supported rope, but full CM peripheral-mode fidelity is not claimed.
 
 ### AGC clocking and lifecycle
 
@@ -95,7 +87,7 @@ The wrapper follows webAGC's approximate timing model (~11.72 μs per AGC instru
 Lifecycle distinction:
 
 - same surviving WebView: AGC timer pauses while hidden and resumes the same in-memory core;
-- page/Activity/process recreation: selected mission/requested mode persist, but a fresh yaAGC reset is constructed;
+- page/Activity/process recreation: CM rope/requested run mode persist, but a fresh yaAGC reset is constructed;
 - CPU registers and erasable memory are not serialized across process/page destruction.
 
 ### DSKY output relay model
@@ -110,7 +102,7 @@ The character relay codes are source-backed, not decimal assumptions. The curren
 
 Visible mapping covers PROG, VERB, NOUN, all 15 register digits, R1/R2/R3 signs, and the six Apollo-11-era LM relay-12 condition lights. Channel `011` supplies COMP ACTY and UPLINK ACTY. yaAGC synthetic/modulated channel `0163` supplies TEMP, KEY REL, OPR ERR, RESTART, STBY, V/N blanking, and EL-off state.
 
-The relay/click model counts low-11 latch changes, including physically driven fields that have no visible connection. The important V35 example is selector 8: ordinary display rendering uses only its D field for R1D1, but Luminary `FULLDSP` still drives the unused C five-relay bank.
+The relay/click model counts low-11 latch changes, including physically driven fields that have no visible connection. The V35 example is selector 8: ordinary display rendering uses only its D field for R1D1, but Comanche `FULLDSP` still drives the unused C five-relay bank.
 
 ### Relay timing
 
@@ -124,7 +116,7 @@ Authentic AGC mode does not add that synthetic scheduler; it consumes yaAGC's em
 
 ### V35 light-test model
 
-Luminary 99 `VBTSTLTS` defines the current source-backed light-test behavior:
+Comanche source defines the current source-backed light-test behavior:
 
 - `FULLDSP = 05675` -> low-11 `01675`
 - `FULLDSP1 = 07675` -> low-11 `03675` on plus rows 7/5/2
@@ -186,7 +178,7 @@ Its V35 semantic driver now proves a channel-driven P00 `PROG 00` precondition b
 ## Remaining high-value work
 
 1. Run the device smoke gates listed in `docs/DEVICE_RUNTIME_SMOKE.md` on current Regular and Fire builds and retain their evidence.
-2. Exercise additional non-V35 Pinball semantics through real channel `015` input in the packaged Android WebView. The host real-WASM gate already covers Comanche V16N65 and P00 entry plus Luminary V37E00E P00 entry.
+2. Exercise additional non-V35 Pinball semantics through real channel `015` input in the packaged Android WebView. The host real-WASM gate covers Comanche V16N65 and P00 entry.
 3. Test long physical PRO behavior through channel `032`.
 4. Verify real OS screen-off/on lifecycle behavior in addition to direct bridge tests.
 5. Verify DreamService startup, non-interactivity, brightness modes, SOLAR permission behavior, and normal-app state after Dream exit.

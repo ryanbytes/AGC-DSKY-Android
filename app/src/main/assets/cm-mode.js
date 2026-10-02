@@ -1,8 +1,8 @@
 'use strict';
 
 // Retained compatibility module for the shared Apollo Block II DSKY finish.
-// Mission selection and rope persistence belong to the application shell;
-// this parser-ordered module performs no script injection.
+// The application shell fixes the supported rope to Comanche 055; this module
+// owns DSKY panel identity and performs no script injection.
 (() => {
   function applyCmMode() {
     document.body.classList.add('apollo-block-ii');
