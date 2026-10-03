@@ -383,7 +383,7 @@
     if (magneticEnabled && magneticSeen && magneticQ && magneticReferenceYaw != null
         && magneticAccuracy !== 0) {
       const magRelYaw = wrap180(eulerXYZ(magneticQ)[2] - magneticReferenceYaw);
-      const gameRelYaw = eulerXYZ(rel)[2];
+      const gameRelYaw = wrap180(eulerXYZ(q)[2] - eulerXYZ(referenceQ)[2]);
       const err = wrap180(magRelYaw - (gameRelYaw + magneticYawCorrection));
       magneticYawCorrection += clamp(err * 0.0025, -0.05, 0.05);
       // The correction is a conventional yaw-frame correction. Apply it to
@@ -772,7 +772,7 @@
     sampleHealth('mag');
     const a = Number.isFinite(displayAngle) ? ((displayAngle%360)+360)%360 : 0;
     magneticRawQ = qNorm([w,x,y,z]);
-    let q = qNorm(qMul(magneticRawQ, qAxis('z', -rad(a))));
+    let q = qNorm(qMul(magneticRawQ, qAxis('z', rad(a))));
     magneticQ = q;
     magneticSeen = true;
     magneticAccuracy = Number.isFinite(accuracy) ? Number(accuracy) : 1;
