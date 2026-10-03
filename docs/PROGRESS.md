@@ -1229,3 +1229,9 @@ Current `main` still declares version `1.1.62` / versionCode `2026093009`. `AppU
 ### 2026-10-03 CM annunciator documentation check
 
 Cross-checking the CM-only face (`index.html`, `dsky-mapping-smoke.js`) against channel-010 relay-12 projection (`agc-display-runtime.js`) found that the implementation notes overstated the visible lamps. The relay decoder retains all six Apollo-11-era condition bits, but the CM face renders only NO ATT, GIMBAL LOCK, TRACKER, and PROG; ALT and VEL remain deliberately absent from the CM projection. Corrected `docs/IMPLEMENTATION_NOTES.md` to state this distinction. No runtime code changed.
+
+### 2026-10-03 Network and data-egress source audit
+
+Inventoried network-capable calls in Android shared assets/native code, PWA code, and the analytics Worker. Android WebView networking is blocked and its CSP allows only same-origin connections; the native network clients are the documented Cloudflare SNTP requests and GitHub release discovery/downloads. Shared JS fetches packaged WASM/rope, legal text, diagnostics assets, and same-origin manifest time only. The PWA service worker handles only same-origin GET requests; optional analytics is a separate injected endpoint and the deployed endpoint remains disabled per the deployment audit above. The Apple bridge/source policy and Android manifest/CSP checks were included in the canonical source suite.
+
+Validation: `env TZ=UTC bash tools/run-source-smokes.sh` passed on current `main` (98 Node smokes plus `ntp-time-smoke.sh`), including manifest/network policy, strict CSP, Apple bridge, PWA, and real pinned Comanche055/WASM checks. This is source/policy evidence, not a packet capture of every OS/runtime request. The analytics Worker's Cloudflare account-level deployment and protections remain uninspected; telemetry stays disabled.
