@@ -162,7 +162,7 @@
       const tactile=lateService('AGCDSKY_KEY_TACTILE');
       if(!tactile||typeof tactile.status!=='function'||typeof tactile.make!=='function'||typeof tactile.release!=='function')throw new Error('key tactile service unavailable');
       const status=tactile.status();
-      if(status.policy!=='event-cue-only; platform-native/browser-supported haptics; no force-to-vibration amplitude mapping')throw new Error('tactile force policy changed');
+      if(status.policy!=='normal DSKY key make/release haptics disabled; diagnostic test pulse only; relay haptics are separate')throw new Error('key haptic policy changed');
       if(status.actuationTravelIn!==3/16||status.overtravelToBottomIn!==1/16||status.totalTravelIn!==1/4)throw new Error('R-700 key travel metadata mismatch');
       if(status.springForceIncreaseToActuationOzMin!==9||status.springForceIncreaseToActuationOzMax!==10.5)throw new Error('spring actuation ΔF envelope mismatch');
       if(status.springForceIncreaseToBottomOzMin!==12||status.springForceIncreaseToBottomOzMax!==14)throw new Error('spring bottom ΔF envelope mismatch');
