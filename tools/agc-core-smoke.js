@@ -44,10 +44,11 @@ function makeCoreHarness(options = {}) {
     let packetWriteResult = options.packetWriteResult ?? 4;
     let packetWriteResults = null;
     const core = new (createEnvironment(options.environment || {}).AgcCore)();
+    let cpuStepHook = options.cpuStepHook || null;
     core.memory = { buffer: new ArrayBuffer(options.memoryBytes || 200000) };
     core.exports = {
         cpu_reset() { calls.push(['reset']); },
-        cpu_step(steps) { calls.push(['step', steps]); },
+        cpu_step(steps) { calls.push(['step', steps]); if (cpuStepHook) cpuStepHook(steps, core); },
         packet_read() { calls.push(['read']); return 0; },
         packet_write(channel, value) {
             calls.push(['write', channel, value]);
@@ -65,12 +66,13 @@ function makeCoreHarness(options = {}) {
         core,
         calls,
         setPacketWriteResult: (v) => { packetWriteResult = v; },
-        setPacketWriteResults: (values) => { packetWriteResults = values.slice(); }
+        setPacketWriteResults: (values) => { packetWriteResults = values.slice(); },
+        setCpuStepHook: (hook) => { cpuStepHook = hook; }
     };
 }
 
 async function testResetAndPeripheralSetup() {
-    const { core, calls, setPacketWriteResult, setPacketWriteResults } = makeCoreHarness();
+    const { core, calls, setPacketWriteResult, setPacketWriteResults, setCpuStepHook } = makeCoreHarness();
 
     core.reset();
     assert(calls.filter(([name]) => name === 'reset').length === 2,
@@ -114,11 +116,26 @@ async function testResetAndPeripheralSetup() {
     setPacketWriteResult(0);
     assert(core.writeIo(0o15, 0o21) === 0,
         'writeIo must return the raw packet_write result for an asserted key');
+    setPacketWriteResults([0, 0]);
+    const stepsBeforeRejectedKey = core.totalSteps;
     core.keyPress(0o21);
-    assert(calls.filter(([name]) => name === 'write').length === 2,
-        'keyPress must forward the key make packet without synthesizing an exception');
+    assert(calls.filter(([name]) => name === 'write').length === 3,
+        'keyPress must retry a full-ring make once without synthesizing an exception');
+    assert(core.totalSteps === stepsBeforeRejectedKey + 1,
+        'full-ring key make retry must account for one MCT');
     assert(core.pendingNormalKeyCode === 0,
-        'rejected/full-ring key make must not be recorded as a pending contact');
+        'twice-rejected/full-ring key make must not be recorded as a pending contact');
+
+    calls.length = 0;
+    setPacketWriteResults([0, 4]);
+    const stepsBeforeKeyRetry = core.totalSteps;
+    assert(core.keyPress(0o21) === 4,
+        'keyPress must retry and report acceptance after a full-ring response');
+    assert(core.totalSteps === stepsBeforeKeyRetry + 1
+        && calls.filter(([name, steps]) => name === 'step' && steps === 1).length === 1,
+    'full-ring key make retry must advance and account for exactly one MCT');
+    assert(core.pendingNormalKeyCode === 0o21,
+        'accepted key make retry must be tracked until channel 015 delivery');
 
     calls.length = 0;
     setPacketWriteResults([0, 4]);
@@ -158,20 +175,46 @@ async function testResetAndPeripheralSetup() {
         'settled KEY RESET must clear pending-make bookkeeping');
 
     // Very fast release before yaAGC has consumed the asynchronous make packet:
-    // one MCT is allowed solely to deliver that queued make/KEYRUPT before the
-    // direct KEYRST clear, otherwise the release could erase the key before it
-    // ever reaches the AGC.
+    // a one-MCT opportunity may not reach the key behind earlier queued input,
+    // so KEYRST must remain deferred until channel 015 receives the make.
     inputWords[keyWord] = 0;
     core.pendingNormalKeyCode = 0o21;
     calls.length = 0;
     assert(core.keyRelease() === true,
         'pending-make KEY RESET failed');
     assert(calls.filter(([name, steps]) => name === 'step' && steps === 1).length === 1,
-        'pending make must be flushed with exactly one MCT before KEYRST');
+        'pending make release must advance one MCT before deciding whether KEYRST can clear');
     assert(calls.filter(([name]) => name === 'write').length === 0,
         'pending-make KEYRST must still avoid a zero-valued channel-015 packet');
-    assert(core.pendingNormalKeyCode === 0,
-        'pending-make KEY RESET must clear pending-make bookkeeping');
+    assert(core.pendingNormalKeyCode === 0o21 && core.pendingNormalKeyRelease,
+        'KEYRST must stay deferred while the make remains behind queued input');
+    inputWords[keyWord] = 0o21;
+    core.step(1);
+    assert((inputWords[keyWord] & 0o37) === 0,
+        'deferred KEYRST must clear channel 015 as soon as the make is delivered');
+    assert(core.pendingNormalKeyCode === 0 && !core.pendingNormalKeyRelease,
+        'delivered deferred KEYRST must clear pending-make bookkeeping');
+
+    inputWords[keyWord] = 0;
+    core.pendingNormalKeyCode = 0o21;
+    core.pendingNormalKeyRelease = false;
+    let heldSnapshotRejected = false;
+    try { core.flushPendingNormalKeyForSnapshot(); }
+    catch (error) { heldSnapshotRejected = /still electrically held/.test(String(error)); }
+    assert(heldSnapshotRejected,
+        'snapshot must not force KEYRST while the physical key is still held');
+    core.pendingNormalKeyRelease = true;
+    setCpuStepHook((_steps, activeCore) => {
+        activeCore.setInputChannelBits(0o15, 0o37, 0o21);
+    });
+    const stepsBeforeSnapshotFlush = core.totalSteps;
+    assert(core.flushPendingNormalKeyForSnapshot() === true,
+        'snapshot must flush an accepted key make before capturing WASM memory');
+    assert(core.totalSteps === stepsBeforeSnapshotFlush + 1
+        && (inputWords[keyWord] & 0o37) === 0
+        && core.pendingNormalKeyCode === 0,
+    'snapshot flush must deliver then electrically release a queued normal key');
+    setCpuStepHook(null);
 
     calls.length = 0;
     await core.loadRope(new Uint8Array([1, 2, 3, 4]).buffer);

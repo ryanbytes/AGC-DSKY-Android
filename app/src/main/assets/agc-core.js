@@ -7,6 +7,7 @@
   const NORMAL_KEY_CHANNEL = 0o15;
   const PROCEED_CHANNEL = 0o32;
   const NORMAL_KEY_MASK = 0o37;
+  const NORMAL_KEY_PENDING_FLUSH_LIMIT = 1024;
   const PROCEED_MASK = 0o20000; // Input channel 032, bit 14. Active low for PRO.
   // Pinned yaAGC agc_t ABI: from &State.Erasable to State.InputChannel.
   // Erasable 8*0400*2 + Fixed 40*02000*2 + Parities 40*(02000/32)*4.
@@ -83,9 +84,10 @@
       this.timer = 0;
       this.startTime = 0;
       // A successful packet_write is asynchronous.  Remember only the make
-      // that may still be queued so KEYRST can flush it when necessary without
+      // that may still be queued so KEYRST can defer its clear when necessary without
       // advancing the AGC on every ordinary physical release.
       this.pendingNormalKeyCode = 0;
+      this.pendingNormalKeyRelease = false;
     }
 
     async load(options={}){
@@ -175,6 +177,7 @@
 
       this.channels = Object.create(null);
       this.pendingNormalKeyCode = 0;
+      this.pendingNormalKeyRelease = false;
       this.totalSteps = 0;
       this.startTime = performance.now();
     }
@@ -217,7 +220,11 @@
     keyPress(keyCode){
       const code = keyCode & NORMAL_KEY_MASK;
       if (!code) return 0;
-      const accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);
+      let accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);
+      if (accepted === 0 && this.exports && typeof this.exports.cpu_step === 'function') {
+        this.advanceOneMct();
+        accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);
+      }
       if (accepted > 0) this.pendingNormalKeyCode = code;
       return accepted;
     }
@@ -229,24 +236,57 @@
       // second keystroke on physical release.
       //
       // Normally the 4-ms scheduler has already consumed the make packet long
-      // before a human releases the key.  Advance one MCT only when the make is
-      // demonstrably still pending; an ordinary settled release must not alter
-      // AGC execution timing merely to clear the external keyboard contact.
+      // before a human releases the key. If it is still behind queued input,
+      // defer KEYRST until a later CPU step delivers the make; clearing channel
+      // 015 early would let that delayed packet reassert a stuck key.
       const pending = this.pendingNormalKeyCode & NORMAL_KEY_MASK;
       if (pending && this.inputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK) !== pending
           && this.exports && typeof this.exports.cpu_step === 'function') {
-        this.exports.cpu_step(1);
-        this.totalSteps += 1;
-        this.drainIo();
+        this.pendingNormalKeyRelease = true;
+        this.advanceOneMct();
+        if (this.pendingNormalKeyCode) return true;
       }
       this.pendingNormalKeyCode = 0;
+      this.pendingNormalKeyRelease = false;
       return this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
+    }
+
+    settlePendingNormalKey(){
+      const pending = this.pendingNormalKeyCode & NORMAL_KEY_MASK;
+      if (!pending || this.inputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK) !== pending) return;
+      this.pendingNormalKeyCode = 0;
+      if (this.pendingNormalKeyRelease) {
+        this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
+        this.pendingNormalKeyRelease = false;
+      }
+    }
+
+    advanceOneMct(){
+      this.exports.cpu_step(1);
+      this.totalSteps += 1;
+      this.drainIo();
+      this.settlePendingNormalKey();
+    }
+
+    flushPendingNormalKeyForSnapshot(){
+      if (!this.pendingNormalKeyCode) return true;
+      if (!this.pendingNormalKeyRelease) {
+        throw new Error('cannot snapshot while a DSKY key make is still electrically held');
+      }
+      for (let i = 0; i < NORMAL_KEY_PENDING_FLUSH_LIMIT && this.pendingNormalKeyCode; i++) {
+        this.advanceOneMct();
+      }
+      if (this.pendingNormalKeyCode) {
+        throw new Error('queued DSKY key did not reach channel 015 before snapshot');
+      }
+      return true;
     }
 
     releaseExternalDskyInputs(){
       // Physical controls are not persistent AGC state.  A restored snapshot
       // must come back with the normal keyboard released and PRO released.
       this.pendingNormalKeyCode = 0;
+      this.pendingNormalKeyRelease = false;
       const keyOk = this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
       const proOk = this.setInputChannelBits(PROCEED_CHANNEL, PROCEED_MASK, PROCEED_MASK);
       return keyOk && proOk;
@@ -264,9 +304,7 @@
       // cannot be dropped: advance one MCT to let ChannelInput consume at
       // least one queued packet, then retry in FIFO order. This is only used
       // under backpressure, so ordinary PRO transitions do not change timing.
-      this.exports.cpu_step(1);
-      this.totalSteps += 1;
-      this.drainIo();
+      this.advanceOneMct();
       return this.writeIo(PROCEED_CHANNEL, value);
     }
 
@@ -288,9 +326,7 @@
       // Process the channel-016 packet before asserting KEYRUPT2 so MARKRUPT
       // samples the new NAVKEYIN value, just as the hardware interrupt follows
       // switch closure. Account for the single MCT in scheduler bookkeeping.
-      this.exports.cpu_step(1);
-      this.totalSteps += 1;
-      this.drainIo();
+      this.advanceOneMct();
 
       // ABI of the pinned yaAGC agc_t following Erasable: Fixed, Parities,
       // InputChannel, OutputChannel7, OutputChannel10, IndexValue, then
@@ -408,6 +444,7 @@
       if (steps > 0) this.exports.cpu_step(steps);
       this.totalSteps += Math.max(0, steps);
       this.drainIo();
+      this.settlePendingNormalKey();
     }
 
     start(clockDivisor=1){

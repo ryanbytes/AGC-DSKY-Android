@@ -1,3 +1,11 @@
+## 2026-10-03 channel-015 key backpressure audit
+
+The real pinned WASM input-ring probe confirmed that an ordinary DSKY key make was silently lost when `packet_write` returned zero on a full ring. A make-only retry is insufficient: if the user releases while that retried packet is still behind queued PIPA increments, clearing channel 015 early lets the late make reassert the key.
+
+`AgcCore.keyPress()` now retries one time after one accounted MCT when the ring is full. If KEYRST occurs before an accepted make reaches channel 015, the core defers the direct channel clear until a later CPU step delivers the make. This preserves FIFO order without queueing channel-015=0 (which would generate a false KEYRUPT1). Snapshot export flushes a deferred release through at most 1,024 MCTs, matching the pinned 1,024-slot ring's maximum 1,023 queued packets; export fails rather than saving a make that is still queued behind a physically held contact.
+
+Validation: focused `agc-core-smoke.js`, `operation-authority-smoke.js`, and real pinned `wasm-runtime-smoke.js` passed. The real WASM test saturated the actual ring with 1,023 PIPA packets, verified normal key retry, immediate release ordering, and no late stuck key. `env TZ=UTC bash tools/run-source-smokes.sh` passed all 101 Node tests plus `ntp-time-smoke.sh`. A local APK build and physical handset/Fire runtime check remain pending; no Android release was made.
+
 ## 2026-10-03 PRO channel-032 input-ring backpressure audit
 
 A real pinned Comanche055/WASM probe filled the yaAGC input ring with 1,023 PIPA counter packets. It accepted a channel-032 PRO press into the last slot, rejected the release (`packet_write` returned `0`), then remained active-low after the queued inputs drained. The PRO pointer controller clears its held pointer state on release, so no later UI event retried that lost electrical transition. This could leave PRO/STBY held after a saturated queue, including at a lifecycle boundary.

@@ -7,6 +7,7 @@ const read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 
 const core=read('agc-core.js');
+const snapshotCodec=read('agc-snapshot-codec.js');
 const input=read('dsky-input-runtime.js');
 const keyboard=read('keyboard-electrical-interlock.js');
 const proceed=read('proceed-electrical.js');
@@ -24,13 +25,19 @@ const phoneIcdu=read('phone-icdu.js');
 for(const marker of [
   'const NORMAL_KEY_CHANNEL = 0o15;',
   'const PROCEED_CHANNEL = 0o32;',
-  'const accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);',
+  'let accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);',
+  'accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);',
+  'this.pendingNormalKeyRelease = true;',
+  'this.settlePendingNormalKey();',
+  'flushPendingNormalKeyForSnapshot(){',
   'const value = pressed ? 0 : PROCEED_MASK;',
   'const accepted = this.writeIo(PROCEED_CHANNEL, value);',
   'if (accepted !== 0 || !this.exports || typeof this.exports.cpu_step !== \'function\')',
   'return this.writeIo(PROCEED_CHANNEL, value);',
   'this.onChannelUpdate(channel, value);'
 ]) assert(core.includes(marker),'AGC core authority path missing: '+marker);
+assert(snapshotCodec.includes('this.flushPendingNormalKeyForSnapshot();'),
+  'snapshot export must flush a queued normal key before saving WASM memory');
 
 for(const marker of [
   "currentMode !== runtime.modes.AGC",

@@ -446,6 +446,44 @@ function proveProLevelSurvivesInputBackpressure(core) {
     return queued;
 }
 
+function proveNormalKeySurvivesInputBackpressure(core) {
+    core.reset();
+    core.configureInputMasks();
+    core.step(1000);
+
+    let queued = 0;
+    let result = 1;
+    while (queued < 5000 && result > 0) {
+        result = core.writeIo(0o237, 1);
+        if (result > 0) queued++;
+    }
+    assert(queued > 0 && queued < 5000 && result === 0,
+        'Comanche055: expected the real input ring to reject a packet when full for key test');
+
+    const stepsBeforeMake = core.totalSteps;
+    assert(core.keyPress(0o21) > 0,
+        'Comanche055: channel-015 key make was lost after a full-ring response');
+    assert(core.totalSteps === stepsBeforeMake + 1,
+        'Comanche055: full-ring key make retry must advance exactly one accounted MCT');
+    assert(core.inputChannelBits(0o15, 0o37) !== 0o21,
+        'Comanche055: saturated-queue key make should still be queued, not applied early');
+
+    assert(core.keyRelease() === true,
+        'Comanche055: immediate KEYRST failed while a channel-015 make remained queued');
+    assert(core.pendingNormalKeyCode === 0o21 && core.pendingNormalKeyRelease,
+        'Comanche055: KEYRST must defer while the accepted key make remains queued');
+
+    core.step(queued + 32);
+    assert(core.inputChannelBits(0o15, 0o37) === 0,
+        'Comanche055: deferred KEYRST must prevent a late queued key from sticking');
+    assert(core.pendingNormalKeyCode === 0 && !core.pendingNormalKeyRelease,
+        'Comanche055: delivered key make and deferred KEYRST must clear pending state');
+
+    core.reset();
+    core.configureInputMasks();
+    return queued;
+}
+
 async function main() {
     const wasmBytes = requireFile(WASM, 27270);
     const ropeBytes = requireFile(ROPE, 73728);
@@ -508,6 +546,8 @@ async function main() {
         `Comanche055: unexpected real execution step count ${core.totalSteps}`);
     const backpressurePackets = proveProLevelSurvivesInputBackpressure(core);
     assert(errors.length === 0, 'Comanche055: error during real PRO backpressure test');
+    const normalKeyBackpressurePackets = proveNormalKeySurvivesInputBackpressure(core);
+    assert(errors.length === 0, 'Comanche055: error during normal-key backpressure test');
 
     core.reset();
     core.configureInputMasks();
@@ -523,6 +563,7 @@ async function main() {
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);
     console.log('  PRO contact: PASS (real Comanche055 observes channel 032 bit 020000 held low and released high)');
     console.log(`  PRO input backpressure: PASS (${backpressurePackets} real queued PIPA increments; release retried after one MCT)`);
+    console.log(`  normal-key input backpressure: PASS (${normalKeyBackpressurePackets} real queued PIPA increments; deferred KEYRST prevented a late stuck key)`);
     console.log('real yaAGC WASM runtime smoke: PASS');
 }
 
