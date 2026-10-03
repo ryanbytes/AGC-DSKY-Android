@@ -25,7 +25,10 @@ for(const marker of [
   'const NORMAL_KEY_CHANNEL = 0o15;',
   'const PROCEED_CHANNEL = 0o32;',
   'const accepted = this.writeIo(NORMAL_KEY_CHANNEL, code);',
-  'return this.writeIo(PROCEED_CHANNEL, pressed ? 0 : PROCEED_MASK);',
+  'const value = pressed ? 0 : PROCEED_MASK;',
+  'const accepted = this.writeIo(PROCEED_CHANNEL, value);',
+  'if (accepted !== 0 || !this.exports || typeof this.exports.cpu_step !== \'function\')',
+  'return this.writeIo(PROCEED_CHANNEL, value);',
   'this.onChannelUpdate(channel, value);'
 ]) assert(core.includes(marker),'AGC core authority path missing: '+marker);
 

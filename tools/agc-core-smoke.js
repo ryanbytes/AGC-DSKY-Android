@@ -42,13 +42,18 @@ function createEnvironment(overrides = {}) {
 function makeCoreHarness(options = {}) {
     const calls = [];
     let packetWriteResult = options.packetWriteResult ?? 4;
+    let packetWriteResults = null;
     const core = new (createEnvironment(options.environment || {}).AgcCore)();
     core.memory = { buffer: new ArrayBuffer(options.memoryBytes || 200000) };
     core.exports = {
         cpu_reset() { calls.push(['reset']); },
         cpu_step(steps) { calls.push(['step', steps]); },
         packet_read() { calls.push(['read']); return 0; },
-        packet_write(channel, value) { calls.push(['write', channel, value]); return packetWriteResult; },
+        packet_write(channel, value) {
+            calls.push(['write', channel, value]);
+            return packetWriteResults && packetWriteResults.length
+                ? packetWriteResults.shift() : packetWriteResult;
+        },
         malloc(size) { calls.push(['malloc', size]); return 256; },
         free(ptr) { calls.push(['free', ptr]); },
         set_fixed(ptr) { calls.push(['set_fixed', ptr]); },
@@ -56,11 +61,16 @@ function makeCoreHarness(options = {}) {
         get_cm_mode() { calls.push(['get_cm_mode']); return 1; },
         get_erasable_ptr() { return 1024; }
     };
-    return { core, calls, setPacketWriteResult: (v) => { packetWriteResult = v; } };
+    return {
+        core,
+        calls,
+        setPacketWriteResult: (v) => { packetWriteResult = v; },
+        setPacketWriteResults: (values) => { packetWriteResults = values.slice(); }
+    };
 }
 
 async function testResetAndPeripheralSetup() {
-    const { core, calls, setPacketWriteResult } = makeCoreHarness();
+    const { core, calls, setPacketWriteResult, setPacketWriteResults } = makeCoreHarness();
 
     core.reset();
     assert(calls.filter(([name]) => name === 'reset').length === 2,
@@ -109,6 +119,19 @@ async function testResetAndPeripheralSetup() {
         'keyPress must forward the key make packet without synthesizing an exception');
     assert(core.pendingNormalKeyCode === 0,
         'rejected/full-ring key make must not be recorded as a pending contact');
+
+    calls.length = 0;
+    setPacketWriteResults([0, 4]);
+    const stepsBeforeProRetry = core.totalSteps;
+    assert(core.proceedKey(false) === 4,
+        'PRO release must retry and report acceptance after a full-ring response');
+    assert(core.totalSteps === stepsBeforeProRetry + 1
+        && calls.some(([name, steps]) => name === 'step' && steps === 1),
+    'full-ring PRO retry must advance and account for exactly one MCT');
+    const retryWrites = calls.filter(([name]) => name === 'write');
+    assert(retryWrites.length === 2
+        && retryWrites.every(([, channel, value]) => channel === 0o32 && value === 0o20000),
+    'full-ring PRO release retry must preserve the released-high channel level');
 
     // KEY RESET is a separate discrete. Releasing a normal key must clear
     // channel 015 directly and must not enqueue channel-015=0, because the

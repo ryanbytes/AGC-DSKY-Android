@@ -411,6 +411,41 @@ function proveComancheNavigationKeyInterrupt(core, errors) {
     return {input, consumed: true};
 }
 
+function proveProLevelSurvivesInputBackpressure(core) {
+    core.reset();
+    core.configureInputMasks();
+    core.step(1000);
+
+    // PIPA counter inputs use yaAGC's one-increment-per-MCT queue path and
+    // can saturate the real 1024-entry ring. Fill it through the production
+    // wrapper instead of substituting a mock packet_write implementation.
+    let queued = 0;
+    let result = 1;
+    while (queued < 5000 && result > 0) {
+        result = core.writeIo(0o237, 1);
+        if (result > 0) queued++;
+    }
+    assert(queued > 0 && queued < 5000 && result === 0,
+        'Comanche055: expected the real input ring to reject a packet when full');
+
+    core.step(1);
+    assert(core.proceedKey(true) > 0,
+        'Comanche055: PRO press was rejected after freeing one input-ring slot');
+    const stepsBeforeRelease = core.totalSteps;
+    assert(core.proceedKey(false) > 0,
+        'Comanche055: PRO release was lost under real input-ring backpressure');
+    assert(core.totalSteps === stepsBeforeRelease + 1,
+        'Comanche055: full-ring PRO retry must advance exactly one accounted MCT');
+
+    core.step(queued + 32);
+    assert(core.inputChannelBits(0o32, 0o20000) === 0o20000,
+        'Comanche055: PRO must return to released-high after the saturated queue drains');
+
+    core.reset();
+    core.configureInputMasks();
+    return queued;
+}
+
 async function main() {
     const wasmBytes = requireFile(WASM, 27270);
     const ropeBytes = requireFile(ROPE, 73728);
@@ -471,6 +506,8 @@ async function main() {
     assert(errors.length === 0, 'Comanche055: real DSKY I/O path reported an error');
     assert(core.totalSteps === 3500,
         `Comanche055: unexpected real execution step count ${core.totalSteps}`);
+    const backpressurePackets = proveProLevelSurvivesInputBackpressure(core);
+    assert(errors.length === 0, 'Comanche055: error during real PRO backpressure test');
 
     core.reset();
     core.configureInputMasks();
@@ -485,6 +522,7 @@ async function main() {
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);
     console.log('  PRO contact: PASS (real Comanche055 observes channel 032 bit 020000 held low and released high)');
+    console.log(`  PRO input backpressure: PASS (${backpressurePackets} real queued PIPA increments; release retried after one MCT)`);
     console.log('real yaAGC WASM runtime smoke: PASS');
 }
 

@@ -254,7 +254,20 @@
 
     proceedKey(pressed){
       // PRO is electrically active-low: 0 means held, 020000 means released.
-      return this.writeIo(PROCEED_CHANNEL, pressed ? 0 : PROCEED_MASK);
+      const value = pressed ? 0 : PROCEED_MASK;
+      const accepted = this.writeIo(PROCEED_CHANNEL, value);
+      if (accepted !== 0 || !this.exports || typeof this.exports.cpu_step !== 'function') {
+        return accepted;
+      }
+
+      // A full yaAGC input ring rejects a packet with 0. A PRO level change
+      // cannot be dropped: advance one MCT to let ChannelInput consume at
+      // least one queued packet, then retry in FIFO order. This is only used
+      // under backpressure, so ordinary PRO transitions do not change timing.
+      this.exports.cpu_step(1);
+      this.totalSteps += 1;
+      this.drainIo();
+      return this.writeIo(PROCEED_CHANNEL, value);
     }
 
     proceedPulse(durationMs=120){
