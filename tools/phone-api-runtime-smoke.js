@@ -30,7 +30,7 @@ assert(phone.includes('const app = window.AGCDSKY;'),'phone-icdu must retain app
 assert(phone.includes('const api = Object.create(app);'),'phone-icdu must define implementations on a module-local export object');
 assert(phone.includes("phoneService.installImplementations(api,'phone-icdu module registration');"),'phone-icdu explicit batch registration missing');
 assert(!phone.includes('const api = window.AGCDSKY;'),'phone-icdu regained direct root-facade alias');
-assert(phone.includes('const e = apolloGimbals(correctedRel);'),'flight IMU path must decompose the corrected attitude with Apollo gimbal geometry');
+assert(phone.includes('const e = apolloGimbals(correctedRel, lastEuler);'),'flight IMU path must decompose the corrected attitude continuously with Apollo gimbal geometry');
 assert(phone.includes('const CM_PIPA_DV_PER_PULSE = 0.0585;')&&!phone.includes('LM_PIPA_DV_PER_PULSE'),
   'phone PIPA input must use only the CM pulse scale');
 const pipaScaleMatch=phone.match(/function pipaDvPerPulse\([\s\S]*?\n  \}/);
@@ -68,12 +68,13 @@ const validCalibration=loadCalibration({schema:1,boresight:[0,3,4]});
 same(validCalibration.boresight,[0,.6,.8],'valid saved boresight was not normalized');
 assert(validCalibration.calibration!==null,'valid saved camera calibration was rejected');
 
-const gimbalMatch=phone.match(/function apolloGimbals\(q\) \{[\s\S]*?\n  \}/);
+const gimbalMatch=phone.match(/function apolloGimbals\(q, previous=null\) \{[\s\S]*?\n  \}/);
 assert(gimbalMatch,'apolloGimbals implementation missing');
 const apolloGimbals=vm.runInNewContext(`(${gimbalMatch[0]})`,{
   Math,
   clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
-  deg:r=>r*180/Math.PI
+  deg:r=>r*180/Math.PI,
+  wrap180:d=>((d+180)%360+360)%360-180
 });
 const qAxis=(axis,degrees)=>{
   const h=degrees*Math.PI/360,c=Math.cos(h),s=Math.sin(h);
@@ -92,6 +93,24 @@ for(const expectedAngles of [[20,0,0],[0,-30,0],[0,0,40],[37,-21,28],[-52,33,-41
   const actual=apolloGimbals(q);
   actual.forEach((value,i)=>assert(angleError(value,expectedAngles[i])<1e-9,
     `Apollo gimbal extraction mismatch for ${JSON.stringify(expectedAngles)}: ${JSON.stringify(actual)}`));
+}
+for(const pole of [-1,1]){
+  let previous=[20,30,pole*89.99];
+  for(const [outer,inner,middle] of [
+    [20,30,pole*89.99],
+    [21,30+pole,pole*90],
+    [21,30+pole,pole*90.01],
+    [21,30+pole,pole*91]
+  ]){
+    const expected=[outer,inner,middle];
+    const q=qMul(qMul(qAxis('y',expected[1]),qAxis('z',expected[2])),qAxis('x',expected[0]));
+    const actual=apolloGimbals(q,previous);
+    actual.forEach((value,i)=>assert(angleError(value,expected[i])<1e-6,
+      `Apollo gimbal branch lost continuity near ${pole*90} degrees: ${JSON.stringify(actual)} vs ${JSON.stringify(expected)}`));
+    actual.forEach((value,i)=>assert(Math.abs(angleError(value,previous[i]))<1.01,
+      `Apollo gimbal pole crossing created an implausible CDU step: ${JSON.stringify(previous)} -> ${JSON.stringify(actual)}`));
+    previous=actual;
+  }
 }
 const assigned=[...phone.matchAll(/^\s*api\.([A-Za-z_$][\w$]*)\s*=\s*(?!=)/gm)].map(m=>m[1]);
 same([...new Set(assigned)].sort(),expected.slice().sort(),'phone-icdu module export set changed without updating the explicit phone registry');
