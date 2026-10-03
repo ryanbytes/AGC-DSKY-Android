@@ -188,7 +188,7 @@
   // so portrait/landscape do not silently swap CDU axes.
   function quaternionFromDeviceOrientation(alpha, beta, gamma) {
     let q = qMul(qMul(qAxis('z',rad(alpha)), qAxis('x',rad(beta))), qAxis('y',rad(gamma)));
-    q = qMul(q, qAxis('z', -rad(screenAngle())));
+    q = qMul(q, qAxis('z', rad(screenAngle())));
     return qNorm(q);
   }
 
