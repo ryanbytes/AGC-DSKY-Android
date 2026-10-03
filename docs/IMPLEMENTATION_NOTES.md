@@ -100,7 +100,7 @@ where W selects a relay row, B is the row discrete/sign bit, and C/D are five-re
 
 The character relay codes are source-backed, not decimal assumptions. The current code has one selector/sign topology shared by real AGC output decoding and synthetic phone-clock relay generation. Invalid five-bit character patterns are rejected rather than silently treated as blank.
 
-Visible mapping covers PROG, VERB, NOUN, all 15 register digits, R1/R2/R3 signs, and the six Apollo-11-era LM relay-12 condition lights. Channel `011` supplies COMP ACTY and UPLINK ACTY. yaAGC synthetic/modulated channel `0163` supplies TEMP, KEY REL, OPR ERR, RESTART, STBY, V/N blanking, and EL-off state.
+Visible CM mapping covers PROG, VERB, NOUN, all 15 register digits, R1/R2/R3 signs, and the four CM-visible relay-12 condition lamps: NO ATT, GIMBAL LOCK, TRACKER, and PROG. The relay-12 decoder retains the six Apollo-11-era condition bits, including ALT and VEL, but the CM face intentionally does not render the LM-only ALT/VEL lamps. Channel `011` supplies COMP ACTY and UPLINK ACTY. yaAGC synthetic/modulated channel `0163` supplies TEMP, KEY REL, OPR ERR, RESTART, STBY, V/N blanking, and EL-off state.
 
 The relay/click model counts low-11 latch changes, including physically driven fields that have no visible connection. The V35 example is selector 8: ordinary display rendering uses only its D field for R1D1, but Comanche `FULLDSP` still drives the unused C five-relay bank.
 
