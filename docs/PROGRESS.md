@@ -2,6 +2,14 @@
 
 The user confirmed that the Regular debug APK runs on their device. The same APK remains verified by `tools/verify-apk.sh` (package/signature, exact CM rope/WASM, and byte-for-byte frontend asset checks); Android 16 emulator `tools/device-full-smoke.sh` had also passed earlier, but the user's device model/OS and full command-level interaction results are not yet known.
 
+## 2026-10-03 current Android emulator Comanche/WebView audit
+
+Re-ran the Regular debug APK (`6d106d1bda3dec2458f30170c15d95a76fe211fd0bcc7cb41a1e909e004632af`) against the attached Android 16 emulator after confirming the installed app is the isolated `org.apollo.agcdsky.eltest` package. `ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT} bash tools/verify-apk.sh app/build/outputs/apk/regular/debug/app-regular-debug.apk regular` passed: package/version/manifest/signature, exact pinned yaAGC/Comanche blobs, byte-identical referenced frontend assets, and absence of an LM rope. The corresponding `tools/device-full-smoke.sh` run passed against the packaged WebView and real WASM.
+
+The live gate read back CM mode `1`; pointer-entered V16N65 returned numeric output with OPR ERR clear; V05N09 displayed three five-digit octal words (`01107 00000 00000`); V14N09 displayed the expected two words (`01107 00000`); held PRO and pause-time release passed; P00/V35 matched `PROG 00`, relay 11 `01265`, `88/+88888` in all registers, relay 12 `00650`, and raw channel 011/0163 state. Page recreation and actual process death each restored the 327,680-byte memory snapshot into a fresh CM-configured core. This is emulator evidence; Fire OS, physical controls/sensors, DreamManager, and handset display remain open.
+
+An iOS Simulator runtime check remains inconclusive on this host: `xcrun simctl list runtimes` produced no output during a 15-second wait and I terminated only that new command. Existing CoreSimulator service and older `simctl` processes were left untouched. iOS runtime behavior remains unverified.
+
 Rebuilt the PWA into a fresh `<temporary-path>` directory, leaving the existing untracked `pwa/dist/` untouched. `node pwa/tools/pwa-smoke.js` and `node pwa/tools/pwa-parity-smoke.js` passed. In Chromium, the packaged service worker installed and controlled the audit page; its cache contained 91 entries and all required page, runtime, WASM, rope, and icon resources. All four packaged PNG icons decoded at their expected dimensions (180, 192, 512, and 512 square). After stopping the local HTTP server, reloading the DSKY still rendered its full page structure from the worker's offline cache. The later main merge and Pages deployment are recorded below.
 
 ## 2026-10-03 Apple builds reconciled to current shared assets
