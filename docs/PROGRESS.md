@@ -20,6 +20,10 @@ Reviewed release discovery and fallback, bounded APK download, SHA-256/sidecar p
 
 Rebuilt the isolated macOS Debug app with temporary error capture. The packaged page loaded and its DebugBridge reported document-start installation and `FRONTEND READY app`. CUA keyboard and DSKY-button actions did not produce frontend input or runtime-error events, so this run does not establish whether the earlier blank-register/OPR ERR symptom came from yaAGC startup or from input delivery. The temporary Swift instrumentation was restored byte-for-byte to the original source. macOS AGC command execution remains unverified; the iOS Simulator is still blocked by the CoreSimulator/Xcode version mismatch. No release artifact was created.
 
+### 2026-10-03 current source-suite replay
+
+On source commit `a4eb12111b3d347fa9cb22accac3740b9db318a0`, `env TZ=UTC bash tools/run-source-smokes.sh` passed all 99 canonical Node smokes plus `ntp-time-smoke.sh`. The real pinned Comanche055/WASM gate verified V16N65E, all eight V05N09E numeric selectors, V14N09E's six R1/R2 selectors (Comanche V14 displays components 1 and 2), P00 relay 11 `01265`, V35 relay 12 `00650`, and MARK/KEYRUPT2 consumption. `adb devices -l` showed only the Android 16 emulator; no physical Fire/handset was attached. No APK was built, signed, or published.
+
 ### 2026-10-03 Activity lifecycle and asset-origin audit
 
 Reviewed Activity pause/resume/destroy handling, sensor registration and acceleration fallbacks, JavaScript visibility transitions and core snapshot/resume, Dream WebView teardown, and `NetClient`'s synthetic HTTPS asset origin and decoded path-segment checks. No source defect was demonstrated. `adb devices -l` showed only `emulator-5554` (`sdk_gphone64_arm64`), so this pass cannot close physical handset/Fire sensor or display gates.
