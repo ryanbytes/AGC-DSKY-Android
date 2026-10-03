@@ -11,6 +11,7 @@ const html=fs.readFileSync(path.join(ROOT,'app/src/main/assets/index.html'),'utf
 const shell=fs.readFileSync(path.join(ROOT,'app/src/main/assets/app-shell-runtime.js'),'utf8');
 const manifest=fs.readFileSync(path.join(ROOT,'app/src/main/AndroidManifest.xml'),'utf8');
 const prep=fs.readFileSync(path.join(ROOT,'tools/prepare-update-release.sh'),'utf8');
+const retryPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateRetryPolicy.java'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 for(const marker of [
   'releases/latest',
@@ -25,8 +26,7 @@ for(const marker of [
   'RETRY_INTERVAL_MS',
   'PREF_LAST_ATTEMPT',
   'UnknownHostException',
-  'isTransientNetworkFailure',
-  'scheduleRetry(context)',
+  'UpdateRetryPolicy.isRetryable',
   'BuildConfig.DEBUG',
   '"fire".equals(BuildConfig.FLAVOR)',
   'app-fire-release.apk',
@@ -45,7 +45,7 @@ for(const marker of [
   'Intent.ACTION_INSTALL_PACKAGE',
   'Intent.FLAG_GRANT_READ_URI_PERMISSION',
   'UpdateApkProvider.uriFor(activity, apk)'
-])assert(java.includes(marker)||apkProvider.includes(marker),`missing updater safety marker: ${marker}`);
+])assert(java.includes(marker)||apkProvider.includes(marker)||retryPolicy.includes(marker),`missing updater safety marker: ${marker}`);
 const fetchIndex=java.indexOf('Release release = fetchLatestReleaseResilient();');
 const noUpdateIndex=java.indexOf('if (release == null || compareVersion(release.version, BuildConfig.VERSION_NAME) <= 0)');
 const noUpdateSuccessIndex=java.indexOf('putLong(PREF_LAST_CHECK, System.currentTimeMillis())',noUpdateIndex);
@@ -57,7 +57,11 @@ assert(java.indexOf('remove(PREF_LAST_ATTEMPT)',noUpdateIndex)<pendingIndex&&
        java.indexOf('remove(PREF_LAST_ATTEMPT)',pendingIndex)>pendingIndex,
   'failed update acquisition must retain its retry throttle until a successful result');
 assert(!java.includes('putLong(PREF_LAST_CHECK, now).apply()'),'updater must not consume the 12-hour check window before network success');
-assert(java.includes('if (isTransientNetworkFailure(error)) {')&&java.includes('scheduleRetry(context);')&&java.includes('notifyStatus(listener, "NETWORK ERROR")'),'transient updater network failures must schedule retry and report manual-check status');
+assert(java.includes('if (UpdateRetryPolicy.isRetryable(error)) {')&&java.includes('scheduleRetry(context, UpdateRetryPolicy.retryDelayMillis(error, RETRY_INTERVAL_MS));')&&java.includes('notifyStatus(listener, "NETWORK ERROR")'),'transient updater failures must schedule retry and report manual-check status');
+const retryCatch=java.indexOf('if (UpdateRetryPolicy.isRetryable(error)) {');
+const retryCatchEnd=java.indexOf('} else {',retryCatch);
+assert(retryCatch>=0&&retryCatchEnd>retryCatch&&java.slice(retryCatch,retryCatchEnd).includes('.remove(PREF_LAST_CHECK).apply();'),
+  'transient failure must clear stale success freshness so the scheduled retry can actually run');
 for(const marker of ['AppUpdater.checkNow(context)','AlarmManager.ELAPSED_REALTIME','setInexactRepeating','CHECK_INTERVAL_MS'])assert(provider.includes(marker),`startup provider missing periodic updater marker: ${marker}`);
 assert(checkReceiver.includes('AppUpdater.check(context)'),'periodic receiver does not invoke updater');
 assert(activity.includes('AppUpdater.onForeground(this)'),'launcher activity must resume pending update UI from the foreground');
@@ -105,6 +109,27 @@ assert(java.includes('new WeakReference<>(activity)')&&java.includes('new Handle
   'verified pending update must be handed to the foreground activity');
 assert(java.includes('MAX_APK_BYTES = 128L * 1024L * 1024L')&&java.includes('if (total > MAX_APK_BYTES) throw new IOException("APK response too large")'),
   'APK download must be bounded while streaming, even when Content-Length is absent or inaccurate');
+assert(retryPolicy.includes('statusCode == 408 || statusCode == 429')&&retryPolicy.includes('statusCode >= 500 && statusCode <= 599')&&
+       retryPolicy.includes('statusCode == 403')&&retryPolicy.includes('rateLimitRemaining')&&retryPolicy.includes('secondary rate limit'),
+  'HTTP transient failures and explicitly identified GitHub 403 rate limits must enter the retryable failure path');
+assert(retryPolicy.includes('error.getSuppressed()')&&retryPolicy.includes('isRetryable(suppressed, visited)')&&retryPolicy.includes('error.getCause(), visited'),
+  'retry classification must inspect nested causes and suppressed fallback errors');
+assert(java.includes('if (status == 404) return null;'),
+  'missing latest-release endpoint must remain a successful no-update result');
+for (const [method, endpoint] of [['fetchLatestRelease','release'],['downloadToFile','APK'],['downloadText','digest']]) {
+  const start=java.indexOf(`private static ${method==='fetchLatestRelease'?'Release':method==='downloadToFile'?'void':'String'} ${method}(`);
+  const end=java.indexOf('\n    private static ',start+1);
+  assert(start>=0&&end>start&&java.slice(start,end).includes(`httpStatusException("${endpoint}", connection, status)`),
+    `${endpoint} HTTP failures must preserve status for retry classification`);
+}
+assert(java.includes('connection.getHeaderField("Retry-After")')&&
+       java.includes('connection.getHeaderField("X-RateLimit-Remaining")')&&
+       java.includes('connection.getHeaderField("X-RateLimit-Reset")')&&
+       java.includes('readAll(error, 16_384)'),
+  'GitHub 403 retry handling must inspect bounded error details and rate-limit headers');
+assert(java.includes('scheduleRetry(context, UpdateRetryPolicy.retryDelayMillis(error, RETRY_INTERVAL_MS))')&&
+       java.includes('SystemClock.elapsedRealtime() + Math.max(RETRY_INTERVAL_MS, delayMs)'),
+  'scheduled retry must not occur before GitHub Retry-After/rate-limit reset windows');
 assert(java.includes('if (temporary.exists()) temporary.delete();'),
   'failed or oversized APK downloads must remove their partial file');
 assert(java.includes('new Asset("app-fire-release.apk.sha256"')&&java.includes('new Asset("app-regular-release.apk.sha256"'),

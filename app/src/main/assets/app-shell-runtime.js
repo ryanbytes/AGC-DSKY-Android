@@ -193,6 +193,20 @@ function initializeAppShell(api,services){
   }
   appShellInitialized=true;
   let holdTimer=0,tapHideControls=false;
+  const controlsPanel=$('controls'),auxTools=document.querySelector('.options-tools');
+  if(controlsPanel&&auxTools){
+    function syncAuxToolsPosition(){
+      if(!auxTools.open){controlsPanel.classList.remove('aux-menu-below');return}
+      const summary=auxTools.querySelector('summary'),popup=auxTools.querySelector('.options-tools-menu');
+      if(!summary||!popup)return;
+      const panelRect=controlsPanel.getBoundingClientRect(),summaryRect=summary.getBoundingClientRect(),popupHeight=popup.getBoundingClientRect().height;
+      const aboveSpace=summaryRect.top-panelRect.top,belowSpace=panelRect.bottom-summaryRect.bottom;
+      controlsPanel.classList.toggle('aux-menu-below',aboveSpace+0.5<popupHeight&&belowSpace+0.5>=popupHeight);
+    }
+    auxTools.addEventListener('toggle',syncAuxToolsPosition);
+    controlsPanel.addEventListener('scroll',syncAuxToolsPosition,{passive:true});
+    addEventListener('resize',syncAuxToolsPosition,{passive:true});
+  }
   document.addEventListener('pointerdown',e=>{
     tapHideControls=false;
     if(shellState.dream)return;

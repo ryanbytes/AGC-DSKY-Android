@@ -7,6 +7,10 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const activity = fs.readFileSync(
     path.join(ROOT, 'app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java'), 'utf8');
+const gravityFilter = fs.readFileSync(
+    path.join(ROOT, 'app/src/main/java/org/apollo/agcdsky/AccelerometerGravityFilter.java'), 'utf8');
+const registrationPolicy = fs.readFileSync(
+    path.join(ROOT, 'app/src/main/java/org/apollo/agcdsky/SensorRegistrationPolicy.java'), 'utf8');
 const dreamService = fs.readFileSync(
     path.join(ROOT, 'app/src/main/java/org/apollo/agcdsky/AgcDreamService.java'), 'utf8');
 const reporter = fs.readFileSync(
@@ -51,6 +55,31 @@ assert(compact(activity).includes('catch(RuntimeExceptionignored){magneticDeclin
     'failed geomagnetic-field calculation must not report location as known');
 assert(activity.includes('AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)'),
     'SensorMainActivity resume must force a hidden transition before visible resume');
+const activityCompact = compact(activity);
+assert(activityCompact.includes('accelerometerGravityFilter.removeGravity(x,y,z,event.timestamp,gravitySensorRegistered)'),
+    'accelerometer callback must use the independently testable gravity-removal filter');
+assert(gravityFilter.includes('TIME_CONSTANT_SECONDS = 0.23f'),
+    'accelerometer gravity fallback must use an explicit time-constant policy');
+assert(gravityFilter.replace(/\s+/g, '').includes('floatelapsedSeconds=(timestampNs-lastTimestampNs)*1.0e-9f;floatalpha=TIME_CONSTANT_SECONDS/(TIME_CONSTANT_SECONDS+elapsedSeconds);'),
+    'accelerometer gravity fallback must scale its low-pass coefficient to measured event spacing');
+assert(gravityFilter.includes('externalGravityRegistered && !gravityValid) return null'),
+    'accelerometer samples must be withheld until a registered gravity sensor supplies its first sample');
+assert(activityCompact.includes('SensorRegistrationPolicy.register(this::registerSensorListener'),
+    'native activity must use the testable registration policy for Android listener results');
+assert(activityCompact.includes('caseLINEAR_ACCELERATION:returnsensorManager.registerListener(this,linearAccelerationSensor,SensorManager.SENSOR_DELAY_GAME)')
+    && activityCompact.includes('caseGRAVITY:returnsensorManager.registerListener(this,gravitySensor,SensorManager.SENSOR_DELAY_GAME)')
+    && activityCompact.includes('caseACCELEROMETER:returnsensorManager.registerListener(this,accelerometerSensor,SensorManager.SENSOR_DELAY_GAME)'),
+    'production registrar must map policy decisions to the corresponding Android sensors');
+assert(registrationPolicy.includes('if (!linear)')
+    && registrationPolicy.includes('gravity = hasGravity && registrar.register(SensorKind.GRAVITY)')
+    && registrationPolicy.includes('accelerometer = hasAccelerometer && registrar.register(SensorKind.ACCELEROMETER)'),
+    'failed preferred registration must attempt both available fallback sensors');
+assert(registrationPolicy.includes('return gravityRegistered ? "accelerometer_minus_gravity" : "accelerometer_lowpass"'),
+    'active fallback source must depend on successful gravity registration, not sensor discovery');
+assert(activityCompact.includes('safeAcceleration,linearAccelerationRegistered||accelerometerRegistered'),
+    'PIPA sensor availability must reflect successful registration instead of sensor discovery');
+assert(activityCompact.includes('safeAttitude,attitudeRegistered'),
+    'IMU sensor availability must reflect successful registration instead of sensor discovery');
 
 assert(proceed.includes('function releaseProceed()'),
     'PRO electrical controller must retain the held-contact release helper');

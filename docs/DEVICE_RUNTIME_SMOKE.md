@@ -55,15 +55,17 @@ The general live gate checks:
 - PRO is asserted on pointer-down, remains visibly held, and releases on pointer-up
 - a hidden/visible `visibilitychange` transition releases held PRO, pauses and resumes the same in-memory AGC instance without replacing it
 - the CM run produces real DSKY output without an AGC error
-- page recreation restores requested CM AGC mode and starts a new CM core
+- page recreation restores requested CM AGC mode and the full WASM linear-memory snapshot into a new CM core
 - the new core reports CM peripheral mode after page recreation and Android process recreation
-- the pre-reload core tag does not survive page recreation, proving a new JavaScript/yaAGC core object is constructed rather than presenting the old in-memory core as serialized state
+- the pre-reload core tag does not survive page recreation, proving a new JavaScript/yaAGC core object is constructed; a separate `lastAction=restored` assertion proves saved WASM memory is imported into it
 
-The smoke snapshots the persistent run-mode setting and attempts to restore it afterward. If the pre-test state was an active AGC run, restoration starts a fresh CM AGC reset; exact CPU/erasable-memory state is not serialized by the app.
+The smoke records and restores the persistent run-mode setting. The page-recreation gate also saves a live 327,680-byte WASM memory checkpoint before reload and requires the new core to report `lastAction=restored` afterward. Snapshot restore checks the saved mission and yaAGC version, then validates the full linear-memory length and fingerprint. JavaScript scheduler counters restart and external DSKY inputs are released; this gate proves AGC memory restoration, not uninterrupted wall-clock execution or physical DSKY fidelity.
 
 ## Relay- and channel-aware V35 semantic gate
 
-`tools/device-v35-smoke.js` enters CM P00 through the real pointer sequence `V37E00E`, waits until channel-010 selector 11 actually carries PROG `00` low-11 `01265`, then enters `V35E` through the same on-screen pointer handlers.
+`tools/device-v35-smoke.js` enters CM P00 through the pointer sequence `V37E00E`, waits until channel-010 selector 11 actually carries PROG `00` low-11 `01265`, executes `V16N65E` through the same on-screen pointer handlers, and requires its exact Pinball code sequence plus numeric register output with raw channel-0163 and rendered OPR ERR both clear. It returns to P00, enters and executes source-backed `V05N09E` through pointer input, checks the six exact Pinball key codes and three five-digit octal result words for the `FAILREG` alarm-code noun, then returns to P00 and enters/executes `V14N09E` through DevTools `Input.dispatchKeyEvent`. That last case exercises the WebView's hardware-key `keydown`/`keyup` listener and requires two octal result words with OPR ERR clear. It then enters `V35E`. The host real-WASM gate independently requires all eight numeric relay selectors for V05N09 and exactly the six R1/R2 selectors for V14N09. DevTools keyboard events are emulator input evidence; they do not replace testing a physical keyboard on a handset.
+
+To save a visual artifact from the verified real test, set `AGC_V35_SCREENSHOT_PATH` to a new local filename before running the device smoke. The driver verifies the AGC display model and the values written to the actual SVG digit slots, waits two animation frames, rechecks the full V35 and relay/channel state, then captures the WebView with DevTools `Page.captureScreenshot`. It refuses to overwrite an existing file. This is an inspection aid and does not replace the semantic assertions.
 
 The frontend exposes read-only diagnostics:
 
@@ -142,12 +144,12 @@ The process gate:
 7. requires `pidof` to become empty, proving the process actually disappeared rather than inferring death from a PID change
 8. relaunches the Activity and discovers the new process/WebView socket
 9. reconnects through CDP
-10. requires the persisted smoke nonce, CM mission, requested AGC mode, a running yaAGC version, and real DSKY output channels
+10. requires the persisted smoke nonce, CM mission, requested AGC mode, a running yaAGC version, a restored full linear-memory snapshot, and real DSKY output channels
 11. restores the user's original frontend mission/run-mode preferences and removes the temporary smoke keys
 
 The two-second delay is needed because Android WebView writes localStorage to its origin store asynchronously; without it, an immediate force-stop can race the storage commit. A numeric PID difference is reported but is not the proof boundary because Linux can theoretically reuse a PID. The observed no-process interval after `force-stop` is the relevant evidence.
 
-This proves Android process-death run-mode restoration and fresh core construction. It still does **not** claim CPU/erasable-memory continuation across process death; the intended behavior is a fresh CM AGC reset with the requested AGC mode restored.
+This proves Android process-death run-mode restoration, fresh core construction, and restoration of the saved full WASM linear memory. It does not claim uninterrupted execution during process death: JavaScript scheduler counters restart and external DSKY inputs are released.
 
 ## Build-time semantic counterparts
 
@@ -174,15 +176,15 @@ These tests prove source/model and real Comanche-rope/WASM semantics before Grad
 A passing full-device smoke does **not** by itself prove:
 
 - pixel-perfect DSKY appearance on the physical display
-- real OS screen-off/screen-on behavior rather than the direct lifecycle bridge check
+- Fire OS and physical-handset screen-off/screen-on behavior. The Android 16 emulator now has a separate real system sleep/wake check: during `Asleep`, packaged WebView state reports `appVisible=false`, `coreRunning=false`, and the same core identity; after wake, the same Activity resumes the same core. The emulator AC stay-awake setting and app `FLAG_KEEP_SCREEN_ON` remained enabled.
 - Activity recreation caused by Android configuration/lifecycle events beyond page reload and explicit process force-stop/relaunch
-- live packaged-WebView Pinball semantics beyond the automated V35E light-test sequence. The host real-WASM gate covers Comanche V16N65/P00 through actual channel-015 input.
+- live packaged-WebView Pinball semantics beyond V16N65E, V05N09E, V14N09E, and the automated V35E light-test sequence. The host real-WASM gate additionally covers Comanche P00 and MARK/KEYRUPT2 through actual channel-015/channel-016 input. Physical keyboard behavior on a handset remains unverified.
 - PRO standby semantics for a long physical hold
-- DreamService selection/startup and non-interactivity
+- DreamService selection/startup, actual Android touch delivery, lifecycle, and DIM/BRIGHT/SOLAR behavior. Source intends interactive mode: a brief tap toggles relay ticking and a 1.8-second hold exits through `DreamBridge`; `tools/dream-interaction-smoke.js` checks the source gesture path, but this emulator has no DreamManager service.
 - DREAM DIM / BRIGHT / SOLAR physical brightness behavior
 - first-use Android/GrapheneOS location permission behavior for SOLAR
 - portrait/landscape DISPLAY cropping on the target phone
-- the source-level CM configuration check has host real-WASM coverage; Android/WebView execution still needs device verification
+- Fire-specific CM configuration and runtime behavior remain unverified; the current Regular debug Android/WebView gate reads back `get_cm_mode() == 1`.
 
 Those remain explicit acceptance gates. Do not upgrade them to verified status from this smoke alone.
 

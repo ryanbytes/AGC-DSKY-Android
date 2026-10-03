@@ -197,6 +197,14 @@ function testNavigationAndSnapshots() {
 
     bytes[10] = 0;
     bytes[11] = 0;
+    const beforeRejectedImport = core.snapshotFingerprint();
+    let rejectedFingerprint = false;
+    try { core.importSnapshot({...snapshot, fingerprint:'00000000'}); }
+    catch (error) { rejectedFingerprint = /fingerprint mismatch/.test(String(error)); }
+    assert(rejectedFingerprint,
+        'snapshot import must reject a mismatched memory fingerprint');
+    assert(core.snapshotFingerprint() === beforeRejectedImport,
+        'rejected snapshot must not mutate live WASM memory');
     assert(core.importSnapshot(snapshot) === true,
         'snapshot import must report success');
     assert(bytes[10] === 0x12 && bytes[11] === 0x34,

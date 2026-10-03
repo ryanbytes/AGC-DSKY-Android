@@ -2,6 +2,7 @@
 'use strict';
 const fs=require('fs');
 const path=require('path');
+const vm=require('vm');
 const ROOT=path.resolve(__dirname,'..');
 const SRC=fs.readFileSync(path.join(ROOT,'app/src/main/assets/diagnostics.js'),'utf8');
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
@@ -14,6 +15,7 @@ for(const marker of [
   "'REAL V35 · CLOSE AND KEY V 3 5 ENTR'",
   'id="diag-ntp-sync"',
   "document.getElementById('diag-ntp-sync').onclick=syncNetworkTimeNow",
+  "if(!phoneStatus()?.pipa?.calibrated){pipaTest={ok:false,message:'CALIBRATE PIPA SENSOR FIRST'}",
   "window.AGCDSKY_SHELL.requestNetworkTimeSync",
   "section('TIME')",
   "'Clock source'",
@@ -87,6 +89,11 @@ for(const marker of [
 assert(!/startDskyTest[\s\S]{0,1200}(?:keyMake|keyReset|writeIo|proceed|lampTest)/.test(SRC),
   'diagnostics V35 must not inject AGC inputs or synthesize display state; V35 stays user-driven through physical DSKY keys');
 assert(!SRC.includes('RUN CLOCK DSKY SELF-TEST')&&!SRC.includes('V35 HARDWARE SEQUENCE STARTED'),'synthetic CLOCK V35 wording returned');
+const rowHelpers=SRC.match(/function escapeHtml\(value\)\{[\s\S]*?function row\(k,v\)\{[^\n]*\}/);
+assert(rowHelpers,'diagnostics row renderer must escape dynamic HTML text');
+const renderRow=vm.runInNewContext(`(()=>{${rowHelpers[0]};return row})()`);
+assert(renderRow('<label>','<img src=x onerror=alert(1)>')==='<tr><td>&lt;label&gt;</td><td>&lt;img src=x onerror=alert(1)&gt;</td></tr>',
+  'diagnostics row values must render as text and never create markup');
 console.log('diagnostics self-test / network-time smoke: PASS');
 
 assert(!SRC.includes('onclick=startFullSelfTest'),'diagnostics full self-test handler must reference the implemented runFullSelfTest function');

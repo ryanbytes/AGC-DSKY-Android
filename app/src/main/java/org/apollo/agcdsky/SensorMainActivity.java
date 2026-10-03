@@ -56,6 +56,8 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     private SensorManager sensorManager;
     private Sensor attitudeSensor;
     private Sensor magneticAttitudeSensor;
+    private boolean attitudeRegistered;
+    private boolean magneticAttitudeRegistered;
     private Sensor linearAccelerationSensor;
     private Sensor accelerometerSensor;
     private Sensor gravitySensor;
@@ -63,8 +65,10 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
     private String magneticSensorName = "none";
     private int magneticAccuracy;
     private String accelerationSensorName = "none";
-    private final float[] gravityEstimate = {0f,0f,0f};
-    private boolean gravityValid;
+    private boolean linearAccelerationRegistered;
+    private boolean gravitySensorRegistered;
+    private boolean accelerometerRegistered;
+    private final AccelerometerGravityFilter accelerometerGravityFilter = new AccelerometerGravityFilter();
     private boolean sensorRegistered;
     private long lastSensorPushNs;
     private long lastMagneticPushNs;
@@ -120,10 +124,10 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
         magneticAttitudeSensor=sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         if(magneticAttitudeSensor!=null)magneticSensorName=magneticAttitudeSensor!=attitudeSensor?"rotation_vector_primary":"rotation_vector_reference";
         linearAccelerationSensor=sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        if(linearAccelerationSensor!=null)accelerationSensorName="linear_acceleration";else{
-            accelerometerSensor=sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);gravitySensor=sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
-            if(accelerometerSensor!=null)accelerationSensorName=gravitySensor!=null?"accelerometer_minus_gravity":"accelerometer_lowpass";
-        }
+        accelerometerSensor=sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        gravitySensor=sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+        if(linearAccelerationSensor!=null)accelerationSensorName="linear_acceleration";
+        else if(accelerometerSensor!=null)accelerationSensorName=gravitySensor!=null?"accelerometer_minus_gravity":"accelerometer_lowpass";
     }
 
     private void configureWindow(){
@@ -157,18 +161,21 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
                 "if(window.AGCDSKY_SHELL&&AGCDSKY_SHELL.nativeUpdateStatus){AGCDSKY_SHELL.nativeUpdateStatus("+json+")}",null);});
     }
 
-    private void pushSensorAvailability(){if(webView==null)return;webViewHandler.postDelayed(()->{if(webView==null)return;String safeAttitude=sensorName.replace("'","");String safeMagnetic=magneticSensorName.replace("'","");String safeAcceleration=accelerationSensorName.replace("'","");String js=String.format(Locale.US,"if(window.AGCDSKY){if(AGCDSKY.nativePhoneSensorStatus){AGCDSKY.nativePhoneSensorStatus('%s',%s)}if(AGCDSKY.nativeMagneticSensorStatus){AGCDSKY.nativeMagneticSensorStatus('%s',%s,%s)}if(AGCDSKY.nativePipaSensorStatus){AGCDSKY.nativePipaSensorStatus('%s',%s)}}",safeAttitude,attitudeSensor!=null,safeMagnetic,magneticAttitudeSensor!=null,magneticAttitudeSensor!=null&&magneticAttitudeSensor!=attitudeSensor,safeAcceleration,linearAccelerationSensor!=null||accelerometerSensor!=null);webView.evaluateJavascript(js,null);},350L);}
+    private void pushSensorAvailability(){if(webView==null)return;webViewHandler.postDelayed(()->{if(webView==null)return;String safeAttitude=sensorName.replace("'","");String safeMagnetic=magneticSensorName.replace("'","");String safeAcceleration=accelerationSensorName.replace("'","");boolean magneticAvailable=magneticAttitudeSensor!=null&&(magneticAttitudeSensor==attitudeSensor?attitudeRegistered:magneticAttitudeRegistered);String js=String.format(Locale.US,"if(window.AGCDSKY){if(AGCDSKY.nativePhoneSensorStatus){AGCDSKY.nativePhoneSensorStatus('%s',%s)}if(AGCDSKY.nativeMagneticSensorStatus){AGCDSKY.nativeMagneticSensorStatus('%s',%s,%s)}if(AGCDSKY.nativePipaSensorStatus){AGCDSKY.nativePipaSensorStatus('%s',%s)}}",safeAttitude,attitudeRegistered,safeMagnetic,magneticAvailable,magneticAvailable&&magneticAttitudeSensor!=attitudeSensor,safeAcceleration,linearAccelerationRegistered||accelerometerRegistered);webView.evaluateJavascript(js,null);},350L);}
     private void pushNtpStatus(NtpTime.Status status){String json=JSONObject.quote(status.toJson());webViewHandler.post(()->{if(webView!=null)webView.evaluateJavascript("if(window.AGCDSKY&&AGCDSKY.nativeNtpStatus){AGCDSKY.nativeNtpStatus("+json+")}",null);});}
-    private void registerSensors(){if(sensorManager==null||sensorRegistered)return;boolean registered=false;if(attitudeSensor!=null)registered|=sensorManager.registerListener(this,attitudeSensor,SensorManager.SENSOR_DELAY_GAME);if(magneticAttitudeSensor!=null&&magneticAttitudeSensor!=attitudeSensor)registered|=sensorManager.registerListener(this,magneticAttitudeSensor,SensorManager.SENSOR_DELAY_UI);if(linearAccelerationSensor!=null)registered|=sensorManager.registerListener(this,linearAccelerationSensor,SensorManager.SENSOR_DELAY_GAME);else{if(gravitySensor!=null)registered|=sensorManager.registerListener(this,gravitySensor,SensorManager.SENSOR_DELAY_GAME);if(accelerometerSensor!=null)registered|=sensorManager.registerListener(this,accelerometerSensor,SensorManager.SENSOR_DELAY_GAME);}sensorRegistered=registered;}
-    private void unregisterSensors(){if(sensorManager!=null&&sensorRegistered)sensorManager.unregisterListener(this);sensorRegistered=false;gravityValid=false;lastSensorPushNs=0L;lastMagneticPushNs=0L;lastAccelerationPushNs=0L;}
+    private boolean registerSensorListener(SensorRegistrationPolicy.SensorKind kind){switch(kind){case ATTITUDE:return sensorManager.registerListener(this,attitudeSensor,SensorManager.SENSOR_DELAY_GAME);case MAGNETIC_ATTITUDE:return sensorManager.registerListener(this,magneticAttitudeSensor,SensorManager.SENSOR_DELAY_UI);case LINEAR_ACCELERATION:return sensorManager.registerListener(this,linearAccelerationSensor,SensorManager.SENSOR_DELAY_GAME);case GRAVITY:return sensorManager.registerListener(this,gravitySensor,SensorManager.SENSOR_DELAY_GAME);case ACCELEROMETER:return sensorManager.registerListener(this,accelerometerSensor,SensorManager.SENSOR_DELAY_GAME);default:throw new IllegalArgumentException("Unknown sensor kind: "+kind);}}
+    private void registerSensors(){if(sensorManager==null||sensorRegistered)return;SensorRegistrationPolicy.Result result=SensorRegistrationPolicy.register(this::registerSensorListener,attitudeSensor!=null,magneticAttitudeSensor!=null,magneticAttitudeSensor==attitudeSensor,linearAccelerationSensor!=null,gravitySensor!=null,accelerometerSensor!=null);attitudeRegistered=result.attitudeRegistered;magneticAttitudeRegistered=result.magneticAttitudeRegistered;linearAccelerationRegistered=result.linearAccelerationRegistered;gravitySensorRegistered=result.gravityRegistered;accelerometerRegistered=result.accelerometerRegistered;accelerationSensorName=result.accelerationSource();sensorRegistered=result.anyRegistered();}
+    private void unregisterSensors(){if(sensorManager!=null&&sensorRegistered)sensorManager.unregisterListener(this);sensorRegistered=false;attitudeRegistered=false;magneticAttitudeRegistered=false;linearAccelerationRegistered=false;gravitySensorRegistered=false;accelerometerRegistered=false;accelerometerGravityFilter.reset();lastSensorPushNs=0L;lastMagneticPushNs=0L;lastAccelerationPushNs=0L;}
 
     @Override public void onSensorChanged(SensorEvent event){
         if(event==null||webView==null)return;
-        if(event.sensor==attitudeSensor){if(lastSensorPushNs!=0L&&event.timestamp-lastSensorPushNs<SENSOR_PUSH_INTERVAL_NS)return;lastSensorPushNs=event.timestamp;try{float[] q=new float[4];SensorManager.getQuaternionFromVector(q,event.values);int angle=displayAngleDegrees();pushPhoneQuaternion(q,angle);if(event.sensor==magneticAttitudeSensor){pushMagneticQuaternion(q,angle);pushSkyPointing(event.values);}}catch(RuntimeException ignored){}return;}
-        if(event.sensor==magneticAttitudeSensor){if(lastMagneticPushNs!=0L&&event.timestamp-lastMagneticPushNs<MAGNETIC_PUSH_INTERVAL_NS)return;lastMagneticPushNs=event.timestamp;try{float[] q=new float[4];SensorManager.getQuaternionFromVector(q,event.values);int angle=displayAngleDegrees();pushMagneticQuaternion(q,angle);pushSkyPointing(event.values);}catch(RuntimeException ignored){}return;}
-        if(event.sensor==gravitySensor){gravityEstimate[0]=event.values[0];gravityEstimate[1]=event.values[1];gravityEstimate[2]=event.values[2];gravityValid=true;return;}
-        if(event.sensor!=linearAccelerationSensor&&event.sensor!=accelerometerSensor)return;if(lastAccelerationPushNs!=0L&&event.timestamp-lastAccelerationPushNs<SENSOR_PUSH_INTERVAL_NS)return;lastAccelerationPushNs=event.timestamp;
-        float x=event.values[0],y=event.values[1],z=event.values[2];if(event.sensor==accelerometerSensor){if(gravitySensor==null){if(!gravityValid){gravityEstimate[0]=x;gravityEstimate[1]=y;gravityEstimate[2]=z;gravityValid=true;}else{gravityEstimate[0]=gravityEstimate[0]*0.92f+x*0.08f;gravityEstimate[1]=gravityEstimate[1]*0.92f+y*0.08f;gravityEstimate[2]=gravityEstimate[2]*0.92f+z*0.08f;}}if(gravityValid){x-=gravityEstimate[0];y-=gravityEstimate[1];z-=gravityEstimate[2];}}pushLinearAcceleration(x,y,z,event.timestamp);
+        if(event.sensor==attitudeSensor&&attitudeRegistered){if(lastSensorPushNs!=0L&&event.timestamp-lastSensorPushNs<SENSOR_PUSH_INTERVAL_NS)return;lastSensorPushNs=event.timestamp;try{float[] q=new float[4];SensorManager.getQuaternionFromVector(q,event.values);int angle=displayAngleDegrees();pushPhoneQuaternion(q,angle);if(event.sensor==magneticAttitudeSensor){pushMagneticQuaternion(q,angle);pushSkyPointing(event.values);}}catch(RuntimeException ignored){}return;}
+        if(event.sensor==magneticAttitudeSensor&&magneticAttitudeRegistered){if(lastMagneticPushNs!=0L&&event.timestamp-lastMagneticPushNs<MAGNETIC_PUSH_INTERVAL_NS)return;lastMagneticPushNs=event.timestamp;try{float[] q=new float[4];SensorManager.getQuaternionFromVector(q,event.values);int angle=displayAngleDegrees();pushMagneticQuaternion(q,angle);pushSkyPointing(event.values);}catch(RuntimeException ignored){}return;}
+        if(event.sensor==gravitySensor&&gravitySensorRegistered){accelerometerGravityFilter.onGravitySample(event.values[0],event.values[1],event.values[2]);return;}
+        if((event.sensor!=linearAccelerationSensor||!linearAccelerationRegistered)&&(event.sensor!=accelerometerSensor||!accelerometerRegistered))return;if(lastAccelerationPushNs!=0L&&event.timestamp-lastAccelerationPushNs<SENSOR_PUSH_INTERVAL_NS)return;lastAccelerationPushNs=event.timestamp;
+        // Do not forward uncorrected gravity while the registered gravity
+        // stream is waiting to produce its first sample.
+        float x=event.values[0],y=event.values[1],z=event.values[2];if(event.sensor==accelerometerSensor){float[] linear=accelerometerGravityFilter.removeGravity(x,y,z,event.timestamp,gravitySensorRegistered);if(linear==null)return;x=linear[0];y=linear[1];z=linear[2];}pushLinearAcceleration(x,y,z,event.timestamp);
     }
     private void pushPhoneQuaternion(float[] q,int displayAngle){if(webView==null||q==null||q.length<4)return;int a=((displayAngle%360)+360)%360;String js=String.format(Locale.US,"(function(){if(!(window.AGCDSKY&&AGCDSKY.nativePhoneQuaternion))return;AGCDSKY.nativePhoneQuaternion(%.9f,%.9f,%.9f,%.9f,%d);try{const q=[%.9f,%.9f,%.9f,%.9f];const n=Math.hypot(q[0],q[1],q[2],q[3]);if(!(n>0))return;for(let i=0;i<4;i++)q[i]/=n;window.dispatchEvent(new CustomEvent('agcdsky-phonequaternion',{detail:Object.freeze({rawQuaternion:Object.freeze(q),displayAngle:%d,source:'android-native'})}))}catch(_){}})()",q[0],q[1],q[2],q[3],a,q[0],q[1],q[2],q[3],a);webViewHandler.post(()->{if(webView!=null)webView.evaluateJavascript(js,null);});}
     private void pushLinearAcceleration(float x,float y,float z,long timestampNs){if(webView==null)return;double seconds=timestampNs*1.0e-9;int angle=displayAngleDegrees();String js=String.format(Locale.US,"if(window.AGCDSKY&&AGCDSKY.nativePhoneLinearAcceleration){AGCDSKY.nativePhoneLinearAcceleration(%.8f,%.8f,%.8f,%.8f,%d)}",x,y,z,seconds,angle);webViewHandler.post(()->{if(webView!=null)webView.evaluateJavascript(js,null);});}

@@ -29,10 +29,10 @@ assert(!source.includes('localStorage.'),'Dream AGC retained direct localStorage
 assert(!/new\s+AgcCore\s*\(/.test(source),'Dream AGC retained ambient AgcCore constructor');
 assert(!source.includes('AGCDSKY_COMPAT')&&!source.includes('compat.'),'Dream AGC depends on compatibility registry');
 
-function makeEnv(search){
+function makeEnv(search,snapshotCoreVersion='dream-test-core'){
   const calls={clockCancel:0,clockStop:0,reset:0,apply:0,render:0,imports:[],starts:[],stops:0,loads:[],channels:[],storeGets:[],debug:[]};
   const status={textContent:''},documentListeners={},windowListeners={};
-  const payload={schema:1,mission:'comanche055',ui:{relayWords:{10:123},ch11:2,ch13:3,ch163:4},core:{memoryB64:'snapshot'}};
+  const payload={schema:1,mission:'comanche055',coreVersion:snapshotCoreVersion,ui:{relayWords:{10:123},ch11:2,ch13:3,ch163:4},core:{memoryB64:'snapshot'}};
   const state=Object.seal({mode:'clock',selectedMission:'comanche055'}),session=Object.seal({core:null,loadedMission:'',suspendedForClock:false,pausedForVisibility:false});
   class FakeCore{
     constructor(options){this.options=options;this.running=false;calls.core=this}
@@ -84,6 +84,9 @@ async function flush(){for(let i=0;i<8;i++)await Promise.resolve()}
   const inert=makeEnv('?dream=1&clock=1&display=1');await flush();
   assert(inert.session.core===null&&inert.state.mode==='clock','clock DreamService URL started Dream AGC');
   assert(inert.calls.clockCancel===0&&inert.calls.clockStop===0&&inert.calls.reset===0&&inert.calls.storeGets.length===0,'inert Dream AGC gate touched services');
+  const incompatible=makeEnv('?dream=1&agc=1','prior-core-version');await flush();
+  assert(incompatible.state.mode==='dream-agc'&&incompatible.session.core.running,'incompatible snapshot prevented fresh Dream AGC startup');
+  assert(incompatible.calls.imports.length===0&&incompatible.calls.apply===0&&incompatible.calls.render===0,'Dream AGC cloned UI or memory from a different core version');
   console.log('Dream AGC runtime smoke: PASS');
   console.log('  CM-only rope/snapshot ownership, read-only snapshot clone, dynamic channel implementations, lifecycle pause/resume, and clock-Dream isolation verified');
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});

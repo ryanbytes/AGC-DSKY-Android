@@ -28,7 +28,10 @@
   gap:3px;
   padding:4px;
   margin:0;
-  overflow:visible;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
   background:
     radial-gradient(circle at 18% 18%,rgba(255,255,255,.035) 0 1px,transparent 1.4px),
     repeating-linear-gradient(94deg,rgba(255,255,255,.012) 0 1px,rgba(0,0,0,.014) 1px 3px),
@@ -165,18 +168,20 @@
 .app-controls .options-tools summary:focus-visible{outline:2px solid rgba(245,247,237,.72);outline-offset:2px}
 .app-controls .options-tools-menu{
   display:none;
-  /* Float the submenu above adjacent controls, outside the panel's box. The
-     panel must keep overflow visible so phone-sized viewports do not clip it. */
+  /* AUX is the bottom row, so the popup opens upward inside the panel's
+     scrollport and remains visible on short phone screens. */
   position:absolute;
   left:0;
-  top:100%;
+  top:auto;
+  bottom:100%;
   width:calc(300% + 6px);
   z-index:24;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:3px;
-  padding:3px 0 0;
+  padding:0 0 3px;
 }
 .app-controls .options-tools[open] .options-tools-menu{display:grid}
+.app-controls.aux-menu-below .options-tools-menu{top:100%;bottom:auto;padding:3px 0 0}
 .app-controls .options-tools-menu #cheat{grid-column:1;grid-row:1}
 .app-controls .options-tools-menu #legal{grid-column:2;grid-row:1}
 .app-controls > .software-update-control{
@@ -442,7 +447,7 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
     left:calc(50% + min(21vw,calc((100vh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))*160/372)) + 4px);
     width:min(38vw,360px);
     max-width:38vw;
-    max-height:none;
+    max-height:calc(100vh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)));
     gap:2px;
     padding:3px;
     transform:translateX(calc(-100% - 4px)) translateY(-50%);
@@ -454,7 +459,6 @@ body:not(.dream).first-run .hint{opacity:1;visibility:visible}
   }
   .controls-visible .app-controls{transform:translateX(var(--landscape-control-panel-offset)) translateY(-50%)}
   .app-controls button{min-height:30px;font-size:6.9px;padding:12px 4px 3px}
-  .app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}
 }
 body.dream #app,body.display-only #app,body.screen-only #app{gap:0}
 body.dream .app-controls,body.display-only .app-controls,body.screen-only .app-controls{display:none!important}

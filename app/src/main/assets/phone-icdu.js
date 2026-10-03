@@ -168,7 +168,11 @@
 
   function rotateScreenVector(v, angleDeg) {
     const a = rad(angleDeg), c = Math.cos(a), sn = Math.sin(a);
-    return [c*v[0] - sn*v[1], sn*v[0] + c*v[1], v[2]];
+    // Android's ROTATION_90 screen axes map to sensor +Y and sensor -X
+    // (SensorManager.remapCoordinateSystem(inR, AXIS_Y, AXIS_MINUS_X)).
+    // Convert sensor-vector components into that screen basis, the inverse
+    // of the screen-to-device rotation applied to the attitude quaternion.
+    return [c*v[0] + sn*v[1], -sn*v[0] + c*v[1], v[2]];
   }
 
   function qAxis(axis, angleRad) {
@@ -343,10 +347,11 @@
     if (!b) return;
     if (!pipaSensorSeen) b.textContent = 'PIPA SENSOR WAITING';
     else if (pipaCalRemaining > 0) b.textContent = 'PIPA CALIBRATING…';
-    else b.textContent = 'PIPA CALIBRATE';
+    else b.textContent = pipaCalibrated ? 'PIPA RECALIBRATE' : 'PIPA CALIBRATE';
     b.title = pipaSensorSeen
       ? ('Phone acceleration active via ' + pipaSensorName
-          + '. Tap while holding still to recalibrate phone bias; AGC PIPA counters are not reset')
+          + (pipaCalibrated ? '. Tap while holding still to recalibrate phone bias' : '. Tap while holding still to measure phone bias; PIPA increments are disabled until calibration completes')
+          + '; AGC PIPA counters are not reset')
       : 'Waiting for phone linear-acceleration sensor';
   }
 
@@ -369,15 +374,22 @@
     // rotate through the current body-to-reference attitude so the PIPAs live
     // in the same simulated stable-platform frame as CDUX/CDUY/CDUZ.
     let v = rotateScreenVector([ax,ay,az], effectiveScreenAngle);
+    let bias = rotateScreenVector(pipaBias, effectiveScreenAngle);
     if (referenceQ && latestQ) {
       const rel = qNorm(qMul(qConj(referenceQ), latestQ));
       v = qRotate(rel, v);
+      bias = qRotate(rel, bias);
     }
     pipaLatestAcceleration = v.slice();
     pipaLatestTimestamp = timestampSeconds;
 
     if (pipaCalRemaining > 0) {
-      for (let i=0;i<3;i++) pipaCalSum[i] += v[i];
+      // Sensor bias is fixed in device axes. Store it there so the matching
+      // correction can follow the same screen/reference-frame transforms as
+      // each later acceleration sample.
+      pipaCalSum[0] += ax;
+      pipaCalSum[1] += ay;
+      pipaCalSum[2] += az;
       pipaCalRemaining--;
       pipaLastTimestamp = timestampSeconds;
       if (pipaCalRemaining === 0) {
@@ -385,6 +397,16 @@
         pipaCalibrated = true;
         pipaFraction = [0,0,0];
       }
+      updatePipaButton();
+      return;
+    }
+
+    // Android's linear-acceleration sensor has an offset that must be sampled
+    // while the user holds the device still. Do not integrate until the
+    // explicit calibration action has collected its sample window.
+    if (!pipaCalibrated) {
+      pipaLastTimestamp = timestampSeconds;
+      pipaFraction = [0,0,0];
       updatePipaButton();
       return;
     }
@@ -408,7 +430,7 @@
     dt = Math.min(dt, 0.05);
 
     for (let axis=0; axis<3; axis++) {
-      const corrected = v[axis] - pipaBias[axis];
+      const corrected = v[axis] - bias[axis];
       pipaFraction[axis] += corrected * dt / pipaDvPerPulse();
       const whole = pipaFraction[axis] < 0 ? Math.ceil(pipaFraction[axis]) : Math.floor(pipaFraction[axis]);
       if (whole) {
@@ -542,15 +564,16 @@
 
 
   // Native Android SensorManager bridge. q is Android's [w,x,y,z]
-  // rotation-vector quaternion. Right-multiply by display rotation so phone
-  // screen X/Y remain the CDU outer/inner axes in portrait or landscape.
+  // rotation-vector quaternion (device-to-world). Right-multiply by the
+  // screen-to-device rotation so phone screen X/Y remain the CDU outer/inner
+  // axes in portrait or landscape.
   api.nativePhoneQuaternion = (w,x,y,z,displayAngle=0) => {
     if (![w,x,y,z].every(Number.isFinite)) return;
     const a = Number.isFinite(displayAngle) ? ((displayAngle%360)+360)%360 : 0;
     sensorSource = 'native';
     sensorSeen = true;
     let q = qNorm([w,x,y,z]);
-    q = qNorm(qMul(q, qAxis('z', -rad(a))));
+    q = qNorm(qMul(q, qAxis('z', rad(a))));
     ingestQuaternion(q, a);
   };
 
@@ -705,9 +728,7 @@
   api.nativePipaSensorStatus = (name,available) => {
     pipaSensorName = String(name || 'unknown');
     if (available) {
-      const wasSeen = pipaSensorSeen;
       pipaSensorSeen = true;
-      if (!wasSeen && !pipaCalibrated && pipaCalRemaining === 0) startPipaCalibration();
     } else {
       pipaSensorSeen = false;
       pipaLastTimestamp = null;
@@ -737,7 +758,7 @@
     health:{imu:{...health.imu,ageMs:health.imu.last?Date.now()-health.imu.last:null},mag:{...health.mag,ageMs:health.mag.last?Date.now()-health.mag.last:null},pipa:{...health.pipa,ageMs:health.pipa.last?Date.now()-health.pipa.last:null},cduWriteRejected,pipaWriteRejected,lastCduAccept,lastPipaAccept},
     skyCalibration:{calibrated:!!skyCalibration,calibration:skyCalibration?{...skyCalibration}:null,boresight:cameraBoresightDevice.slice(),declination:skyDeclination,rawNative:{...rawNativeSky}},
     pipa:{sensorSeen:pipaSensorSeen,sensorName:pipaSensorName,calibrated:pipaCalibrated,calRemaining:pipaCalRemaining,
-      bias:{x:pipaBias[0],y:pipaBias[1],z:pipaBias[2]},
+      biasDevice:{x:pipaBias[0],y:pipaBias[1],z:pipaBias[2]},
       acceleration:{x:pipaLatestAcceleration[0],y:pipaLatestAcceleration[1],z:pipaLatestAcceleration[2],timestamp:pipaLatestTimestamp},
       emitted:{x:pipaEmitted[0],y:pipaEmitted[1],z:pipaEmitted[2]},
       pending:{x:pipaPending[0],y:pipaPending[1],z:pipaPending[2]},

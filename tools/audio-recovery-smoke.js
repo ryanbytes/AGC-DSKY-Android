@@ -5,26 +5,29 @@ const {installServiceRegistry}=require('./test-service-registry');
 const ROOT=path.resolve(__dirname,'..'),ASSETS=path.join(ROOT,'app/src/main/assets'),read=n=>fs.readFileSync(path.join(ASSETS,n),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 const guardSource=read('background-audio-guard.js'),audioSource=read('relay-audio-runtime.js'),shellSource=read('app-shell-runtime.js'),pageResourceLifecycleSource=read('page-resource-lifecycle.js'),debugReporterSource=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/DebugReporter.java'),'utf8');
-function makeHarness({dream=false,hidden=false}={}){
+function makeHarness({dream=false,hidden=false,audioUnlocked=true}={}){
   const reports=[],instances=[],scheduled=new Map();let timerId=0;
   class FakeAudioContext{
     static nextState='running';static nextResumeError=null;
-    constructor(){this.state=FakeAudioContext.nextState;this.resumeError=FakeAudioContext.nextResumeError;FakeAudioContext.nextState='running';FakeAudioContext.nextResumeError=null;this.currentTime=1;this.listeners=new Map();this.closeCount=0;instances.push(this)}
+    constructor(){this.state=FakeAudioContext.nextState;this.resumeError=FakeAudioContext.nextResumeError;FakeAudioContext.nextState='running';FakeAudioContext.nextResumeError=null;this.currentTime=1;this.listeners=new Map();this.closeCount=0;this.resumeCalls=0;instances.push(this)}
     addEventListener(type,fn){if(!this.listeners.has(type))this.listeners.set(type,[]);this.listeners.get(type).push(fn)}
     dispatch(type,event={}){for(const fn of this.listeners.get(type)||[])fn(event)}
-    resume(){if(this.resumeError)return Promise.reject(this.resumeError);this.state='running';this.dispatch('statechange');return Promise.resolve()}
+    resume(){this.resumeCalls++;if(this.resumeError)return Promise.reject(this.resumeError);this.state='running';this.dispatch('statechange');return Promise.resolve()}
     close(){this.closeCount++;this.state='closed';this.dispatch('statechange');return Promise.resolve()}
   }
   const soundButton={textContent:'RELAY CLICKS ON'},storage=new Map();
   const shell={store:{get:k=>storage.get(k)||null,set(k,v){storage.set(k,String(v));return true}},element:id=>id==='sound'?soundButton:null};
   const environment={tickLevel:()=>1};
   const clock={stopQueue(){}};
-  const context={console,window:null,globalThis:null,document:{hidden,getElementById:id=>id==='sound'?soundButton:null,addEventListener(){}},AGCDSKY_SHELL:shell,AGCDSKY_ENVIRONMENT:environment,AGCDSKY_CLOCK:clock,AudioContext:FakeAudioContext,webkitAudioContext:undefined,DebugBridge:{report(detail){reports.push(String(detail))}},Promise,WeakSet,Map,Object,Number,String,Math,Error,TypeError,setTimeout(fn){const id=++timerId;scheduled.set(id,fn);return id},clearTimeout(id){scheduled.delete(id)}};
+  const documentListeners=new Map();
+  const context={console,window:null,globalThis:null,document:{hidden,getElementById:id=>id==='sound'?soundButton:null,addEventListener(type,fn){if(!documentListeners.has(type))documentListeners.set(type,[]);documentListeners.get(type).push(fn)}},AGCDSKY_SHELL:shell,AGCDSKY_ENVIRONMENT:environment,AGCDSKY_CLOCK:clock,AudioContext:FakeAudioContext,webkitAudioContext:undefined,DebugBridge:{report(detail){reports.push(String(detail))}},Promise,WeakSet,Map,Object,Number,String,Math,Error,TypeError,setTimeout(fn){const id=++timerId;scheduled.set(id,fn);return id},clearTimeout(id){scheduled.delete(id)}};
   context.window=context;context.globalThis=context;installServiceRegistry(context);vm.createContext(context);
   for(const name of ['app-state-runtime.js','relay-audio-runtime.js'])new vm.Script(read(name),{filename:name}).runInContext(context);
   const state=context.AGCDSKY_APP_STATE;state.dream=dream;state.tickSound=true;state.appVisible=!hidden;
   new vm.Script(guardSource,{filename:'background-audio-guard.js'}).runInContext(context);
-  return{context,state,audio:context.AGCDSKY_AUDIO,recovery:context.AGCDSKY_AUDIO_RECOVERY,FakeAudioContext,instances,reports,soundButton,scheduled};
+  const dispatchDocument=(type,event={})=>{for(const fn of documentListeners.get(type)||[])fn(event)};
+  if(audioUnlocked)dispatchDocument('pointerdown',{isTrusted:true});
+  return{context,state,audio:context.AGCDSKY_AUDIO,recovery:context.AGCDSKY_AUDIO_RECOVERY,FakeAudioContext,instances,reports,soundButton,scheduled,documentListeners,dispatchDocument};
 }
 async function flush(){await Promise.resolve();await Promise.resolve()}
 (async()=>{
@@ -64,7 +67,7 @@ async function flush(){await Promise.resolve();await Promise.resolve()}
   const closed=h.audio.context();closed.state='closed';const afterClosed=h.audio.ensure();assert(afterClosed&&afterClosed!==closed&&h.instances.length===4,'closed context must be replaced exactly once');assert(h.recovery.status().failures===0,'ordinary closed-context replacement is not renderer failure');
 
   const r=makeHarness();r.FakeAudioContext.nextState='suspended';r.FakeAudioContext.nextResumeError=new Error('device unavailable');assert(r.audio.ensure(),'suspended context should exist while resume settles');await flush();assert(r.recovery.status().state==='none'&&r.recovery.status().failures===1,'resume rejection must retire/count failed context');
-  const p=makeHarness();p.FakeAudioContext.nextState='suspended';const policy=new Error('gesture required');policy.name='NotAllowedError';p.FakeAudioContext.nextResumeError=policy;const policyCtx=p.audio.ensure();await flush();assert(p.recovery.status().state==='suspended'&&p.recovery.status().failures===0&&policyCtx.closeCount===0,'NotAllowedError must retain suspended context without failure count');
+  const p=makeHarness({audioUnlocked:false});p.FakeAudioContext.nextState='suspended';const policy=new Error('gesture required');policy.name='NotAllowedError';p.FakeAudioContext.nextResumeError=policy;assert(p.audio.ensure()===null&&p.instances.length===0,'audio context must not be created before a trusted gesture');for(let i=0;i<20;i++){p.audio.ensure();p.audio.playBurst(1)}assert(p.instances.length===0,'clock relay updates must not create audio before a trusted gesture');p.dispatchDocument('pointerdown',{isTrusted:false});assert(p.audio.ensure()===null&&p.instances.length===0,'synthetic pointer events must not unlock audio');p.dispatchDocument('pointerdown',{isTrusted:true});const policyCtx=p.audio.ensure();await flush();assert(policyCtx&&p.recovery.status().state==='suspended'&&p.recovery.status().failures===0&&policyCtx.closeCount===0&&policyCtx.resumeCalls===1,'NotAllowedError must retain the suspended context without counting a renderer failure');for(let i=0;i<20;i++){p.audio.ensure();p.audio.playBurst(1)}assert(policyCtx.resumeCalls===1,'blocked autoplay must not retry resume during ordinary relay updates');p.dispatchDocument('pointerdown',{isTrusted:true});policyCtx.resumeError=null;p.audio.ensure();await flush();assert(policyCtx.resumeCalls===2&&p.recovery.status().state==='running','trusted pointer gesture must allow one new resume attempt');
   const interrupted=makeHarness();interrupted.FakeAudioContext.nextState='interrupted';const interruptedCtx=interrupted.audio.ensure();await flush();assert(interruptedCtx&&interrupted.recovery.status().state==='running','interrupted WebAudio context must be resumed');
   const dream=makeHarness({dream:true});assert(dream.audio.ensure()===null&&dream.instances.length===0,'Dream mode must remain silent');
   const hidden=makeHarness({hidden:true});assert(hidden.audio.ensure()===null&&hidden.instances.length===0,'hidden app must not create/resume relay audio');

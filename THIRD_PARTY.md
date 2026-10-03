@@ -28,13 +28,14 @@ Production revisions of `1006315` call out nominal 5300-angstrom (530 nm) EL out
 
 ## DSKY electroluminescent vector outlines
 
-The normalized numeric-segment path outlines currently used by `dsky-geometry.js` and the native EL-only widget are derived from Ben Krasnow's `DSKY_EL_replica` project (`graphics/DSKY V2.svg`). They are retained as a vector transcription source where exact original segment contours have not yet been re-entered directly from the engineering drawing; they are not treated as overriding the original MIT/NASA dimensions or specifications.
+The numeric-segment contours used by the WebView DSKY and native EL-only widget are traced from the drawing-backed `1006315G-exact.step` model in Riley Rainey's `agc-mechanical-cad` repository, commit `2d7dccd5bc4f0263a14ac5a4fd112a15d447010d` (STEP blob `841351a225482cb7926aeb4e97cced8db7ba2258`). The paths are normalized into the display's inch datum and mapped to the physical E/H/M/N/K/F/J electrodes. MIT/IL SCD `1006315G` remains the primary specification; the STEP is secondary geometric evidence, not an original NASA drawing.
 
-- Project: https://github.com/benkrasnow/DSKY_EL_replica
-- Copyright (c) 2019 Ben Krasnow
-- License: MIT
+- Source project: https://github.com/rrainey/agc-mechanical-cad/tree/2d7dccd5bc4f0263a14ac5a4fd112a15d447010d
+- Source model: `agc-block-ii/1006315G-exact.step`
+- Copyright (c) 2019 Riley Rainey
+- License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0): https://creativecommons.org/licenses/by-sa/4.0/
 
-The copyright and MIT permission notice are retained in the source and packaged `THIRD_PARTY_NOTICES.txt`.
+The derived path data is adapted from the STEP model; the original model is not bundled. Earlier revisions used Ben Krasnow's `DSKY_EL_replica` (`graphics/DSKY V2.svg`), but its numeric contours were replaced by the drawing-backed STEP transcription and are no longer used by either current renderer.
 
 ## Gorton Condensed annunciator vector outlines
 

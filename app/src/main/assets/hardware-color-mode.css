@@ -8,6 +8,10 @@ body.authentic-colors.apollo-block-ii:not(.dream):not(.screen-only) .dsky{
 }
 body.authentic-colors.apollo-block-ii .el-glass-background{fill:#4e535a!important}
 body.authentic-colors.apollo-block-ii .el-ito-dot{fill:#91999c!important;opacity:.68!important}
+/* INTEGRAL drives the 5-VAC incandescent branch separately from key EL. */
+body.apollo-block-ii.lamp-hardware-ready .lamp.on .lamp-source{
+  opacity:calc(var(--integral-incandescent-level, var(--integral-level)) * var(--lamp-gain,1));
+}
 body.authentic-colors.apollo-block-ii .lamp:not(.on){
   background:linear-gradient(112deg,rgba(255,255,255,.075),transparent 31%),linear-gradient(180deg,#858a8c 0%,#7c8183 58%,#707578 100%)!important;
 }

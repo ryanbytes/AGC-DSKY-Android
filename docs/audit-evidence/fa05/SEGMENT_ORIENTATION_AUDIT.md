@@ -1,5 +1,17 @@
 # FA-05 EL segment-orientation audit
 
+## Current status (2026-10-03)
+
+The correction described below remains in the current source. Current-source checks pass:
+`node tools/el-drawing-conformance-smoke.js`,
+`node tools/el-geometry-lock-smoke.js`, and
+`node tools/dsky-mapping-smoke.js`. The full source suite (97 Node smokes plus
+`ntp-time-smoke.sh`), six-variant Gradle assemble/lint, APK verification, and
+full Android 16 packaged-runtime smoke also pass on the current source. The
+captured Comanche V35 screen was
+visually inspected; this checks the actual rendered geometry but does not
+establish physical EL glass/optical appearance.
+
 ## Question
 
 Are the Apollo EL digit electrodes vertically flipped, mirrored, or otherwise bound to the wrong physical positions?
@@ -60,7 +72,7 @@ The regression suite now tests both SCD dimensions and physical E/N identity, so
 - Apollo segment lettering: **PROVEN** by the independent schematic trace and named CAD solids.
 - Prior app physical assignment: **PROVEN wrong** by coordinate/shape correspondence.
 - Corrected dimensional conformance: **PASS** in the source calculation.
-- Final branch acceptance: **PENDING** full CI and rendered/device verification.
+- Local implementation acceptance: **PASS** current build, source, APK, and rendered-device gates; physical-screen appearance remains unverified.
 
 ## Live rendered verification
 
@@ -76,5 +88,4 @@ The gate is now permanent in `tools/capture-visual-goldens.sh`; future visual ca
 
 Independent old/new artifact comparison between the pre-orientation golden capture and the corrected capture confirms a real rendered change. The normal full-panel capture differs in **2,608 pixels**, bounded to the EL display region (x 248–369, y 186–388 in the 412×915 golden). The lamp-test capture differs in **3,558 pixels**. This disproves the earlier local comparison result that mistakenly reported the captures as pixel-identical.
 
-The corrected golden was also inspected directly: digit strokes remain sharp, continuous, and unclipped while the asymmetric Apollo electrode contours move to the documented physical E/H/M/N/K/F/J identities.
-
+The corrected golden was inspected directly: digit strokes remain sharp, continuous, and unclipped while the asymmetric Apollo electrode contours move to the documented physical E/H/M/N/K/F/J identities. The current Android 16 V35 screenshot also shows these filled segment shapes in the packaged runtime; physical-screen optics remain outside that evidence.

@@ -200,8 +200,11 @@ for (const marker of [
   '.options-tools{\n  grid-column:1;\n  grid-row:3',
   '> .software-update-control{\n  grid-column:3;\n  grid-row:3'
 ]) assert(CONTROLS.includes(marker), 'fixed option-panel position missing: ' + marker);
-assert(CONTROLS.includes('max-height:26vh') && CONTROLS.includes('overflow:visible'),
-  'AUXILIARY submenu must escape the panel clip on phone-sized viewports');
+assert(CONTROLS.includes('max-height:26vh') &&
+       CONTROLS.includes('overflow-y:auto;') &&
+       CONTROLS.includes('overflow-x:hidden;') &&
+       CONTROLS.includes('overscroll-behavior:contain;'),
+  'phone-sized controls must scroll within their viewport instead of clipping lower controls');
 assert(CONTROLS.includes('width:100%') && CONTROLS.includes('min-width:0'),
   'fixed-grid control cells must size to their assigned panel positions');
 assert(CONTROLS.includes('text-overflow:clip') && CONTROLS.includes('white-space:nowrap'),
@@ -243,15 +246,25 @@ for (const viewport of [{width:1280,height:720},{width:1024,height:600},{width:8
     `open landscape composition must fit and center at ${viewport.width}x${viewport.height}`);
 }
 for (const height of [240,360,480,720]) {
-  const panelHeight=160;
+  const panelHeight=Math.min(160,height-20);
   const top=(height-panelHeight)/2;
   assert(top>=8&&top+panelHeight<=height-8,
     `landscape controls panel must remain vertically inside a ${height}px viewport`);
 }
 assert(/\.app-controls\{\s*position:absolute;\s*top:50%;\s*left:calc\(50% \+ min\(21vw,calc\(\(100vh - max\(12px,env\(safe-area-inset-top\)\) - max\(8px,env\(safe-area-inset-bottom\)\)\)\*160\/372\)\) \+ 4px\);/.test(CONTROLS),
   'landscape controls must be removed from flex sizing, vertically centered, and anchored to the centered DSKY right edge');
-assert(CONTROLS.includes('.app-controls .options-tools-menu{top:auto;bottom:100%;padding:0 0 3px}'),
-  'AUXILIARY submenu must open upward in landscape');
+assert(CONTROLS.includes('max-height:calc(100vh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)));'),
+  'landscape controls must fit the safe viewport and scroll when their content is taller');
+assert(CONTROLS.includes('top:auto;\n  bottom:100%;') &&
+       CONTROLS.includes('padding:0 0 3px;') &&
+       CONTROLS.indexOf('bottom:100%;') < CONTROLS.indexOf('@media (orientation:landscape)'),
+  'AUXILIARY submenu must open upward in every orientation to keep the bottom-row menu visible');
+assert(CONTROLS.includes('.app-controls.aux-menu-below .options-tools-menu{top:100%;bottom:auto;padding:3px 0 0}') &&
+       APP_SHELL.includes('function syncAuxToolsPosition()') &&
+       APP_SHELL.includes('aboveSpace+0.5<popupHeight&&belowSpace+0.5>=popupHeight') &&
+       APP_SHELL.includes("controlsPanel.addEventListener('scroll',syncAuxToolsPosition,{passive:true})") &&
+       APP_SHELL.includes("addEventListener('resize',syncAuxToolsPosition,{passive:true})"),
+  'AUXILIARY submenu must flip into the visible panel area when scrolling would clip it');
 assert(CONTROLS.includes('.options-tools[open] .options-tools-menu{display:grid}') &&
        /\.options-tools-menu\s*\{[^}]*position:absolute/s.test(CONTROLS) &&
        CONTROLS.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&

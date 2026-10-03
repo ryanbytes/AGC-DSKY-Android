@@ -12,7 +12,7 @@ const fail = message => { console.error('PWA PARITY FAIL: ' + message); process.
 function walk(dir, prefix='') {
   const out = [];
   for (const entry of fs.readdirSync(dir, {withFileTypes:true})) {
-    if (entry.name === '.DS_Store') continue;
+    if (entry.name === '.DS_Store' || entry.name === '.self-contained-assets-note') continue;
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isDirectory()) out.push(...walk(path.join(dir, entry.name), rel));
     else out.push(rel);
@@ -55,12 +55,13 @@ for (const ref of sharedRefs) {
 }
 
 const sw = fs.readFileSync(path.join(site, 'sw.js'), 'utf8');
+if (sw.includes("'./.self-contained-assets-note'")) fail('repository-only hidden asset marker must not be precached');
 for (const rel of sourceFiles) {
   if (rel === 'index.html' || rel.startsWith('.')) continue;
   if (!sw.includes(`'./${rel}'`)) fail(`shared asset is not available offline: ${rel}`);
 }
 
-for (const rel of ['pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'pwa-print-bridge.js', 'clock-behavior-v2.js', 'analytics.js', 'manifest.webmanifest', 'yaAGC.wasm', 'Comanche055.bin']) {
+for (const rel of ['pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-clock-guard.js', 'pwa-print-bridge.js', 'pwa-print.css', 'pwa-print-android.css', 'pwa-print-window.js', 'clock-behavior-v2.js', 'analytics.js', 'manifest.webmanifest', 'icons/icon-512-maskable.png', 'yaAGC.wasm', 'Comanche055.bin']) {
   if (!sw.includes(`'./${rel}'`)) fail(`PWA-only runtime asset is not available offline: ${rel}`);
 }
 

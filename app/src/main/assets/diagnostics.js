@@ -52,7 +52,8 @@
     };
     document.getElementById('diag-clear').onclick=()=>{snapshot.clear();update()};
   }
-  function row(k,v){return `<tr><td>${k}</td><td>${v}</td></tr>`}
+  function escapeHtml(value){return String(value).replace(/[&<>]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch]))}
+  function row(k,v){return `<tr><td>${escapeHtml(k)}</td><td>${escapeHtml(v)}</td></tr>`}
   function section(name){return `<tr><th colspan="2">${name}</th></tr>`}
   function pipaWords(core){if(!core||typeof core.readErasable!=='function')return null;return [0o37,0o40,0o41].map(a=>core.readErasable(0,a)&0x7fff)}
   function syncNetworkTimeNow(){
@@ -229,6 +230,7 @@
   function startPipaTest(){
     const core=coreSession.core,start=pipaWords(core),b=document.getElementById('diag-pipa-test');
     if(!core||!core.running||!start){pipaTest={ok:false,message:'AGC MUST BE RUNNING'};update();return}
+    if(!phoneStatus()?.pipa?.calibrated){pipaTest={ok:false,message:'CALIBRATE PIPA SENSOR FIRST'};update();return}
     pipaTest={running:true,start,timestamp:Date.now(),message:'MOVE PHONE NOW'};if(b)b.textContent='MOVE PHONE · TEST RUNNING';
     clearTimeout(pipaTestTimer);pipaTestTimer=setTimeout(()=>{const end=pipaWords(core),delta=end?end.map((v,i)=>((v-start[i]+16384)&0x7fff)-16384):null;const moved=delta&&delta.some(v=>v!==0);pipaTest={running:false,ok:!!moved,start,end,delta,timestamp:Date.now(),message:moved?'PIPA COUNTERS RESPONDED':'NO PIPA COUNTER CHANGE'};if(b)b.textContent='ARM 5-SECOND PIPA MOTION TEST';update()},5000);update();
   }

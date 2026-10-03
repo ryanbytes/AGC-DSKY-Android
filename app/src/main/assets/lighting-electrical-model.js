@@ -20,7 +20,6 @@
 
   const root = document.documentElement;
   const INCANDESCENT_FLUX_EXPONENT = 3.4;
-  const STYLE_ID = 'dsky-lighting-electrical-model';
   let integralVoltageRatio = 1;
   let incandescentFluxRatio = 1;
 
@@ -55,20 +54,6 @@
     }
   }
 
-  function installStyle() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent = `
-/* INTEGRAL drives the 5-VAC incandescent branch separately from key EL. */
-body.apollo-block-ii.lamp-hardware-ready .lamp.on .lamp-source {
-  opacity:calc(var(--integral-incandescent-level, var(--integral-level)) * var(--lamp-gain,1));
-}
-`;
-    document.head.appendChild(style);
-  }
-
-  installStyle();
   apply();
 
   // flight-hardware-ui.js changes the normalized INTEGRAL control by writing

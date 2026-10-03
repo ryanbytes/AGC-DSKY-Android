@@ -2,17 +2,19 @@
 'use strict';
 
 /*
- * End-to-end semantic V35 gate for Comanche055 in the Android WebView.
+ * End-to-end Comanche055 display-command and V35 gates in the Android WebView.
  *
  * Path proven by this smoke:
  *   pointer events -> Pinball -> real yaAGC/Comanche055 -> channel 010/011/0163
  *   -> hardware-fidelity latches + app state -> rendered DSKY/annunciators.
+ * It runs V16N65E, V05N09E, and V14N09E between P00 entry and V35E.
  *
  * Requires the DevTools socket to have already been adb-forwarded by
  * tools/device-agc-smoke.sh. No npm packages are used; Node 18+ is enough.
  */
 
 const crypto = require('crypto');
+const fs = require('fs');
 const http = require('http');
 const net = require('net');
 const { URL } = require('url');
@@ -254,6 +256,9 @@ function dskyExpression() {
     if(!api||typeof api.appStatus!=='function'||typeof api.hardware!=='function')return null;
     const app=api.appStatus(),hw=api.hardware(),d=app.display||{};
     const reg=(r)=>({sign:r?(r.plus?'+':(r.minus?'-':' ')):' ',digits:r&&Array.isArray(r.digits)?r.digits.join(''):''});
+    const rendered=(id,kind)=>Array.from(document.querySelectorAll('#'+id+' > g[data-el-slot="'+kind+'"]'))
+      .map(slot=>{const value=slot.getAttribute('data-el-value')||'',split=value.indexOf(':');return split<0?'':value.slice(split+1)}).join('');
+    const renderedReg=(id)=>rendered(id,'register');
     const lamps={};
     document.querySelectorAll('[data-lamp]').forEach((el)=>{if(el.dataset.lamp)lamps[el.dataset.lamp]=el.classList.contains('on')});
     return {
@@ -263,6 +268,7 @@ function dskyExpression() {
       channels:app.channels||{},
       relays:hw.latches||{},
       display:{prog:(d.prog||[]).join(''),verb:(d.verb||[]).join(''),noun:(d.noun||[]).join(''),r1:reg(d.r1),r2:reg(d.r2),r3:reg(d.r3)},
+      rendered:{prog:rendered('prog','upper-digit'),verb:rendered('verb','upper-digit'),noun:rendered('noun','upper-digit'),r1:renderedReg('r1'),r2:renderedReg('r2'),r3:renderedReg('r3')},
       lamps,
       vnBlanked:document.body.classList.contains('vn-flash-off'),
       elOff:document.body.classList.contains('el-off'),
@@ -334,6 +340,26 @@ async function keySequence(cdp, keys, basePointerId) {
   }
 }
 
+async function keyboardKeySequence(cdp, keys) {
+  for (const key of keys) {
+    const lower = key.toLowerCase();
+    const code = /^[0-9]$/.test(key) ? `Digit${key}` : `Key${key.toUpperCase()}`;
+    const virtualKeyCode = key.toUpperCase().charCodeAt(0);
+    await cdp.call('Input.dispatchKeyEvent', {
+      type:'keyDown', key:lower, code, windowsVirtualKeyCode:virtualKeyCode,
+      nativeVirtualKeyCode:virtualKeyCode, text:lower, unmodifiedText:lower
+    });
+    const input = await cdp.evaluate(`(() => ({keyboard:AGCDSKY.keyboardElectrical.state(),channel15:AGCDSKY.getCore().inputChannelBits(0o15,0o37)}))()`);
+    keySequenceTrace.push({key, keyCode:input.keyboard.electricalKeyCode, channel15DuringMake:input.channel15});
+    await delay(35);
+    await cdp.call('Input.dispatchKeyEvent', {
+      type:'keyUp', key:lower, code, windowsVirtualKeyCode:virtualKeyCode,
+      nativeVirtualKeyCode:virtualKeyCode
+    });
+    await delay(35);
+  }
+}
+
 const PROGRAM00_LOW11 = 0o1265;
 // Comanche055 schedules V35 teardown after five seconds. Finish looking for
 // the settled display before that source-defined boundary so the timeout
@@ -376,6 +402,110 @@ async function waitForP00(cdp) {
   throw new Error(`V37E00E did not reach P00; last state: ${JSON.stringify(last)}; key trace: ${JSON.stringify(keySequenceTrace)}`);
 }
 
+async function proveV16N65Monitor(cdp) {
+  const entryTraceStart = keySequenceTrace.length;
+  await keySequence(cdp, ['V','1','6','N','6','5'], 1300);
+  const entryCodes = keySequenceTrace.slice(entryTraceStart).map(item => item.keyCode);
+  const expectedEntryCodes = [0o21,0o01,0o06,0o37,0o06,0o05];
+  assert(entryCodes.length === expectedEntryCodes.length
+      && entryCodes.every((code,index) => code === expectedEntryCodes[index]),
+    `V16N65 Pinball key-code trace mismatch: ${entryCodes.map(code => `0o${Number(code).toString(8)}`).join(',')}`);
+  const entered = await cdp.evaluate(dskyExpression());
+  assert(entered && entered.display.prog === '00' && entered.display.verb === '16' && entered.display.noun === '65',
+    `V16N65 did not latch through the live DSKY input path: ${JSON.stringify(entered)}`);
+  assert(![entered.display.r1,entered.display.r2,entered.display.r3].some(r => /\d/.test(r.digits)),
+    `V16N65 entry unexpectedly retained numeric register output: ${JSON.stringify(entered.display)}`);
+
+  const executeTraceStart = keySequenceTrace.length;
+  await keySequence(cdp, ['E'], 1400);
+  assert(keySequenceTrace[executeTraceStart]?.keyCode === 0o34,
+    'V16N65E did not reach yaAGC as Pinball ENTR 0o34');
+  const deadline = Date.now() + 10000;
+  let last;
+  while (Date.now() < deadline) {
+    last = await cdp.evaluate(dskyExpression());
+    const numericResponse = last && [last.display.r1,last.display.r2,last.display.r3].some(r => /\d/.test(r.digits));
+    const operatorError = last && (Number(last.channels.ch0163 || 0) & 0o00100) !== 0;
+    if (last && last.mode === 'agc' && last.display.prog === '00'
+        && last.display.verb === '16' && last.display.noun === '65'
+        && numericResponse && !operatorError && !last.lamps.oprerr) return last;
+    if (last && last.modeText.includes('AGC ERROR')) throw new Error(`AGC stopped during V16N65E: ${last.modeText}`);
+    await delay(75);
+  }
+  throw new Error(`V16N65E produced no numeric, OPR-ERR-free response; last state: ${JSON.stringify(last)}`);
+}
+
+async function proveV05N09AlarmDisplay(cdp) {
+  const entryTraceStart = keySequenceTrace.length;
+  await keySequence(cdp, ['V','0','5','N','0','9'], 1300);
+  const entryCodes = keySequenceTrace.slice(entryTraceStart).map(item => item.keyCode);
+  const expectedEntryCodes = [0o21,0o20,0o05,0o37,0o20,0o11];
+  assert(entryCodes.length === expectedEntryCodes.length
+      && entryCodes.every((code,index) => code === expectedEntryCodes[index]),
+    `V05N09 Pinball key-code trace mismatch: ${entryCodes.map(code => `0o${Number(code).toString(8)}`).join(',')}`);
+
+  const entered = await cdp.evaluate(dskyExpression());
+  assert(entered && entered.display.prog === '00' && entered.display.verb === '05' && entered.display.noun === '09',
+    `V05N09 did not latch through the live DSKY input path: ${JSON.stringify(entered)}`);
+
+  const executeTraceStart = keySequenceTrace.length;
+  await keySequence(cdp, ['E'], 1400);
+  assert(keySequenceTrace[executeTraceStart]?.keyCode === 0o34,
+    'V05N09E did not reach yaAGC as Pinball ENTR 0o34');
+
+  const deadline = Date.now() + 10000;
+  let last;
+  while (Date.now() < deadline) {
+    last = await cdp.evaluate(dskyExpression());
+    const octalWord = value => value && /^[0-7]{5}$/.test(value.digits) && String(value.sign).trim() === '';
+    const octalResponse = last && [last.display.r1,last.display.r2,last.display.r3].every(octalWord);
+    const operatorError = last && (Number(last.channels.ch0163 || 0) & 0o00100) !== 0;
+    if (last && last.mode === 'agc' && last.display.prog === '00'
+        && last.display.verb === '05' && last.display.noun === '09'
+        && octalResponse && !operatorError && !last.lamps.oprerr) return last;
+    if (last && last.modeText.includes('AGC ERROR')) throw new Error(`AGC stopped during V05N09E: ${last.modeText}`);
+    await delay(75);
+  }
+  throw new Error(`V05N09E produced no three-word octal response without OPR ERR; last state: ${JSON.stringify(last)}`);
+}
+
+async function proveV14N09TwoComponentMonitor(cdp) {
+  const entryTraceStart = keySequenceTrace.length;
+  // DevTools injects Android WebView keyboard events here. This exercises the
+  // app's hardware-key listener, while remaining emulator rather than physical
+  // keyboard evidence.
+  await keyboardKeySequence(cdp, ['v','1','4','n','0','9']);
+  const entryCodes = keySequenceTrace.slice(entryTraceStart).map(item => item.keyCode);
+  const expectedEntryCodes = [0o21,0o01,0o04,0o37,0o20,0o11];
+  assert(entryCodes.length === expectedEntryCodes.length
+      && entryCodes.every((code,index) => code === expectedEntryCodes[index]),
+    `V14N09 Pinball key-code trace mismatch: ${entryCodes.map(code => `0o${Number(code).toString(8)}`).join(',')}`);
+
+  const entered = await cdp.evaluate(dskyExpression());
+  assert(entered && entered.display.prog === '00' && entered.display.verb === '14' && entered.display.noun === '09',
+    `V14N09 did not latch through the live DSKY input path: ${JSON.stringify(entered)}`);
+
+  const executeTraceStart = keySequenceTrace.length;
+  await keyboardKeySequence(cdp, ['e']);
+  assert(keySequenceTrace[executeTraceStart]?.keyCode === 0o34,
+    'V14N09E did not reach yaAGC as Pinball ENTR 0o34');
+
+  const deadline = Date.now() + 10000;
+  let last;
+  while (Date.now() < deadline) {
+    last = await cdp.evaluate(dskyExpression());
+    const octalWord = value => value && /^[0-7]{5}$/.test(value.digits) && String(value.sign).trim() === '';
+    const firstTwoWords = last && octalWord(last.display.r1) && octalWord(last.display.r2);
+    const operatorError = last && (Number(last.channels.ch0163 || 0) & 0o00100) !== 0;
+    if (last && last.mode === 'agc' && last.display.prog === '00'
+        && last.display.verb === '14' && last.display.noun === '09'
+        && firstTwoWords && !operatorError && !last.lamps.oprerr) return last;
+    if (last && last.modeText.includes('AGC ERROR')) throw new Error(`AGC stopped during V14N09E: ${last.modeText}`);
+    await delay(75);
+  }
+  throw new Error(`V14N09E produced no two-word octal response without OPR ERR; last state: ${JSON.stringify(last)}`);
+}
+
 function visibleV35State(state) {
   if (!state || !state.display || !state.lamps) return false;
   const d = state.display;
@@ -383,6 +513,10 @@ function visibleV35State(state) {
     && d.r1.sign === '+' && d.r1.digits === '88888'
     && d.r2.sign === '+' && d.r2.digits === '88888'
     && d.r3.sign === '+' && d.r3.digits === '88888'
+    && state.rendered && state.rendered.prog === '88'
+    && state.rendered.verb === '88' && state.rendered.noun === '88'
+    && state.rendered.r1 === '+88888' && state.rendered.r2 === '+88888'
+    && state.rendered.r3 === '+88888'
     && state.lampTestActive === false
     && relayWordsMatch(state)
     && discreteChannelsMatchRenderedState(state);
@@ -410,6 +544,20 @@ async function proveFlashPhase(cdp, initial) {
     await delay(50);
   }
   throw new Error(`Comanche V35E did not expose a channel-0163-consistent V/N flash transition; last state: ${JSON.stringify(last)}`);
+}
+
+async function captureVerifiedV35Screenshot(cdp) {
+  const outputPath=process.env.AGC_V35_SCREENSHOT_PATH;
+  if(!outputPath)return null;
+  await cdp.evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))`);
+  const painted=await cdp.evaluate(dskyExpression());
+  assert(visibleV35State(painted),`V35 state changed before screenshot paint: ${JSON.stringify(painted)}`);
+  const capture=await cdp.call('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
+  assert(typeof capture.data==='string'&&capture.data.length>0,'WebView screenshot returned no PNG data');
+  const png=Buffer.from(capture.data,'base64');
+  assert(png.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),'WebView screenshot did not return PNG data');
+  fs.writeFileSync(outputPath,png,{flag:'wx'});
+  return outputPath;
 }
 
 async function snapshotState(cdp) {
@@ -444,16 +592,31 @@ async function main() {
 
     await keySequence(cdp, ['V','3','7','E','0','0','E'], 1100);
     const p00 = await waitForP00(cdp);
+    const monitor = await proveV16N65Monitor(cdp);
+    await keySequence(cdp, ['V','3','7','E','0','0','E'], 1500);
+    await waitForP00(cdp);
+    const alarmDisplay = await proveV05N09AlarmDisplay(cdp);
+    await keySequence(cdp, ['V','3','7','E','0','0','E'], 1500);
+    await waitForP00(cdp);
+    const twoComponentMonitor = await proveV14N09TwoComponentMonitor(cdp);
     await keySequence(cdp, ['V','3','5','E'], 1200);
     const visible = await waitForVisibleV35(cdp);
+    const screenshotPath=await captureVerifiedV35Screenshot(cdp);
     const flash = await proveFlashPhase(cdp, visible);
 
+    console.log('Device Comanche055 V16N65 monitor smoke: PASS');
+    console.log(`  V16N65E response: ${monitor.display.r1.sign}${monitor.display.r1.digits} ${monitor.display.r2.sign}${monitor.display.r2.digits} ${monitor.display.r3.sign}${monitor.display.r3.digits}`);
+    console.log('Device Comanche055 V05N09 octal alarm-code display: PASS');
+    console.log(`  V05N09E response: ${alarmDisplay.display.r1.digits} ${alarmDisplay.display.r2.digits} ${alarmDisplay.display.r3.digits}`);
+    console.log('Device Comanche055 V14N09 two-component monitor: PASS');
+    console.log(`  V14N09E response: ${twoComponentMonitor.display.r1.digits} ${twoComponentMonitor.display.r2.digits}`);
     console.log('Device Comanche055 V35 semantic smoke: PASS');
     console.log(`  P00: PROG ${p00.display.prog}; relay 11 low-11 0o${Number(p00.relays[11]).toString(8).padStart(4,'0')}`);
     console.log(`  V35: ${visible.display.prog}/${visible.display.verb}/${visible.display.noun} ${visible.display.r1.sign}${visible.display.r1.digits} ${visible.display.r2.sign}${visible.display.r2.digits} ${visible.display.r3.sign}${visible.display.r3.digits}`);
     console.log(`  relay 12 low-11: 0o${Number(visible.relays[12]).toString(8).padStart(4,'0')}`);
     console.log(`  channel 011: 0o${Number(visible.channels.ch011 || 0).toString(8).padStart(5,'0')}`);
     console.log(`  channel 0163 visible/flash: 0o${Number(visible.channels.ch0163 || 0).toString(8).padStart(5,'0')} / 0o${Number(flash.channels.ch0163 || 0).toString(8).padStart(5,'0')}`);
+    if(screenshotPath)console.log(`  verified V35 screenshot: ${screenshotPath}`);
     console.log('  path: pointer input -> yaAGC/Comanche055 -> raw channels/hardware latches -> DSKY');
   } finally {
     if (snapshot) await restoreState(cdp, snapshot);

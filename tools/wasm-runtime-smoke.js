@@ -227,6 +227,116 @@ function proveV16N65Monitor(core, errors, channelUpdates) {
     };
 }
 
+function proveV05N09AlarmDisplay(core, errors, channelUpdates) {
+    core.reset();
+    core.configureInputMasks();
+    assert(core.totalSteps === 0,
+        'V05N09 setup must leave mission accounting at the true reset vector');
+    channelUpdates.length = 0;
+    errors.length = 0;
+    core.step(100000);
+
+    enterProgram00(core, errors, channelUpdates);
+    channelUpdates.length = 0;
+    // Comanche055 documents V05 as a three-component octal display and N09
+    // as the read-only alarm-code noun (FAILREG).
+    sendKeys(core, [0o21, 0o20, 0o05, 0o37, 0o20, 0o11]);
+    assert(errors.length === 0, 'Comanche055: error while typing V05N09');
+
+    const enteredRelays = relayStateFromUpdates(channelUpdates);
+    const verbRelay = enteredRelays.get(10);
+    const nounRelay = enteredRelays.get(9);
+    assert(verbRelay !== undefined && (verbRelay & 0o3777) === ((0o25 << 5) | 0o36),
+        `Comanche055: V05 relay state is wrong: ${verbRelay === undefined ? 'missing' : `0o${(verbRelay & 0o3777).toString(8)}`}`);
+    assert(nounRelay !== undefined && (nounRelay & 0o3777) === ((0o25 << 5) | 0o37),
+        `Comanche055: N09 relay state is wrong: ${nounRelay === undefined ? 'missing' : `0o${(nounRelay & 0o3777).toString(8)}`}`);
+
+    channelUpdates.length = 0;
+    core.keyPress(0o34);
+    const responseRows = new Set();
+    let operatorErrorObserved = false;
+    let eventIndex = 0;
+    let responseSteps = 0;
+    const maxResponseSteps = 350000;
+    const chunkSteps = 10000;
+
+    while (responseSteps < maxResponseSteps && responseRows.size < 8 && !operatorErrorObserved) {
+        core.step(chunkSteps);
+        responseSteps += chunkSteps;
+        for (; eventIndex < channelUpdates.length; eventIndex++) {
+            const [channel, value] = channelUpdates[eventIndex];
+            if (channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0) {
+                operatorErrorObserved = true;
+            }
+            if (channel !== CHANNEL_DSKY) continue;
+            const relay = (value >> 11) & 0o17;
+            if (relay >= 1 && relay <= 8) responseRows.add(relay);
+        }
+    }
+
+    assert(errors.length === 0, 'Comanche055: error while executing V05N09E');
+    assert(!operatorErrorObserved, 'Comanche055: V05N09E asserted OPR ERR');
+    assert(responseRows.size === 8,
+        `Comanche055: V05N09E did not display all three octal components; rows ${Array.from(responseRows).sort((a,b)=>a-b).join(',')}`);
+    return {responseSteps, responseRows: Array.from(responseRows).sort((a,b)=>a-b)};
+}
+
+function proveV14N09TwoComponentMonitor(core, errors, channelUpdates) {
+    core.reset();
+    core.configureInputMasks();
+    assert(core.totalSteps === 0,
+        'V14N09 setup must leave mission accounting at the true reset vector');
+    channelUpdates.length = 0;
+    errors.length = 0;
+    core.step(100000);
+
+    enterProgram00(core, errors, channelUpdates);
+    channelUpdates.length = 0;
+    // Comanche055 defines V14 as monitoring components 1 and 2 in R1/R2;
+    // N09 is a three-component, octal-only noun. This checks the component
+    // count boundary without loading or changing erasable data.
+    sendKeys(core, [0o21, 0o01, 0o04, 0o37, 0o20, 0o11]);
+    assert(errors.length === 0, 'Comanche055: error while typing V14N09');
+
+    const enteredRelays = relayStateFromUpdates(channelUpdates);
+    const verbRelay = enteredRelays.get(10);
+    const nounRelay = enteredRelays.get(9);
+    assert(verbRelay !== undefined && (verbRelay & 0o3777) === 0o0157,
+        `Comanche055: V14 relay state is wrong: ${verbRelay === undefined ? 'missing' : `0o${(verbRelay & 0o3777).toString(8)}`}`);
+    assert(nounRelay !== undefined && (nounRelay & 0o3777) === ((0o25 << 5) | 0o37),
+        'Comanche055: N09 relay state is wrong');
+
+    channelUpdates.length = 0;
+    core.keyPress(0o34);
+    const responseRows = new Set();
+    let operatorErrorObserved = false;
+    let eventIndex = 0;
+    let responseSteps = 0;
+    const maxResponseSteps = 350000;
+    const chunkSteps = 10000;
+
+    while (responseSteps < maxResponseSteps && responseRows.size < 6 && !operatorErrorObserved) {
+        core.step(chunkSteps);
+        responseSteps += chunkSteps;
+        for (; eventIndex < channelUpdates.length; eventIndex++) {
+            const [channel, value] = channelUpdates[eventIndex];
+            if (channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0) {
+                operatorErrorObserved = true;
+            }
+            if (channel !== CHANNEL_DSKY) continue;
+            const relay = (value >> 11) & 0o17;
+            if (relay >= 1 && relay <= 8) responseRows.add(relay);
+        }
+    }
+
+    assert(errors.length === 0, 'Comanche055: error while executing V14N09E');
+    assert(!operatorErrorObserved, 'Comanche055: V14N09E asserted OPR ERR');
+    assert(responseRows.size === 6
+        && [3, 4, 5, 6, 7, 8].every((relay) => responseRows.has(relay)),
+    `Comanche055: V14N09E did not monitor exactly components 1 and 2 in R1/R2; relays ${Array.from(responseRows).sort((a,b)=>a-b).join(',')}`);
+    return {responseSteps, responseRows: Array.from(responseRows).sort((a,b)=>a-b)};
+}
+
 function proveV35LightTest(core, errors, channelUpdates) {
     core.reset();
     core.configureInputMasks();
@@ -333,6 +443,8 @@ async function main() {
         'Comanche055: yaAGC version export returned no usable string');
 
     const v16n65 = proveV16N65Monitor(core, errors, channelUpdates);
+    const v05n09 = proveV05N09AlarmDisplay(core, errors, channelUpdates);
+    const v14n09 = proveV14N09TwoComponentMonitor(core, errors, channelUpdates);
     const v35 = proveV35LightTest(core, errors, channelUpdates);
     const mark = proveComancheNavigationKeyInterrupt(core, errors);
 
@@ -358,6 +470,8 @@ async function main() {
 
     console.log(`real yaAGC ${ROPE_NAME}: PASS (${version})`);
     console.log(`  V16N65E monitor: PASS (V=0o${v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${v16n65.nounRelay.toString(8).padStart(4, '0')}; selectors ${v16n65.responseRelays.join(',')}; within ${v16n65.responseSteps} steps)`);
+    console.log(`  V05N09E alarm-code display: PASS (selectors ${v05n09.responseRows.join(',')}; within ${v05n09.responseSteps} steps)`);
+    console.log(`  V14N09E two-component monitor: PASS (selectors ${v14n09.responseRows.join(',')}; within ${v14n09.responseSteps} steps)`);
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);

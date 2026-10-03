@@ -1,5 +1,24 @@
 # FA-05 Detail-C conformance matrix
 
+## Current status (2026-10-03)
+
+The corrected segment identities and Detail-E placement are present in the
+current source. The full canonical source suite passed (98 Node smokes plus
+`ntp-time-smoke.sh`, including the real pinned Comanche055 WASM checks). Gradle
+9.5.1 `:app:verifyPinnedAgcAssets :app:assemble :app:lint` passed across all
+six Regular/Fire variants; lint reported 11 warnings and zero errors. The
+verified Regular debug APK passed `tools/verify-apk.sh` and
+`tools/device-full-smoke.sh` on Android 16, including real Comanche V35 state,
+page recreation, and process-death restoration. Its rendered V35 capture was
+visually inspected in the current V35 screenshot; the E/H/M/N/K/F/J
+electrode forms render as filled, continuous segments with the expected
+asymmetric top and bottom strokes. The separate on-source geometry checks
+remain the dimensional/identity evidence; the emulator capture does not
+measure physical display optics.
+
+The historical “current main” and “candidate” labels below record the original
+pre-integration audit checkpoint and do not describe the present branch.
+
 Primary dimensional authority: MIT/MSC SCD 1006315G Detail C.  
 Secondary geometry evidence: archived `1006315G-exact.step`.  
 Independent Apollo relay/segment nomenclature cross-check: VirtualAGC `Tools/traceDSKY.py`, blob `6d994a40529d377ceaf865f63f8ce0bebec885a8`, traced from the original DSKY relay schematics.
@@ -52,4 +71,4 @@ The visible separator thickness on current main is already 2.695 SVG units, appr
 
 ## Status
 
-The corrected digit geometry passes the primary Detail-C conformance calculations. FA-05 remains open until the complete branch build/test gates and a rendered/device visual check are complete.
+The corrected digit geometry passes the primary Detail-C and Detail-E conformance calculations, and the physical E/H/M/N/K/F/J assignment is covered by independent source/geometry checks. Current-source build, lint, packaged APK verification, and the rendered Android 16 V35 capture all pass. FA-05's local implementation acceptance is complete; physical-screen appearance on a target phone remains unverified.

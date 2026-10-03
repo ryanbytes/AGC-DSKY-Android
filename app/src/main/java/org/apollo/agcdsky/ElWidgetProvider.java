@@ -1,5 +1,6 @@
 package org.apollo.agcdsky;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
@@ -14,8 +15,8 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.TypedValue;
 import android.util.LruCache;
+import android.util.TypedValue;
 import android.widget.RemoteViews;
 import java.util.Calendar;
 import java.util.Locale;
@@ -94,7 +95,27 @@ public final class ElWidgetProvider extends AppWidgetProvider {
 
     @android.annotation.TargetApi(Build.VERSION_CODES.S) private static RemoteViews.RemoteCollectionItems buildFrames(Context context,int count){RemoteViews.RemoteCollectionItems.Builder builder=new RemoteViews.RemoteCollectionItems.Builder();for(int i=0;i<count;i++){RemoteViews frame=new RemoteViews(context.getPackageName(),R.layout.el_second_frame);frame.setImageViewResource(R.id.el_second_image,SECOND_DRAWABLES[i]);builder.addItem(i,frame);}return builder.build();}
     private static PendingIntent tickIntent(Context context){Intent tick=new Intent(context,ElWidgetProvider.class).setAction(ACTION_TICK);return PendingIntent.getBroadcast(context,TICK_REQUEST_CODE,tick,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
-    private static void scheduleNextMinute(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm==null)return;long now=System.currentTimeMillis(),next=now-(now%MINUTE_MS)+MINUTE_MS;PendingIntent pi=tickIntent(context);if(Build.VERSION.SDK_INT<31){alarm.setExactAndAllowWhileIdle(AlarmManager.RTC,next,pi);return;}if(alarm.canScheduleExactAlarms()){try{alarm.setExactAndAllowWhileIdle(AlarmManager.RTC,next,pi);return;}catch(SecurityException ignored){}}alarm.setAndAllowWhileIdle(AlarmManager.RTC,next,pi);}
+    // RTC is deliberately non-wakeup. Use exact minute boundaries only where
+    // the platform permits them; Android 12+ otherwise gets the inexact idle-safe fallback.
+    // Lint cannot infer the pre-S permission rules or the S+ canScheduleExactAlarms guard below.
+    @SuppressLint("MissingPermission")
+    private static void scheduleNextMinute(Context context){
+      AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+      if(alarm==null)return;
+      long now=System.currentTimeMillis(),next=now-(now%MINUTE_MS)+MINUTE_MS;
+      PendingIntent pi=tickIntent(context);
+      if(Build.VERSION.SDK_INT<31){
+        alarm.setExactAndAllowWhileIdle(AlarmManager.RTC,next,pi);
+        return;
+      }
+      if(alarm.canScheduleExactAlarms()){
+        try{
+          alarm.setExactAndAllowWhileIdle(AlarmManager.RTC,next,pi);
+          return;
+        }catch(SecurityException ignored){}
+      }
+      alarm.setAndAllowWhileIdle(AlarmManager.RTC,next,pi);
+    }
     private static void cancelTick(Context context){AlarmManager alarm=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarm!=null)alarm.cancel(tickIntent(context));}
     private static int clamp(int v,int lo,int hi){return Math.max(lo,Math.min(hi,v));}
 

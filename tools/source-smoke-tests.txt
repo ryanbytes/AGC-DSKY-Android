@@ -43,6 +43,7 @@ runtime-transition-integration-smoke.js
 dsky-input-runtime-smoke.js
 app-input-boundary-smoke.js
 operation-authority-smoke.js
+pipa-inertial-frame-smoke.js
 audio-recovery-smoke.js
 cheatsheet-smoke.js
 optics-service-smoke.js
@@ -58,6 +59,7 @@ relay-stretch-stability-smoke.js
 
 dream-mode-smoke.js
 dream-orientation-smoke.js
+dream-interaction-smoke.js
 dream-agc-runtime-smoke.js
 device-v35-policy-smoke.js
 device-package-policy-smoke.js
@@ -75,8 +77,10 @@ el-drawing-conformance-smoke.js
 widget-relay-model-smoke.js
 solar-model-smoke.js
 agc-core-smoke.js
+update-retry-policy-smoke.js
 proceed-electrical-smoke.js
 native-diagnostic-smoke.js
+native-sensor-fallback-smoke.js
 diagnostics-self-test-smoke.js
 dsky-mapping-smoke.js
 dsky-keycode-consistency-smoke.js
@@ -96,4 +100,6 @@ lighting-electrical-model-smoke.js
 v35-model-smoke.js
 dsky-output-path-smoke.js
 asset-reference-smoke.js
+apple-camera-permission-smoke.js
+apple-script-bridge-smoke.js
 wasm-runtime-smoke.js
