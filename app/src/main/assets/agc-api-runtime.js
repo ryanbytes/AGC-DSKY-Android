@@ -89,7 +89,14 @@
   ]);
   function publicPhoneImplementation(name){const service=lateService('AGCDSKY_PHONE');return service&&typeof service.implementation==='function'?service.implementation(name):null}
   const publicPhoneApi=Object.freeze(Object.fromEntries(PHONE_API_NAMES.map(name=>[name,function(...args){const impl=publicPhoneImplementation(name);return typeof impl==='function'?Reflect.apply(impl,window.AGCDSKY,args):undefined}])));
-  function publicSetAppVisible(visible){const result=apiLifecycle.setAppVisible(visible);if(!visible)publicPhoneApi.recenterPhoneImu();return result}
+  function publicSetAppVisible(visible){
+    if(!visible){
+      const proceed=lateService('AGCDSKY_PROCEED');
+      if(proceed&&typeof proceed.release==='function')proceed.release();
+      publicPhoneApi.recenterPhoneImu();
+    }
+    return apiLifecycle.setAppVisible(visible);
+  }
 
   window.AGCDSKY={services:apiServices,lifecycle:apiLifecycle,agcChannel:apiDisplay.onChannel,getCore:()=>apiCore.core,setAppVisible:publicSetAppVisible,getMission:()=>apiState.selectedMission,enterClock:publicEnterClock,enterAgc:publicEnterAgc,appStatus:apiLifecycle.status,saveAgcState:apiSnapshot.save,clearSavedAgcState:apiSnapshot.clear,savedSnapshotInfo:apiSnapshot.savedInfo,verifySnapshotRoundTrip:apiSnapshot.verifyRoundTrip,scheduleAgcAutosave:apiSnapshot.scheduleAutosave,accurateTime:apiShell.accurateTime,accurateDate:apiShell.accurateDate,ntpStatus:()=>({...apiState.ntpStatus}),nativeNtpStatus:apiShell.updateNtpStatus,hardware:publicHardware,audioStatus:publicAudioStatus,relayShow:publicRelayShow,openDiagnostics:publicOpenDiagnostics,closeDiagnostics:publicCloseDiagnostics,openSextant:publicOpenSextant,closeSextant:publicCloseSextant,sextantStatus:publicSextantStatus,applyCmMode:publicApplyCmMode,hardwarePersonality:publicHardwarePersonality,keyMechanicalSpec:publicKeyMechanicalSpec,...publicPhoneApi,get runtimeTransitions(){return lateService('AGCDSKY_RUNTIME')},get inputRuntime(){return lateService('AGCDSKY_INPUT')},get clockBehavior(){return lateService('AGCDSKY_CLOCK_BEHAVIOR')},get hardwareColorMode(){return lateService('AGCDSKY_HARDWARE_COLOR_MODE')},get lightingElectrical(){return lateService('AGCDSKY_LIGHTING_ELECTRICAL')},get lightingRheostatStop(){return lateService('AGCDSKY_LIGHTING_RHEOSTAT_STOP')},get proceedElectrical(){return lateService('AGCDSKY_PROCEED')},get lighting(){return lateService('AGCDSKY_FLIGHT_HARDWARE_UI')?.lighting||null},get keyboardElectrical(){return lateService('AGCDSKY_KEYBOARD_ELECTRICAL')},get sextantTapMark(){return lateService('AGCDSKY_SEXTANT_TAP_MARK')}};
   apiShell.initialize(window.AGCDSKY,apiServices);
