@@ -44,6 +44,9 @@
 
   function printableDocument(snapshot) {
     const cssUrl = new URL('cheatsheet.css', location.href).href;
+    const printCssUrl = new URL('pwa-print.css', location.href).href;
+    const androidPrintCssUrl = new URL('pwa-print-android.css', location.href).href;
+    const printScriptUrl = new URL('pwa-print-window.js', location.href).href;
     const android = isAndroid();
     const checklistHtml = android && snapshot.panes.length
       ? androidSheetMarkup(snapshot.panes)
@@ -51,8 +54,6 @@
     const guidance = android
       ? 'ANDROID · 4 COMPACT MODEL PAGES PER LETTER SHEET · cut on the dashed guides, rotate each card upright, and stack in page order.'
       : '4 COMPACT CHECKLIST PAGES PER LANDSCAPE LETTER SHEET · print or save PDF, then cut on the dashed guides and stack.';
-    const autoPrint = android ? '' : "setTimeout(()=>{try{window.print()}catch(_){}},350);";
-
     return `<!doctype html>
 <html>
 <head>
@@ -60,99 +61,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Apollo CMC / DSKY Checklist</title>
 <link rel="stylesheet" href="${cssUrl}">
-<style>
-  html,body{min-height:100%;margin:0;background:#d8d3c5;color:#111}
-  #pwa-print-toolbar{position:sticky;top:0;z-index:99999;display:flex;align-items:center;gap:10px;padding:10px 12px;background:#171714;color:#f5f0e3;font:700 13px/1.3 Arial,sans-serif}
-  #pwa-print-toolbar .copy{flex:1}
-  #pwa-print-toolbar button{min-height:42px;padding:8px 12px;border:1px solid #777;background:#f4eedf;color:#111;font-weight:800}
-  #app{display:block!important;width:min(100%,1056px)!important;height:auto!important;margin:12px auto!important;padding:0!important;overflow:visible!important}
-  #agc-cheat-sheet{display:block!important;max-height:none!important;overflow:visible!important}
-
-  /*
-   * Android Chromium/Brave may force portrait Letter. Use explicit physical
-   * sheet wrappers so pagination is deterministic. Each compact 5.10 x 3.80 in
-   * landscape checklist card is rotated into a 3.90 x 5.20 in portrait slot.
-   * A 2 x 2 slot grid fits four cards on one Letter sheet with small gutters.
-   */
-  body.pwa-android-imposed #app{width:8.10in!important;margin:8px auto!important}
-  body.pwa-android-imposed #agc-cheat-sheet{
-    width:8.10in!important;
-    margin:0!important;
-    padding:0!important;
-    border:0!important;
-    background:#fff!important;
-  }
-  body.pwa-android-imposed .pwa-model-sheets{
-    display:block!important;
-    width:8.10in!important;
-    margin:0!important;
-    padding:0!important;
-  }
-  body.pwa-android-imposed .pwa-model-sheet{
-    display:grid!important;
-    grid-template-columns:repeat(2,3.90in)!important;
-    grid-template-rows:repeat(2,5.20in)!important;
-    gap:.20in!important;
-    justify-content:center!important;
-    align-content:center!important;
-    width:8.10in!important;
-    height:10.60in!important;
-    margin:0!important;
-    padding:0!important;
-    overflow:hidden!important;
-    background:#fff!important;
-    break-after:page!important;
-    page-break-after:always!important;
-  }
-  body.pwa-android-imposed .pwa-model-sheet:last-child{
-    break-after:auto!important;
-    page-break-after:auto!important;
-  }
-  body.pwa-android-imposed .pwa-model-sheet.single{
-    grid-template-columns:3.90in!important;
-    grid-template-rows:5.20in!important;
-  }
-  body.pwa-android-imposed .pwa-model-slot{
-    position:relative!important;
-    box-sizing:border-box!important;
-    width:3.90in!important;
-    height:5.20in!important;
-    margin:0!important;
-    padding:0!important;
-    overflow:visible!important;
-  }
-  body.pwa-android-imposed .pwa-model-slot>.cheat-pane{
-    display:block!important;
-    position:absolute!important;
-    left:50%!important;
-    top:50%!important;
-    box-sizing:border-box!important;
-    width:5.10in!important;
-    height:3.80in!important;
-    min-height:0!important;
-    margin:0!important;
-    transform:translate(-50%,-50%) rotate(90deg)!important;
-    transform-origin:center center!important;
-    outline-offset:-.03in!important;
-    break-before:auto!important;
-    page-break-before:auto!important;
-    break-after:auto!important;
-    page-break-after:auto!important;
-    break-inside:avoid!important;
-    page-break-inside:avoid!important;
-  }
-
-  @media print{
-    #pwa-print-toolbar{display:none!important}
-    #app{width:auto!important;margin:0!important}
-    body.pwa-android-imposed{background:#fff!important}
-    body.pwa-android-imposed #app,
-    body.pwa-android-imposed #agc-cheat-sheet,
-    body.pwa-android-imposed .pwa-model-sheets,
-    body.pwa-android-imposed .pwa-model-sheet{width:8.10in!important}
-  }
-  ${android ? '@page{size:8.5in 11in;margin:.20in}' : ''}
-</style>
+<link rel="stylesheet" href="${printCssUrl}">
+${android ? `<link rel="stylesheet" href="${androidPrintCssUrl}">` : ''}
 </head>
 <body${android ? ' class="pwa-android-imposed"' : ''}>
 <div id="pwa-print-toolbar">
@@ -161,11 +71,7 @@
   <button id="pwa-print-close" type="button">CLOSE</button>
 </div>
 <main id="app">${checklistHtml}</main>
-<script>
-document.getElementById('pwa-print-action').addEventListener('click',()=>{try{window.print()}catch(_){}});
-document.getElementById('pwa-print-close').addEventListener('click',()=>window.close());
-${autoPrint}
-<\/script>
+<script src="${printScriptUrl}"></script>
 </body>
 </html>`;
   }

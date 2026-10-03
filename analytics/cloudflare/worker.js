@@ -95,7 +95,11 @@ async function recordEvent(request, env) {
     return json({error: 'invalid JSON'}, 400, cors);
   }
 
-  const event = String(body.event || '').toLowerCase();
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return json({error: 'invalid event payload'}, 400, cors);
+  }
+
+  const event = typeof body.event === 'string' ? body.event.toLowerCase() : '';
   const clientId = body.clientId;
   const standalone = body.standalone === true ? 1 : 0;
   const device = DEVICE_VALUES.has(body.device) ? body.device : 'other';
@@ -159,7 +163,7 @@ async function getStats(env) {
     `),
     env.DB.prepare(`
       SELECT COUNT(*) AS users FROM clients
-      WHERE last_seen >= datetime('now', '-7 days')
+      WHERE last_seen >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-7 days')
     `),
     env.DB.prepare(`
       SELECT last_device AS device, COUNT(*) AS users

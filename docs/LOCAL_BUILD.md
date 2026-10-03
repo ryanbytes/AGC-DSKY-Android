@@ -100,10 +100,10 @@ The source gate requires:
 - `PROG`, `VERB`, `NOUN`, signed registers, and EL separator rules;
 - horizontally and vertically resizable AppWidget metadata;
 - native SNTP and HTTPS updater permissions (`INTERNET` and `ACCESS_NETWORK_STATE`); WebView loads remain blocked;
-- a non-wakeup `AlarmManager.RTC` minute scheduler rather than an exact/wakeup alarm;
+- a non-wakeup `AlarmManager.RTC` minute scheduler: exact minute delivery before Android 12 and when Android 12+ already permits exact alarms, with an inexact idle-safe fallback otherwise; no exact-alarm permission is requested;
 - no `drawRect`, `drawRoundRect`, `drawCircle`, or `drawOval` primitives in the widget renderer, preventing a bezel/faceplate/fastener layer from being quietly reintroduced.
 
-The actual segment polygons come from the same crew-facing Ben Krasnow `DSKY V2.svg` EL geometry used by the WebView DSKY. This is a native AppWidget because Android home-screen widgets require a native `RemoteViews` surface; it does not create a second AGC implementation.
+The WebView and native widget use the same numeric-segment contours transcribed from Riley Rainey's drawing-backed `1006315G-exact.step` model; the current source revision, attribution, and CC BY-SA 4.0 license are recorded in `THIRD_PARTY.md` and the packaged `THIRD_PARTY_NOTICES.txt`. This is a native AppWidget because Android home-screen widgets require a native `RemoteViews` surface; it does not create a second AGC implementation.
 
 ## Relay/V35 source invariants
 
@@ -138,7 +138,7 @@ The pre-build checks also guard:
 - geolocation restricted to the packaged synthetic HTTPS origin
 - top-level navigation restricted to packaged `/assets/` content
 - local WebView responses use explicit `200 OK`, `Cache-Control: no-store`, and MIME-sniffing protection
-- strict offline CSP with `'wasm-unsafe-eval'`, not ordinary `'unsafe-eval'` or inline script
+- enforcing offline CSP: default deny, same-origin packaged assets, `'wasm-unsafe-eval'` only for WASM, and no ordinary `'unsafe-eval'`, inline scripts, or inline styles
 - frontend script order is defined by `app/src/main/assets/index.html` and guarded by `tools/asset-reference-smoke.js`; removed monolithic `app.js` / `app-refine.js` / `runtime-debug.js` files must not return
 - CSP violations and stack-bearing runtime failures reach the local private debug reporter
 - `FRONTEND READY` is withheld until the packaged page initializes and EL rendering is complete
@@ -216,8 +216,8 @@ The subsequent WebView/AGC layers use the real app process and real `AgcCore`; n
 - rendered PROG/VERB/NOUN `88` and R1/R2/R3 `+88888`
 - V35 steady annunciators checked against the actual decoded relay/channel state, including COMP ACTY == contemporaneous channel `011` bit `00002`
 - observed yaAGC-modulated V/N + KEY REL/OPR ERR off phase while V35 relay latches/steady lamps persist
-- packaged-page reload restoring CM-only AGC/requested run mode on a newly constructed core
-- actual process destruction with `adb shell am force-stop`, observed no-process interval, relaunch, and persisted CM/AGC preferences on a fresh process/core
+- packaged-page reload restoring CM-only AGC/run mode and the saved full linear-memory snapshot on a newly constructed core
+- actual process destruction with `adb shell am force-stop`, observed no-process interval, relaunch, and persisted CM/AGC preferences plus full memory snapshot on a fresh process/core
 - best-effort restoration of the user's pre-smoke mission/run-mode preferences
 
 See `docs/DEVICE_RUNTIME_SMOKE.md` for exact proof boundaries. Adding or strengthening a script is not evidence it passes; output must be captured from a current APK built from the corresponding source revision.
@@ -234,11 +234,11 @@ Even a passing full-device smoke does not prove every user-visible behavior. Rem
 
 - pixel-perfect physical-screen inspection of digits, signs, lamps, and annunciators
 - EL home-screen widget picker appearance, EL-only rendering, resize behavior, tap-to-open, and minute/timezone refresh on the target launcher
-- real OS screen-off/screen-on behavior beyond the direct lifecycle bridge
+- Fire OS and physical-handset OS screen-off/screen-on behavior. Android 16 emulator has a separate real sleep/wake result recorded in `docs/PROGRESS.md`.
 - long physical PRO hold for intended standby semantics
-- DreamService selection/startup/non-interactivity through Android UI
+- DreamService selection/startup, interaction contract, and lifecycle through Android UI
 - physical DREAM DIM / BRIGHT / SOLAR brightness and first-use location-permission behavior
 - portrait/landscape DISPLAY cropping/scaling on the target phone
-- representative Pinball semantics beyond the automated V35 sequence
+- representative Pinball semantics beyond device-tested V16N65E/V05N09E/V35E and host-tested MARK/KEYRUPT2
 
 A passing build/verification/full-device sequence is the point at which current-source runtime claims can be upgraded from implemented to verified.

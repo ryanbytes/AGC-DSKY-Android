@@ -34,7 +34,13 @@ req(provider,'RemoteViews.RemoteCollectionItems.Builder','live register adapter'
 req(provider,'R.drawable.el_sec_59','generated frame table');
 req(provider,'pairFrames=buildFrames(context,60)','60-frame adapter');
 req(provider,'hourFrames=buildFrames(context,24)','24-frame adapter');
-req(provider,'alarm.setExactAndAllowWhileIdle','minute refresh');
+const scheduler=provider.match(/private static void scheduleNextMinute\(Context context\)\{[\s\S]*?\n    \}/)?.[0]||'';
+req(provider,'@SuppressLint("MissingPermission")\n    private static void scheduleNextMinute','guarded exact alarm lint rationale');
+req(scheduler,'AlarmManager.RTC','non-wakeup wall-clock alarm');
+if(!/if\(Build\.VERSION\.SDK_INT<31\)\{\s*alarm\.setExactAndAllowWhileIdle\(AlarmManager\.RTC,next,pi\);\s*return;\s*\}/.test(scheduler))fail('pre-Android 12 minute tick must use the exact RTC alarm');
+if(!/if\(alarm\.canScheduleExactAlarms\(\)\)\{\s*try\{\s*alarm\.setExactAndAllowWhileIdle\(AlarmManager\.RTC,next,pi\);\s*return;\s*\}catch\(SecurityException ignored\)\{\}\s*\}/.test(scheduler))fail('Android 12+ exact RTC alarm must be guarded and fall through on SecurityException');
+req(scheduler,'alarm.setAndAllowWhileIdle(AlarmManager.RTC,next,pi)','Android 12+ inexact fallback');
+no(scheduler,'AlarmManager.RTC_WAKEUP','non-wakeup minute scheduler');
 
 req(finish,'--el:#6decb4','WebView EL color');
 req(provider,'CORE=Color.rgb(109,236,180),RULE=CORE','native EL color');

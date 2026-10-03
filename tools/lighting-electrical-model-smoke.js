@@ -6,6 +6,7 @@ const path = require('path');
 const vm = require('vm');
 const {installServiceRegistry} = require('./test-service-registry');
 const source = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/lighting-electrical-model.js'),'utf8');
+const css = fs.readFileSync(path.resolve(__dirname, '../app/src/main/assets/hardware-color-mode.css'),'utf8');
 function assert(condition,message){if(!condition)throw new Error(message)}
 function near(actual,expected,tolerance=1e-5){return Math.abs(actual-expected)<=tolerance}
 let observerCallback=null,derivedWrites=0;
@@ -28,9 +29,9 @@ assert(near(model.incandescentFlux(1),1),'full-voltage output must normalize to 
 assert(near(model.incandescentFlux(0),0),'zero-voltage output must be 0');
 assert(near(model.incandescentFlux(.5),Math.pow(.5,3.4)),'half-voltage response does not use V^3.4');
 assert(near(model.incandescentFlux(.75),Math.pow(.75,3.4)),'three-quarter response does not use V^3.4');
-const style=elements.get('dsky-lighting-electrical-model');
-assert(style&&style.textContent.includes('--integral-incandescent-level'),'incandescent override style missing');
-assert(style.textContent.includes('var(--lamp-gain,1)'),'override discarded lamp gain');
+assert(!elements.has('dsky-lighting-electrical-model'),'lighting runtime injected an inline style element');
+assert(css.includes('body.apollo-block-ii.lamp-hardware-ready .lamp.on .lamp-source'),'incandescent override selector missing from packaged CSS');
+assert(css.includes('var(--integral-incandescent-level, var(--integral-level)) * var(--lamp-gain,1)'),'incandescent override discarded lamp gain');
 root.style.setProperty('--integral-level','.75');const state75=model.state();
 assert(near(state75.integralVoltageRatio,.75),'model did not observe INTEGRAL voltage');
 assert(near(state75.incandescentFluxRatio,Math.pow(.75,3.4)),'derived flux wrong at .75');

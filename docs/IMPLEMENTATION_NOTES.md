@@ -87,8 +87,8 @@ The wrapper follows webAGC's approximate timing model (~11.72 μs per AGC instru
 Lifecycle distinction:
 
 - same surviving WebView: AGC timer pauses while hidden and resumes the same in-memory core;
-- page/Activity/process recreation: CM rope/requested run mode persist, but a fresh yaAGC reset is constructed;
-- CPU registers and erasable memory are not serialized across process/page destruction.
+- page/Activity/process recreation: CM rope/requested run mode and a schema-1 snapshot of the full WASM linear memory persist; a fresh yaAGC object imports that memory before execution resumes;
+- snapshot restore requires the same mission and yaAGC core version, validates the full memory length/fingerprint before mutating the new core, and resets JavaScript scheduler counters and releases external DSKY inputs.
 
 ### DSKY output relay model
 
@@ -150,7 +150,7 @@ The ring-buffer backend initializes lazily, so the wrapper must preserve rope lo
 
 ## DreamService
 
-`AgcDreamService` loads the same local page with dream/display query state. It has a separate WebView, remains synthetic clock/display-only, hides interaction controls, supports DIM/BRIGHT/SOLAR, sets window brightness through `DreamBridge`, and applies small periodic position drift.
+`AgcDreamService` loads the same local page with dream/display query state. It has a separate WebView, remains synthetic clock/display-only, hides controls, supports DIM/BRIGHT/SOLAR, sets window brightness through `DreamBridge`, and applies small periodic position drift. It is intentionally interactive so touch reaches the WebView: a brief display tap toggles relay ticking, while a 1.8-second hold calls `DreamBridge.finishDream()`. `tools/dream-interaction-smoke.js` exercises this packaged-page gesture logic and checks the native interactive/exit bridge source contract.
 
 Dream presentation must not cause MainActivity to inherit display-only/clock state. Same-origin WebStorage is intentionally shared because Activity and DreamService remain in the same app process/origin.
 
@@ -177,10 +177,12 @@ Its V35 semantic driver now proves a channel-driven P00 `PROG 00` precondition b
 
 ## Remaining high-value work
 
-1. Run the device smoke gates listed in `docs/DEVICE_RUNTIME_SMOKE.md` on current Regular and Fire builds and retain their evidence.
-2. Exercise additional non-V35 Pinball semantics through real channel `015` input in the packaged Android WebView. The host real-WASM gate covers Comanche V16N65 and P00 entry.
-3. Test long physical PRO behavior through channel `032`.
-4. Verify real OS screen-off/on lifecycle behavior in addition to direct bridge tests.
-5. Verify DreamService startup, non-interactivity, brightness modes, SOLAR permission behavior, and normal-app state after Dream exit.
-6. Perform physical portrait/landscape DISPLAY and pixel-level DSKY visual review.
-7. The CM-mode setter/readback has been added through the documented audited-source rebuild; retain live packaged-WebView mode readback in the Android device smoke so this is not inferred from host-only WASM tests.
+1. Run the isolated full device gates on a Fire build/Fire OS. The Regular debug build now passes the complete gate on the Android 16 emulator; its package is `.eltest` and its installed state is separate from production.
+2. Run the macOS/iOS Apple builds in their target runtimes and verify real WebKit asset loading, interaction, relay haptics, and printing. Both Debug targets compile and package the exact pinned assets. Relay events now use bounded Core Haptics transient patterns when the device reports support; tactile output on Apple hardware and cross-device feel remain unverified. CoreSimulator is still older than this Xcode, so simulator launch/rendering remains unavailable. Physical Apple runtime and printing remain unverified.
+3. Continue representative non-V35 Pinball input coverage. The packaged Android WebView drives `V37E00E` -> `V16N65E` -> `V37E00E` -> `V05N09E` -> `V37E00E` -> `V14N09E` -> `V35E`; V16/V05 use DSKY pointer input and V14 exercises WebView keydown/keyup events sent through DevTools. V05 checks the read-only FAILREG three-word octal response; V14 checks its two-component subset and OPR ERR state. The host real-WASM gate checks all eight V05 selectors and only the six R1/R2 V14 selectors. Android handset physical keyboard behavior and further load/extended-verb paths remain open; the host gate also covers MARK/KEYRUPT2.
+4. Verify physical PRO standby hold through channel `032`. A two-second pointer-held PRO press/release passes in the emulator.
+5. Repeat actual OS screen-off/on verification on Fire OS and a physical handset. The Android 16 emulator has now passed a real `Asleep`/`Awake` transition with the packaged WebView reporting `appVisible=false` and `coreRunning=false` while asleep, then resuming the same AGC core object after wake. The emulator's AC stay-awake setting and app `FLAG_KEEP_SCREEN_ON` remained enabled during this test.
+6. Verify DreamService startup, touch delivery through Android DreamManager, brightness modes, SOLAR permission behavior, and normal-app state after Dream exit. The source gesture contract now has a host regression; the Android 16 emulator lacks a DreamManager service, and Fire/physical behavior is unverified.
+7. Perform physical portrait/landscape DISPLAY and pixel-level DSKY visual review; the new AUX-menu fit is verified in Chromium and the packaged Android WebView, not on the owner's handset.
+8. Verify the currently deployed PWA offline path and a physical phone browser. A hosted precache audit found `./.self-contained-assets-note` returns 404 on GitHub Pages, which rejects the worker's atomic `cache.addAll()` install; the local build now excludes that marker. On 2026-10-03, the current local package passed PWA build, package/parity smokes, and a live Chromium worker-install/offline-reload check; its worker took control, populated 91 cache entries with the required assets, and all four PNG icons decoded at the requested dimensions. Earlier Chromium testing proved offline startup and a real Comanche055 P00/CM-mode run for its then-current build. The currently hosted worker still serves the old marker and corrupt icons, and its install/offline behavior after publishing the fix plus physical phone-browser behavior remain unverified.
+9. Review abuse controls for the public anonymous-analytics event endpoint. The Worker validates bounded event payloads and hashes client IDs, but CORS `Origin` checks are not authentication and the code has no rate limit. Cloudflare-side rate limiting is outside this repository and was not inspected.

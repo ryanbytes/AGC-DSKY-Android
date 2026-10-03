@@ -17,7 +17,7 @@ const REQUIRED_SHARED_ASSETS = [
 // build-site.sh expands the marker below from app/src/main/assets so every
 // other shared frontend file is automatically offline-capable. Keep PWA-only
 // and external runtime files explicit here.
-const CORE_ASSETS = [
+const CORE_ASSETS = [...new Set([
   './',
   ...REQUIRED_SHARED_ASSETS,
   /*__SHARED_ASSET_PRECACHE__*/
@@ -27,14 +27,18 @@ const CORE_ASSETS = [
   './pwa-auto-dim.js',
   './pwa-clock-guard.js',
   './pwa-print-bridge.js',
+  './pwa-print.css',
+  './pwa-print-android.css',
+  './pwa-print-window.js',
   './analytics.js',
   './clock-behavior-v2.js',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-512-maskable.png',
   './yaAGC.wasm',
   './Comanche055.bin'
-];
+])];
 
 self.addEventListener('install', event => {
   event.waitUntil(

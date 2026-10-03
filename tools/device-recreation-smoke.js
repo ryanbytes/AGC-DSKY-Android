@@ -330,6 +330,7 @@ function statusExpression() {
       channels: c ? Object.keys(c.channels || {}).map(Number).sort((a,b) => a-b) : [],
       runMode: localStorage.getItem('runMode'),
       storedMission: localStorage.getItem('agcMission'),
+      snapshot: window.AGCDSKY && typeof AGCDSKY.appStatus==='function' ? AGCDSKY.appStatus().snapshot : null,
       modeText: document.getElementById('mode') ? document.getElementById('mode').textContent : '',
       mode: window.AGCDSKY && typeof AGCDSKY.appStatus==='function' ? AGCDSKY.appStatus().mode : null
     };
@@ -423,6 +424,12 @@ async function main() {
     snapshot = await snapshotState(cdp);
 
     const before = await enterMission(cdp, 'comanche055');
+    const checkpointSaved = await cdp.evaluate("AGCDSKY.saveAgcState('device page recreation smoke checkpoint')");
+    assert(checkpointSaved === true, 'could not save the live WASM memory checkpoint before page reload');
+    const checkpoint = await cdp.evaluate('AGCDSKY.appStatus().snapshot');
+    assert(checkpoint.saved && checkpoint.meta && checkpoint.meta.bytes > 0
+        && checkpoint.meta.coreVersion === before.version,
+      `live WASM memory checkpoint metadata invalid: ${JSON.stringify(checkpoint)}`);
     const sentinel = `old-core-${crypto.randomBytes(8).toString('hex')}`;
     const tagged = await cdp.evaluate(`(() => {
       const c = AGCDSKY.getCore();
@@ -449,6 +456,10 @@ async function main() {
       && s.runMode === 'agc'
       && s.core
       && s.running
+      && s.snapshot
+      && s.snapshot.lastAction === 'restored'
+      && s.snapshot.meta
+      && s.snapshot.meta.bytes === checkpoint.meta.bytes
       && s.cmPeripheralMode === 1
       && s.sentinel === null
       && typeof s.version === 'string'
@@ -463,7 +474,8 @@ async function main() {
     console.log('Device page recreation smoke: PASS');
     console.log(`  before reload: ${before.mission}; ${before.version}; steps=${before.totalSteps}`);
     console.log(`  after reload: ${after.mission}; ${after.version}; CM mode=${after.cmPeripheralMode}; steps=${after.totalSteps}`);
-    console.log('  persistent state: CM mission + requested AGC mode restored');
+    console.log(`  WASM memory snapshot: ${after.snapshot.lastAction}; ${after.snapshot.meta.bytes} bytes; ${after.snapshot.meta.coreVersion}`);
+    console.log('  persistent state: CM mission, requested AGC mode, and full linear-memory snapshot restored');
     console.log('  core identity: fresh JS/yaAGC core object after page recreation');
   } finally {
     if (snapshot) await restoreState(cdp, snapshot);

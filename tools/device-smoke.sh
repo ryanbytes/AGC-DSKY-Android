@@ -101,22 +101,28 @@ START_OUTPUT="$($ADB shell am start -W -n "$ACTIVITY" 2>&1)" || {
 }
 printf '%s\n' "$START_OUTPUT"
 
-# Give WebView enough time to load the local page and execute the frontend. A
-# debug-only native marker emitted by dream-agc.js after script setup and EL
-# rendering proves frontend initialization; process-alive alone is not enough.
-sleep 2
-PID="$($ADB shell pidof -s "$PACKAGE" 2>/dev/null | tr -d '\r' || true)"
+# WebView's first startup can take longer than two seconds on a cold emulator.
+# Poll for up to 15 seconds for the debug-only marker emitted by dream-agc.js
+# after script setup and EL rendering; process-alive alone is not enough.
+PID=""
+for attempt in {1..30}; do
+  PID="$($ADB shell pidof -s "$PACKAGE" 2>/dev/null | tr -d '\r' || true)"
+  if [[ -n "$PID" ]]; then
+    if ! $ADB logcat -d -v threadtime --pid="$PID" > "$LOG_DIR/logcat.txt" 2>/dev/null; then
+      # Older adb/logcat combinations may not support --pid. Keep a useful fallback.
+      $ADB logcat -d -v threadtime > "$LOG_DIR/logcat.txt" 2>/dev/null || true
+    fi
+    grep -Fq 'FRONTEND READY app' "$LOG_DIR/logcat.txt" && break
+  else
+    # Capture global logcat before returning a launch failure; the process may
+    # already be gone and its PID-filtered buffer is no longer addressable.
+    $ADB logcat -d -v threadtime > "$LOG_DIR/logcat.txt" 2>/dev/null || true
+  fi
+  sleep 0.5
+done
 
 if [[ -n "$PID" ]]; then
   printf 'Process: %s (pid %s)\n' "$PACKAGE" "$PID"
-  if ! $ADB logcat -d -v threadtime --pid="$PID" > "$LOG_DIR/logcat.txt" 2>/dev/null; then
-    # Older adb/logcat combinations may not support --pid. Keep a useful fallback.
-    $ADB logcat -d -v threadtime > "$LOG_DIR/logcat.txt" 2>/dev/null || true
-  fi
-else
-  # Capture global logcat before returning a launch failure; the process may
-  # already be gone and its PID-filtered buffer is no longer addressable.
-  $ADB logcat -d -v threadtime > "$LOG_DIR/logcat.txt" 2>/dev/null || true
 fi
 
 # Debug builds are debuggable, so run-as can inspect the app-private local crash

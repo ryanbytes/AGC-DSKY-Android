@@ -14,9 +14,38 @@ function assert(condition, message) {
 
 const html = fs.readFileSync(INDEX, 'utf8');
 
+const policyMatch = html.match(/<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"\s*\/?\s*>/i);
+assert(policyMatch, 'frontend must declare an enforcing Content-Security-Policy');
+const directiveParts = policyMatch[1].split(';').map(part => {
+  const [name, ...values] = part.trim().split(/\s+/);
+  return [name.toLowerCase(), values];
+});
+const directives = new Map(directiveParts);
+const requiredPolicy = {
+  'default-src': ["'none'"],
+  'script-src': ["'self'", "'wasm-unsafe-eval'"],
+  'style-src': ["'self'"],
+  'img-src': ["'self'"],
+  'connect-src': ["'self'"],
+  'media-src': ["'self'"],
+  'font-src': ["'self'"],
+  'worker-src': ["'self'"],
+  'manifest-src': ["'self'"],
+  'object-src': ["'none'"],
+  'base-uri': ["'none'"],
+  'form-action': ["'none'"]
+};
+assert(directiveParts.length === directives.size, 'CSP must not repeat directives');
+assert(directives.size === Object.keys(requiredPolicy).length, 'CSP directives changed unexpectedly');
+for (const [name, expected] of Object.entries(requiredPolicy)) {
+  assert(JSON.stringify(directives.get(name)) === JSON.stringify(expected),
+    `CSP ${name} must be exactly ${expected.join(' ')}`);
+}
+assert(!policyMatch[1].split(/[;\s]+/).some(token => /^'(?:unsafe-inline|unsafe-eval)'$/i.test(token)),
+  'CSP must not allow ordinary unsafe-inline or unsafe-eval');
+
 // The packaged WebView is network-blocked by the Android shell. Keep the page
-// itself self-contained too: no remote scripts, styles, images, forms, frames,
-// or inline JavaScript/event handlers.
+// itself self-contained too: no remote assets, forms, frames, or inline code.
 const assetRefs = [];
 for (const pattern of [
   /<script\s+[^>]*src="([^"]+)"/gi,
@@ -40,12 +69,15 @@ assert(!/\son[a-z]+\s*=/i.test(html),
 assert(!/<iframe\b/i.test(html), 'frontend must not contain iframe elements');
 assert(!/<form\b/i.test(html), 'frontend must not contain form elements');
 
-const styles = [...html.matchAll(/<style\b([^>]*)>([\s\S]*?)<\/style>/gi)];
-assert(styles.length === 1, `expected exactly one inline style block, found ${styles.length}`);
-assert(/\bid="dsky-solo"/i.test(styles[0][1]),
-  'the only inline style block must be #dsky-solo');
-assert(!/@import\b/i.test(styles[0][2]), '#dsky-solo must not import external CSS');
-assert(!/url\s*\(/i.test(styles[0][2]), '#dsky-solo must not reference external resources');
+assert(!/<style\b/i.test(html), 'frontend must not contain inline style blocks');
+assert(!/\sstyle\s*=/i.test(html), 'frontend must not contain inline style attributes');
+for (const filename of fs.readdirSync(ASSET_ROOT).filter(name => name.endsWith('.js'))) {
+  const source = fs.readFileSync(path.join(ASSET_ROOT, filename), 'utf8');
+  assert(!/document\.createElement\(\s*['"]style['"]\s*\)/i.test(source),
+    `${filename} must not inject inline style blocks`);
+  assert(!/<style\b|<script\s*>/i.test(source),
+    `${filename} must not generate inline style or script blocks`);
+}
 
 // Keep this smoke focused on CSP/local-asset isolation rather than duplicating
 // the full runtime architecture tests. Verify every external script is local,

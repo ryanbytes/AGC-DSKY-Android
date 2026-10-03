@@ -29,11 +29,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.net.ConnectException;
 import java.net.HttpURLConnection;
-import java.net.NoRouteToHostException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -154,8 +150,12 @@ final class AppUpdater {
                 notifyStatus(listener, "READY TO INSTALL · " + release.version);
                 if (userInitiated) offerPendingToForeground();
             } catch (Exception error) {
-                if (isTransientNetworkFailure(error)) {
-                    scheduleRetry(context);
+                if (UpdateRetryPolicy.isRetryable(error)) {
+                    // A scheduled retry must not be suppressed by the last
+                    // successful check's 12-hour freshness window.
+                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                            .remove(PREF_LAST_CHECK).apply();
+                    scheduleRetry(context, UpdateRetryPolicy.retryDelayMillis(error, RETRY_INTERVAL_MS));
                     notifyStatus(listener, "NETWORK ERROR");
                 } else {
                     DebugReporter.appendNativeError(context, "Updater: " + error);
@@ -173,25 +173,15 @@ final class AppUpdater {
         new Handler(Looper.getMainLooper()).post(() -> resumePendingInstall(activity));
     }
 
-    private static boolean isTransientNetworkFailure(Throwable error) {
-        for (Throwable current = error; current != null; current = current.getCause()) {
-            if (current instanceof UnknownHostException
-                    || current instanceof ConnectException
-                    || current instanceof NoRouteToHostException
-                    || current instanceof SocketTimeoutException) return true;
-        }
-        return false;
-    }
-
     private static PendingIntent retryIntent(Context context) {
         Intent intent = new Intent(context, UpdateCheckReceiver.class).setAction(UpdateCheckReceiver.ACTION_CHECK);
         return PendingIntent.getBroadcast(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static void scheduleRetry(Context context) {
+    private static void scheduleRetry(Context context, long delayMs) {
         AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarm == null) return;
-        long when = SystemClock.elapsedRealtime() + RETRY_INTERVAL_MS;
+        long when = SystemClock.elapsedRealtime() + Math.max(RETRY_INTERVAL_MS, delayMs);
         PendingIntent pending = retryIntent(context);
         alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME, when, pending);
     }
@@ -288,7 +278,7 @@ final class AppUpdater {
         try {
             int status = connection.getResponseCode();
             if (status == 404) return null;
-            if (status != 200) throw new IllegalStateException("release HTTP " + status);
+            if (status != 200) throw httpStatusException("release", connection, status);
             String json = readAll(connection.getInputStream(), 2_000_000);
             JSONObject root = new JSONObject(json);
             if (root.optBoolean("draft", false) || root.optBoolean("prerelease", false)) return null;
@@ -325,7 +315,7 @@ final class AppUpdater {
         HttpURLConnection connection = open(url);
         try {
             int status = connection.getResponseCode();
-            if (status != 200) throw new IllegalStateException("APK HTTP " + status);
+            if (status != 200) throw httpStatusException("APK", connection, status);
             int contentLength = connection.getContentLength();
             if (contentLength > MAX_APK_BYTES) throw new IOException("APK response too large");
             try (InputStream input = new BufferedInputStream(connection.getInputStream()); FileOutputStream output = new FileOutputStream(temporary)) {
@@ -351,11 +341,27 @@ final class AppUpdater {
         HttpURLConnection connection = open(url);
         try {
             int status = connection.getResponseCode();
-            if (status != 200) throw new IllegalStateException("digest HTTP " + status);
+            if (status != 200) throw httpStatusException("digest", connection, status);
             return readAll(connection.getInputStream(), 16_384);
         } finally {
             connection.disconnect();
         }
+    }
+
+    private static UpdateRetryPolicy.HttpStatusException httpStatusException(
+            String endpoint, HttpURLConnection connection, int status) {
+        String responseBody = "";
+        if (status == 403) {
+            try {
+                InputStream error = connection.getErrorStream();
+                if (error != null) responseBody = readAll(error, 16_384);
+            } catch (Exception ignored) {}
+        }
+        return new UpdateRetryPolicy.HttpStatusException(endpoint, status,
+                connection.getHeaderField("Retry-After"),
+                connection.getHeaderField("X-RateLimit-Remaining"),
+                connection.getHeaderField("X-RateLimit-Reset"), responseBody,
+                System.currentTimeMillis());
     }
 
     private static String readAll(InputStream input, int maxBytes) throws Exception {

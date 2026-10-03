@@ -1,5 +1,15 @@
 # FA-05 Detail E front-face audit
 
+## Current status (2026-10-03)
+
+The checkpoint below predates integration. PR #183 (`30835e4`) incorporated
+the corrected `REGISTER_GAP_IN=.060` value and STEP-backed separator geometry.
+Current-source drawing-conformance, geometry-lock, and DSKY-mapping smokes,
+the full source suite, all six Regular/Fire builds, lint, APK verification, and
+the Android 16 packaged-runtime gate pass; see `CONFORMANCE_MATRIX.md` for the
+current-state summary. The “Current main” measurements and candidate status
+below describe the pre-merge checkpoint only.
+
 Primary authority: MIT/MSC SCD 1006315G, sheet 2, Detail E.
 
 ## What Detail E constrains
@@ -63,4 +73,5 @@ Result: **PASS** against the Detail-E 0.055–0.065 in band.
 - main digit-to-separator placement: FAIL;
 - FA-05 branch placement candidate: PASS by source calculation;
 - separator lengths/end shape: restored from archived STEP secondary evidence;
-- final FA-05 closure still requires complete branch build/test and rendered/device verification.
+- current local source, build, package, and rendered-device verification: PASS;
+- physical-screen appearance on a target handset remains unverified.

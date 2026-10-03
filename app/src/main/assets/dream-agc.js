@@ -39,7 +39,8 @@
       const raw = dreamShell.store.get('agcSnapshotV1');
       if (!raw) return false;
       const payload = JSON.parse(raw);
-      if (!payload || payload.schema !== 1 || payload.mission !== dreamState.selectedMission || !payload.core) {
+      if (!payload || payload.schema !== 1 || payload.mission !== dreamState.selectedMission
+          || payload.coreVersion !== dreamCore.core.version() || !payload.core) {
         return false;
       }
       dreamCore.core.importSnapshot(payload.core);

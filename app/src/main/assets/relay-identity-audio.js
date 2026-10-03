@@ -78,19 +78,18 @@
     for(const offset of bounceTimes){state=!state;events.push({atMs:travelMs+offset,state,kind:'bounce'})}events.push({atMs:stableMs,state:finalState,kind:'settled'});return events;
   }
   function profile(id,ordinal){
-    const m=sourceBoundTimingProfile(id),auxiliary=String(id).startsWith('AUX:');
-    // Audio is a generic perceptual click for the relay class. The D1-D6/K1-K20
-    // crosswalk is now source-proven, but no flown-unit acoustic data supports
-    // per-package acoustic individuality.
-    const bodyScale=auxiliary?.985:1;
+    const m=sourceBoundTimingProfile(id);
+    // Audio is one generic perceptual click for every relay. The D1-D6/K1-K20
+    // crosswalk is source-proven, but no flown-unit acoustic data supports
+    // per-package or relay-class acoustic differences.
     return Object.freeze({
       id,ordinal,...m,settleMs:Math.max(m.setStableMs,m.resetStableMs),
-      acousticBasis:'generic-perceptual-relay-class-cue; not measured Apollo audio',
-      f1:5600*bodyScale,f2:8300*bodyScale,f3:11600*bodyScale,f4:14200*bodyScale,
+      acousticBasis:'generic-perceptual-relay-cue; not measured Apollo audio',
+      f1:5600,f2:8300,f3:11600,f4:14200,
       d1:.00155,d2:.00185,d3:.00135,d4:.00095,
       strikeDecay:.00033,strikeMix:.14,ringMix:1,level:1,
-      phaseSeed:hash32(auxiliary?'AUX:generic:phase':'LATCHING:generic:phase'),
-      contactSeed:hash32(auxiliary?'AUX:generic:contact':'LATCHING:generic:contact')
+      phaseSeed:hash32('GENERIC:phase'),
+      contactSeed:hash32('GENERIC:contact')
     });
   }
   const profileCache=new Map();
@@ -228,7 +227,7 @@
   function individualDskyRelayClick(ctx,when=ctx.currentTime,strength=1){
     const state=snapshot();if(!state)return fallbackEmitTick(ctx,when,strength);
     const auxChanges=changedAux(state);
-    if(auxChanges.length){auxChanges.forEach((change,i)=>{const id=`AUX:${AUX_LABEL[change.name]||change.name.toUpperCase()}`,ordinal=auxOrdinal(change.name),p=profileFor(id,ordinal),individualStrength=change.on?.66:.58,travelMs=change.on?p.setTravelMs:p.resetTravelMs;playIdentity(ctx,when+travelMs/1000+i*.00008,individualStrength,id,ordinal,change.on)});return}
+    if(auxChanges.length){auxChanges.forEach((change,i)=>{const id=`AUX:${AUX_LABEL[change.name]||change.name.toUpperCase()}`,ordinal=auxOrdinal(change.name),p=profileFor(id,ordinal),travelMs=change.on?p.setTravelMs:p.resetTravelMs;playIdentity(ctx,when+travelMs/1000+i*.00008,.66,id,ordinal,change.on)});return}
     const row=Number(state.activeDrive)||0,baseSettle=Array.isArray(state.armatureSettleMs)?state.armatureSettleMs:[];
     if(row>=1&&row<=12&&baseSettle.length===11){
       const deltaMs=Math.max(0,(when-ctx.currentTime)*1000),bit=closestBit(deltaMs,baseSettle,row);
@@ -253,10 +252,10 @@
     const play=()=>playIdentity(ctx,ctx.currentTime+.00005,Number(strength)||.66,id,ordinal,on);
     if(ctx.state==='running')play();else ctx.resume().then(play).catch(()=>{});return true;
   }
-  function playAuxImpact(name,engaging,strength=.62){
+  function playAuxImpact(name,engaging,strength=.66){
     if(!identityState.tickSound||!AUX_ORDER.includes(name))return false;
     const ctx=audio.ensure();if(!ctx)return false;const id=`AUX:${AUX_LABEL[name]||String(name).toUpperCase()}`,ordinal=auxOrdinal(name),on=!!engaging;
-    const play=()=>playIdentity(ctx,ctx.currentTime+.00005,Number(strength)||.62,id,ordinal,on);
+    const play=()=>playIdentity(ctx,ctx.currentTime+.00005,Number(strength)||.66,id,ordinal,on);
     if(ctx.state==='running')play();else ctx.resume().then(play).catch(()=>{});return true;
   }
 

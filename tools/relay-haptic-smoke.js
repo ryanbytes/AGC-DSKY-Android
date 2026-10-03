@@ -68,6 +68,10 @@ const topology=context.DSKY_RELAY_TOPOLOGY;
 vm.runInContext(identity,context,{filename:'relay-identity-audio.js'});
 const model=context.DSKY_RELAY_AUDIO;
 assert(model&&typeof model.hapticPatternFor==='function'&&typeof model.playRelayBankHaptic==='function','relay haptic waveform API missing');
+const latchingAudio=model.profileFor(4,7),auxiliaryAudio=model.auxiliaryProfileFor('comp');
+const acousticFields=['f1','f2','f3','f4','d1','d2','d3','d4','strikeDecay','strikeMix','ringMix','level','phaseSeed','contactSeed'];
+assert(JSON.stringify(acousticFields.map(k=>latchingAudio[k]))===JSON.stringify(acousticFields.map(k=>auxiliaryAudio[k])),
+  'relay classes must not claim unsupported acoustic differences');
 
 const setPatterns=[],resetPatterns=[];
 for(let row=1;row<=12;row++)for(let bit=0;bit<11;bit++){

@@ -8,6 +8,7 @@
 
 - Virtual AGC project: https://github.com/virtualagc/virtualagc
 - Virtual AGC site: https://www.ibiblio.org/apollo/
+- MIT/MSC Specification Control Drawing `1006315G`, *Indicator, Digital, Electroluminescent*: https://www.ibiblio.org/apollo/SCDs/scd_1006315g.pdf
 - Virtual AGC developer information / yaAGC I/O protocol: https://www.ibiblio.org/apollo/developer.html
 - VirtualAGC `yaDSKY2/LM.ini`: LM annunciator map, channel assignments, key codes.
 - VirtualAGC `piPeripheral/humanizeScript.py`: channel `010` relay-word decoding and DSKY channel bit names.
@@ -15,7 +16,7 @@
 - VirtualAGC `yaAGC/agc_engine.h`: fictitious channel `0163` DSKY modulation masks.
 - VirtualAGC `yaAGC/agc_engine.c`: DSKY hardware reconstruction, RESTART flip-flop/RSET behavior, STBY/EL-off behavior, channel `0163` output.
 - VirtualAGC `yaAGC/ringbuffer_api.c`: browser/WASM input transport and KEYRUPT generation behavior.
-- Apollo 11 Comanche 055 `PINBALL_GAME__BUTTONS_AND_LIGHTS.agc`: CM Pinball keyboard processing, RSET/error-reset path, display lock/release behavior.
+- Apollo 11 Comanche 055 at VirtualAGC commit `ddc65e7bed41f1301921b934fcbaaee93db99dda`: [`ASSEMBLY_AND_OPERATION_INFORMATION.agc`](https://github.com/virtualagc/virtualagc/blob/ddc65e7bed41f1301921b934fcbaaee93db99dda/Comanche055/ASSEMBLY_AND_OPERATION_INFORMATION.agc) defines regular verbs and noun component/format restrictions; [`PINBALL_NOUN_TABLES.agc`](https://github.com/virtualagc/virtualagc/blob/ddc65e7bed41f1301921b934fcbaaee93db99dda/Comanche055/PINBALL_NOUN_TABLES.agc) maps nouns to erasable registers and types; [`PINBALL_GAME__BUTTONS_AND_LIGHTS.agc`](https://github.com/virtualagc/virtualagc/blob/ddc65e7bed41f1301921b934fcbaaee93db99dda/Comanche055/PINBALL_GAME__BUTTONS_AND_LIGHTS.agc) implements CM Pinball keyboard processing, RSET/error-reset, display lock/release, and regular-verb behavior.
 - Apollo 11 Luminary 099 `PINBALL_GAME_BUTTONS_AND_LIGHTS.agc`: original DSKY key codes, channel 15 keyboard behavior, channel 10 relay-word display format, and relay digit codes.
 - Apollo 11 source mirror: https://github.com/chrislgarry/Apollo-11
 - Apollo-derived DSKY interface drawing: https://commons.wikimedia.org/wiki/File:Apollo_DSKY_interface.svg
@@ -48,6 +49,9 @@ The documented spring rate and assembled stroke allow only the spring-force *inc
 - Apollo AGC CDU-to-direction-cosine-matrix documentation defines X as outer gimbal/CDUX, Y as inner gimbal/CDUY, and Z as middle gimbal/CDUZ.
 - The documented matrix is exactly `Ry(inner) * Rz(middle) * Rx(outer)`. A generic roll/pitch/yaw `Rz * Ry * Rx` decomposition agrees for isolated single-axis motion but is wrong for compound attitudes.
 - `phone-icdu.js` therefore keeps conventional device Euler angles only for camera aiming and magnetic-yaw input conditioning; the flight CDU path extracts Apollo outer/inner/middle angles from the quaternion DCM before generating CDUX/CDUY/CDUZ pulses.
+- Apollo Guidance Computer System Test Procedures, §§21-119–21-120, states the nominal CM PIPA scale factor is exactly `5.85 cm/sec/pulse`; `phone-icdu.js` uses the equivalent `0.0585 m/s` delta-V per pulse. https://www.ibiblio.org/apollo/Documents/agcis_21_system_test.pdf
+- Android `SensorManager.remapCoordinateSystem` documents `AXIS_Y, AXIS_MINUS_X` for a display at `Surface.ROTATION_90`. The native PIPA path uses the inverse screen-to-device rotation for its device-to-world quaternion and the matching device-to-screen basis for acceleration vectors. Android also states that the linear-acceleration sensor has an offset and recommends sampling that offset in a calibration step while the device is still; the app therefore waits for the user's explicit `PIPA CALIBRATE` action before emitting PIPA increments. Its accelerometer fallback applies the guide's time-constant-based low-pass approach to gravity estimation; the selected `0.23 s` time constant is an app tuning value. https://developer.android.com/reference/android/hardware/SensorManager#remapCoordinateSystem(float[],int,int,float[]) https://developer.android.com/develop/sensors-and-location/sensors/sensors_motion#use-the-linear-accelerometer https://developer.android.com/develop/sensors-and-location/sensors/sensors_motion#use-the-accelerometer
+- Android `SensorManager.registerListener` returns whether a sensor is successfully enabled. The native bridge now uses per-sensor registration results for PIPA/IMU availability and selects the accelerometer fallback when the preferred linear-acceleration sensor cannot be enabled. https://developer.android.com/reference/android/hardware/SensorManager#registerListener(android.hardware.SensorEventListener,android.hardware.Sensor,int)
 
 ### CM optics CDU scaling
 

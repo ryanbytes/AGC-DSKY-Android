@@ -337,11 +337,18 @@
       if (binary.length !== bytes.length || snapshot.byteLength !== bytes.length) {
         throw new Error('AGC snapshot memory size mismatch');
       }
+      if (snapshot.fingerprint) {
+        let h = 0x811c9dc5;
+        for (let i=0; i<binary.length; i++) {
+          h ^= binary.charCodeAt(i) & 0xff;
+          h = Math.imul(h, 0x01000193) >>> 0;
+        }
+        if (h.toString(16).padStart(8,'0') !== snapshot.fingerprint) {
+          throw new Error('AGC snapshot fingerprint mismatch');
+        }
+      }
       this.stop();
       for (let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i) & 0xff;
-      if (snapshot.fingerprint && this.snapshotFingerprint() !== snapshot.fingerprint) {
-        throw new Error('AGC snapshot fingerprint mismatch');
-      }
       this.releaseExternalDskyInputs();
       this.channels = Object.create(null);
       this.totalSteps = 0;

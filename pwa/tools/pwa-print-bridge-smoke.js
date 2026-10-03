@@ -6,6 +6,8 @@ const path=require('path');
 const vm=require('vm');
 
 const source=fs.readFileSync(path.resolve(__dirname,'../static/pwa-print-bridge.js'),'utf8');
+const printCss=fs.readFileSync(path.resolve(__dirname,'../static/pwa-print.css'),'utf8');
+const androidPrintCss=fs.readFileSync(path.resolve(__dirname,'../static/pwa-print-android.css'),'utf8');
 const fail=message=>{console.error('PWA PRINT BRIDGE FAIL: '+message);process.exit(1)};
 const assert=(ok,message)=>{if(!ok)fail(message)};
 
@@ -78,12 +80,15 @@ assert(written.includes('cheatsheet.css'),'print document does not load checklis
 assert(written.includes('PRINT / SAVE PDF'),'print/PDF action missing');
 assert(written.includes('ANDROID · 4 COMPACT MODEL PAGES PER LETTER SHEET'),'Android compact four-up guidance missing');
 assert(written.includes('<body class="pwa-android-imposed">'),'Android print document must activate explicit-sheet mode');
-assert(written.includes('@page{size:8.5in 11in;margin:.20in}'),'Android print document must use explicit portrait Letter dimensions');
-assert(written.includes('grid-template-columns:repeat(2,3.90in)!important'),'Android sheet must reserve two compact columns');
-assert(written.includes('grid-template-rows:repeat(2,5.20in)!important'),'Android sheet must reserve two compact rows');
-assert(written.includes('width:8.10in!important')&&written.includes('height:10.60in!important'),'Android physical sheet dimensions missing');
-assert(written.includes('width:5.10in!important')&&written.includes('height:3.80in!important'),'Android compact card dimensions missing');
-assert(written.includes('transform:translate(-50%,-50%) rotate(90deg)!important'),'Android model cards must be centered and rotated inside fixed slots');
+assert(written.includes('pwa-print.css')&&written.includes('pwa-print-android.css'),'print document must load packaged print stylesheets');
+assert(written.includes('pwa-print-window.js'),'print document must load an external script');
+assert(!/<style\b|<script\s*>/i.test(written),'print document must not emit inline CSS or JavaScript');
+assert(androidPrintCss.includes('@page{size:8.5in 11in;margin:.20in}'),'Android print stylesheet must use explicit portrait Letter dimensions');
+assert(printCss.includes('grid-template-columns:repeat(2,3.90in)!important'),'Android sheet must reserve two compact columns');
+assert(printCss.includes('grid-template-rows:repeat(2,5.20in)!important'),'Android sheet must reserve two compact rows');
+assert(printCss.includes('width:8.10in!important')&&printCss.includes('height:10.60in!important'),'Android physical sheet dimensions missing');
+assert(printCss.includes('width:5.10in!important')&&printCss.includes('height:3.80in!important'),'Android compact card dimensions missing');
+assert(printCss.includes('transform:translate(-50%,-50%) rotate(90deg)!important'),'Android model cards must be centered and rotated inside fixed slots');
 
 for(const sheet of [1,2])assert(written.includes('data-model-sheet="'+sheet+'"'),'missing explicit print sheet '+sheet);
 assert((written.match(/class="pwa-model-sheet(?: single)?"/g)||[]).length===2,'five checklist pages must create exactly two physical sheets');

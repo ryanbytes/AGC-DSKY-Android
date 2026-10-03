@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self'; worker-src 'self'; manifest-src 'self'">
 <title>AGC DSKY</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="controls-layout.css">
@@ -17,14 +18,7 @@
 <link rel="stylesheet" href="parallax-3d.css">
 <link rel="stylesheet" href="photoreal-finish.css">
 <link rel="stylesheet" href="hardware-color-mode.css">
-
-<style id="dsky-solo">
-html,body,#app{background:#000!important}
-#mode{display:none!important}
-.dsky{z-index:3!important}
-.el-glass-background{fill:#696d67}
-.el-ito-dot{fill:#a2a69f;opacity:.88}
-</style>
+<link rel="stylesheet" href="dsky-solo.css">
 </head>
 <body>
 <main id="app">

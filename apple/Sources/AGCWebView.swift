@@ -4,10 +4,10 @@ import WebKit
 
 #if os(iOS)
 import UIKit
-import CoreHaptics
 #elseif os(macOS)
 import AppKit
 #endif
+import CoreHaptics
 
 @MainActor
 final class AGCWebViewModel: ObservableObject {
@@ -86,13 +86,10 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
     private let keyReleaseFeedback = UIImpactFeedbackGenerator(style: .light)
     private let keyTestFeedback = UIImpactFeedbackGenerator(style: .heavy)
 #endif
+    private var relayHapticEngine: CHHapticEngine?
 
     private var hapticBridgeAvailable: Bool {
-#if os(iOS)
-        return CHHapticEngine.capabilitiesForHardware().supportsHaptics
-#elseif os(macOS)
-        return true
-#endif
+        CHHapticEngine.capabilitiesForHardware().supportsHaptics
     }
 
     private var hapticPlatformName: String {
@@ -125,6 +122,43 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
         configuration.setURLSchemeHandler(assetHandler, forURLScheme: AGCAssetSchemeHandler.scheme)
         configuration.userContentController.add(self, name: "PrintBridge")
         configuration.userContentController.add(self, name: "HapticBridge")
+#if DEBUG
+        configuration.userContentController.add(self, name: "DebugBridge")
+        let debugScript = """
+        (() => {
+          const report = (type, detail) => {
+            try {
+              window.webkit.messageHandlers.DebugBridge.postMessage({
+                type: String(type).slice(0, 32),
+                detail: String(detail == null ? '' : detail).slice(0, 2048)
+              });
+            } catch (_) {}
+          };
+          window.DebugBridge = Object.freeze({
+            ready: detail => report('ready', detail),
+            report: detail => report('report', detail)
+          });
+          window.addEventListener('error', event => {
+            const target = event.target;
+            const detail = target && (target.src || target.href)
+              ? `resource load failed: ${target.src || target.href}`
+              : `${event.message || 'JavaScript error'} @${event.filename || ''}:${event.lineno || 0}:${event.colno || 0}`;
+            report('error', detail);
+          }, true);
+          window.addEventListener('unhandledrejection', event => {
+            const reason = event.reason;
+            report('unhandledrejection', reason && (reason.stack || reason.message) || reason);
+          });
+          window.addEventListener('securitypolicyviolation', event => {
+            report('csp', `${event.violatedDirective} blocked ${event.blockedURI || 'inline content'}`);
+          });
+          report('report', 'debug bridge installed at document start');
+        })();
+        """
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: debugScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        )
+#endif
         configuration.userContentController.addUserScript(
             WKUserScript(
                 source: "window.PrintBridge=Object.freeze({printChecklist:function(){window.webkit.messageHandlers.PrintBridge.postMessage('print')}});",
@@ -141,7 +175,9 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
           amplitudeControl:function(){return false;},
           keyMake:function(){window.webkit.messageHandlers.HapticBridge.postMessage('make');return true;},
           keyRelease:function(){window.webkit.messageHandlers.HapticBridge.postMessage('release');return true;},
-          testPulse:function(){window.webkit.messageHandlers.HapticBridge.postMessage('test');return true;}
+          testPulse:function(){window.webkit.messageHandlers.HapticBridge.postMessage('test');return true;},
+          relayImpact:function(durationMs,amplitude){window.webkit.messageHandlers.HapticBridge.postMessage({type:'relayImpact',durationMs:durationMs,amplitude:amplitude});return true;},
+          relayWaveform:function(timings,amplitudes){window.webkit.messageHandlers.HapticBridge.postMessage({type:'relayWaveform',timings:timings,amplitudes:amplitudes});return true;}
         });
         """
         configuration.userContentController.addUserScript(
@@ -193,14 +229,44 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
         webView.stopLoading()
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "PrintBridge")
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "HapticBridge")
+#if DEBUG
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "DebugBridge")
+#endif
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         model.detach(webView: webView)
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        if message.name == "HapticBridge", let command = message.body as? String {
-            performKeyHaptic(command)
+        let origin = message.frameInfo.securityOrigin
+#if DEBUG
+        if message.name == "DebugBridge" {
+            NSLog("[AGC DSKY DEBUG] bridge origin: main=%@ scheme=%@ host=%@",
+                  message.frameInfo.isMainFrame ? "yes" : "no",
+                  origin.protocol as NSString,
+                  origin.host as NSString)
+        }
+#endif
+        guard message.frameInfo.isMainFrame,
+              origin.protocol.lowercased() == AGCAssetSchemeHandler.scheme,
+              origin.host.lowercased() == AGCAssetSchemeHandler.host else { return }
+
+#if DEBUG
+        if message.name == "DebugBridge",
+           let payload = message.body as? [String: String],
+           let type = payload["type"],
+           ["ready", "report", "error", "unhandledrejection", "csp"].contains(type) {
+            NSLog("[AGC DSKY DEBUG] %@: %@", type as NSString, (payload["detail"] ?? "").prefix(2048) as NSString)
+            return
+        }
+#endif
+
+        if message.name == "HapticBridge" {
+            if let command = message.body as? String {
+                performKeyHaptic(command)
+            } else if let payload = message.body as? [String: Any] {
+                performRelayHaptic(payload)
+            }
             return
         }
         guard message.name == "PrintBridge", (message.body as? String) == "print", let webView = model.webView else { return }
@@ -236,6 +302,85 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
             break
         }
 #endif
+    }
+
+    private func performRelayHaptic(_ payload: [String: Any]) {
+        guard hapticBridgeAvailable,
+              let type = payload["type"] as? String else { return }
+
+        if type == "relayImpact" {
+            guard let duration = payload["durationMs"] as? NSNumber,
+                  let amplitude = payload["amplitude"] as? NSNumber,
+                  duration.doubleValue == 1,
+                  (1...3).contains(amplitude.intValue),
+                  amplitude.doubleValue == Double(amplitude.intValue) else { return }
+            playRelayHapticEvents([relayHapticEvent(amplitude: amplitude.intValue, at: 0)])
+            return
+        }
+
+        guard type == "relayWaveform",
+              let timings = payload["timings"] as? String,
+              let amplitudes = payload["amplitudes"] as? String else { return }
+        playRelayWaveform(timings: timings, amplitudes: amplitudes)
+    }
+
+    private func playRelayWaveform(timings: String, amplitudes: String) {
+        guard timings.utf8.count <= 1024,
+              amplitudes.utf8.count <= 1024 else { return }
+        let timingParts = timings.split(separator: ",", omittingEmptySubsequences: false)
+        let amplitudeParts = amplitudes.split(separator: ",", omittingEmptySubsequences: false)
+        guard !timingParts.isEmpty,
+              timingParts.count == amplitudeParts.count,
+              timingParts.count <= 192 else { return }
+
+        var elapsedMs = 0
+        var events: [CHHapticEvent] = []
+        for (timingPart, amplitudePart) in zip(timingParts, amplitudeParts) {
+            guard let durationMs = Int(timingPart),
+                  let amplitude = Int(amplitudePart),
+                  (0...80).contains(durationMs),
+                  (0...3).contains(amplitude) else { return }
+            if amplitude > 0 {
+                guard durationMs > 0 else { return }
+                events.append(relayHapticEvent(amplitude: amplitude, at: Double(elapsedMs) / 1000))
+            }
+            elapsedMs += durationMs
+            guard elapsedMs <= 750 else { return }
+        }
+        guard !events.isEmpty else { return }
+        playRelayHapticEvents(events)
+    }
+
+    private func relayHapticEvent(amplitude: Int, at time: TimeInterval) -> CHHapticEvent {
+        // Preserve the shared 0..255 cue value numerically; this is not a claim
+        // that Apple and Android hardware produce equal perceived intensity.
+        CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(amplitude) / 255)
+            ],
+            relativeTime: time
+        )
+    }
+
+    private func playRelayHapticEvents(_ events: [CHHapticEvent]) {
+        guard !events.isEmpty else { return }
+        do {
+            let engine: CHHapticEngine
+            if let relayHapticEngine {
+                engine = relayHapticEngine
+            } else {
+                engine = try CHHapticEngine()
+                engine.isAutoShutdownEnabled = true
+                relayHapticEngine = engine
+            }
+            try engine.start()
+            let pattern = try CHHapticPattern(events: events, parameters: [])
+            let player = try engine.makePlayer(with: pattern)
+            try player.start(atTime: CHHapticTimeImmediate)
+        } catch {
+            relayHapticEngine = nil
+        }
     }
 
     private func printChecklist(from webView: WKWebView) {
@@ -329,7 +474,8 @@ final class AGCWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKS
     ) {
         if origin.protocol.lowercased() == AGCAssetSchemeHandler.scheme,
            origin.host.lowercased() == AGCAssetSchemeHandler.host,
-           type == .camera || type == .cameraAndMicrophone {
+           frame.isMainFrame,
+           type == .camera {
             decisionHandler(.grant)
         } else {
             decisionHandler(.deny)

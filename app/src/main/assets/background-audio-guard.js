@@ -12,6 +12,7 @@
   const audibleNow=()=>!guardState.dream&&!document.hidden&&guardState.appVisible;
   const AUDIO_STABLE_MS=8000,AUDIO_FAILURE_LIMIT=2;
   let audioFailureCount=0,audioCircuitOpen=false,audioFailureReported=false,audioStableTimer=0;
+  let audioUserGestureUnlocked=false,audioResumeBlockedUntilGesture=false,audioGestureEpoch=0;
   const observedAudioContexts=new WeakSet(),retiredAudioContexts=new WeakSet();
   const getContext=()=>audio.context();
   const setContext=value=>audio.setContext(value,'audio recovery context');
@@ -37,8 +38,9 @@
   function resetAudioCircuit(){audioFailureCount=0;audioCircuitOpen=false;audioFailureReported=false;clearStableTimer()}
 
   try{if(getContext())adoptAudioContext(getContext())}catch(_){}
+  document.addEventListener('pointerdown',event=>{if(event&&event.isTrusted===false)return;audioUserGestureUnlocked=true;audioGestureEpoch++;audioResumeBlockedUntilGesture=false},{capture:true,passive:true});
   function resilientEnsureAudio(){
-    if(!audibleNow()||!guardState.tickSound||audioCircuitOpen)return null;
+    if(!audibleNow()||!guardState.tickSound||audioCircuitOpen||!audioUserGestureUnlocked)return null;
     let ctx=getContext();
     if(ctx&&ctx.state==='closed'){retireAudioContext(ctx,'context already closed',null,false);ctx=null}
     if(!ctx){
@@ -47,9 +49,11 @@
     }else adoptAudioContext(ctx);
     if(ctx.state==='running'){markAudioStable(ctx);return ctx}
     if(ctx.state==='closed'){retireAudioContext(ctx,'context closed during acquisition',null,false);return null}
-    if(ctx.state!=='running'&&typeof ctx.resume==='function'){
-      try{const resumed=ctx.resume();if(resumed&&typeof resumed.then==='function')resumed.then(()=>markAudioStable(ctx)).catch(error=>{if(error&&error.name==='NotAllowedError')return;retireAudioContext(ctx,'resume rejected',error)})}
-      catch(error){if(!error||error.name!=='NotAllowedError'){retireAudioContext(ctx,'resume threw',error);return null}}
+    if(ctx.state!=='running'&&typeof ctx.resume==='function'&&!audioResumeBlockedUntilGesture){
+      const gestureEpoch=audioGestureEpoch;
+      const blockUntilGesture=()=>{if(gestureEpoch===audioGestureEpoch)audioResumeBlockedUntilGesture=true};
+      try{const resumed=ctx.resume();if(resumed&&typeof resumed.then==='function')resumed.then(()=>markAudioStable(ctx)).catch(error=>{if(error&&error.name==='NotAllowedError'){blockUntilGesture();return}retireAudioContext(ctx,'resume rejected',error)})}
+      catch(error){if(error&&error.name==='NotAllowedError')blockUntilGesture();else{retireAudioContext(ctx,'resume threw',error);return null}}
     }
     return ctx;
   }
@@ -64,7 +68,7 @@
   audio.installImplementation('emitTick',guardedRelayTick,'background audio visibility guard');
 
   const audiblePlayRelayBurst=audio.implementation('playBurst');
-  function guardedRelayBurst(count){if(!audibleNow()||audioCircuitOpen)return;return audiblePlayRelayBurst(count)}
+  function guardedRelayBurst(count){if(!audibleNow()||audioCircuitOpen||!audioUserGestureUnlocked||audioResumeBlockedUntilGesture)return;return audiblePlayRelayBurst(count)}
   audio.installImplementation('playBurst',guardedRelayBurst,'background relay burst guard');
 
   function status(){const ctx=getContext();return{state:ctx?ctx.state:'none',failures:audioFailureCount,circuitOpen:audioCircuitOpen}}

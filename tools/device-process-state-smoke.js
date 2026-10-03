@@ -334,6 +334,7 @@ function statusExpression() {
       runMode: localStorage.getItem('runMode'),
       storedMission: localStorage.getItem('agcMission'),
       mode: window.AGCDSKY && typeof AGCDSKY.appStatus==='function' ? AGCDSKY.appStatus().mode : null,
+      snapshot: window.AGCDSKY && typeof AGCDSKY.appStatus==='function' ? AGCDSKY.appStatus().snapshot : null,
       modeText: document.getElementById('mode') ? document.getElementById('mode').textContent : ''
     };
   })()`;
@@ -463,6 +464,11 @@ async function verify(cdp) {
       && s.runMode === 'agc'
       && s.core
       && s.running
+      && s.snapshot
+      && s.snapshot.lastAction === 'restored'
+      && s.snapshot.meta
+      && s.snapshot.meta.mission === 'comanche055'
+      && s.snapshot.meta.bytes > 0
       && typeof s.version === 'string'
       && s.version.length > 0
       && !s.modeText.includes('AGC ERROR')
@@ -472,6 +478,7 @@ async function verify(cdp) {
     console.log('Device process recreation smoke: PASS');
     console.log(`  persisted nonce: ${markers.nonce}`);
     console.log(`  restored mission/run mode: ${state.mission} / ${state.runMode}`);
+    console.log(`  full WASM memory snapshot: ${state.snapshot.lastAction}; ${state.snapshot.meta.bytes} bytes; ${state.snapshot.meta.coreVersion}`);
     console.log(`  fresh process core: ${state.version}; CM mode=${state.cmPeripheralMode}`);
   } finally {
     try {
