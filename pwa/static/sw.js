@@ -30,7 +30,6 @@ const CORE_ASSETS = [...new Set([
   './pwa-print.css',
   './pwa-print-android.css',
   './pwa-print-window.js',
-  './analytics.js',
   './clock-behavior-v2.js',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',

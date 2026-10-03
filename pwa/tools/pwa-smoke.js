@@ -14,7 +14,7 @@ const text = rel => read(rel).toString('utf8');
 const exists = rel => fs.existsSync(path.join(site, rel));
 
 for (const rel of [
-  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-print-bridge.js', 'pwa-print.css', 'pwa-print-android.css', 'pwa-print-window.js', 'analytics.js', 'sw.js',
+  'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-print-bridge.js', 'pwa-print.css', 'pwa-print-android.css', 'pwa-print-window.js', 'sw.js',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png',
   'PRIVACY_POLICY.txt', 'yaAGC.wasm', 'Comanche055.bin', '.agcdsky-pwa-generated'
 ]) {
@@ -45,12 +45,7 @@ for (const [name, values] of Object.entries(strictDirectives)) {
 if (cspDirectives.size !== Object.keys(strictDirectives).length + 1) fail('CSP contains missing or unexpected directives');
 if (csp[1].split(/[;\s]+/).some(token => /^'(?:unsafe-inline|unsafe-eval)'$/i.test(token))) fail('CSP allows ordinary unsafe-inline or unsafe-eval');
 const connect = cspDirectives.get('connect-src');
-if (!connect || connect[0] !== "'self'" || connect.length > 2) fail('CSP connect-src must allow same-origin and at most one analytics origin');
-if (connect.length === 2) {
-  let analyticsOrigin;
-  try { analyticsOrigin = new URL(connect[1]); } catch (_) { fail('CSP analytics origin is invalid'); }
-  if (analyticsOrigin.protocol !== 'https:' || analyticsOrigin.origin !== connect[1]) fail('CSP analytics source must be an exact HTTPS origin');
-}
+if (JSON.stringify(connect) !== JSON.stringify(["'self'"])) fail('CSP connect-src must permit same-origin requests only');
 if (/<style\b|\sstyle\s*=|<script\s*>/i.test(index)) fail('PWA page must not contain inline CSS or JavaScript');
 for (const marker of [
   'rel="manifest" href="manifest.webmanifest"',
@@ -59,10 +54,12 @@ for (const marker of [
   '<script src="pwa-sensor-parity.js"></script>',
   '<script src="pwa-auto-dim.js"></script>',
   '<script src="pwa-print-bridge.js"></script>',
-  '<script src="pwa-bootstrap.js"></script>',
-  '<script src="analytics.js"></script>'
+  '<script src="pwa-bootstrap.js"></script>'
 ]) {
   if (!index.includes(marker)) fail('index.html missing ' + marker);
+}
+if (exists('analytics.js') || /analytics\.js|AGCDSKYAnalytics|AGC_ANALYTICS_ENDPOINT/i.test(index)) {
+  fail('PWA output must not include analytics assets, globals, or endpoint configuration');
 }
 if (index.indexOf('pwa-sensor-parity.js') > index.indexOf('pwa-auto-dim.js') || index.indexOf('pwa-auto-dim.js') > index.indexOf('pwa-bootstrap.js')) {
   fail('PWA parity scripts must initialize before generic PWA bootstrap');
@@ -258,86 +255,6 @@ for (const marker of [
 try { new Function(autoDim); }
 catch (error) { fail('pwa-auto-dim.js syntax error: ' + error.message); }
 
-const analytics = text('analytics.js');
-if (analytics.includes('__ANALYTICS_ENDPOINT_JSON__') || analytics.includes('__APP_VERSION_JSON__')) {
-  fail('analytics build tokens were not replaced');
-}
-try { new Function(analytics); }
-catch (error) { fail('analytics.js syntax error: ' + error.message); }
-if (!analytics.includes("navigator.doNotTrack === '1'")) fail('analytics client must honor Do Not Track');
-if (!analytics.includes("credentials: 'omit'")) fail('analytics client must omit credentials');
-
-function analyticsHarness({search = '', doNotTrack = '0', standalone = true, endpoint = 'https://analytics.example'} = {}) {
-  const listeners = {};
-  const values = new Map();
-  const requests = [];
-  const window = {
-    AGCDSKYAnalytics: {},
-    doNotTrack,
-    matchMedia: () => ({matches: standalone}),
-    addEventListener: (name, listener) => { listeners[name] = listener; }
-  };
-  const context = {
-    window,
-    location: {search},
-    navigator: {doNotTrack, userAgent: 'Mozilla/5.0 (iPhone)', maxTouchPoints: 5, standalone: false},
-    localStorage: {
-      getItem: key => values.has(key) ? values.get(key) : null,
-      setItem: (key, value) => values.set(key, String(value)),
-      removeItem: key => values.delete(key)
-    },
-    crypto: {randomUUID: () => '01234567-89ab-cdef-0123-456789abcdef'},
-    URLSearchParams,
-    fetch: async (url, options) => { requests.push({url, options}); return {ok: true}; }
-  };
-  const analyticsFixture = analytics
-    .replace(/const ENDPOINT = .*;/, `const ENDPOINT = ${JSON.stringify(endpoint)};`)
-    .replace(/const BUILD = .*;/, 'const BUILD = "audit-build";');
-  vm.runInNewContext(analyticsFixture, context);
-  return {window, listeners, values, requests};
-}
-
-async function checkAnalyticsDataBoundary() {
-  const disabled = analyticsHarness({endpoint: ''});
-  if (disabled.window.AGCDSKYAnalytics.enabled || disabled.window.AGCDSKYAnalytics.endpoint !== null) {
-    fail('an empty analytics endpoint must leave telemetry disabled');
-  }
-  if (typeof disabled.listeners.load === 'function'
-      || await disabled.window.AGCDSKYAnalytics.send('launch') !== false
-      || disabled.requests.length !== 0 || disabled.values.size !== 0) {
-    fail('a disabled analytics endpoint must not register launches, send requests, or create a client ID');
-  }
-
-  const enabled = analyticsHarness();
-  if (!enabled.window.AGCDSKYAnalytics.enabled) fail('HTTPS analytics endpoint should be enabled in this fixture');
-  if (typeof enabled.listeners.load !== 'function') fail('enabled analytics must register one launch event');
-  await enabled.window.AGCDSKYAnalytics.send('launch');
-  if (enabled.requests.length !== 1) fail('launch must send exactly one analytics request');
-  const {url, options} = enabled.requests[0];
-  if (url !== 'https://analytics.example/v1/event') fail('analytics request used an unexpected endpoint');
-  if (options.credentials !== 'omit' || options.method !== 'POST') fail('analytics request must POST without credentials');
-  const payload = JSON.parse(options.body);
-  const expectedKeys = ['build', 'clientId', 'device', 'event', 'standalone'];
-  if (JSON.stringify(Object.keys(payload).sort()) !== JSON.stringify(expectedKeys)) {
-    fail('analytics payload fields changed: ' + Object.keys(payload).sort().join(','));
-  }
-  if (payload.event !== 'launch' || payload.device !== 'iphone' || payload.standalone !== true
-      || payload.build !== 'audit-build' || payload.clientId !== '01234567-89ab-cdef-0123-456789abcdef') {
-    fail('analytics payload values do not match the coarse launch fixture');
-  }
-
-  const optedOut = analyticsHarness({search: '?telemetry=off'});
-  if (optedOut.window.AGCDSKYAnalytics.enabled || await optedOut.window.AGCDSKYAnalytics.send('launch') !== false || optedOut.requests.length !== 0) {
-    fail('telemetry=off must suppress analytics transmission');
-  }
-  const dnt = analyticsHarness({doNotTrack: '1'});
-  if (dnt.window.AGCDSKYAnalytics.enabled || await dnt.window.AGCDSKYAnalytics.send('launch') !== false || dnt.requests.length !== 0) {
-    fail('Do Not Track must suppress analytics transmission');
-  }
-  console.log('Analytics payload/opt-out boundary: PASS');
-}
-checkAnalyticsDataBoundary().catch(error => fail('analytics data-boundary check failed: ' + error.message));
-
 const checklistJs = text('cheatsheet.js');
 const checklistCss = text('cheatsheet.css');
 const pwaPrint = text('pwa-print-bridge.js');
@@ -390,16 +307,17 @@ if (!sharedStyle.includes('.el-seg{\n  display:none;\n  fill:none;\n  stroke:non
 if (!sharedStyle.includes('.el-seg.on{\n  display:inline;\n  fill:var(--el);')) fail('energized numeric/sign EL rule missing');
 
 const privacy = text('PRIVACY_POLICY.txt');
-for (const marker of ['ANONYMOUS USAGE ANALYTICS', 'HMAC-hashes', '?telemetry=off', 'Ambient light sensor']) {
+for (const marker of ['does not include analytics or send usage events', 'Ambient light sensor']) {
   if (!privacy.includes(marker)) fail('PWA privacy policy missing ' + marker);
 }
 
 const sw = text('sw.js');
 if (sw.includes('__CACHE_VERSION__')) fail('service-worker cache version was not stamped');
+if (sw.includes("'./analytics.js'")) fail('service worker must not cache an analytics client');
 if (sw.includes("'./.self-contained-assets-note'")) fail('service-worker must not pre-cache the repository-only hidden assets marker');
 if (sw.includes('client.navigate(')) fail('service-worker activation must not forcibly navigate open DSKY pages');
 if (!sw.includes('.then(() => self.clients.claim())')) fail('service worker must still claim clients after activation');
-for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-print-bridge.js', 'pwa-print.css', 'pwa-print-android.css', 'pwa-print-window.js', 'analytics.js']) {
+for (const required of ['yaAGC.wasm', 'Comanche055.bin', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-print-bridge.js', 'pwa-print.css', 'pwa-print-android.css', 'pwa-print-window.js']) {
   if (!sw.includes(`'./${required}'`)) fail('service worker does not pre-cache ' + required);
 }
 if (!sw.includes('event.waitUntil(cacheWrite)')) fail('service-worker cache writes must extend the fetch-event lifetime');
@@ -490,7 +408,7 @@ for (const rel of new Set(refs)) {
   console.log('Android browser fullscreen touch fallback: PASS');
   console.log('Browser wake lock / PIPA motion / absolute-orientation parity: PASS');
   console.log('Ambient-light / solar-location auto dimming: PASS');
-  console.log('Analytics client: PASS');
+  console.log('No analytics assets, hooks, or external request origin: PASS');
   console.log('Service-worker unique precache install, cache lifetime, and quota-failure handling: PASS');
   console.log('Apollo compact four-up model checklist + Android explicit-sheet imposition / dark EL + persistent COMP legend parity: PASS');
 })().catch(error => fail('service-worker cache behavior test failed: ' + error.message));
