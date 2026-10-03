@@ -4,6 +4,12 @@ Continued the DreamService audit without building an APK or changing runtime cod
 
 `node tools/solar-model-smoke.js`, `node tools/dream-mode-smoke.js`, `node tools/dream-interaction-smoke.js`, `node tools/dream-orientation-smoke.js`, and `node tools/dream-agc-runtime-smoke.js` all passed. These confirm the solar model's equinox/mid-latitude and polar fallbacks, clock-only DreamService URL, tap/hold bridge contract, safe early configuration callbacks, and Dream AGC snapshot/lifecycle isolation. No source defect was demonstrated. These host checks do not prove Android DreamManager input delivery or actual Fire/physical panel output for DIM/BRIGHT/SOLAR; those device gates remain open. Per the user's direction, no new release is to be made until the audit is complete.
 
+### 2026-10-03 updater handoff and Command Module-only source audit
+
+Reviewed release discovery and fallback, bounded APK download, SHA-256/sidecar parsing, package/version/signer validation, pending-update revalidation, foreground-only installer launch, fixed-name read-only APK provider, component visibility, and backup exclusions. Reviewed Android packaging and shared frontend references for mission selection/rope scope. The source forces Comanche055, defaults the core to CM and reads back its mode, packages only the pinned Comanche055 rope, and the APK verifier rejects Luminary099. The public PWA is separately verified in the deployment audit above; an existing untracked local `pwa/dist/` build artifact was left untouched and is not evidence of current runtime output.
+
+`node tools/self-update-smoke.js`, `node tools/update-retry-policy-smoke.js`, `node tools/manifest-policy-smoke.js`, `node tools/asset-reference-smoke.js`, and `node tools/wasm-runtime-smoke.js` all passed. The real pinned Comanche runtime passed V16N65, V05N09, V14N09, P00, V35, and MARK/KEYRUPT2 checks. No new source defect was demonstrated. Live updater network/install behavior remains unverified because debug builds disable updates; release-signed installer handoff and Fire-device acceptance remain outstanding. No APK was built as part of this pass.
+
 ## 2026-10-03 client APK confirmation and local PWA offline runtime
 
 The user confirmed that the Regular debug APK runs on their device. The same APK remains verified by `tools/verify-apk.sh` (package/signature, exact CM rope/WASM, and byte-for-byte frontend asset checks); Android 16 emulator `tools/device-full-smoke.sh` had also passed earlier, but the user's device model/OS and full command-level interaction results are not yet known.
