@@ -113,7 +113,7 @@
     });
     await run('Comanche 055 rope',async()=>{
       ropeBytes=await fetchCheckedAsset(SELF_TEST_ASSETS[1]);
-      return SELF_TEST_ASSETS[2].size+' bytes · pinned Git blob SHA-1 verified';
+      return SELF_TEST_ASSETS[1].size+' bytes · pinned Git blob SHA-1 verified';
     });
     await run('Relay-to-digit matrix',async()=>{
       const matrix=window.DSKY_RELAY_MATRIX,display=window.AGCDSKY_DISPLAY,renderer=window.AGCDSKY_RENDERER;

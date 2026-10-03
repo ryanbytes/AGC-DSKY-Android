@@ -38,6 +38,8 @@ for(const marker of [
   'RUN NON-FLIGHT APP SELF-TEST',
   "document.getElementById('diag-full-test').onclick=runFullSelfTest",
   'SELF_TEST_ASSETS',
+  "fetchCheckedAsset(SELF_TEST_ASSETS[1])",
+  "return SELF_TEST_ASSETS[1].size+' bytes · pinned Git blob SHA-1 verified'",
   "gitBlobSha1:'04a24dd1df4a81738e138b3e9f048d2b10498439'",
   "gitBlobSha1:'9e4ec167dc99ac12b233df07b6b91fef585e5015'",
   "WebAssembly.compile(wasmBytes.slice(0))",
@@ -86,6 +88,7 @@ for(const marker of [
   "'Non-flight app self-test'",
   "Object.freeze({open,close,runFullSelfTest})"
 ]) assert(SRC.includes(marker),'diagnostics contract missing: '+marker);
+assert(!SRC.includes('SELF_TEST_ASSETS[2]'),'diagnostics asset success reporting must not index beyond the two pinned assets');
 assert(!/startDskyTest[\s\S]{0,1200}(?:keyMake|keyReset|writeIo|proceed|lampTest)/.test(SRC),
   'diagnostics V35 must not inject AGC inputs or synthesize display state; V35 stays user-driven through physical DSKY keys');
 assert(!SRC.includes('RUN CLOCK DSKY SELF-TEST')&&!SRC.includes('V35 HARDWARE SEQUENCE STARTED'),'synthetic CLOCK V35 wording returned');
