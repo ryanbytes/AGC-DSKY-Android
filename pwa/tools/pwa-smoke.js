@@ -16,9 +16,12 @@ const exists = rel => fs.existsSync(path.join(site, rel));
 for (const rel of [
   'index.html', 'manifest.webmanifest', 'pwa-bootstrap.js', 'pwa-sensor-parity.js', 'pwa-auto-dim.js', 'pwa-print-bridge.js', 'pwa-print.css', 'pwa-print-android.css', 'pwa-print-window.js', 'analytics.js', 'sw.js',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png',
-  'PRIVACY_POLICY.txt', 'yaAGC.wasm', 'Comanche055.bin'
+  'PRIVACY_POLICY.txt', 'yaAGC.wasm', 'Comanche055.bin', '.agcdsky-pwa-generated'
 ]) {
   if (!exists(rel)) fail('missing ' + rel);
+}
+if (text('.agcdsky-pwa-generated').trim() !== 'AGC DSKY generated PWA output v1') {
+  fail('site output is missing its builder ownership marker');
 }
 
 const index = text('index.html');
