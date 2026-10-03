@@ -6,7 +6,13 @@ const path=require('path');
 const vm=require('vm');
 const root=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'app/src/main/assets/phone-icdu.js'),'utf8');
+const nativeActivity=fs.readFileSync(path.join(root,'app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java'),'utf8');
 function assert(ok,message){if(!ok)throw new Error(message)}
+
+assert(nativeActivity.includes('pushPhoneQuaternion(q,angle,event.timestamp)'),
+  'Android attitude sensor event timestamp is not forwarded to the phone IMU bridge');
+assert(nativeActivity.includes('nativePhoneQuaternion(%.9f,%.9f,%.9f,%.9f,%d,%.8f)'),
+  'native phone IMU bridge does not send attitude timestamp to the production runtime');
 
 function createHarness(screenAngle=0){
   const core={running:true,writes:[],writeIo(ch,value){this.writes.push([ch,value]);return 1}};
@@ -53,6 +59,19 @@ function qRotate(q,v){const [w,x,y,z]=q,[vx,vy,vz]=v,tx=2*(y*vz-z*vy),ty=2*(z*vx
 function qAxisZ(degrees){return [Math.cos(degrees*Math.PI/360),0,0,Math.sin(degrees*Math.PI/360)]}
 function qAxis(axis,degrees){const h=degrees*Math.PI/360,c=Math.cos(h),s=Math.sin(h);return axis==='x'?[c,s,0,0]:axis==='y'?[c,0,s,0]:[c,0,0,s]}
 function sensorToScreen(v,degrees){const a=degrees*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return [c*v[0]+s*v[1],-s*v[0]+c*v[1],v[2]]}
+
+// Acceleration and attitude are separate Android sensor streams. Pair PIPA
+// samples with the attitude at their event timestamp, not whichever attitude
+// happened to be delivered most recently by the WebView bridge.
+const timestampProbe=createHarness();
+timestampProbe.nativePhoneQuaternion(1,0,0,0,0,1.00);
+timestampProbe.nativePhoneQuaternion(...qAxisZ(90),0,1.10);
+timestampProbe.nativePipaSensorStatus('test-linear-acceleration',true);
+timestampProbe.nativePhoneLinearAcceleration(1,0,0,1.05,0);
+const timestampState=timestampProbe.phoneIcduStatus().pipa;
+assert(Math.abs(timestampState.acceleration.x-Math.SQRT1_2)<1e-9
+    &&Math.abs(timestampState.acceleration.y-Math.SQRT1_2)<1e-9,
+  `PIPA did not interpolate attitude at the acceleration event timestamp: ${JSON.stringify(timestampState.acceleration)}`);
 
 // W3C DeviceOrientation stays in the device's standard-orientation frame.
 // Verify its browser fallback maps natural device +X to each display's screen
@@ -297,6 +316,6 @@ assert(pipaResume.fractional.x===0&&pipaResume.fractional.y===0&&pipaResume.frac
 
 console.log('PIPA inertial-frame smoke: PASS');
 console.log('  rotating bias cancellation, stable-frame axis mapping, bidirectional increments, and CM pulse scale verified');
-console.log('  compound attitude, all display rotations, variable event intervals, out-of-order timestamps, PINC/MINC transport, backpressure retry, lifecycle rebasing, and PIPA sensor-loss clearing verified');
+console.log('  attitude/acceleration timestamp interpolation, compound attitude, all display rotations, variable event intervals, out-of-order timestamps, PINC/MINC transport, backpressure retry, lifecycle rebasing, and PIPA sensor-loss clearing verified');
 
 function buttonFor(harnessApi){return harnessApi.__buttons['pipa-cal']}

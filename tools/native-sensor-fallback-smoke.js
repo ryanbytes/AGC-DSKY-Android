@@ -62,11 +62,21 @@ public final class NativeSensorFallbackTest {
     AccelerometerGravityFilter filter=new AccelerometerGravityFilter();
     check(filter.removeGravity(0,0,9.81f,1_000_000_000L,true)==null,
       "raw accelerometer sample escaped before the registered gravity stream's first sample");
-    filter.onGravitySample(0,0,9.81f);
+    filter.onGravitySample(0,0,9.81f,1_000_000_000L);
     float[] corrected=filter.removeGravity(0,0,9.81f,1_020_000_000L,true);
     near(corrected[0],0,"gravity subtraction x");near(corrected[1],0,"gravity subtraction y");near(corrected[2],0,"gravity subtraction z");
     corrected=filter.removeGravity(1,-2,10.81f,1_040_000_000L,true);
     near(corrected[0],1,"linear acceleration x");near(corrected[1],-2,"linear acceleration y");near(corrected[2],1,"linear acceleration z");
+
+    filter.reset();
+    filter.onGravitySample(0,0,9.81f,2_000_000_000L);
+    filter.onGravitySample(0,9.81f,0,2_100_000_000L);
+    corrected=filter.removeGravity(0,4.905f,4.905f,2_050_000_000L,true);
+    near(corrected[0],0,"interpolated gravity subtraction x");
+    near(corrected[1],0,"interpolated gravity subtraction y");
+    near(corrected[2],0,"interpolated gravity subtraction z");
+    check(filter.removeGravity(0,9.81f,0,2_300_000_001L,true)==null,
+      "stale gravity estimate was used outside the timestamp-alignment window");
 
     filter.reset();
     corrected=filter.removeGravity(0,0,9.81f,2_000_000_000L,false);
@@ -82,7 +92,7 @@ public final class NativeSensorFallbackTest {
     check(filter.removeGravity(0,0,9.81f,3_000_000_000L,true)==null,
       "reset must clear the prior gravity sample before the next sensor registration");
     System.out.println("Native sensor registration and accelerometer fallback smoke: PASS");
-    System.out.println("  preferred registration, fallback order, unavailable state, shared attitude sensor, registered-gravity readiness, subtraction, and irregular timing verified against production Java");
+    System.out.println("  preferred registration, fallback order, unavailable state, shared attitude sensor, timestamp-aligned gravity subtraction, stale-sample rejection, and irregular low-pass timing verified against production Java");
   }
 }`;
 
