@@ -8,6 +8,7 @@
 
 - Virtual AGC project: https://github.com/virtualagc/virtualagc
 - Virtual AGC site: https://www.ibiblio.org/apollo/
+- AC Electronics, ND-1021042 Rev. F, Volume II, *LEM Primary Guidance, Navigation, and Control System Manual*, §§4-5.10–4-5.10.2, pp. 4-648–4-649: CMC main/navigation DSKYs are described as electrically identical/interchangeable; the relay matrix is identified as latching and status/caution relays as non-latching. No production relay operate/release/bounce timing is specified in this section. https://www.ibiblio.org/apollo/Documents/acelectroniclmma00acel_0.pdf
 - MIT/MSC Specification Control Drawing `1006315G`, *Indicator, Digital, Electroluminescent*: https://www.ibiblio.org/apollo/SCDs/scd_1006315g.pdf
 - Virtual AGC developer information / yaAGC I/O protocol: https://www.ibiblio.org/apollo/developer.html
 - VirtualAGC `yaDSKY2/LM.ini`: LM annunciator map, channel assignments, key codes.

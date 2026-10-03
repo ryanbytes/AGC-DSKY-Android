@@ -8,6 +8,12 @@ must remain explicitly uncertain.
 - MIT/IL final report R-700 states that the Block II DSKY contains **120
   latching relays and 12 nonlatching relays**.
   Source: https://ibiblio.org/apollo/Documents/R-700.pdf
+- AC Electronics ND-1021042 Rev. F, Volume II, §§4-5.10–4-5.10.2
+  (pp. 4-648–4-649) describes the CMC main and navigation DSKYs as
+  electrically identical/interchangeable, and distinguishes latching relay
+  matrix relays from non-latching status/caution relays. This is system-level
+  behavior evidence, not an exact production relay timing specification.
+  Source: https://www.ibiblio.org/apollo/Documents/acelectroniclmma00acel_0.pdf
 - Production relay-circuit assembly 2003910-021 contains **20 relay part
   2004688-1/-2 plus 2 relay part 2004689-2**. Each DSKY contains six D1-D6
   indicator-driver modules, independently corroborating 6 x 22 = **132 relay
