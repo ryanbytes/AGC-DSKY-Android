@@ -50,6 +50,8 @@ for(const marker of [
   "'Keypad wiring'",
   "'Keyboard electrical contacts'",
   "'Key tactile model'",
+  "status.policy!=='normal DSKY key make/release haptics disabled; diagnostic test pulse only; relay haptics are separate'",
+  "'key haptic policy changed'",
   "'Native/browser bridges'",
   "'Sensor plumbing'",
   "'Network time'",
@@ -89,6 +91,8 @@ for(const marker of [
   "Object.freeze({open,close,runFullSelfTest})"
 ]) assert(SRC.includes(marker),'diagnostics contract missing: '+marker);
 assert(!SRC.includes('SELF_TEST_ASSETS[2]'),'diagnostics asset success reporting must not index beyond the two pinned assets');
+assert(!SRC.includes("event-cue-only; platform-native/browser-supported haptics; no force-to-vibration amplitude mapping"),
+  'diagnostics must not enforce the retired enabled-key-haptic policy');
 assert(!/startDskyTest[\s\S]{0,1200}(?:keyMake|keyReset|writeIo|proceed|lampTest)/.test(SRC),
   'diagnostics V35 must not inject AGC inputs or synthesize display state; V35 stays user-driven through physical DSKY keys');
 assert(!SRC.includes('RUN CLOCK DSKY SELF-TEST')&&!SRC.includes('V35 HARDWARE SEQUENCE STARTED'),'synthetic CLOCK V35 wording returned');

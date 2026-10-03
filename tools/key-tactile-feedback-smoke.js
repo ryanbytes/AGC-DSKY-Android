@@ -145,6 +145,7 @@ assert(service&&Object.isFrozen(service),'tactile service missing/mutable');
 assert(service.make('1')===false&&service.release('1')===false,'normal key haptics must be disabled');
 assert(calls.length===0,'disabled normal key haptics must not reach native vibration');
 const status=service.status();
+assert(status.policy==='normal DSKY key make/release haptics disabled; diagnostic test pulse only; relay haptics are separate','native tactile policy status wrong');
 assert(status.nativeBridge===true,'native bridge status false');
 assert(status.browserVibration===false,'native surface incorrectly reports browser vibration');
 assert(status.hapticPlatform==='android','native platform status wrong');
