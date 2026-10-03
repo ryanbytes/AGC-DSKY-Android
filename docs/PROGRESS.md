@@ -10,6 +10,12 @@ Reviewed release discovery and fallback, bounded APK download, SHA-256/sidecar p
 
 `node tools/self-update-smoke.js`, `node tools/update-retry-policy-smoke.js`, `node tools/manifest-policy-smoke.js`, `node tools/asset-reference-smoke.js`, and `node tools/wasm-runtime-smoke.js` all passed. The real pinned Comanche runtime passed V16N65, V05N09, V14N09, P00, V35, and MARK/KEYRUPT2 checks. No new source defect was demonstrated. Live updater network/install behavior remains unverified because debug builds disable updates; release-signed installer handoff and Fire-device acceptance remain outstanding. No APK was built as part of this pass.
 
+### 2026-10-03 Activity lifecycle and asset-origin audit
+
+Reviewed Activity pause/resume/destroy handling, sensor registration and acceleration fallbacks, JavaScript visibility transitions and core snapshot/resume, Dream WebView teardown, and `NetClient`'s synthetic HTTPS asset origin and decoded path-segment checks. No source defect was demonstrated. `adb devices -l` showed only `emulator-5554` (`sdk_gphone64_arm64`), so this pass cannot close physical handset/Fire sensor or display gates.
+
+The exact source tree passed `env TZ=UTC bash tools/run-source-smokes.sh`: 99 canonical Node smokes plus `ntp-time-smoke.sh`. This includes lifecycle/service ownership, native sensor fallback, manifest/network policy, DreamService behavior, CM-only asset policy, and real pinned Comanche055 WASM semantics. No APK was built. Device-specific DreamManager, Fire OS, physical sensor/display, and release-signed updater behavior remain open.
+
 ## 2026-10-03 client APK confirmation and local PWA offline runtime
 
 The user confirmed that the Regular debug APK runs on their device. The same APK remains verified by `tools/verify-apk.sh` (package/signature, exact CM rope/WASM, and byte-for-byte frontend asset checks); Android 16 emulator `tools/device-full-smoke.sh` had also passed earlier, but the user's device model/OS and full command-level interaction results are not yet known.
