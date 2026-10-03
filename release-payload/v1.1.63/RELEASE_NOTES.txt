@@ -1,0 +1,5 @@
+AGC DSKY v1.1.63
+
+This release includes the audited sensor input and display-orientation fixes, including corrected PIPA acceleration interval integration and browser landscape-axis mapping. It packages the pinned Command Module AGC runtime and Comanche055 rope.
+
+Both APKs are signed with the established standalone release key. Regular is for Android phones; Fire is for Fire tablets.
