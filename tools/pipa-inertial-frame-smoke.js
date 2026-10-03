@@ -53,6 +53,21 @@ function qAxisZ(degrees){return [Math.cos(degrees*Math.PI/360),0,0,Math.sin(degr
 function qAxis(axis,degrees){const h=degrees*Math.PI/360,c=Math.cos(h),s=Math.sin(h);return axis==='x'?[c,s,0,0]:axis==='y'?[c,0,s,0]:[c,0,0,s]}
 function sensorToScreen(v,degrees){const a=degrees*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return [c*v[0]+s*v[1],-s*v[0]+c*v[1],v[2]]}
 
+// Identical game and magnetic attitude streams must not create a yaw-drift
+// correction merely because the phone started tilted or the display is rotated.
+for(const displayAngle of [0,90,180,270]){
+  const probe=createHarness(displayAngle);
+  const base=qMul(qMul(qAxis('z',0),qAxis('y',30)),qAxis('x',20));
+  const moved=qMul(qAxis('z',10),base);
+  probe.nativeMagneticQuaternion(...base,displayAngle,3);
+  probe.nativePhoneQuaternion(...base,displayAngle);
+  probe.nativeMagneticQuaternion(...moved,displayAngle,3);
+  probe.nativePhoneQuaternion(...moved,displayAngle);
+  const correction=probe.phoneIcduStatus().magnetic.yawCorrection;
+  assert(Math.abs(correction)<1e-12,
+    `identical attitude sources created ${correction} degrees of magnetic correction at display rotation ${displayAngle}`);
+}
+
 const api=createHarness();
 
 // Sensor availability must not silently calibrate while the phone may be

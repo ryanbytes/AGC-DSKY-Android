@@ -39,7 +39,10 @@ const pipaScale=vm.runInNewContext(`(()=>{const CM_PIPA_DV_PER_PULSE=0.0585;${pi
 assert(pipaScale()===0.0585,'CM PIPA input must use 5.85 cm/s per pulse');
 assert(!phone.includes('pipaMission'),'PIPA path must not retain LM mission switching');
 assert(phone.includes('opticsAngles = eulerXYZ(opticalRel);'),'camera aiming must retain conventional device Euler decomposition');
-assert(phone.includes('const gameRelYaw = eulerXYZ(rel)[2];'),'magnetic drift estimator must compare conventional device yaw, not Apollo middle-gimbal angle');
+assert(phone.includes('const gameRelYaw = wrap180(eulerXYZ(q)[2] - eulerXYZ(referenceQ)[2]);'),
+  'magnetic drift estimator must compare yaw changes in the same world frame');
+assert(phone.includes("qMul(magneticRawQ, qAxis('z', rad(a)))"),
+  'magnetic and game attitude quaternions must use the same screen-coordinate rotation');
 assert(phone.includes("correctedRel = qNorm(qMul(qAxis('z', rad(magneticYawCorrection)), rel));"),
   'magnetic yaw correction must be applied to the attitude quaternion before Apollo gimbal decomposition');
 assert(!phone.includes('e[2] += magneticYawCorrection'),
