@@ -13,7 +13,7 @@ function createHarness(screenAngle=0){
   const api={getCore:()=>core};
   const buttons=Object.fromEntries(['imu-zero','mag-lock','pipa-cal'].map(id=>[id,{textContent:'',title:''}]));
   let clickHandler=null,hidden=false;
-  const documentListeners={},intervals=[];
+  const documentListeners={},windowListeners={},intervals=[];
   const service={installImplementations(implementations){Object.assign(api,implementations)}};
   const context={
     window:null,
@@ -24,7 +24,7 @@ function createHarness(screenAngle=0){
     performance:{now:()=>0},
     localStorage:{getItem:()=>null,setItem(){}},
     navigator:{},
-    addEventListener(){},
+    addEventListener(name,handler){windowListeners[name]=handler},
     setInterval(fn){intervals.push(fn);return intervals.length},
     clearInterval(){},
     Math,Number,Array,Object,String,Date,JSON,Set,Reflect,Error,TypeError
@@ -35,6 +35,7 @@ function createHarness(screenAngle=0){
   api.__buttons=buttons;
   api.__core=core;
   api.__setHidden=value=>{hidden=!!value;if(documentListeners.visibilitychange)documentListeners.visibilitychange()};
+  api.__fireWindowEvent=(name,event)=>{if(windowListeners[name])windowListeners[name](event)};
   api.__tick=()=>intervals.forEach(fn=>fn());
   api.clickPipaCalibration=()=>{assert(clickHandler,'PIPA calibration click handler was not registered');clickHandler({target:{id:'pipa-cal'}})};
   return api;
@@ -52,6 +53,23 @@ function qRotate(q,v){const [w,x,y,z]=q,[vx,vy,vz]=v,tx=2*(y*vz-z*vy),ty=2*(z*vx
 function qAxisZ(degrees){return [Math.cos(degrees*Math.PI/360),0,0,Math.sin(degrees*Math.PI/360)]}
 function qAxis(axis,degrees){const h=degrees*Math.PI/360,c=Math.cos(h),s=Math.sin(h);return axis==='x'?[c,s,0,0]:axis==='y'?[c,0,s,0]:[c,0,0,s]}
 function sensorToScreen(v,degrees){const a=degrees*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return [c*v[0]+s*v[1],-s*v[0]+c*v[1],v[2]]}
+
+// W3C DeviceOrientation stays in the device's standard-orientation frame.
+// Verify its browser fallback maps natural device +X to each display's screen
+// basis before turning that attitude change into the Apollo CDU axes.
+for(const [displayAngle,expected] of [
+  [0,{outer:10,inner:0,middle:0}],
+  [90,{outer:0,inner:-10,middle:0}],
+  [180,{outer:-10,inner:0,middle:0}],
+  [270,{outer:0,inner:10,middle:0}]
+]){
+  const probe=createHarness(displayAngle);
+  probe.__fireWindowEvent('deviceorientation',{alpha:0,beta:0,gamma:0});
+  probe.__fireWindowEvent('deviceorientation',{alpha:0,beta:10,gamma:0});
+  const attitude=probe.phoneIcduStatus().unwrappedDegrees;
+  for(const axis of ['outer','inner','middle'])assert(Math.abs(attitude[axis]-expected[axis])<1e-6,
+    `DeviceOrientation display rotation ${displayAngle} mapped device +X to wrong ${axis} CDU angle: ${attitude[axis]}`);
+}
 
 // Identical game and magnetic attitude streams must not create a yaw-drift
 // correction merely because the phone started tilted or the display is rotated.
