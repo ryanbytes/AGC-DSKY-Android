@@ -512,9 +512,13 @@
       return;
     }
     let dt = timestampSeconds - pipaLastTimestamp;
+    if (!(dt > 0)) return;
     pipaLastTimestamp = timestampSeconds;
-    if (!(dt > 0) || dt > 0.20) return;
-    dt = Math.min(dt, 0.05);
+    // Android's event rate is a hint and can be slower than SENSOR_DELAY_GAME.
+    // Preserve all elapsed time for accepted samples instead of silently
+    // dropping acceleration after 50 ms. The bridge formats seconds to 10 ns
+    // resolution, so allow that rounding at the 200 ms stale-sample boundary.
+    if (dt > 0.20 + 1e-8) return;
 
     for (let axis=0; axis<3; axis++) {
       const corrected = v[axis] - bias[axis];
