@@ -1,0 +1,7 @@
+AGC DSKY v1.1.64
+
+This update aligns phone PIPA acceleration, attitude, and gravity samples by sensor event time. It interpolates between nearby samples and rejects stale references so acceleration is not projected using a mismatched orientation or gravity estimate.
+
+The Android app remains Command Module only and uses the pinned Comanche055 rope and yaAGC runtime.
+
+Physical handset sensor behavior, Fire OS behavior, and several Apple/DreamService hardware paths remain under audit and were not verified by this release build.
