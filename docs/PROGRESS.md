@@ -1,3 +1,11 @@
+## 2026-10-03 channel-016 navigation input-order audit
+
+A real pinned-WASM probe filled the yaAGC input ring with 1,023 PIPA increments, leaving one free slot for MARK. `AgcCore.navKeyPress()` advanced one MCT and asserted KEYRUPT2 while channel 016 was still zero. Since the ring can defer channel-016 delivery behind unprogrammed counter packets, Comanche could service the interrupt before NAVKEYIN contained the pressed key. The prior test only pressed MARK with an empty input queue and did not catch this ordering error.
+
+Navigation make now retries once on a full ring, then advances the CPU until the accepted channel-016 value is actually visible before asserting KEYRUPT2. Release similarly retries and waits until channel 016 is zero. A held navigation contact rejects another make, and snapshot restoration clears channel-016 external input along with normal keys and PRO. The wait is bounded at 1,024 MCTs, using the pinned input ring capacity.
+
+Validation: focused core, authority, optics, and real-WASM smokes passed. The real WASM regression filled the 1,023-packet ring before MARK; the make path waited 1,024 MCTs, then asserted KEYRUPT2 with NAVKEYIN=040. A saturated release waited 1,024 MCTs and returned NAVKEYIN to zero. The Comanche MARK/KEYRUPT2 smoke with an empty queue still passed and the real core consumed the request. `ANDROID_SDK_ROOT=/Users/ryan/Library/Android/sdk env TZ=UTC bash tools/build-local.sh` passed on source commit `b4cee98659faa58cd8fe72765964c909a3184614`; its canonical suite passed all 101 Node tests and the NTP shell smoke, and Regular and Fire debug APKs passed verification at version 1.1.65/versionCode 2026100303. APK SHA-256: Regular `047e877a1ca3b0010a4696ab37e217db620ba2aa65e3c6893efe3e8b7a1ff661`, Fire `bd8cbfc85fa31e2ee3dca9c01ce4ad86519ce8362bea0ab8ddd864aa34555077`. `adb devices -l` showed no attached targets, so packaged WebView interaction remains unverified; no signed release was made.
+
 ## 2026-10-03 channel-015 key backpressure audit
 
 The real pinned WASM input-ring probe confirmed that an ordinary DSKY key make was silently lost when `packet_write` returned zero on a full ring. A make-only retry is insufficient: if the user releases while that retried packet is still behind queued PIPA increments, clearing channel 015 early lets the late make reassert the key.
