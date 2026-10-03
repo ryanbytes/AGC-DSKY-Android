@@ -10,6 +10,12 @@ The live gate read back CM mode `1`; pointer-entered V16N65 returned numeric out
 
 An iOS Simulator runtime check remains inconclusive on this host: `xcrun simctl list runtimes` produced no output during a 15-second wait and I terminated only that new command. Existing CoreSimulator service and older `simctl` processes were left untouched. iOS runtime behavior remains unverified.
 
+## 2026-10-03 deployed PWA offline Comanche runtime
+
+Rechecked the post-merge GitHub Pages site in an isolated Playwright/Brave context. The registered worker at `https://ryanbytes.github.io/AGC-DSKY-Android/sw.js` was active and controlled the page; cache `agc-dsky-pwa-e3a097e72950` contained 90 entries, including the document, current WASM/Comanche rope, manifest, both checked icons, and print-window script. With browser networking disabled, a reload still rendered the DSKY. Entered CM AGC mode and P00, then entered V16N65 through the visible pointer-key path. The exact pinned Comanche runtime reported V16N65, numeric output (`00000`, `00003`, `04187`), and no OPR ERR while `offlineReady` remained true.
+
+The three browser console errors were the expected offline failures of the PWA HTTP-Date network-time probes to `manifest.webmanifest`; the app reported network time unavailable and the simulator continued. This closes the post-merge hosted-browser install/offline runtime gap. Physical phone-browser behavior remains unverified. The isolated browser session was closed after the check.
+
 Rebuilt the PWA into a fresh `<temporary-path>` directory, leaving the existing untracked `pwa/dist/` untouched. `node pwa/tools/pwa-smoke.js` and `node pwa/tools/pwa-parity-smoke.js` passed. In Chromium, the packaged service worker installed and controlled the audit page; its cache contained 91 entries and all required page, runtime, WASM, rope, and icon resources. All four packaged PNG icons decoded at their expected dimensions (180, 192, 512, and 512 square). After stopping the local HTTP server, reloading the DSKY still rendered its full page structure from the worker's offline cache. The later main merge and Pages deployment are recorded below.
 
 ## 2026-10-03 Apple builds reconciled to current shared assets
