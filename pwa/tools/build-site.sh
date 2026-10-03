@@ -6,7 +6,13 @@ SOURCE_ASSETS="$ROOT/app/src/main/assets"
 WEBAGC="$ROOT/vendor/webAGC"
 CM_WASM="$ROOT/vendor/yaAGC-cm/yaAGC.wasm"
 PWA="$ROOT/pwa"
-DEST="${1:-$PWA/dist}"
+REPLACE=0
+if [[ "${1:-}" == "--replace" ]]; then
+  REPLACE=1
+  shift
+fi
+[[ $# -le 1 ]] || { printf 'PWA BUILD FAIL: usage: %s [--replace] [destination]\n' "$0" >&2; exit 1; }
+DEST_INPUT="${1:-$PWA/dist}"
 ANALYTICS_ENDPOINT="${AGC_ANALYTICS_ENDPOINT:-}"
 
 fail() {
@@ -18,12 +24,49 @@ command -v git >/dev/null 2>&1 || fail "git is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 command -v rsync >/dev/null 2>&1 || fail "rsync is required"
 
+[[ ! -L "$DEST_INPUT" ]] || fail "destination is a symbolic link; refusing to write through it: $DEST_INPUT"
+DEST="$(python3 - "$DEST_INPUT" <<'PY'
+from pathlib import Path
+import sys
+print(Path(sys.argv[1]).expanduser().resolve(strict=False))
+PY
+)"
+
+# The destination must never be the checkout, an input tree, or an ancestor of
+# them. In particular, writing beneath SOURCE_ASSETS would make rsync copy its
+# own output recursively. A fresh output beneath pwa/ (including pwa/dist) is
+# allowed; only pwa/ itself is protected.
+for protected in / "$ROOT" "$PWA"; do
+  [[ "$DEST" != "$protected" ]] || fail "destination is a protected source/root path: $DEST"
+done
+case "$ROOT/" in
+  "$DEST/"*) fail "destination would contain the repository checkout: $ROOT" ;;
+esac
+for protected in "$SOURCE_ASSETS" "$ROOT/vendor" "$WEBAGC"; do
+  [[ "$DEST" != "$protected" ]] || fail "destination is a protected source/root path: $DEST"
+  case "$protected/" in
+    "$DEST/"*) fail "destination would contain a protected source/root path: $protected" ;;
+  esac
+  case "$DEST/" in
+    "$protected/"*) fail "destination is inside a protected source/root path: $protected" ;;
+  esac
+done
+
+if [[ -e "$DEST" ]]; then
+  [[ -d "$DEST" ]] || fail "destination exists and is not a directory: $DEST"
+  if [[ -n "$(find "$DEST" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+    [[ "$REPLACE" == 1 ]] || fail "destination is populated; preserving existing files. Use --replace only when you intend to replace this output: $DEST"
+    [[ -f "$DEST/.agcdsky-pwa-generated" ]] || fail "--replace requires a destination created by this builder; preserving unrecognized contents: $DEST"
+    [[ "$(cat "$DEST/.agcdsky-pwa-generated")" == "AGC DSKY generated PWA output v1" ]] || fail "--replace destination marker is invalid; preserving existing files: $DEST"
+    rm -rf -- "$DEST"
+  fi
+fi
+
 "$ROOT/apple/tools/verify-pinned-assets.sh"
 [[ -d "$SOURCE_ASSETS" ]] || fail "shared web assets are missing: $SOURCE_ASSETS"
 
-rm -rf "$DEST"
 mkdir -p "$DEST"
-rsync -a --delete --exclude '.DS_Store' --exclude '.self-contained-assets-note' "$SOURCE_ASSETS/" "$DEST/"
+rsync -a --exclude '.DS_Store' --exclude '.self-contained-assets-note' "$SOURCE_ASSETS/" "$DEST/"
 mkdir -p "$DEST/icons"
 cp "$SOURCE_ASSETS/clock-behavior.js" "$DEST/clock-behavior-v2.js"
 cp "$CM_WASM" "$DEST/yaAGC.wasm"
@@ -137,3 +180,4 @@ if [[ -n "$ANALYTICS_ENDPOINT" ]]; then
 else
   printf 'Analytics endpoint: disabled\n'
 fi
+printf '%s\n' 'AGC DSKY generated PWA output v1' > "$DEST/.agcdsky-pwa-generated"

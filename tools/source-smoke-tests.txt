@@ -4,6 +4,7 @@
 
 source-smoke-manifest-smoke.js
 release-publication-policy-smoke.js
+pwa-build-site-safety-smoke.js
 branding-smoke.js
 manifest-policy-smoke.js
 ntp-policy-smoke.js
