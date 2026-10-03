@@ -27,6 +27,7 @@ presentation-state-smoke.js
 late-state-ownership-smoke.js
 app-shell-runtime-smoke.js
 agc-api-runtime-smoke.js
+app-visibility-pro-smoke.js
 phone-api-runtime-smoke.js
 display-runtime-smoke.js
 phone-clock-runtime-smoke.js
