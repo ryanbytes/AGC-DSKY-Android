@@ -16,6 +16,10 @@ Reviewed release discovery and fallback, bounded APK download, SHA-256/sidecar p
 
 `node tools/self-update-smoke.js`, `node tools/update-retry-policy-smoke.js`, `node tools/manifest-policy-smoke.js`, `node tools/asset-reference-smoke.js`, and `node tools/wasm-runtime-smoke.js` all passed. The real pinned Comanche runtime passed V16N65, V05N09, V14N09, P00, V35, and MARK/KEYRUPT2 checks. No new source defect was demonstrated. Live updater network/install behavior remains unverified because debug builds disable updates; release-signed installer handoff and Fire-device acceptance remain outstanding. No APK was built as part of this pass.
 
+### 2026-10-03 macOS WebView follow-up
+
+Rebuilt the isolated macOS Debug app with temporary error capture. The packaged page loaded and its DebugBridge reported document-start installation and `FRONTEND READY app`. CUA keyboard and DSKY-button actions did not produce frontend input or runtime-error events, so this run does not establish whether the earlier blank-register/OPR ERR symptom came from yaAGC startup or from input delivery. The temporary Swift instrumentation was restored byte-for-byte to the original source. macOS AGC command execution remains unverified; the iOS Simulator is still blocked by the CoreSimulator/Xcode version mismatch. No release artifact was created.
+
 ### 2026-10-03 Activity lifecycle and asset-origin audit
 
 Reviewed Activity pause/resume/destroy handling, sensor registration and acceleration fallbacks, JavaScript visibility transitions and core snapshot/resume, Dream WebView teardown, and `NetClient`'s synthetic HTTPS asset origin and decoded path-segment checks. No source defect was demonstrated. `adb devices -l` showed only `emulator-5554` (`sdk_gphone64_arm64`), so this pass cannot close physical handset/Fire sensor or display gates.
