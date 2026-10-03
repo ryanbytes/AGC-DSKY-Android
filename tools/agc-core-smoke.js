@@ -227,8 +227,11 @@ async function testResetAndPeripheralSetup() {
 }
 
 function testNavigationAndSnapshots() {
-    const { core, calls } = makeCoreHarness({ memoryBytes: 220000 });
+    const { core, calls, setCpuStepHook } = makeCoreHarness({ memoryBytes: 220000 });
     const bytes = new Uint8Array(core.memory.buffer);
+    setCpuStepHook((_steps, activeCore) => {
+        activeCore.setInputChannelBits(0o16, 0o177, 0o20);
+    });
 
     assert(core.navKeyPress(0o20) === true,
         'accepted navigation key must assert KEYRUPT2');
@@ -236,9 +239,19 @@ function testNavigationAndSnapshots() {
         && channel === 0o16 && value === 0o20),
         'navigation key must write channel 016');
     assert(calls.some(([name, steps]) => name === 'step' && steps === 1),
-        'navigation key must process one CPU step before KEYRUPT2');
+        'navigation key must wait for channel-016 delivery before KEYRUPT2');
     assert(bytes[1024 + 92196 + 6] === 1,
         'navigation key must assert KEYRUPT2 request byte');
+    assert(core.pendingNavigationKeyCode === 0o20,
+        'navigation make must remain tracked while its switch contact is held');
+    setCpuStepHook((_steps, activeCore) => {
+        activeCore.setInputChannelBits(0o16, 0o177, 0);
+    });
+    assert(core.navKeyRelease() === true,
+        'navigation release must wait for channel 016 to return to zero');
+    assert(core.inputChannelBits(0o16, 0o177) === 0
+        && core.pendingNavigationKeyCode === 0,
+    'navigation release must clear NAVKEYIN and held-contact bookkeeping');
 
     // Deliberately snapshot transient physical switch states. importSnapshot()
     // must validate the saved bytes first, then restore the external keyboard
@@ -246,10 +259,12 @@ function testNavigationAndSnapshots() {
     const inputWords = new Uint16Array(core.memory.buffer);
     const keyWord = core.inputChannelWordIndex(0o15);
     const proWord = core.inputChannelWordIndex(0o32);
-    assert(keyWord >= 0 && proWord >= 0,
+    const navWord = core.inputChannelWordIndex(0o16);
+    assert(keyWord >= 0 && proWord >= 0 && navWord >= 0,
         'could not resolve DSKY input words for snapshot test');
     inputWords[keyWord] = (inputWords[keyWord] & ~0o37) | 0o21;
     inputWords[proWord] &= ~0o20000;
+    inputWords[navWord] |= 0o20;
     core.pendingNormalKeyCode = 0o21;
 
     bytes[10] = 0x12;
@@ -281,6 +296,8 @@ function testNavigationAndSnapshots() {
         'snapshot restore left a normal DSKY key electrically held');
     assert((inputWords[proWord] & 0o20000) === 0o20000,
         'snapshot restore left active-low PRO electrically held');
+    assert((inputWords[navWord] & 0o177) === 0,
+        'snapshot restore left a navigation key electrically held');
     assert(core.pendingNormalKeyCode === 0,
         'snapshot restore retained transient key-make bookkeeping');
 

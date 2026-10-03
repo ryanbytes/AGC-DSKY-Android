@@ -7,7 +7,7 @@
   const NORMAL_KEY_CHANNEL = 0o15;
   const PROCEED_CHANNEL = 0o32;
   const NORMAL_KEY_MASK = 0o37;
-  const NORMAL_KEY_PENDING_FLUSH_LIMIT = 1024;
+  const INPUT_RING_MCT_FLUSH_LIMIT = 1024;
   const PROCEED_MASK = 0o20000; // Input channel 032, bit 14. Active low for PRO.
   // Pinned yaAGC agc_t ABI: from &State.Erasable to State.InputChannel.
   // Erasable 8*0400*2 + Fixed 40*02000*2 + Parities 40*(02000/32)*4.
@@ -88,6 +88,7 @@
       // advancing the AGC on every ordinary physical release.
       this.pendingNormalKeyCode = 0;
       this.pendingNormalKeyRelease = false;
+      this.pendingNavigationKeyCode = 0;
     }
 
     async load(options={}){
@@ -178,6 +179,7 @@
       this.channels = Object.create(null);
       this.pendingNormalKeyCode = 0;
       this.pendingNormalKeyRelease = false;
+      this.pendingNavigationKeyCode = 0;
       this.totalSteps = 0;
       this.startTime = performance.now();
     }
@@ -273,7 +275,7 @@
       if (!this.pendingNormalKeyRelease) {
         throw new Error('cannot snapshot while a DSKY key make is still electrically held');
       }
-      for (let i = 0; i < NORMAL_KEY_PENDING_FLUSH_LIMIT && this.pendingNormalKeyCode; i++) {
+      for (let i = 0; i < INPUT_RING_MCT_FLUSH_LIMIT && this.pendingNormalKeyCode; i++) {
         this.advanceOneMct();
       }
       if (this.pendingNormalKeyCode) {
@@ -287,9 +289,11 @@
       // must come back with the normal keyboard released and PRO released.
       this.pendingNormalKeyCode = 0;
       this.pendingNormalKeyRelease = false;
+      this.pendingNavigationKeyCode = 0;
       const keyOk = this.setInputChannelBits(NORMAL_KEY_CHANNEL, NORMAL_KEY_MASK, 0);
+      const navKeyOk = this.setInputChannelBits(0o16, 0o177, 0);
       const proOk = this.setInputChannelBits(PROCEED_CHANNEL, PROCEED_MASK, PROCEED_MASK);
-      return keyOk && proOk;
+      return keyOk && navKeyOk && proOk;
     }
 
     proceedKey(pressed){
@@ -320,13 +324,26 @@
     // here without modifying erasable AGC memory or flight software.
     navKeyPress(value){
       if (!this.exports || typeof this.exports.get_erasable_ptr !== 'function') return false;
-      const accepted = this.writeIo(0o16, value & 0o177);
+      const code = value & 0o177;
+      if (!code || this.pendingNavigationKeyCode) return false;
+      let accepted = this.writeIo(0o16, code);
+      if (accepted === 0) {
+        this.advanceOneMct();
+        accepted = this.writeIo(0o16, code);
+      }
       if (!(accepted > 0)) return false;
+      this.pendingNavigationKeyCode = code;
 
-      // Process the channel-016 packet before asserting KEYRUPT2 so MARKRUPT
-      // samples the new NAVKEYIN value, just as the hardware interrupt follows
-      // switch closure. Account for the single MCT in scheduler bookkeeping.
-      this.advanceOneMct();
+      // The channel-016 packet is asynchronous. A single MCT does not guarantee
+      // delivery when earlier unprogrammed-counter packets occupy the ring, so
+      // wait for NAVKEYIN itself before asserting the peripheral's KEYRUPT2.
+      if (!this.waitForInputChannelBits(0o16, 0o177, code)) {
+        this.navKeyRelease();
+        return false;
+      }
+
+      // The pinned ring-buffer transport omits this hardware edge; provide it
+      // only after the real channel-016 make has reached NAVKEYIN.
 
       // ABI of the pinned yaAGC agc_t following Erasable: Fixed, Parities,
       // InputChannel, OutputChannel7, OutputChannel10, IndexValue, then
@@ -335,13 +352,33 @@
       const erasable = this.exports.get_erasable_ptr() >>> 0;
       const addr = erasable + ERASABLE_TO_INTERRUPT_REQUESTS + 6;
       const bytes = new Uint8Array(this.memory.buffer);
-      if (addr >= bytes.length) return false;
+      if (addr >= bytes.length) {
+        this.navKeyRelease();
+        return false;
+      }
       bytes[addr] = 1;
       return true;
     }
 
     navKeyRelease(){
-      return this.writeIo(0o16, 0);
+      const pending = this.pendingNavigationKeyCode & 0o177;
+      if (pending && !this.waitForInputChannelBits(0o16, 0o177, pending)) return false;
+      let accepted = this.writeIo(0o16, 0);
+      if (accepted === 0) {
+        this.advanceOneMct();
+        accepted = this.writeIo(0o16, 0);
+      }
+      if (!(accepted > 0) || !this.waitForInputChannelBits(0o16, 0o177, 0)) return false;
+      this.pendingNavigationKeyCode = 0;
+      return true;
+    }
+
+    waitForInputChannelBits(channel, mask, value){
+      for (let i = 0; i < INPUT_RING_MCT_FLUSH_LIMIT; i++) {
+        if (this.inputChannelBits(channel, mask) === value) return true;
+        this.advanceOneMct();
+      }
+      return this.inputChannelBits(channel, mask) === value;
     }
 
     navKeyPulse(value, durationMs=90){

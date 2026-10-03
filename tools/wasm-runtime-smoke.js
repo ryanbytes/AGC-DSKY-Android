@@ -484,6 +484,58 @@ function proveNormalKeySurvivesInputBackpressure(core) {
     return queued;
 }
 
+function proveNavigationKeyOrderingSurvivesBackpressure(core) {
+    core.reset();
+    core.configureInputMasks();
+    core.step(100000);
+
+    let queued = 0;
+    let result = 1;
+    while (queued < 5000 && result > 0) {
+        result = core.writeIo(0o237, 1);
+        if (result > 0) queued++;
+    }
+    assert(queued === 1023 && result === 0,
+        'Comanche055: expected the real input ring to fill before navigation key test');
+
+    const ERASABLE_TO_INTERRUPT_REQUESTS = 92196;
+    const base = core.exports.get_erasable_ptr() >>> 0;
+    const requests = new Uint8Array(core.memory.buffer, base + ERASABLE_TO_INTERRUPT_REQUESTS);
+    const pressStart = core.totalSteps;
+    assert(core.navKeyPress(0o40) === true,
+        'Comanche055: MARK was rejected with one ring slot available');
+    const pressSteps = core.totalSteps - pressStart;
+    assert(pressSteps > 1,
+        'Comanche055: navigation press returned before earlier queued PIPA inputs were consumed');
+    assert(core.inputChannelBits(0o16, 0o177) === 0o40,
+        'Comanche055: KEYRUPT2 was not preceded by delivered MARK data on NAVKEYIN');
+    assert(requests[6] === 1,
+        'Comanche055: ordered MARK make did not assert KEYRUPT2');
+
+    queued = 0;
+    result = 1;
+    while (queued < 5000 && result > 0) {
+        result = core.writeIo(0o237, 1);
+        if (result > 0) queued++;
+    }
+    assert(queued === 1023 && result === 0,
+        'Comanche055: expected the real input ring to fill before navigation release test');
+    const releaseStart = core.totalSteps;
+    assert(core.navKeyRelease() === true,
+        'Comanche055: MARK release was lost under real input-ring backpressure');
+    assert(core.totalSteps - releaseStart > 1,
+        'Comanche055: navigation release returned before NAVKEYIN was cleared');
+    assert(core.inputChannelBits(0o16, 0o177) === 0,
+        'Comanche055: channel 016 remained asserted after ordered MARK release');
+    assert(core.pendingNavigationKeyCode === 0,
+        'Comanche055: navigation key bookkeeping remained held after release');
+    const releaseSteps = core.totalSteps - releaseStart;
+
+    core.reset();
+    core.configureInputMasks();
+    return {queued, pressSteps, releaseSteps};
+}
+
 async function main() {
     const wasmBytes = requireFile(WASM, 27270);
     const ropeBytes = requireFile(ROPE, 73728);
@@ -548,6 +600,8 @@ async function main() {
     assert(errors.length === 0, 'Comanche055: error during real PRO backpressure test');
     const normalKeyBackpressurePackets = proveNormalKeySurvivesInputBackpressure(core);
     assert(errors.length === 0, 'Comanche055: error during normal-key backpressure test');
+    const navigationBackpressure = proveNavigationKeyOrderingSurvivesBackpressure(core);
+    assert(errors.length === 0, 'Comanche055: error during navigation-key backpressure test');
 
     core.reset();
     core.configureInputMasks();
@@ -564,6 +618,7 @@ async function main() {
     console.log('  PRO contact: PASS (real Comanche055 observes channel 032 bit 020000 held low and released high)');
     console.log(`  PRO input backpressure: PASS (${backpressurePackets} real queued PIPA increments; release retried after one MCT)`);
     console.log(`  normal-key input backpressure: PASS (${normalKeyBackpressurePackets} real queued PIPA increments; deferred KEYRST prevented a late stuck key)`);
+    console.log(`  navigation-key backpressure: PASS (${navigationBackpressure.queued} real queued PIPA increments; MARK wait=${navigationBackpressure.pressSteps} MCTs; release wait=${navigationBackpressure.releaseSteps} MCTs)`);
     console.log('real yaAGC WASM runtime smoke: PASS');
 }
 

@@ -97,13 +97,19 @@ assert(relayShow.includes('presentation choreography over the same physical rela
 assert(relayShow.includes("showState.mode='relay-show'"),'Relay Show no longer isolates itself from AGC mode');
 
 for(const marker of [
-  'const accepted = this.writeIo(0o16, value & 0o177);',
-  'this.exports.cpu_step(1);',
+  'let accepted = this.writeIo(0o16, code);',
+  'if (!this.waitForInputChannelBits(0o16, 0o177, code)) {',
+  'this.pendingNavigationKeyCode = code;',
+  'if (pending && !this.waitForInputChannelBits(0o16, 0o177, pending)) return false;',
+  'if (!(accepted > 0) || !this.waitForInputChannelBits(0o16, 0o177, 0)) return false;',
+  'waitForInputChannelBits(channel, mask, value){',
   'const ERASABLE_TO_INTERRUPT_REQUESTS = 92196;',
   'const addr = erasable + ERASABLE_TO_INTERRUPT_REQUESTS + 6;',
   'bytes[addr] = 1;',
-  'return this.writeIo(0o16, 0);'
 ]) assert(core.includes(marker),'navigation KEYRUPT2 transport path missing: '+marker);
+assert(core.indexOf('if (!this.waitForInputChannelBits(0o16, 0o177, code)) {')
+    < core.indexOf('bytes[addr] = 1;'),
+  'navigation KEYRUPT2 must follow channel-016 make delivery');
 assert(core.includes('does not raise the')&&core.includes('corresponding KEYRUPT2 request'),'navigation transport shim is not explicitly documented');
 
 for(const marker of [
