@@ -362,6 +362,7 @@
 
     navKeyRelease(){
       const pending = this.pendingNavigationKeyCode & 0o177;
+      if (!pending && this.inputChannelBits(0o16, 0o177) === 0) return true;
       if (pending && !this.waitForInputChannelBits(0o16, 0o177, pending)) return false;
       let accepted = this.writeIo(0o16, 0);
       if (accepted === 0) {
