@@ -211,17 +211,51 @@
   // Apollo CDU_TO_DCM uses M = Ry(inner) * Rz(middle) * Rx(outer), where
   // X=outer/CDUX, Y=inner/CDUY, Z=middle/CDUZ. Extract those angles directly
   // from the quaternion DCM rather than using generic Z-Y-X Euler angles.
-  function apolloGimbals(q) {
+  function apolloGimbals(q, previous=null) {
     const [w,x,y,z] = q;
     const m00 = 1 - 2*(y*y + z*z);
     const m10 = 2*(x*y + w*z);
     const m11 = 1 - 2*(x*x + z*z);
     const m12 = 2*(y*z - w*x);
     const m20 = 2*(x*z - w*y);
+    const m02 = 2*(x*z + w*y);
+    const m22 = 1 - 2*(x*x + y*y);
     const middle = Math.asin(clamp(m10, -1, 1));
     const inner = Math.atan2(-m20, m00);
     const outer = Math.atan2(-m12, m11);
-    return [deg(outer), deg(inner), deg(middle)];
+    const principal = [deg(outer), deg(inner), deg(middle)];
+    if (!previous) return principal;
+
+    // Euler extraction has two equivalent branches. Prefer the one nearest
+    // the previous sample so crossing +/-90 degrees does not synthesize a
+    // half-revolution on CDUX/CDUY.
+    const alternate = [
+      deg(outer) + 180,
+      deg(inner) + 180,
+      deg(middle) >= 0 ? 180 - deg(middle) : -180 - deg(middle)
+    ];
+    const branchCost = candidate => candidate.reduce((cost, value, axis) => {
+      const delta = wrap180(value - previous[axis]);
+      return cost + delta*delta;
+    }, 0);
+    let result = branchCost(alternate) < branchCost(principal) ? alternate : principal;
+
+    // At exact lock, outer and inner are not individually observable. Recover
+    // their observable sum (positive pole) or difference (negative pole),
+    // then share its smallest cyclic correction across both axes. This keeps
+    // floating-point residue at the singularity from becoming CDU motion.
+    if (Math.hypot(m00, m20) < 1e-7) {
+      const pole = m10 >= 0 ? 1 : -1;
+      const coupled = deg(Math.atan2(m02, m22));
+      const previousCoupled = previous[1] + pole*previous[0];
+      const correction = wrap180(coupled - previousCoupled);
+      result = [
+        previous[0] + pole*correction/2,
+        previous[1] + correction/2,
+        result[2]
+      ];
+    }
+    return result;
   }
 
   function zeroHere(q=null) {
@@ -357,7 +391,7 @@
       // directly to e[2] would incorrectly treat middle gimbal as generic yaw.
       correctedRel = qNorm(qMul(qAxis('z', rad(magneticYawCorrection)), rel));
     }
-    const e = apolloGimbals(correctedRel);
+    const e = apolloGimbals(correctedRel, lastEuler);
     if (!lastEuler) {
       lastEuler = e;
       updateButton();
