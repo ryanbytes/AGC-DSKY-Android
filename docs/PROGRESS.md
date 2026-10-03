@@ -1431,3 +1431,11 @@ No Android device is attached, so the updated sensor timing has not been verifie
 The host PRO controller smoke covered pointer ownership, release on cancel/visibility loss/CLOCK transition, and failure cleanup, while the real Comanche055 runtime smoke sent a PRO press/release without checking the AGC-observed level. Strengthened `tools/wasm-runtime-smoke.js` to read input channel `032` bit `020000` from the live pinned yaAGC core: it must be high before the press, low after one MCT while held, and high after one MCT on release. The existing total mission-step count remains unchanged. This confirms active-low maintained-contact behavior against real Comanche055/WASM; physical handset PRO/STBY remains unverified.
 
 Validation: `node --check tools/wasm-runtime-smoke.js`, `node tools/wasm-runtime-smoke.js`, `git diff --check`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed. The canonical suite reports 100 Node smokes plus the NTP shell smoke and real pinned Comanche055 command paths.
+
+## 2026-10-03 native Activity pause releases held PRO
+
+The Android Activity explicitly tells the WebView that the app is hidden from `onPause()`. That native callback does not guarantee a DOM `visibilitychange` or pointer-cancel event. Before this fix, pausing while PRO was held could stop the AGC core with channel `032` bit `020000` still active, and the pointer controller could retain ownership after resume.
+
+The public app-visibility path now releases the PRO service and recenters phone motion before forwarding the hide transition to the lifecycle service, so the core snapshots only after transient inputs have been released. The AGC API runtime smoke asserts the ordering and confirms that becoming visible does not spuriously release PRO. This is source/host-smoke evidence; physical handset pause/resume remains unverified.
+
+The Android candidate metadata is v1.1.65 / versionCode 2026100303. The release remains unverified and unpublished until both locally built APKs pass the established signer, package, and asset checks. The prior signing password was exposed during an earlier tool interaction and must not be reused; release signing awaits a replacement credential path.
