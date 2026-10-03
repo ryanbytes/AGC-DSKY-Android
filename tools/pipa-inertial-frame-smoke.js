@@ -136,6 +136,62 @@ assert(state.pending.y===0&&state.pending.z===0,'stable-frame -X acceleration le
 assert(Math.abs(state.pending.x+state.fractional.x+0.1/0.0585)<1e-9,
   'positive/negative PIPA delta-V did not conserve the source-backed 5.85 cm/s increment scale');
 
+// Accepted sensor intervals are elapsed event time. Do not silently integrate
+// only 50 ms when Android delivers a slower (but still accepted) event.
+const intervalProbe=createHarness();
+intervalProbe.nativePhoneQuaternion(1,0,0,0,0);
+intervalProbe.nativePipaSensorStatus('test-linear-acceleration',true);
+intervalProbe.clickPipaCalibration();
+for(let i=0;i<60;i++)intervalProbe.nativePhoneLinearAcceleration(0,0,0,1+i*0.02,0);
+intervalProbe.nativePhoneLinearAcceleration(0,0,0,2.20,0);
+intervalProbe.nativePhoneLinearAcceleration(1,0,0,2.30,0);
+let intervalState=intervalProbe.phoneIcduStatus().pipa;
+assert(Math.abs(intervalState.pending.x+intervalState.fractional.x-0.1/0.0585)<1e-9,
+  '100 ms accepted PIPA interval discarded acceleration beyond 50 ms');
+intervalProbe.nativePhoneLinearAcceleration(1,0,0,2.50,0);
+intervalState=intervalProbe.phoneIcduStatus().pipa;
+assert(Math.abs(intervalState.pending.x+intervalState.fractional.x-0.3/0.0585)<1e-9,
+  '200 ms accepted PIPA interval discarded acceleration beyond 50 ms');
+intervalProbe.nativePhoneLinearAcceleration(100,0,0,2.45,0);
+intervalProbe.nativePhoneLinearAcceleration(1,0,0,2.55,0);
+intervalState=intervalProbe.phoneIcduStatus().pipa;
+assert(Math.abs(intervalState.pending.x+intervalState.fractional.x-0.35/0.0585)<1e-9,
+  'out-of-order PIPA timestamp moved the integration baseline backward');
+
+// Verify the production pump emits the CM PIPA channels with the proper PINC /
+// MINC sense, and retries a ring-buffer rejection without losing a pulse.
+const transportProbe=createHarness();
+transportProbe.nativePhoneQuaternion(1,0,0,0,0);
+transportProbe.nativePipaSensorStatus('test-linear-acceleration',true);
+transportProbe.clickPipaCalibration();
+for(let i=0;i<60;i++)transportProbe.nativePhoneLinearAcceleration(0,0,0,1+i*0.02,0);
+transportProbe.nativePhoneLinearAcceleration(0,0,0,2.20,0);
+transportProbe.nativePhoneLinearAcceleration(1,-1,2,2.25,0);
+transportProbe.nativePhoneLinearAcceleration(1,-1,2,2.30,0);
+const transportAttempts=[];
+const transportCore=transportProbe.__core;
+let rejectFirstPositiveX=true;
+transportCore.writeIo=(channel,value)=>{
+  transportAttempts.push([channel,value]);
+  if(channel===0o237&&rejectFirstPositiveX){rejectFirstPositiveX=false;return 0}
+  transportCore.writes.push([channel,value]);
+  return 1;
+};
+transportProbe.__tick();
+let transportState=transportProbe.phoneIcduStatus().pipa;
+assert(transportState.pending.x===1&&transportState.pending.y===0&&transportState.pending.z===0,
+  'rejected PIPAX increment was dropped or blocked unrelated PIPA axes');
+transportProbe.__tick();
+transportState=transportProbe.phoneIcduStatus().pipa;
+assert(transportState.pending.x===0&&transportState.pending.y===0&&transportState.pending.z===0,
+  'accepted PIPA retry did not drain its pending increment');
+assert(transportCore.writes.filter(([channel])=>channel===0o237).length===1,
+  'PIPAX ring-buffer retry did not emit exactly one accepted pulse');
+assert(transportCore.writes.filter(([channel,value])=>channel===0o240&&value===0o02).length===1,
+  'negative stable-frame Y did not emit one PIPAY MINC');
+assert(transportCore.writes.filter(([channel,value])=>channel===0o241&&value===0o00).length===3,
+  'positive stable-frame Z did not emit three PIPAZ PINC pulses');
+
 // Android's documented ROTATION_90 remap uses AXIS_Y and AXIS_MINUS_X:
 // device +X therefore maps to screen -Y, and device +Y maps to screen +X.
 // Assert the basis mapping independently of the production rotation helper.
@@ -227,8 +283,9 @@ pipaResumeProbe.nativePhoneQuaternion(1,0,0,0,0);
 pipaResumeProbe.nativePipaSensorStatus('test-linear-acceleration',true);
 pipaResumeProbe.clickPipaCalibration();
 for(let i=0;i<60;i++)pipaResumeProbe.nativePhoneLinearAcceleration(0,0,0,1+i*0.02,0);
-pipaResumeProbe.nativePhoneLinearAcceleration(1,0,0,2.3,0);
-pipaResumeProbe.nativePhoneLinearAcceleration(1,0,0,2.35,0);
+pipaResumeProbe.nativePhoneLinearAcceleration(0,0,0,2.20,0);
+pipaResumeProbe.nativePhoneLinearAcceleration(1,0,0,2.25,0);
+pipaResumeProbe.nativePhoneLinearAcceleration(1,0,0,2.30,0);
 let pipaResume=pipaResumeProbe.phoneIcduStatus().pipa;
 assert(pipaResume.pending.x===1,'PIPA lifecycle fixture did not create a buffered increment');
 pipaResumeProbe.nativePipaSensorStatus('test-linear-acceleration',false);
@@ -240,6 +297,6 @@ assert(pipaResume.fractional.x===0&&pipaResume.fractional.y===0&&pipaResume.frac
 
 console.log('PIPA inertial-frame smoke: PASS');
 console.log('  rotating bias cancellation, stable-frame axis mapping, bidirectional increments, and CM pulse scale verified');
-console.log('  compound attitude, all display rotations, hidden/resumed IMU rebasing, and PIPA sensor-loss clearing verified');
+console.log('  compound attitude, all display rotations, variable event intervals, out-of-order timestamps, PINC/MINC transport, backpressure retry, lifecycle rebasing, and PIPA sensor-loss clearing verified');
 
 function buttonFor(harnessApi){return harnessApi.__buttons['pipa-cal']}
