@@ -10,6 +10,9 @@
 
   Core.prototype.exportSnapshot = function() {
     if (!this.memory) throw new Error('AGC core not loaded');
+    if (typeof this.flushPendingNormalKeyForSnapshot === 'function') {
+      this.flushPendingNormalKeyForSnapshot();
+    }
     const bytes = new Uint8Array(this.memory.buffer);
     const pieces = [];
     for (let i = 0; i < bytes.length; i += ENCODE_BYTES) {
