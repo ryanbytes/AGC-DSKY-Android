@@ -76,6 +76,7 @@
   let magneticEnabled = true;
   let magneticReferenceYaw = null;
   let magneticYawCorrection = 0;
+  let needsSensorRebase = false;
 
   let pipaSensorSeen = false;
   let pipaSensorName = 'none';
@@ -241,10 +242,51 @@
     updatePipaButton();
   }
 
+  function discardPendingPhoneMotion() {
+    needsSensorRebase = true;
+    referenceQ = null;
+    latestQ = null;
+    lastEuler = null;
+    unwrappedDeg = [0,0,0];
+    baselineCounts = emittedCounts.slice();
+    desiredCounts = emittedCounts.slice();
+    pending = [0,0,0];
+    pipaLastTimestamp = null;
+    pipaFraction = [0,0,0];
+    pipaPending = [0,0,0];
+    if (pipaCalRemaining > 0) {
+      pipaCalRemaining = 0;
+      pipaCalSum = [0,0,0];
+    }
+    if (opticsCapture) {
+      opticsReferenceQ = null;
+      opticsAngles = [0,0,0];
+    }
+    updatePipaButton();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) discardPendingPhoneMotion();
+  });
+
   function ingestQuaternion(q, effectiveScreenAngle=screenAngle()) {
     sampleHealth('imu');
     sensorSeen = true;
+    if (document.hidden) {
+      discardPendingPhoneMotion();
+      updateButton();
+      return;
+    }
     latestQ = q;
+    if (needsSensorRebase) {
+      needsSensorRebase = false;
+      zeroHere(q);
+      if (opticsCapture) {
+        opticsReferenceQ = q;
+        opticsAngles = [0,0,0];
+      }
+      return;
+    }
     const core = typeof api.getCore === 'function' ? api.getCore() : null;
     // Clock mode and Android backgrounding intentionally pause the simulated AGC.
     // Rebase the phone while paused so moving the handset outside AGC mode cannot
@@ -359,6 +401,17 @@
     if (![ax,ay,az,timestampSeconds].every(Number.isFinite)) return;
     sampleHealth('pipa');
     pipaSensorSeen = true;
+    if (document.hidden) {
+      pipaLastTimestamp = null;
+      pipaFraction = [0,0,0];
+      pipaPending = [0,0,0];
+      if (pipaCalRemaining > 0) {
+        pipaCalRemaining = 0;
+        pipaCalSum = [0,0,0];
+      }
+      updatePipaButton();
+      return;
+    }
     const core = typeof api.getCore === 'function' ? api.getCore() : null;
 
     // Aiming the sextant is an input-device gesture, not spacecraft
@@ -497,6 +550,7 @@
   }
 
   function pump() {
+    if (document.hidden) return;
     const core = typeof api.getCore === 'function' ? api.getCore() : null;
     if (!core || !core.running || !sensorSeen) return;
     if (opticsCapture) return;
@@ -541,14 +595,7 @@
   document.addEventListener('pointerdown',requestPermission,{once:true,passive:true});
   document.addEventListener('click',e=>{
     if (e.target && e.target.id === 'imu-zero') {
-      referenceQ = null;
-      lastEuler = null;
-      unwrappedDeg = [0,0,0];
-      baselineCounts = emittedCounts.slice();
-      desiredCounts = emittedCounts.slice();
-      pending = [0,0,0];
-      pipaLastTimestamp = null;
-      pipaFraction = [0,0,0];
+      discardPendingPhoneMotion();
       requestPermission();
       updateButton();
     } else if (e.target && e.target.id === 'pipa-cal') {
@@ -580,11 +627,11 @@
   api.setOpticsCaptureActive = active => {
     opticsCapture = !!active;
     opticsAngles = [0,0,0];
-    opticsReferenceQ = opticsCapture ? latestQ : null;
+    opticsReferenceQ = opticsCapture && !needsSensorRebase ? latestQ : null;
     pipaLastTimestamp = null;
     pipaFraction = [0,0,0];
     pipaPending = [0,0,0];
-    if (latestQ) {
+    if (latestQ && !needsSensorRebase) {
       referenceQ = latestQ;
       lastEuler = [0,0,0];
       unwrappedDeg = [0,0,0];
@@ -614,6 +661,7 @@
     if (!available && sensorSource !== 'web') {
       sensorSource = 'none';
       sensorSeen = false;
+      discardPendingPhoneMotion();
     }
     updateButton();
   };
@@ -732,6 +780,12 @@
     } else {
       pipaSensorSeen = false;
       pipaLastTimestamp = null;
+      pipaFraction = [0,0,0];
+      pipaPending = [0,0,0];
+      if (pipaCalRemaining > 0) {
+        pipaCalRemaining = 0;
+        pipaCalSum = [0,0,0];
+      }
     }
     updatePipaButton();
   };
@@ -765,7 +819,7 @@
       fractional:{x:pipaFraction[0],y:pipaFraction[1],z:pipaFraction[2]}},
     sky:{...skyPointing}
   });
-  api.recenterPhoneImu = () => { referenceQ=null; lastEuler=null; unwrappedDeg=[0,0,0]; baselineCounts=emittedCounts.slice(); desiredCounts=emittedCounts.slice(); pending=[0,0,0]; magneticReferenceYaw=magneticQ?eulerXYZ(magneticQ)[2]:null; magneticYawCorrection=0; };
+  api.recenterPhoneImu = () => { discardPendingPhoneMotion(); magneticReferenceYaw=magneticQ?eulerXYZ(magneticQ)[2]:null; magneticYawCorrection=0; return true; };
 
   phoneService.installImplementations(api,'phone-icdu module registration');
 })();

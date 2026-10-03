@@ -9,22 +9,23 @@ const source=fs.readFileSync(path.join(root,'app/src/main/assets/phone-icdu.js')
 function assert(ok,message){if(!ok)throw new Error(message)}
 
 function createHarness(screenAngle=0){
-  const core={running:true,writeIo(){return 1}};
+  const core={running:true,writes:[],writeIo(ch,value){this.writes.push([ch,value]);return 1}};
   const api={getCore:()=>core};
   const buttons=Object.fromEntries(['imu-zero','mag-lock','pipa-cal'].map(id=>[id,{textContent:'',title:''}]));
-  let clickHandler=null;
+  let clickHandler=null,hidden=false;
+  const documentListeners={},intervals=[];
   const service={installImplementations(implementations){Object.assign(api,implementations)}};
   const context={
     window:null,
     AGCDSKY:api,
     AGCDSKY_SERVICE_REGISTRY:{get(name){assert(name==='AGCDSKY_PHONE','unexpected service requested');return service}},
-    document:{getElementById:id=>buttons[id]||null,addEventListener(name,handler){if(name==='click')clickHandler=handler}},
+    document:{get hidden(){return hidden},getElementById:id=>buttons[id]||null,addEventListener(name,handler){if(name==='click')clickHandler=handler;else documentListeners[name]=handler}},
     screen:{orientation:{angle:screenAngle}},
     performance:{now:()=>0},
     localStorage:{getItem:()=>null,setItem(){}},
     navigator:{},
     addEventListener(){},
-    setInterval(){return 1},
+    setInterval(fn){intervals.push(fn);return intervals.length},
     clearInterval(){},
     Math,Number,Array,Object,String,Date,JSON,Set,Reflect,Error,TypeError
   };
@@ -32,6 +33,9 @@ function createHarness(screenAngle=0){
   vm.createContext(context);
   vm.runInContext(source,context,{filename:'phone-icdu.js'});
   api.__buttons=buttons;
+  api.__core=core;
+  api.__setHidden=value=>{hidden=!!value;if(documentListeners.visibilitychange)documentListeners.visibilitychange()};
+  api.__tick=()=>intervals.forEach(fn=>fn());
   api.clickPipaCalibration=()=>{assert(clickHandler,'PIPA calibration click handler was not registered');clickHandler({target:{id:'pipa-cal'}})};
   return api;
 }
@@ -166,8 +170,43 @@ for(const angle of [0,90,180,270]){
     `display ${angle} leaked stable +X into a fractional off-axis PIPA`);
 }
 
+// Motion accumulated while the app is hidden must not be injected into the
+// AGC when Android/WebView resumes without delivering background sensor events.
+const resumeProbe=createHarness();
+resumeProbe.nativePhoneQuaternion(1,0,0,0,0);
+resumeProbe.__core.running=false;
+resumeProbe.__setHidden(true);
+const pausedAngle=20*Math.PI/360;
+resumeProbe.nativePhoneQuaternion(Math.cos(pausedAngle),Math.sin(pausedAngle),0,0,0);
+resumeProbe.__setHidden(false);
+resumeProbe.__core.running=true;
+resumeProbe.nativePhoneQuaternion(Math.cos(pausedAngle),Math.sin(pausedAngle),0,0,0);
+let resumed=resumeProbe.phoneIcduStatus();
+assert(resumed.pending.x===0&&resumed.pending.y===0&&resumed.pending.z===0,
+  'orientation change while hidden created a resumed CDU pulse backlog');
+resumeProbe.__tick();
+assert(resumeProbe.__core.writes.length===0,'hidden-period orientation was emitted to yaAGC after resume');
+
+// Sensor loss also drops buffered PIPA increments instead of replaying them
+// when the acceleration source registers again.
+const pipaResumeProbe=createHarness();
+pipaResumeProbe.nativePhoneQuaternion(1,0,0,0,0);
+pipaResumeProbe.nativePipaSensorStatus('test-linear-acceleration',true);
+pipaResumeProbe.clickPipaCalibration();
+for(let i=0;i<60;i++)pipaResumeProbe.nativePhoneLinearAcceleration(0,0,0,1+i*0.02,0);
+pipaResumeProbe.nativePhoneLinearAcceleration(1,0,0,2.3,0);
+pipaResumeProbe.nativePhoneLinearAcceleration(1,0,0,2.35,0);
+let pipaResume=pipaResumeProbe.phoneIcduStatus().pipa;
+assert(pipaResume.pending.x===1,'PIPA lifecycle fixture did not create a buffered increment');
+pipaResumeProbe.nativePipaSensorStatus('test-linear-acceleration',false);
+pipaResume=pipaResumeProbe.phoneIcduStatus().pipa;
+assert(pipaResume.pending.x===0&&pipaResume.pending.y===0&&pipaResume.pending.z===0,
+  'lost PIPA sensor retained buffered increments');
+assert(pipaResume.fractional.x===0&&pipaResume.fractional.y===0&&pipaResume.fractional.z===0,
+  'lost PIPA sensor retained a partial delta-V interval');
+
 console.log('PIPA inertial-frame smoke: PASS');
 console.log('  rotating bias cancellation, stable-frame axis mapping, bidirectional increments, and CM pulse scale verified');
-console.log('  compound attitude and all 0/90/180/270-degree display rotations verified');
+console.log('  compound attitude, all display rotations, hidden/resumed IMU rebasing, and PIPA sensor-loss clearing verified');
 
 function buttonFor(harnessApi){return harnessApi.__buttons['pipa-cal']}
