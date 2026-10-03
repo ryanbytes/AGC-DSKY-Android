@@ -1108,7 +1108,9 @@ app/build/outputs/apk/fire/debug/app-fire-debug.apk
 
 Debug package ID remains install-safe alongside the release app through the `.eltest` application-ID suffix.
 
-## Current host verification and build blocker
+## Historical 2026-09-11 host verification and build blocker
+
+This section records the limitations of the 2026-09-11 execution environment. They were not the state of the Mac checkout used for the 2026-10-03 canonical build recorded below.
 
 The 2026-09-11 correction pass was exercised as far as the current container permits. Observed host results:
 
@@ -1120,7 +1122,7 @@ The 2026-09-11 correction pass was exercised as far as the current container per
 
 These are host/source checks, not an Android build or device test.
 
-The canonical Android build was then attempted/preflighted in the current execution environment. The blockers are concrete:
+At that time, the canonical Android build was attempted/preflighted in an execution environment with these blockers:
 
 - Java 21 and Node 22 are available;
 - no Gradle installation is available;
@@ -1129,9 +1131,11 @@ The canonical Android build was then attempted/preflighted in the current execut
 - there is no complete current recursive checkout in the build container;
 - shell network/DNS cannot resolve GitHub, so the Gradle bootstrap, repository clone/submodule initialization, and Android SDK package download cannot be completed here.
 
-Shortest next experiment: run `bash tools/build-local.sh` on a machine/container with the required Android SDK and exact recursive checkout. The obsolete hosted Android build workflow has since been removed to enforce the local-only APK build policy.
+Those blockers were resolved for current `main` on the Mac on 2026-10-03; see the exact-revision build result below. The obsolete hosted Android build workflow remains removed to enforce the local-only APK build policy.
 
-## Verification status
+## Historical 2026-09-11 verification status
+
+The following checklist records the earlier drawing/relay revision. It is not a current blocker list; later current-main results and still-open physical gates follow below.
 
 Historical v1.1.2 regular/Fire source checkpoints have previously completed the canonical local build and Fire-device HOME verification. Those results do **not** automatically apply to the 2026-09-11 drawing/relay revision.
 
@@ -1156,11 +1160,11 @@ For the current drawing/relay revision plus the CLOCK→AGC transition refactor 
 
 Do not upgrade any unchecked item to verified without actual output from that exact source revision.
 
-## Remaining external and physical verification work
+## Verification gates noted on 2026-09-11 (historical)
 
 1. Exact 2004688/2004689 production relay timing remains unresolved; the current generic profile avoids claiming unsupported per-part acoustics. Recover readable production SCDs if they become available.
 2. Validate current Fire and Regular release-signed builds on physical targets; the connected Android 36 emulator does not prove Fire OS or physical-screen behavior.
-3. Complete the canonical clean-tree build and keep running current-source device gates after integration; the current modified worktree was built through equivalent explicit Gradle/source commands.
+3. The canonical clean-tree build blocker was closed on 2026-10-03 for exact current `main`; physical device gates remain open as listed in the later audit checkpoints.
 
 ## Build policy
 
@@ -1339,3 +1343,17 @@ The tracked application tree in this checkout byte-matched `origin/main` at `f1b
 ### 2026-10-03 native widget and Fire redirect source audit
 
 Reviewed the native EL home-screen widget renderer, size calculation, API-31+ fixed-frame flippers, pre-31 raster fallback, minute-boundary scheduling, and resize/time/package update paths. Reviewed Fire Mode enable/disable state, package-specific boot intent, launcher-event filtering, redirect debounce, and the guarded Fire HOME setup script. Focused `node tools/el-widget-smoke.js`, `node tools/el-widget-labels-smoke.js`, `node tools/fire-home-setup-smoke.js`, and `node tools/manifest-policy-smoke.js` all passed. No source defect was demonstrated. This is source and host-smoke evidence only: native widget appearance and real Fire OS boot/HOME behavior remain unchecked on hardware. No APK or release was produced.
+
+### 2026-10-03 canonical clean build of current main
+
+Created a separate clean worktree at exact `origin/main` commit `5c98d74784d090ccb370fcd1b5c6e9a72e41aad0`, initialized the recursive `vendor/webAGC` submodule at its required pinned commit, and ran `ANDROID_SDK_ROOT=/Users/ryan/Library/Android/sdk bash tools/build-local.sh`. The canonical gate passed all 100 Node source smokes plus the NTP shell smoke, Gradle 9.5.1 checksum-verified bootstrap, Android platform 37 / Build Tools 36.0.0 checks, clean Regular and Fire debug builds, and `tools/verify-apk.sh` for both APKs. Independent `unzip -t` checks found no archive errors. SHA-256: Regular `f70157a47f6f211d00fc8d34757f70b7588ec01f1c977f9bca229bdeb16d141a`; Fire `143c712e143e39c327b5ddbd99a783fe7376315ce254f2c5bdda2dad698c2b60`.
+
+Then `ANDROID_SDK_ROOT=/Users/ryan/Library/Android/sdk bash tools/gradle-bootstrap.sh --no-daemon :app:verifyPinnedAgcAssets :app:assemble` passed and assembled all six Regular/Fire debug, installfix, and unsigned release APKs. `unzip -t` passed on each archive, and `apksigner verify --verbose` passed for both installfix APKs. `aapt2 dump badging` on both release outputs reported the source version `1.1.62` / `2026093009`. The release outputs remain unsigned local build artifacts; nothing was signed or published.
+
+`adb devices -l` returned no attached targets, and this SDK installation has no emulator executable, so no install/runtime gate ran against these exact APKs. The canonical build blocker is closed; physical Android/Fire behavior, Apple hardware, widget appearance, print flows, DreamManager behavior, and the remaining external accuracy items are still open. No client release was signed or published.
+
+### 2026-10-03 current-source Apple build and simulator launch
+
+`bash apple/tools/verify-pinned-assets.sh` passed. With Xcode 27.0, built `AGCDSKYmacOS` for macOS and `AGCDSKYiOS` for an iPhone 17 Pro / iOS 26.5 simulator in separate `/tmp` DerivedData directories, with signing disabled. `tools/verify-shared-frontend-parity.py` passed for both bundles; all 72 shared assets were byte-identical to `app/src/main/assets`.
+
+Installed and launched the iOS Simulator build. The debug bridge logged main origin `agcdsky://app`, installation at document start, and `ready: app`; its launch log contained no JavaScript error, unhandled-rejection, or CSP event. Cold-launch captures show a black WebView at about 1 second and the complete centered DSKY by 3 seconds; the runtime eventually renders, but the debug readiness event precedes the first captured painted DSKY. This is simulator startup evidence, not proof of physical iPhone behavior or DSKY command input. The simulator was shut down after the check. The macOS target was built but not freshly launched/interacted with; its previous interaction result remains inconclusive. No app source changed, and no release was created.
