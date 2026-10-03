@@ -16,6 +16,12 @@ Rechecked the post-merge GitHub Pages site in an isolated Playwright/Brave conte
 
 The three browser console errors were the expected offline failures of the PWA HTTP-Date network-time probes to `manifest.webmanifest`; the app reported network time unavailable and the simulator continued. This closes the post-merge hosted-browser install/offline runtime gap. Physical phone-browser behavior remains unverified. The isolated browser session was closed after the check.
 
+## 2026-10-03 optional analytics deployment-surface audit
+
+Confirmed the public PWA `analytics.js` endpoint is empty; its current deployed build does not transmit analytics events. GitHub's Actions API reports no runs of `deploy-analytics.yml`, the repository variable lookup for `AGC_ANALYTICS_ENDPOINT` returns 404, the repository secret listing returned no entries, and this shell has no `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` environment variables. These checks show no configured repository-driven Worker deployment path. They do not rule out a manually deployed Worker or organization/environment-scoped credentials, so they do not establish whether a standalone endpoint is live or rate-limited.
+
+The Worker source remains publicly callable if deployed: allowed `Origin` only controls browser CORS, and no rate limiter is implemented. Keep PWA telemetry disabled until a deployed Worker URL and its actual edge/account abuse controls are inspected and a rate-limit policy is selected. No Cloudflare account or service was changed.
+
 Rebuilt the PWA into a fresh `<temporary-path>` directory, leaving the existing untracked `pwa/dist/` untouched. `node pwa/tools/pwa-smoke.js` and `node pwa/tools/pwa-parity-smoke.js` passed. In Chromium, the packaged service worker installed and controlled the audit page; its cache contained 91 entries and all required page, runtime, WASM, rope, and icon resources. All four packaged PNG icons decoded at their expected dimensions (180, 192, 512, and 512 square). After stopping the local HTTP server, reloading the DSKY still rendered its full page structure from the worker's offline cache. The later main merge and Pages deployment are recorded below.
 
 ## 2026-10-03 Apple builds reconciled to current shared assets
