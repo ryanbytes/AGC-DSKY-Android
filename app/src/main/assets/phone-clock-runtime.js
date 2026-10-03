@@ -18,6 +18,7 @@
   const CLOCK_RELAY_MS=120,CLOCK_SETTLE_MS=20;
   let clockDigitsValue={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']};
   let clockRelayWordsValue={},relayQueueValue=[],relayBusyValue=false;
+  let relayQueueGenerationValue=0;
   let lampTestActiveValue=false,lampTestTimerValue=0;
   const DIGIT_RELAY_VALUE={' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31};
   const CLOCK_GROUPS_VALUE=[
@@ -74,8 +75,9 @@
     for(const group of CLOCK_GROUPS_VALUE)clockRelayWordsValue[group.relay]=clockWordImpl(group,want);
     ['r1','r2','r3'].forEach(name=>renderRegSlot.get()(name));
   }
-  function baseStopClockQueue(){relayQueueValue=[];relayBusyValue=false}
+  function baseStopClockQueue(){relayQueueGenerationValue++;relayQueueValue=[];relayBusyValue=false}
   function baseRunRelayQueue(){
+    const generation=relayQueueGenerationValue;
     const job=relayQueueValue.shift();
     if(!job){relayBusyValue=false;return}
     if(clockState.mode!=='clock'){relayBusyValue=false;relayQueueValue=[];return}
@@ -83,12 +85,12 @@
     clockRelayWordsValue[job.group.relay]=job.newWord;
     if(clockState.tickSound&&diff)clockAudio.playBurst(diff);
     setTimeout(()=>{
-      if(clockState.mode!=='clock')return;
+      if(generation!==relayQueueGenerationValue||clockState.mode!=='clock')return;
       const touched=new Set();
       for(const [name,i] of job.group.cells){clockDigitsValue[name][i]=job.want[name][i];touched.add(name)}
       touched.forEach(name=>renderRegSlot.get()(name));
     },CLOCK_SETTLE_MS);
-    setTimeout(()=>runQueueSlot.get()(),CLOCK_RELAY_MS);
+    setTimeout(()=>{if(generation===relayQueueGenerationValue)runQueueSlot.get()()},CLOCK_RELAY_MS);
   }
   function baseTick(){
     if(clockState.mode!=='clock'||lampTestActiveValue||relayBusyValue)return;

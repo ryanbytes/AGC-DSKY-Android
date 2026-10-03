@@ -50,11 +50,13 @@ function createHarness(initialMode = 'clock') {
     return {mode};
   };
   const keyPresses = [];
+  const keyResets = [];
+  const inputEvents = [];
   const handlers = {};
   const timers = [];
   const core = {
-    keyPress(code){ keyPresses.push(code); return 1; },
-    keyRelease(){ return true; },
+    keyPress(code){ keyPresses.push(code); inputEvents.push(['make', code]); return 1; },
+    keyRelease(){ keyResets.push(mode); inputEvents.push(['reset']); return true; },
     proceedKey(){ return 1; }
   };
   const lifecycle = {
@@ -109,7 +111,7 @@ function createHarness(initialMode = 'clock') {
   if (!Object.isFrozen(context.AGCDSKY_CLOCK_BEHAVIOR)) fail('CLOCK behavior service is not frozen');
 
   return {
-    AGCDSKY, context, handlers, timers, keyPresses,
+    AGCDSKY, context, handlers, timers, keyPresses, keyResets, inputEvents,
     get mode(){ return mode; }, set mode(value){ mode = value; },
     get enterCount(){ return enterCount; },
     get savedReason(){ return savedReason; },
@@ -133,6 +135,8 @@ async function flush(count = 20) { for (let i = 0; i < count; i++) await Promise
   await flush();
   if (fresh.mode !== 'agc' || fresh.enterCount !== 1) fail('first CLOCK key did not complete exactly one AGC promotion');
   if (fresh.keyPresses.length !== 1 || fresh.keyPresses[0] !== 0o21) fail('VERB did not reach Pinball as octal 021');
+  if (fresh.keyResets.length !== 1) fail('CLOCK fallback key make was not followed by KEYRST');
+  if (fresh.inputEvents.map(event => event[0]).join(',') !== 'make,reset') fail('CLOCK fallback did not release each key immediately');
   if (fresh.savedReason !== 'clock keypad handoff') fail('CLOCK handoff did not route autosave through snapshot owner');
   if (fresh.timers.length !== 1 || fresh.timers[0].delay !== 90) fail('CLOCK handoff created an unexpected timer');
   const freshRuntime = fresh.context.AGCDSKY_RUNTIME.snapshot();
@@ -154,6 +158,8 @@ async function flush(count = 20) { for (let i = 0; i < count; i++) await Promise
   releaseLoad();
   await flush();
   if (queued.keyPresses.join(',') !== `${0o21},${0o37}`) fail('queued CLOCK contacts were not forwarded in order');
+  if (queued.keyResets.length !== 2) fail('queued CLOCK fallback keys were not released between makes');
+  if (queued.inputEvents.map(event => event[0]).join(',') !== 'make,reset,make,reset') fail('queued CLOCK fallback keys did not alternate make and KEYRST');
   if (queued.savedReason !== 'clock keypad handoff') fail('queued CLOCK handoff did not schedule snapshot autosave');
 
   const loading = createHarness();
