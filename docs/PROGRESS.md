@@ -1425,3 +1425,9 @@ PR #249 merged the timestamp-aligned phone PIPA sensor changes into `main` at `e
 Release workflow run 37155712069 published [v1.1.64](https://github.com/ryanbytes/AGC-DSKY-Android/releases/tag/v1.1.64). Fresh downloads matched their published SHA-256 sidecars. Regular APK SHA-256: `86127102db5eafbfb311ffba9f40b30ed3d3ea227c621579df5f2f2d76399c0a`; Fire APK SHA-256: `8776b1df54cfb5696e202d0d146dbdca64be2f38492abc4c4fc84974bf810b5e`.
 
 No Android device is attached, so the updated sensor timing has not been verified on a physical handset; Fire OS, physical display, DreamManager, and Apple hardware/runtime gates also remain open. This release does not close the broader audit.
+
+## 2026-10-03 PRO channel-032 real-core audit
+
+The host PRO controller smoke covered pointer ownership, release on cancel/visibility loss/CLOCK transition, and failure cleanup, while the real Comanche055 runtime smoke sent a PRO press/release without checking the AGC-observed level. Strengthened `tools/wasm-runtime-smoke.js` to read input channel `032` bit `020000` from the live pinned yaAGC core: it must be high before the press, low after one MCT while held, and high after one MCT on release. The existing total mission-step count remains unchanged. This confirms active-low maintained-contact behavior against real Comanche055/WASM; physical handset PRO/STBY remains unverified.
+
+Validation: `node --check tools/wasm-runtime-smoke.js`, `node tools/wasm-runtime-smoke.js`, `git diff --check`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed. The canonical suite reports 100 Node smokes plus the NTP shell smoke and real pinned Comanche055 command paths.

@@ -455,10 +455,19 @@ async function main() {
     core.step(2000);
     core.keyPress(0o21);
     core.step(1000);
+    const proMask = 0o20000;
+    assert(core.inputChannelBits(0o32, proMask) === proMask,
+        'Comanche055: PRO channel 032 bit 020000 must be released before the hold');
     core.proceedKey(true);
-    core.step(250);
+    core.step(1);
+    assert(core.inputChannelBits(0o32, proMask) === 0,
+        'Comanche055: held PRO must clear input channel 032 bit 020000');
+    core.step(249);
     core.proceedKey(false);
-    core.step(250);
+    core.step(1);
+    assert(core.inputChannelBits(0o32, proMask) === proMask,
+        'Comanche055: released PRO must restore input channel 032 bit 020000');
+    core.step(249);
     assert(errors.length === 0, 'Comanche055: real DSKY I/O path reported an error');
     assert(core.totalSteps === 3500,
         `Comanche055: unexpected real execution step count ${core.totalSteps}`);
@@ -475,6 +484,7 @@ async function main() {
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);
+    console.log('  PRO contact: PASS (real Comanche055 observes channel 032 bit 020000 held low and released high)');
     console.log('real yaAGC WASM runtime smoke: PASS');
 }
 
