@@ -252,6 +252,10 @@ function testNavigationAndSnapshots() {
     assert(core.inputChannelBits(0o16, 0o177) === 0
         && core.pendingNavigationKeyCode === 0,
     'navigation release must clear NAVKEYIN and held-contact bookkeeping');
+    calls.length = 0;
+    assert(core.navKeyRelease() === true
+        && calls.filter(([name]) => name === 'write').length === 0,
+    'duplicate navigation release must not enqueue a spurious channel-016 packet');
 
     // Deliberately snapshot transient physical switch states. importSnapshot()
     // must validate the saved bytes first, then restore the external keyboard
