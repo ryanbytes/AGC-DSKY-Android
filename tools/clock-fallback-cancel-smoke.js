@@ -56,7 +56,8 @@ const runtime = {
 };
 const input = {
   ready(){ return mode === MODES.AGC && !clockPending; },
-  keyMake(code){ calls.push(['make', code]); return 1; }
+  keyMake(code){ calls.push(['make', code]); return 1; },
+  keyReset(){ calls.push(['reset']); return true; }
 };
 const snapshot = Object.freeze({scheduleAutosave(reason){ calls.push(['autosave', reason]); }});
 const context = {

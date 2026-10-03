@@ -26,6 +26,9 @@ jobs:
       - name: Verify pinned AGC assets
         run: apple/tools/verify-pinned-assets.sh
 
+      - name: Verify Apple wrapper permission policy
+        run: node apple/tools/apple-wrapper-policy-smoke.js
+
       - name: Build macOS app
         run: |
           xcodebuild \

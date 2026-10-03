@@ -11,6 +11,8 @@ import CoreHaptics
 
 @MainActor
 final class AGCWebViewModel: ObservableObject {
+    private static var visibleSceneIDs = Set<UUID>()
+    private let sceneID = UUID()
     weak var webView: WKWebView?
     private(set) var requestedVisible = true
 #if os(macOS)
@@ -23,11 +25,12 @@ final class AGCWebViewModel: ObservableObject {
     }
 
     func detach(webView: WKWebView) {
-        if self.webView === webView {
-            self.webView = nil
-        }
+        guard self.webView === webView else { return }
+        self.webView = nil
+        requestedVisible = false
 #if os(iOS)
-        UIApplication.shared.isIdleTimerDisabled = false
+        Self.visibleSceneIDs.remove(sceneID)
+        UIApplication.shared.isIdleTimerDisabled = !Self.visibleSceneIDs.isEmpty
 #elseif os(macOS)
         endMacActivity()
 #endif
@@ -44,7 +47,12 @@ final class AGCWebViewModel: ObservableObject {
 
     private func applyVisibilityState() {
 #if os(iOS)
-        UIApplication.shared.isIdleTimerDisabled = requestedVisible
+        if requestedVisible {
+            Self.visibleSceneIDs.insert(sceneID)
+        } else {
+            Self.visibleSceneIDs.remove(sceneID)
+        }
+        UIApplication.shared.isIdleTimerDisabled = !Self.visibleSceneIDs.isEmpty
 #elseif os(macOS)
         if requestedVisible {
             beginMacActivity()

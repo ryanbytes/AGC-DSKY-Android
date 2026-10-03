@@ -233,6 +233,8 @@
 
   function close(){
     releaseNavContact();
+    const tapMark=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_SEXTANT_TAP_MARK');
+    if(tapMark&&typeof tapMark.cancel==='function')tapMark.cancel();
     const view = document.getElementById('sxt-view');
     if (view) view.classList.remove('open');
     document.body.classList.remove('sxt-combined');
@@ -247,11 +249,15 @@
     if (!view || !view.classList.contains('open')) return;
     if (document.hidden) {
       releaseNavContact();
+      lastPhoneAngles = null;
+      if (typeof api.setOpticsCaptureActive === 'function') api.setOpticsCaptureActive(false);
       releaseCamera();
       const status = document.getElementById('sxt-status');
       if (status) status.textContent = 'SXT · CAMERA PAUSED';
       return;
     }
+    lastPhoneAngles = null;
+    if (typeof api.setOpticsCaptureActive === 'function') api.setOpticsCaptureActive(true);
     acquireCamera();
   }
 

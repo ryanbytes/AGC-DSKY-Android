@@ -89,10 +89,11 @@
     );
   }
 
-  function writePulses(c, channel, counts) {
+  function writePulses(c, channel, counts, token) {
     return new Promise((resolve, reject) => {
       let left = Math.trunc(counts);
       const step = () => {
+        if (token !== markToken) { reject(new Error('tap mark cancelled')); return; }
         if (!left) { resolve(); return; }
         const sign = left > 0 ? 1 : -1;
         const count = Math.min(Math.abs(left), MAX_PULSES_PER_STEP);
@@ -153,8 +154,8 @@
     try {
       if (!await waitForExistingOptics(token) || token !== markToken) throw new Error('optics input busy');
       await Promise.all([
-        writePulses(c, SHAFT_CH, shaftCounts),
-        writePulses(c, TRUNNION_CH, trunnionCounts)
+        writePulses(c, SHAFT_CH, shaftCounts, token),
+        writePulses(c, TRUNNION_CH, trunnionCounts, token)
       ]);
       if (token !== markToken) return false;
       const ok = c.navKeyPulse(MARK_BIT, 90);
