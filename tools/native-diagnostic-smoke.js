@@ -62,8 +62,10 @@ assert(gravityFilter.includes('TIME_CONSTANT_SECONDS = 0.23f'),
     'accelerometer gravity fallback must use an explicit time-constant policy');
 assert(gravityFilter.replace(/\s+/g, '').includes('floatelapsedSeconds=(timestampNs-lastTimestampNs)*1.0e-9f;floatalpha=TIME_CONSTANT_SECONDS/(TIME_CONSTANT_SECONDS+elapsedSeconds);'),
     'accelerometer gravity fallback must scale its low-pass coefficient to measured event spacing');
-assert(gravityFilter.includes('externalGravityRegistered && !gravityValid) return null'),
-    'accelerometer samples must be withheld until a registered gravity sensor supplies its first sample');
+assert(activityCompact.includes('accelerometerGravityFilter.onGravitySample(event.values[0],event.values[1],event.values[2],event.timestamp)'),
+    'gravity sensor callback must preserve its event timestamp');
+assert(compact(gravityFilter).includes('if(externalGravityRegistered){if(!gravityAt(timestampNs))returnnull;}'),
+    'accelerometer samples must wait for a gravity estimate aligned to their event timestamp');
 assert(activityCompact.includes('SensorRegistrationPolicy.register(this::registerSensorListener'),
     'native activity must use the testable registration policy for Android listener results');
 assert(activityCompact.includes('caseLINEAR_ACCELERATION:returnsensorManager.registerListener(this,linearAccelerationSensor,SensorManager.SENSOR_DELAY_GAME)')

@@ -54,6 +54,9 @@
   let sensorSeen = false;
   let sensorSource = 'none';
   let nativeSensorName = 'none';
+  const nativeAttitudeHistory = [];
+  const MAX_NATIVE_ATTITUDE_SAMPLES = 96;
+  const MAX_NATIVE_ATTITUDE_AGE_SECONDS = 0.10;
   let permissionRequested = false;
   let screenEpoch = screenAngle();
   let latestQ = null;
@@ -153,6 +156,65 @@
   function qNorm(q) {
     const n = Math.hypot(q[0],q[1],q[2],q[3]) || 1;
     return q.map(v => v/n);
+  }
+
+  function qSlerp(a, b, fraction) {
+    let target = b;
+    let cosine = a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3];
+    if (cosine < 0) {
+      target = b.map(value => -value);
+      cosine = -cosine;
+    }
+    if (cosine > 0.9995) {
+      return qNorm(a.map((value,index) => value + fraction*(target[index]-value)));
+    }
+    const angle = Math.acos(clamp(cosine,-1,1));
+    const sine = Math.sin(angle);
+    const left = Math.sin((1-fraction)*angle)/sine;
+    const right = Math.sin(fraction*angle)/sine;
+    return qNorm(a.map((value,index) => left*value + right*target[index]));
+  }
+
+  function rememberNativeAttitude(q, timestampSeconds) {
+    if (!Number.isFinite(timestampSeconds)) return;
+    const sample = {timestamp:timestampSeconds, quaternion:q.slice()};
+    let index = nativeAttitudeHistory.findIndex(item => item.timestamp >= timestampSeconds);
+    if (index < 0) index = nativeAttitudeHistory.length;
+    if (nativeAttitudeHistory[index] && nativeAttitudeHistory[index].timestamp === timestampSeconds) {
+      nativeAttitudeHistory[index] = sample;
+    } else {
+      nativeAttitudeHistory.splice(index,0,sample);
+    }
+    if (nativeAttitudeHistory.length > MAX_NATIVE_ATTITUDE_SAMPLES) {
+      nativeAttitudeHistory.splice(0,nativeAttitudeHistory.length-MAX_NATIVE_ATTITUDE_SAMPLES);
+    }
+  }
+
+  function nativeAttitudeAt(timestampSeconds, effectiveScreenAngle) {
+    if (!Number.isFinite(timestampSeconds) || nativeAttitudeHistory.length === 0) return null;
+    let upper = nativeAttitudeHistory.findIndex(item => item.timestamp >= timestampSeconds);
+    let deviceQ;
+    if (upper === 0) {
+      const sample = nativeAttitudeHistory[0];
+      if (sample.timestamp-timestampSeconds > MAX_NATIVE_ATTITUDE_AGE_SECONDS) return null;
+      deviceQ = sample.quaternion;
+    } else if (upper < 0) {
+      const sample = nativeAttitudeHistory[nativeAttitudeHistory.length-1];
+      if (timestampSeconds-sample.timestamp > MAX_NATIVE_ATTITUDE_AGE_SECONDS) return null;
+      deviceQ = sample.quaternion;
+    } else {
+      const before = nativeAttitudeHistory[upper-1];
+      const after = nativeAttitudeHistory[upper];
+      const span = after.timestamp-before.timestamp;
+      if (!(span > 0) || span > MAX_NATIVE_ATTITUDE_AGE_SECONDS*2) {
+        const nearest = timestampSeconds-before.timestamp <= after.timestamp-timestampSeconds ? before : after;
+        if (Math.abs(nearest.timestamp-timestampSeconds) > MAX_NATIVE_ATTITUDE_AGE_SECONDS) return null;
+        deviceQ = nearest.quaternion;
+      } else {
+        deviceQ = qSlerp(before.quaternion,after.quaternion,(timestampSeconds-before.timestamp)/span);
+      }
+    }
+    return qNorm(qMul(deviceQ,qAxis('z',rad(effectiveScreenAngle))));
   }
 
   function qRotate(q, v) {
@@ -288,6 +350,7 @@
     pipaLastTimestamp = null;
     pipaFraction = [0,0,0];
     pipaPending = [0,0,0];
+    nativeAttitudeHistory.length = 0;
     if (pipaCalRemaining > 0) {
       pipaCalRemaining = 0;
       pipaCalSum = [0,0,0];
@@ -462,8 +525,10 @@
     // in the same simulated stable-platform frame as CDUX/CDUY/CDUZ.
     let v = rotateScreenVector([ax,ay,az], effectiveScreenAngle);
     let bias = rotateScreenVector(pipaBias, effectiveScreenAngle);
-    if (referenceQ && latestQ) {
-      const rel = qNorm(qMul(qConj(referenceQ), latestQ));
+    const sampleQ = nativeAttitudeAt(timestampSeconds,effectiveScreenAngle)
+      || (nativeAttitudeHistory.length === 0 ? latestQ : null);
+    if (referenceQ && sampleQ) {
+      const rel = qNorm(qMul(qConj(referenceQ), sampleQ));
       v = qRotate(rel, v);
       bias = qRotate(rel, bias);
     }
@@ -499,7 +564,7 @@
     }
 
     // As with the ICDUs, CLOCK/background motion is intentionally discarded.
-    if (!core || !core.running || !referenceQ || !latestQ) {
+    if (!core || !core.running || !referenceQ || !sampleQ) {
       pipaLastTimestamp = timestampSeconds;
       pipaFraction = [0,0,0];
       pipaPending = [0,0,0];
@@ -652,12 +717,14 @@
   // rotation-vector quaternion (device-to-world). Right-multiply by the
   // screen-to-device rotation so phone screen X/Y remain the CDU outer/inner
   // axes in portrait or landscape.
-  api.nativePhoneQuaternion = (w,x,y,z,displayAngle=0) => {
+  api.nativePhoneQuaternion = (w,x,y,z,displayAngle=0,timestampSeconds=null) => {
     if (![w,x,y,z].every(Number.isFinite)) return;
     const a = Number.isFinite(displayAngle) ? ((displayAngle%360)+360)%360 : 0;
     sensorSource = 'native';
     sensorSeen = true;
-    let q = qNorm([w,x,y,z]);
+    const deviceQ = qNorm([w,x,y,z]);
+    rememberNativeAttitude(deviceQ,timestampSeconds);
+    let q = deviceQ;
     q = qNorm(qMul(q, qAxis('z', rad(a))));
     ingestQuaternion(q, a);
   };
