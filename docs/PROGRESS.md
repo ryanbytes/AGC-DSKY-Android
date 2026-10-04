@@ -1,3 +1,11 @@
+## 2026-10-04 updater release-identity audit
+
+The updater compared the GitHub release tag with its installed `BuildConfig.VERSION_NAME`, then verified a candidate APK's package, increasing version code, and signer, but did not compare the APK's own `versionName` with that release tag. The publication workflow checks the payload `VERSION` and APK sidecar hashes, so a correctly signed higher-version-code APK with mismatched embedded version could be published and accepted; after installation the app would keep discovering the newer tag and redownload/reject the same version-code APK.
+
+Candidate verification now requires the APK `versionName` to normalize to the selected release version before accepting it. Added numeric-equivalence, tag/APK match, mismatch, and invalid-name regressions, and wired the check into the updater source smoke. The pending-install revalidation keeps its existing package/version-code/signer checks because the candidate's stored SHA-256 already binds it to the release-identity check performed before staging.
+
+Validation: `node tools/self-update-smoke.js`, `bash tools/ntp-time-smoke.sh`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed; the full source suite includes the real pinned yaAGC + Comanche055 semantic gate. Clean detached commit `8acf6ec780da348999d6a200d239118deabccbea` passed the canonical local `tools/build-local.sh`; Regular and Fire debug APKs passed the included `tools/verify-apk.sh` checks for source-matched metadata, signing validity, pinned assets, and packaged frontend bytes. No release or live-device test was performed.
+
 ## 2026-10-04 native SNTP response-version audit
 
 `SntpClient` sent NTPv4 requests and validated response mode, leap state, stratum, source, and originate timestamp, but did not validate the response version. It could therefore use timestamps from unsupported version values. The response gate now accepts NTPv3/v4, preserving RFC 5905's documented NTPv4 backward compatibility with NTPv3, and rejects v2 and v5 before using server time. Added local UDP regression fixtures for both supported versions and both version boundaries.

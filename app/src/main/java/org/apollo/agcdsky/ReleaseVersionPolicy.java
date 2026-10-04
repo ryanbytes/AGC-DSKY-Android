@@ -27,6 +27,12 @@ final class ReleaseVersionPolicy {
         return 0;
     }
 
+    static boolean matchesRelease(String releaseVersion, String apkVersionName) {
+        String expected = normalize(releaseVersion);
+        String actual = normalize(apkVersionName);
+        return expected != null && actual != null && compare(expected, actual) == 0;
+    }
+
     private static String canonicalComponent(String value) {
         int first = 0;
         while (first < value.length() - 1 && value.charAt(first) == '0') first++;
