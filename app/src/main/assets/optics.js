@@ -51,6 +51,15 @@
   let pairMeta = null;
   let pairComputedAt = 0;
   const CENTER_TOL_DEG = 0.08;
+  const SKY_LOCATION_MAX_AGE_MS = 300000;
+
+  function skyLocationAgeMs(location=skyLocation,now=Date.now()){
+    return location&&Number.isFinite(location.timestamp)?now-location.timestamp:Infinity;
+  }
+  function skyLocationFresh(location=skyLocation,now=Date.now()){
+    const age=skyLocationAgeMs(location,now);
+    return age>=0&&age<=SKY_LOCATION_MAX_AGE_MS;
+  }
 
   function core(){ return typeof api.getCore === 'function' ? api.getCore() : null; }
   function comancheMissionSelected(){ return typeof api.getMission === 'function' && api.getMission() === 'comanche055'; }
@@ -295,19 +304,21 @@
     lastPhoneAngles=null;
   }
 
-  function setSkyLocation(lat,lon,alt=0,accuracy=NaN){
+  function setSkyLocation(lat,lon,alt=0,accuracy=NaN,timestamp=Date.now()){
     lat=Number(lat);lon=Number(lon);alt=Number(alt);
     if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat > 90||lon < -180||lon > 180)return false;
-    skyLocation={lat,lon,alt:Number.isFinite(alt)?alt:0,accuracy:Number(accuracy),timestamp:Date.now()};
+    timestamp=Number(timestamp);
+    if(!Number.isFinite(timestamp)||timestamp<=0)return false;
+    skyLocation={lat,lon,alt:Number.isFinite(alt)?alt:0,accuracy:Number(accuracy),timestamp};
     try{localStorage.setItem('sxtSkyLocation',JSON.stringify(skyLocation))}catch(_){ }
-    try{if(window.SkyBridge&&typeof SkyBridge.setLocation==='function')SkyBridge.setLocation(lat,lon,skyLocation.alt)}catch(_){ }
+    try{if(skyLocationFresh()&&window.SkyBridge&&typeof SkyBridge.setLocation==='function')SkyBridge.setLocation(lat,lon,skyLocation.alt)}catch(_){ }
     selectedPair=null;pairCandidates=[];pairIndex=0;pairMeta=null;pairComputedAt=0;updateStarFinder();return true;
   }
 
   function requestSkyLocation(){
-    try{const c=JSON.parse(localStorage.getItem('sxtSkyLocation')||'null');if(c)setSkyLocation(c.lat,c.lon,c.alt,c.accuracy)}catch(_){ }
+    try{const c=JSON.parse(localStorage.getItem('sxtSkyLocation')||'null');if(c)setSkyLocation(c.lat,c.lon,c.alt,c.accuracy,c.timestamp)}catch(_){ }
     if(!navigator.geolocation)return;
-    navigator.geolocation.getCurrentPosition(p=>setSkyLocation(p.coords.latitude,p.coords.longitude,p.coords.altitude||0,p.coords.accuracy),()=>updateStarFinder(),{enableHighAccuracy:true,maximumAge:300000,timeout:12000});
+    navigator.geolocation.getCurrentPosition(p=>setSkyLocation(p.coords.latitude,p.coords.longitude,p.coords.altitude||0,p.coords.accuracy,p.timestamp),()=>updateStarFinder(),{enableHighAccuracy:true,maximumAge:SKY_LOCATION_MAX_AGE_MS,timeout:12000});
   }
 
   function requestWebStarFinderSensors(){
@@ -337,7 +348,7 @@
   function chooseStar(star){selectedStar=star;updateStarFinder()}
 
   function computePair(){
-    const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');if(!cat||!skyLocation)return null;
+    const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');if(!cat||!skyLocationFresh())return null;
     const now=Date.now();
     if(selectedPair&&now-pairComputedAt<5000)return selectedPair;
     pairMeta=typeof cat.candidatePairs==='function'?cat.candidatePairs(skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date(),12,6):null;
@@ -354,12 +365,13 @@
   }
 
   function currentTargetPosition(){
-    const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');if(!cat||!skyLocation||!selectedStar)return null;
+    const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');if(!cat||!skyLocationFresh()||!selectedStar)return null;
     return cat.apparentHorizontal(selectedStar,skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date());
   }
 
   function calibratePointing(){
     const pos=currentTargetPosition(),st=document.getElementById('sxt-status');
+    if(!skyLocationFresh()){if(st)st.textContent='SXT · REFRESH LOCATION BEFORE CALIBRATION';return}
     if(!pos||!selectedStar){if(st)st.textContent='SXT · SELECT STAR FIRST';return}
     if(typeof api.calibrateSkyBoresight!=='function'){if(st)st.textContent='SXT · POINTING CAL UNAVAILABLE';return}
     const r=api.calibrateSkyBoresight(pos.az,pos.alt,`${selectedStar.code} ${selectedStar.name}`);
@@ -390,8 +402,20 @@
     }
     if(!skyLocation){loc.textContent='LOCATION REQUIRED · ALLOW LOCATION';pairEl.textContent='PAIR WAITING';if(cond)cond.textContent='';buttons.innerHTML='';return}
     const ac=Number.isFinite(skyLocation.accuracy)?(' ±'+Math.round(skyLocation.accuracy)+' m'):'';
-    const age=Math.max(0,Date.now()-(skyLocation.timestamp||0));
-    loc.textContent=`${skyLocation.lat.toFixed(4)}°, ${skyLocation.lon.toFixed(4)}°${ac} · LOCATION ${Math.round(age/1000)} s OLD`;
+    const age=skyLocationAgeMs();
+    loc.textContent=`${skyLocation.lat.toFixed(4)}°, ${skyLocation.lon.toFixed(4)}°${ac} · LOCATION ${Number.isFinite(age)?Math.round(Math.max(0,age)/1000):'UNKNOWN'} s OLD`;
+    if(!skyLocationFresh()){
+      pairEl.textContent='PAIR WAITING · LOCATION STALE';
+      if(cond)cond.textContent='REFRESH LOCATION BEFORE STAR AIMING';
+      buttons.innerHTML='';
+      targ.textContent='TARGET WAITING FOR FRESH LOCATION';
+      cmd.textContent='';
+      err.textContent='LOCATION STALE · REFRESH STAR FINDER';
+      arrow.style.transform='rotate(0deg)';
+      const cue=document.getElementById('sxt-star-cue');
+      if(cue){cue.classList.remove('active','outside','centered');cue.style.removeProperty('--cue-x');cue.style.removeProperty('--cue-y')}
+      return;
+    }
     const pair=computePair();
     if(!pair){pairEl.textContent='NO 40–66° APOLLO PAIR ABOVE 12°';if(cond&&pairMeta?.conditions)cond.textContent=`${pairMeta.conditions.label} · SUN ${pairMeta.conditions.sunAlt.toFixed(1)}°`;buttons.innerHTML='';return}
     const meta=pairMeta,conditions=meta?.conditions||pair.conditions;
@@ -616,6 +640,6 @@
   });
   setInterval(pump,4);
 
-  function status(){return {open:document.getElementById('sxt-view')?.classList.contains('open')||false,combinedDsky:document.body.classList.contains('sxt-combined'),pending:{shaft:pending[0],trunnion:pending[1]},camera:!!stream,cameraPending:!!cameraAcquire,aimScale,finderEnabled,location:skyLocation,target:selectedStar?{code:selectedStar.code,name:selectedStar.name,mag:selectedStar.mag}:null,pair:selectedPair?{a:selectedPair.a.star.code,b:selectedPair.b.star.code,sep:selectedPair.sep,index:pairIndex,count:pairCandidates.length}:null,pointingCalibration:typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null,health:{writeRejected:opticsWriteRejected,lastAccept:lastOpticsAccept}}}
+  function status(){return {open:document.getElementById('sxt-view')?.classList.contains('open')||false,combinedDsky:document.body.classList.contains('sxt-combined'),pending:{shaft:pending[0],trunnion:pending[1]},camera:!!stream,cameraPending:!!cameraAcquire,aimScale,finderEnabled,location:skyLocation,locationFresh:skyLocationFresh(),target:selectedStar?{code:selectedStar.code,name:selectedStar.name,mag:selectedStar.mag}:null,pair:selectedPair?{a:selectedPair.a.star.code,b:selectedPair.b.star.code,sep:selectedPair.sep,index:pairIndex,count:pairCandidates.length}:null,pointingCalibration:typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null,health:{writeRejected:opticsWriteRejected,lastAccept:lastOpticsAccept}}}
   window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_OPTICS',Object.freeze({open,close,status}),'optics publication');
 })();
