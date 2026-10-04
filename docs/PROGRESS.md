@@ -1,3 +1,11 @@
+## 2026-10-04 Comanche V05N09 data-fidelity audit
+
+The V05N09 host gate previously stopped after seeing each numeric relay selector, so it could pass even if the displayed alarm codes were wrong. It now reads the three source-mapped FAILREG erasable words, independently decodes the octal C/D relay contacts for all 15 digit positions, requires blank signs, and compares all three five-digit display words to raw memory. It also releases ENTR through the production KEYRST path before waiting for the response. The real pinned core displayed `01107 00000 00000`, matching FAILREG exactly.
+
+The packaged-WebView driver now reads FAILREG through the core's existing read-only `readErasable` method and compares it with both the DSKY display model and the actual rendered EL digit slots, while requiring V05N09 to leave FAILREG unchanged. The source policy smoke covers that assertion path. The updated device driver has not yet been run on Android in this pass.
+
+Validation: `node --check tools/wasm-runtime-smoke.js`, `node --check tools/device-v35-smoke.js`, `node --check tools/device-v35-policy-smoke.js`, `node tools/wasm-runtime-smoke.js`, `node tools/device-v35-policy-smoke.js`, `env TZ=UTC bash tools/run-source-smokes.sh` (107 Node tests plus NTP shell smoke), and `git diff --check` passed. The real-WASM gate reports the exact matching output `01107 00000 00000`; `adb devices -l` shows no attached Android target, so Android/WebView runtime confirmation of the new readback assertion remains open.
+
 ## 2026-10-04 Comanche cold-start and fresh-start accuracy audit
 
 The real-WASM semantic gate reset the AGC and proceeded directly to P00. With the exact pinned Comanche055 rope, that cold start reproducibly sets FAILREG word 1 to `01107`: Comanche's documented phase-table consistency check raises the alarm before mission fresh-start initialization. This was a test-sequence gap, not evidence of a DSKY or yaAGC fault. The host gate now verifies the raw `01107 00000 00000` cold-start state, sends the authentic Pinball `V36E` fresh-start sequence, and requires all three FAILREG words to clear before continuing its normal command tests. Source documentation identifies `V36E`/SLAP1 as the operator-initiated fresh start that clears FAILREG and initializes the phase tables.
