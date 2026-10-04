@@ -167,6 +167,9 @@ assert(!java.includes('UpdateInstallActivity'),'obsolete installer callback acti
 assert(!manifest.includes('android:name=".UpdateInstallActivity"'),'obsolete installer callback activity must stay removed from manifest');
 for(const marker of ['application/vnd.android.package-archive','ParcelFileDescriptor.MODE_READ_ONLY','OpenableColumns.DISPLAY_NAME','app-fire-release.apk','app-regular-release.apk'])assert(apkProvider.includes(marker),`update APK provider missing ${marker}`);
 for(const marker of ['app-regular-release.apk','app-fire-release.apk','app-regular-release.apk.sha256','app-fire-release.apk.sha256','apksigner','sha256'])assert(prep.includes(marker),`release-prep script missing ${marker}`);
+assert(prep.includes('EXPECTED_CERT_SHA256="409ad676e8052e50416a1bf69e095137ef639ac13ce4652160a19380a117fa1f"')&&
+       prep.includes('APK Signature Scheme v2 or newer')&&prep.includes('Signer #[0-9]+ certificate SHA-256 digest'),
+  'release prep must require the established certificate and APK Signature Scheme v2 or newer');
 assert(java.includes('PackageManager.GET_SIGNING_CERTIFICATES | PackageManager.GET_SIGNATURES'),
   'Android 9/10 archive verification must request legacy signatures alongside SigningInfo');
 assert(java.includes('Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.signingInfo != null') &&
