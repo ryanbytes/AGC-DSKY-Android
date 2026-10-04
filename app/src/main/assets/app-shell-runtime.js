@@ -33,7 +33,7 @@ function show(v,n){
 const BROWSER_TIME_RESYNC_MS=10*60*1000;
 const BROWSER_TIME_STALE_MS=2*60*60*1000;
 const BROWSER_TIME_REQUEST_TIMEOUT_MS=5000;
-let browserTimeLastAttemptMs=0,browserTimeInFlight=null;
+let browserTimeLastAttemptMs=0,browserTimeInFlight=null,browserVisibilityClockSample=null;
 function hasNativeTimeBridge(){return !!(window.TimeBridge&&typeof TimeBridge.getStatus==='function')}
 function accurateTime(){if(shellState.ntpStatus.state==='synced'&&networkTimeAnchor)return Math.round(networkTimeAnchor.utcMs+(performance.now()-networkTimeAnchor.elapsedMs));return Date.now()+(shellState.ntpStatus.state==='synced'?(Number(shellState.ntpStatus.offsetMs)||0):0)}
 function accurateDate(){return new Date(accurateTime())}
@@ -131,6 +131,22 @@ function requestNetworkTimeSync(){
   return syncBrowserNetworkTime(true);
 }
 function refreshTimeStatus(){if(loadNativeNtpStatus())return true;refreshBrowserTimeAge();void syncBrowserNetworkTime(false);return false}
+function refreshNetworkTimeOnVisibility(visible){
+  if(hasNativeTimeBridge()){
+    if(visible)loadNativeNtpStatus();
+    return;
+  }
+  if(!visible){browserVisibilityClockSample={wallMs:Date.now(),elapsedMs:performance.now()};return;}
+  const before=browserVisibilityClockSample;browserVisibilityClockSample=null;
+  if(!before||shellState.ntpStatus.source!=='http-date'||shellState.ntpStatus.state!=='synced')return;
+  const wallElapsed=Date.now()-before.wallMs,monotonicElapsed=performance.now()-before.elapsedMs;
+  if(Math.abs(wallElapsed-monotonicElapsed)<=250)return;
+  updateNtpStatus({state:'stale',usingNetworkTime:false,lastError:'Wall and monotonic clocks diverged while app was backgrounded'});
+  browserTimeLastAttemptMs=0;
+  void syncBrowserNetworkTime(true).then(ok=>{
+    if(!ok&&shellState.ntpStatus.state==='stale'){browserTimeLastAttemptMs=0;void syncBrowserNetworkTime(true);}
+  });
+}
 
 function missionSpec(){return MISSION}
 function applyMissionButton(){document.body.classList.add('spacecraft-cm')}
@@ -236,7 +252,7 @@ function initializeAppShell(api,services){
   },{passive:true});
   document.addEventListener('pointerup',()=>{clearTimeout(holdTimer);if(tapHideControls)hideControls();tapHideControls=false},{passive:true});
   document.addEventListener('pointercancel',()=>{clearTimeout(holdTimer);tapHideControls=false},{passive:true});
-  document.addEventListener('visibilitychange',()=>api.setAppVisible(!document.hidden));
+  document.addEventListener('visibilitychange',()=>{const visible=!document.hidden;api.setAppVisible(visible);refreshNetworkTimeOnVisibility(visible)});
   addEventListener('pagehide',()=>{const core=shellCore();if(shellState.mode==='agc'&&core){core.stop();api.saveAgcState('page hide')}});
   $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;environment.applyDim();showControls()});
   $('dreambright').addEventListener('click',()=>{environment.cycleDreamMode();showControls()});
