@@ -65,6 +65,13 @@
     const accuracy=location?.accuracy;
     return Number.isFinite(accuracy)&&accuracy>=0?Math.min(180,accuracy/MEAN_EARTH_RADIUS_M*180/Math.PI):Infinity;
   }
+  function skyPointingCue(distance,locationUncertainty,calibrated){
+    if(!calibrated)return 'uncalibrated';
+    if(distance+locationUncertainty<=CENTER_TOL_DEG)return 'centered';
+    if(distance+locationUncertainty<=SXT_FOV_DEG/2)return 'in-field';
+    if(distance-locationUncertainty<=SXT_FOV_DEG/2)return 'position-uncertain';
+    return 'move';
+  }
 
   function core(){ return typeof api.getCore === 'function' ? api.getCore() : null; }
   function comancheMissionSelected(){ return typeof api.getMission === 'function' && api.getMission() === 'comanche055'; }
@@ -454,6 +461,7 @@
     }
     const projected=typeof api.projectSkyTarget==='function'?api.projectSkyTarget(targetPos.az,targetPos.alt):null;
     const d=projected?{distance:projected.distance,angle:projected.screenAngle}:cat.bearingDelta(pointing,targetPos);
+    const cueState=skyPointingCue(d.distance,skyLocationUncertaintyDeg(),!!projected?.calibrated);
     const locationUncertainty=skyLocationUncertaintyDeg(),edge=SXT_FOV_DEG/2;
     arrow.style.transform=`rotate(${d.angle.toFixed(1)}deg)`;
     if(cue){
@@ -462,14 +470,16 @@
       const rr=Math.min(radius,radius*(d.distance/edge)),aa=d.angle*Math.PI/180;
       cue.style.setProperty('--cue-x',(Math.sin(aa)*rr).toFixed(1)+'px');
       cue.style.setProperty('--cue-y',(-Math.cos(aa)*rr).toFixed(1)+'px');
-      cue.classList.add('active');cue.classList.toggle('outside',d.distance-locationUncertainty>edge);cue.classList.toggle('centered',d.distance+locationUncertainty<=CENTER_TOL_DEG);
+      cue.classList.add('active');cue.classList.toggle('outside',cueState==='move');cue.classList.toggle('centered',cueState==='centered');
     }
     const src=pointing.source?` · ${String(pointing.source).toUpperCase()}`:'';
-    err.textContent=d.distance+locationUncertainty<=CENTER_TOL_DEG
+    err.textContent=cueState==='uncalibrated'
+      ?`BORESIGHT UNCALIBRATED · AIM ESTIMATE ${d.distance.toFixed(1)}° · CENTER A KNOWN STAR, THEN CALIBRATE${src}`
+      :cueState==='centered'
       ?`CENTERED · ${d.distance.toFixed(3)}°${src}`
-      :(d.distance+locationUncertainty<=edge
+      :(cueState==='in-field'
         ?`IN FIELD · ${d.distance.toFixed(2)}°${src}`
-        :(d.distance-locationUncertainty<=edge
+        :(cueState==='position-uncertain'
           ?`POSITION UNCERTAIN · ${Number.isFinite(locationUncertainty)?'LOCATION ±'+locationUncertainty.toFixed(2)+'°':'LOCATION ACCURACY UNKNOWN'} · TARGET ${d.distance.toFixed(1)}°${src}`
           :`MOVE ${d.distance.toFixed(1)}° · PHONE AZ ${pointing.az.toFixed(1)} ALT ${pointing.alt.toFixed(1)}${src}`));
   }
