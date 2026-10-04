@@ -79,6 +79,7 @@ el-geometry-lock-smoke.js
 el-drawing-conformance-smoke.js
 widget-relay-model-smoke.js
 solar-model-smoke.js
+apollo-stars-accuracy-smoke.js
 agc-core-smoke.js
 update-retry-policy-smoke.js
 proceed-electrical-smoke.js

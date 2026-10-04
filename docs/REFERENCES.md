@@ -21,6 +21,11 @@
 - Apollo 11 Luminary 099 `PINBALL_GAME_BUTTONS_AND_LIGHTS.agc`: original DSKY key codes, channel 15 keyboard behavior, channel 10 relay-word display format, and relay digit codes.
 - Apollo 11 source mirror: https://github.com/chrislgarry/Apollo-11
 - Apollo-derived DSKY interface drawing: https://commons.wikimedia.org/wiki/File:Apollo_DSKY_interface.svg
+- NASA, *Apollo Onboard Navigation*, slides 7–12: the Basic Reference Coordinate System is inertial, carries the navigation stars, and uses the nearest beginning-of-year epoch; its axes are tied to the mean equator/equinox. https://ntrs.nasa.gov/api/citations/20090016292/downloads/20090016292.pdf?attachment=true
+- MIT Instrumentation Laboratory, SGA Memo 8-71, *Choice of Time-Points for the Various Apollo Nearest Besselian Ephemeris Years*: identifies NBY 1969/1970 as Apollo 11/12/13 and gives its 1970.0 reference epoch. https://www.ibiblio.org/apollo/Documents/SGA-Memo-8-71-Robertson.pdf
+- NASA Technical Note D-6741, *Onboard Navigation Software*: identifies Apollo's NBY frame and states that the star-table vectors were accurate to about 5 arcseconds over only ±3 years, with periodic updating needed. https://www.nasa.gov/wp-content/uploads/static/history/alsj/tnD6741OnbrdNavSoftwr.pdf
+- International Astronomical Union Standards of Fundamental Astronomy (SOFA): official precession and Earth-orientation algorithms; `apollo-stars.js` uses the lightweight IAU 1976 precession model to move the old Apollo mean coordinates to the observation-date mean frame. https://www.iausofa.org/current-software
+- SIMBAD's Deneb (α Cygni) and Polaris (α UMi) positions are independent regression checkpoints; the lookups use ICRS/J2000 coordinates and the database documents that coordinate epoch convention. https://simbad.cds.unistra.fr/simbad/sim-id?Ident=Deneb https://simbad.cds.unistra.fr/simbad/sim-id?Ident=Polaris https://simbad.u-strasbg.fr/Pages/guide/sim-fsam.htx
 
 ### Block II DSKY key hardware
 
