@@ -38,7 +38,7 @@ assert(display.includes("document.body.classList.toggle('el-off',!!(agcCh163Valu
 assert(renderer.includes("document.body.classList.remove('vn-flash-off','el-off')"),'display reset no longer clears only the intentional blanking classes');
 const hardware=read('hardware-fidelity.js');
 assert(hardware.includes("function hardwareDecodeChannel163(value)")&&hardware.includes("document.body.classList.toggle('el-off',!!(word&0o01000))"),'hardware EL-off path is not owned by channel 0163');
-assert(hardware.includes("if(render&&name==='flash')document.body.classList.toggle('vn-flash-off',on)"),'hardware V/N flash path is not owned by the modeled FLASH relay');
+assert(hardware.includes("if(render&&name==='flash'){document.body.classList.toggle('vn-flash-off',on);renderer.refreshAccessibleState()}"),'hardware V/N flash path is not owned by the modeled FLASH relay or leaves its accessible state stale');
 
 assert(stateCss.includes('.vn-flash-off #verb')&&stateCss.includes('.vn-flash-off #noun'),'intentional VERB/NOUN flash CSS missing');
 for(const selector of ['.el-off .el-legend-bg','.el-off .el-rule','.el-off .el-field .el-seg.on','.el-off .comp-el.on .el-comp-bg'])assert(stateCss.includes(selector),'EL supply-off lost luminous selector '+selector);

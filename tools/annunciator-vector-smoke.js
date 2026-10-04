@@ -27,7 +27,7 @@ const labels={
   oprerr:'OPR ERR',tracker:'TRACKER'
 };
 for(const [name,label] of Object.entries(labels)){
-  const marker=`data-lamp="${name}" aria-label="${label}"><svg class="lamp-legend"`;
+  const marker=`data-lamp="${name}" role="img" aria-label="${label} off"><svg class="lamp-legend"`;
   req(html,marker,'fixed vector legend '+name);
 }
 for(const raw of ['>UPLINK<br>ACTY<','>GIMBAL<br>LOCK<','>KEY REL<','>RESTART<','>TRACKER<'])no(html,raw,'runtime text annunciator');

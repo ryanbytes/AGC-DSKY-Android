@@ -85,7 +85,7 @@
     for(const [name,requested] of Object.entries(next||{})){
       if(!Object.prototype.hasOwnProperty.call(hw.auxRelays,name))continue;
       const on=!!requested;hw.auxRelays[name]=on;
-      if(render&&name==='flash')document.body.classList.toggle('vn-flash-off',on);
+      if(render&&name==='flash'){document.body.classList.toggle('vn-flash-off',on);renderer.refreshAccessibleState()}
       else if(render&&AUX_VISUAL[name])renderer.setLamp(AUX_VISUAL[name],on);
     }
   }
@@ -156,7 +156,7 @@
   function hardwareDecodeChannel163(value){
     const word=Number(value)&0o77777;display.setChannelState(0o163,word,{render:false});
     document.body.classList.toggle('el-off',!!(word&0o01000));
-    setAuxRelays({circuit:!!(word&0o00001),temp:!!(word&0o00010),keyrel:!!(word&0o00020),flash:!!(word&0o00040),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);return true;
+    setAuxRelays({circuit:!!(word&0o00001),temp:!!(word&0o00010),keyrel:!!(word&0o00020),flash:!!(word&0o00040),oprerr:!!(word&0o00100),restart:!!(word&0o00200),stby:!!(word&0o00400)},true);renderer.refreshAccessibleState();return true;
   }
   display.installImplementation('decodeChannel163',hardwareDecodeChannel163,'hardware pulse-modulated auxiliaries');
 
