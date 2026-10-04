@@ -13,4 +13,8 @@ final class NtpSyncAge {
         }
         return Math.max(0L, wallNowMs + offsetMs - syncUtcMs);
     }
+
+    static long networkTimeMs(long syncUtcMs, long ageMs, long wallNowMs) {
+        return syncUtcMs != 0L && ageMs >= 0L ? syncUtcMs + ageMs : wallNowMs;
+    }
 }

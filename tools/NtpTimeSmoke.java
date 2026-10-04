@@ -269,6 +269,12 @@ public final class NtpTimeSmoke {
                 "legacy sync record did not use corrected wall time");
         check(NtpSyncAge.ageMs(0L, 0L, 0L, 0L, -1, -1, 0L) == -1L,
                 "missing sync was not reported as unavailable");
+        check(NtpSyncAge.networkTimeMs(syncUtc, 60_000L, syncUtc - 3_600_000L) == syncUtc + 60_000L,
+                "network time followed a backward wall-clock step after synchronization");
+        check(NtpSyncAge.networkTimeMs(syncUtc, 60_000L, syncUtc + 3_600_000L) == syncUtc + 60_000L,
+                "network time followed a forward wall-clock step after synchronization");
+        check(NtpSyncAge.networkTimeMs(syncUtc, -1L, syncUtc + 3_600_000L) == syncUtc + 3_600_000L,
+                "unavailable network age did not fall back to wall time");
     }
 
     private static void testLiveCloudflare() throws Exception {
