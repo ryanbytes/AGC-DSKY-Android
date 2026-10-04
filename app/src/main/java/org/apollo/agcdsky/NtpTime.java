@@ -10,6 +10,7 @@ import android.util.Log;
 
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -110,12 +111,22 @@ public final class NtpTime {
     private static void synchronize(Context context,String reason){
         List<SntpClient.Sample> samples=new ArrayList<>();
         String lastFailure="";
+        long syncStartWallMs=System.currentTimeMillis();
+        long syncStartElapsedNs=SystemClock.elapsedRealtimeNanos();
         for(int i=0;i<SAMPLES;i++){
             try{samples.add(SntpClient.query(SERVER,TIMEOUT_MS));}
             catch(Exception error){
                 lastFailure=error.getClass().getSimpleName()+(error.getMessage()==null?"":": "+error.getMessage());
                 Log.w(TAG,"SNTP sample failed: "+reason+" #"+(i+1),error);
             }
+        }
+        try {
+            SntpClient.verifyNoWallClockStep(syncStartWallMs, System.currentTimeMillis(),
+                    syncStartElapsedNs, SystemClock.elapsedRealtimeNanos());
+        } catch (IOException error) {
+            Log.w(TAG, "SNTP sample set crossed a device wall-clock change", error);
+            recordAttempt(context,reason,"failed",error.getMessage());
+            return;
         }
         if(samples.isEmpty()){
             recordAttempt(context,reason,"failed",lastFailure.isEmpty()?"No valid SNTP response":lastFailure);

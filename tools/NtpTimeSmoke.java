@@ -12,6 +12,7 @@ public final class NtpTimeSmoke {
         testSuccess();
         testProtocolVersions();
         testMonotonicReceiveTimestamp();
+        testWallClockStepDetection();
         testServerProcessingDoesNotBiasOffset();
         testWrongPeerRejected();
         testMalformedResponse();
@@ -20,7 +21,7 @@ public final class NtpTimeSmoke {
         testPersistedSyncAgeAcrossBoots();
         if (args.length > 0 && "--live".equals(args[0])) testLiveCloudflare();
         System.out.println("ntp time smoke: PASS");
-        System.out.println("  four-timestamp offset, reboot-aware freshness, server-processing correction, wrong-peer/malformed rejection, timeout, and recovery verified");
+        System.out.println("  four-timestamp offset, wall-clock step rejection, reboot-aware freshness, server-processing correction, wrong-peer/malformed rejection, timeout, and recovery verified");
     }
 
     private static void testSuccess() throws Exception {
@@ -95,6 +96,35 @@ public final class NtpTimeSmoke {
         check(SntpClient.receiveTimeMs(requestWallMs, requestElapsedNs, receiveElapsedNs)
                         == requestWallMs + 375L,
                 "monotonic receive timestamp drifted from T1 after an in-flight wall-clock adjustment");
+    }
+
+    private static void testWallClockStepDetection() {
+        long requestWallMs = 1_800_000_000_000L;
+        long requestElapsedNs = 9_000_000_000_000L;
+        long receiveElapsedNs = requestElapsedNs + 375_000_000L;
+        try {
+            SntpClient.verifyNoWallClockStep(requestWallMs, requestWallMs + 375L,
+                    requestElapsedNs, receiveElapsedNs);
+        } catch (Exception error) {
+            throw new AssertionError("steady wall clock was reported as stepped", error);
+        }
+        assertWallClockStepRejected(requestWallMs + 875L, requestWallMs,
+                requestElapsedNs, receiveElapsedNs, "forward");
+        assertWallClockStepRejected(requestWallMs - 125L, requestWallMs,
+                requestElapsedNs, receiveElapsedNs, "backward");
+    }
+
+    private static void assertWallClockStepRejected(long receiveWallMs, long requestWallMs,
+                                                   long requestElapsedNs, long receiveElapsedNs,
+                                                   String direction) {
+        boolean rejected = false;
+        try {
+            SntpClient.verifyNoWallClockStep(requestWallMs, receiveWallMs,
+                    requestElapsedNs, receiveElapsedNs);
+        } catch (Exception expected) {
+            rejected = "device wall clock changed during NTP request".equals(expected.getMessage());
+        }
+        check(rejected, direction + " wall-clock adjustment did not reject the sample");
     }
 
     private static void testServerProcessingDoesNotBiasOffset() throws Exception {

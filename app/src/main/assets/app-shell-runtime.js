@@ -46,6 +46,7 @@ function loadNativeNtpStatus(){try{if(hasNativeTimeBridge()){updateNtpStatus(Tim
 function browserTimeUrl(){const url=new URL('manifest.webmanifest',location.href);url.searchParams.set('_agcdsky_time',String(Date.now()));return url.toString()}
 async function sampleBrowserNetworkTime(){
   const sent=Date.now();
+  const sentElapsed=performance.now();
   const controller=typeof AbortController==='function'?new AbortController():null;
   let timeout=0;
   let response;
@@ -57,12 +58,16 @@ async function sampleBrowserNetworkTime(){
       timeout=setTimeout(()=>{if(controller)controller.abort();reject(new Error('network time request timed out'))},BROWSER_TIME_REQUEST_TIMEOUT_MS);
     })]);
   }finally{clearTimeout(timeout)}
+  const receivedElapsed=performance.now();
   const received=Date.now();
+  const monotonicElapsed=receivedElapsed-sentElapsed;
+  const wallElapsed=received-sent;
+  if(Math.abs(wallElapsed-monotonicElapsed)>250)throw new Error('device wall clock changed during network time request');
   if(!response||!response.ok)throw new Error('network time HTTP failure');
   const serverMs=Date.parse(response.headers.get('date')||'');
   if(!Number.isFinite(serverMs))throw new Error('network time Date header unavailable');
-  const midpoint=sent+((received-sent)/2);
-  return{offsetMs:Math.round((serverMs+500)-midpoint),roundTripMs:Math.max(0,received-sent)};
+  const midpoint=sent+(monotonicElapsed/2);
+  return{offsetMs:Math.round((serverMs+500)-midpoint),roundTripMs:Math.max(0,monotonicElapsed)};
 }
 function refreshBrowserTimeAge(){
   if(shellState.ntpStatus.source!=='http-date'||!shellState.ntpStatus.lastSyncUtcMs)return;
@@ -80,7 +85,16 @@ function syncBrowserNetworkTime(force=false){
   updateNtpStatus({syncInFlight:true,lastAttemptUtcMs:now,lastAttemptResult:'syncing',lastAttemptReason:force?'manual':'automatic',lastError:''});
   browserTimeInFlight=(async()=>{
     const samples=[];
+    const syncStartedElapsed=performance.now();
+    const syncStartedWall=Date.now();
     for(let i=0;i<3;i++){try{samples.push(await sampleBrowserNetworkTime())}catch(_){}}
+    const syncElapsed=performance.now()-syncStartedElapsed;
+    const syncWallElapsed=Date.now()-syncStartedWall;
+    if(Math.abs(syncWallElapsed-syncElapsed)>250){
+      refreshBrowserTimeAge();
+      updateNtpStatus({syncInFlight:false,lastAttemptResult:'failed',lastError:'Device wall clock changed during network time sync'});
+      return false;
+    }
     if(!samples.length){
       refreshBrowserTimeAge();
       updateNtpStatus({syncInFlight:false,lastAttemptResult:'failed',lastError:'HTTP Date network-time samples failed'});
