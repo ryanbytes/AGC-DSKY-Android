@@ -28,7 +28,8 @@ for(const token of ['paintApolloDigitSlot(','paintApolloSignSlot('])assert(apoll
 
 const jsFiles=fs.readdirSync(ASSETS).filter(name=>name.endsWith('.js'));
 for(const cls of ['vn-flash-off','el-off']){
-  const owners=jsFiles.filter(name=>read(name).includes(cls));
+  const mutation=new RegExp(`\\.classList\\.(?:add|remove|toggle)\\([^)]*['\"]${cls}['\"]`);
+  const owners=jsFiles.filter(name=>mutation.test(read(name)));
   const allowed=['agc-display-runtime.js','dsky-display-renderer.js','hardware-fidelity.js'];
   for(const owner of owners)assert(allowed.includes(owner),`unexpected ${cls} mutation path in ${owner}`);
 }

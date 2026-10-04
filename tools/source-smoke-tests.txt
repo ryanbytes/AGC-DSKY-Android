@@ -13,6 +13,7 @@ self-update-smoke.js
 csp-smoke.js
 compat-boundary-smoke.js
 public-facade-boundary-smoke.js
+public-diagnostics-snapshot-smoke.js
 root-facade-creation-smoke.js
 late-public-facade-mutation-smoke.js
 late-service-publication-smoke.js
