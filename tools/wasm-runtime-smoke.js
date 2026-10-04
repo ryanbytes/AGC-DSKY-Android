@@ -147,8 +147,14 @@ function completeV35RelayState(relays, expectedRelay12 = COMANCHE_V35_RELAY12_LO
 }
 
 function keyAndRun(core, keyCode, steps = 12000) {
-    core.keyPress(keyCode);
+    assert(core.keyPress(keyCode) > 0,
+        `Comanche055: normal key 0o${keyCode.toString(8)} was not accepted`);
     core.step(steps);
+    assert(core.keyRelease(),
+        `Comanche055: KEYRST failed after normal key 0o${keyCode.toString(8)}`);
+    core.step(1);
+    assert(core.inputChannelBits(0o15, 0o177) === 0,
+        `Comanche055: normal key 0o${keyCode.toString(8)} remained electrically held after KEYRST`);
 }
 
 function sendKeys(core, keyCodes, steps = 12000) {

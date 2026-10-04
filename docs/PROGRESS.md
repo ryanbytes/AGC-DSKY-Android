@@ -1,3 +1,9 @@
+## 2026-10-04 real-WASM normal-key make/release audit
+
+The host Comanche command helper sent consecutive channel-015 key makes without modeling the physical all-keys-released KEYRST between taps. The real-WASM smoke now requires each key make to be accepted, allows the configured processing interval, calls the production `keyRelease()` path, advances one MCT, and confirms channel 015 is electrically clear before sending the next key. This improves the semantic gate's input fidelity; no production behavior changed and no DSKY defect was found in this check.
+
+Validation: `node --check tools/wasm-runtime-smoke.js`, `node tools/wasm-runtime-smoke.js`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed. The canonical suite passed 107 Node tests plus `ntp-time-smoke.sh`; the real pinned yaAGC + Comanche055 gate passed V16N65, V06N65, V05N09, V14N09, P00, V35, MARK/KEYRUPT2, optics, and PRO/key backpressure checks with make/release input sequences. This remains host-WASM evidence, not Android/WebView or physical-keypad verification.
+
 ## 2026-10-04 DSKY input release-path audit
 
 Reviewed the CM normal-key path from the window-capture interlock through the input service and yaAGC channel 015, plus maintained PRO channel 032 and optics/navigation channel 016. The current implementation preserves one-key-at-a-time behavior, KEYRST only after all normal switches release, PRO's separate active-low maintained contact, and navigation-key make/release on the real channel. Existing tests cover key mappings, auto-repeat suppression, key release, CLOCK handoff, PRO release on pause, and queued-input backpressure. Added direct keyboard-interlock regressions for pointercancel, window blur during pointer input, and window blur during hardware-keyboard input; these assert pressed state clears and exactly one KEYRST is sent. No production-code defect was found in these reviewed paths.
