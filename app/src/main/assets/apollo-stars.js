@@ -185,6 +185,12 @@
     const dot=Math.max(-1,Math.min(1,a.x*b.x+a.y*b.y+a.z*b.z));
     return Math.acos(dot)*r2d;
   }
+  function angularSeparationEquatorial(a,b){
+    const dec1=a.dec*d2r,dec2=b.dec*d2r,deltaRa=wrap180(b.ra-a.ra)*d2r;
+    const sinDec=Math.sin((dec2-dec1)/2),sinRa=Math.sin(deltaRa/2);
+    const haversine=Math.max(0,Math.min(1,sinDec*sinDec+Math.cos(dec1)*Math.cos(dec2)*sinRa*sinRa));
+    return 2*Math.atan2(Math.sqrt(haversine),Math.sqrt(1-haversine))*r2d;
+  }
   function bearingDelta(pointing,target){
     const alt1=pointing.alt*d2r,alt2=target.alt*d2r,da=wrap180(target.az-pointing.az)*d2r;
     const cosd=Math.sin(alt1)*Math.sin(alt2)+Math.cos(alt1)*Math.cos(alt2)*Math.cos(da);
@@ -196,12 +202,15 @@
   function candidatePairs(lat,lon,date=new Date(),minAlt=12,limit=6){
     if(!Number.isFinite(lat)||!Number.isFinite(lon))return {pairs:[],conditions:null,strict:false,visibleCount:0};
     const conditions=skyConditions(lat,lon,date);
-    const geometric=stars.map(star=>({star,pos:horizontal(star,lat,lon,date)})).filter(x=>x.pos.alt>=minAlt);
+    const geometric=stars.map(star=>{
+      const equatorial=equatorialOfDate(star,date);
+      return {star,equatorial,pos:horizontalRaDec(equatorial.ra,equatorial.dec,lat,lon,date)};
+    }).filter(x=>x.pos.alt>=minAlt);
     const likely=geometric.filter(x=>x.star.mag<=conditions.maxMag);
     function build(pool,strict){
       const pairs=[];
       for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++){
-        const a=pool[i],b=pool[j],sep=angularSeparation(a.star,b.star);
+        const a=pool[i],b=pool[j],sep=angularSeparationEquatorial(a.equatorial,b.equatorial);
         if(sep<40||sep>66)continue;
         const brightness=-(a.star.mag+b.star.mag),altitude=a.pos.alt+b.pos.alt;
         const score=altitude*.75+brightness*8-Math.abs(sep-53)*.22;

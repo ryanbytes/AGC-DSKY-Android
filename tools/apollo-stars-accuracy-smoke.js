@@ -88,6 +88,23 @@ const expected=catalog.horizontalRaDec(modern.ra,modern.dec,39.77,-86.16,new Dat
 assert(Math.abs(actual.alt-expected.alt)<1e-10&&Math.abs(actual.az-expected.az)<1e-10,
   'horizontal star position did not use equatorial coordinates precessed to date');
 
+const pairDate=new Date('2026-10-03T12:00:00.000Z');
+const currentPairs=catalog.candidatePairs(39.77,-86.16,pairDate,0,6).pairs;
+assert(currentPairs.length>0,'current-date Apollo star-pair search returned no candidates');
+function unitVector(position){
+  const ra=position.ra*Math.PI/180,dec=position.dec*Math.PI/180;
+  return {x:Math.cos(dec)*Math.cos(ra),y:Math.cos(dec)*Math.sin(ra),z:Math.sin(dec)};
+}
+for(const pair of currentPairs){
+  const a=catalog.equatorialOfDate(pair.a.star,pairDate),b=catalog.equatorialOfDate(pair.b.star,pairDate);
+  const expectedSeparation=catalog.angularSeparation(unitVector(a),unitVector(b));
+  assert(Math.abs(pair.sep-expectedSeparation)<1e-8,
+    `${pair.a.star.name}/${pair.b.star.name} pair score uses stale rather than observation-date separation`);
+}
+assert(currentPairs.some(pair=>pair.a.star.name==='CAPELLA'&&pair.b.star.name==='SIRIUS'),
+  'proper-motion pair regression fixture changed');
+
 console.log('Apollo star accuracy smoke: PASS');
 console.log('  37 Apollo vectors retain their 1970.0 epoch; phone positions use Hipparcos ICRS astrometry, proper motion, and date precession');
 console.log(`  all 37 Hipparcos paths recover their 1970 Comanche vectors within 5 arcseconds (max ${maxApolloEpochError.toFixed(2)} arcsec: ${worstApolloEpochStar})`);
+console.log('  P51 candidate-pair angles use the same observation-date directions as the star finder');
