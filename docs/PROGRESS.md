@@ -4,7 +4,7 @@ The updater compared the GitHub release tag with its installed `BuildConfig.VERS
 
 Candidate verification now requires the APK `versionName` to normalize to the selected release version before accepting it. Added numeric-equivalence, tag/APK match, mismatch, and invalid-name regressions, and wired the check into the updater source smoke. The pending-install revalidation keeps its existing package/version-code/signer checks because the candidate's stored SHA-256 already binds it to the release-identity check performed before staging.
 
-Validation: `node tools/self-update-smoke.js`, `bash tools/ntp-time-smoke.sh`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed; the full source suite includes the real pinned yaAGC + Comanche055 semantic gate. Canonical Android build and APK verification for this exact revision remain to be run. No release or live-device test was performed.
+Validation: `node tools/self-update-smoke.js`, `bash tools/ntp-time-smoke.sh`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed; the full source suite includes the real pinned yaAGC + Comanche055 semantic gate. Clean detached commit `8acf6ec780da348999d6a200d239118deabccbea` passed the canonical local `tools/build-local.sh`; Regular and Fire debug APKs passed the included `tools/verify-apk.sh` checks for source-matched metadata, signing validity, pinned assets, and packaged frontend bytes. No release or live-device test was performed.
 
 ## 2026-10-04 native SNTP response-version audit
 
