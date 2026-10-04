@@ -20,6 +20,8 @@ const ROPE = path.join(ROOT, 'vendor/webAGC/demo/agc/Comanche055.bin');
 const CHANNEL_DSKY = 0o10;
 const CHANNEL_DSKY_DISCRETES = 0o163;
 const OPR_ERR_BIT = 0o100;
+const FAILREG_ADDRESSES = [0o375, 0o376, 0o377];
+const COLD_START_PHASE_TABLE_ALARM = 0o1107;
 const RELAY_ZERO = 0o25;
 const RELAY_EIGHT = 0o35;
 const RELAY_SIGN_BIT = 0o2000;
@@ -60,7 +62,7 @@ function verifyBinaryImportContract(wasmBytes) {
         `unexpected yaAGC WASM imports:\n  actual: ${actual.join(', ')}\n  expected: ${expected.join(', ')}`);
 
     const exported = new Set(WebAssembly.Module.exports(module).map((entry) => entry.name));
-    for (const name of ['malloc', 'free', 'set_fixed', 'configure_cm_mode', 'get_cm_mode', 'cpu_reset', 'cpu_step', 'packet_write', 'packet_read']) {
+    for (const name of ['malloc', 'free', 'set_fixed', 'configure_cm_mode', 'get_cm_mode', 'get_erasable_ptr', 'cpu_reset', 'cpu_step', 'packet_write', 'packet_read']) {
         assert(exported.has(name), `yaAGC WASM missing required export: ${name}`);
     }
 }
@@ -159,6 +161,36 @@ function keyAndRun(core, keyCode, steps = 12000) {
 
 function sendKeys(core, keyCodes, steps = 12000) {
     for (const keyCode of keyCodes) keyAndRun(core, keyCode, steps);
+}
+
+function failRegWords(core) {
+    const base = core.exports.get_erasable_ptr() >>> 1;
+    const erasable = new Uint16Array(core.memory.buffer);
+    return FAILREG_ADDRESSES.map((address) => erasable[base + address]);
+}
+
+function proveComancheFreshStart(core, errors, channelUpdates) {
+    core.reset();
+    core.configureInputMasks();
+    channelUpdates.length = 0;
+    errors.length = 0;
+    core.step(100000);
+
+    const coldStartAlarm = failRegWords(core);
+    assert(coldStartAlarm[0] === COLD_START_PHASE_TABLE_ALARM
+            && coldStartAlarm[1] === 0 && coldStartAlarm[2] === 0,
+        `Comanche055: cold reset did not expose source-documented phase-table alarm 01107 in FAILREG: ${coldStartAlarm.map((word) => `0o${word.toString(8).padStart(5, '0')}`).join(' ')}`);
+
+    // SLAP1 is the source-documented, pilot-commanded fresh start. It clears
+    // FAILREG and initializes the phase tables before ordinary mission tests.
+    sendKeys(core, [0o21, 0o03, 0o06, 0o34]);
+    core.step(10000);
+    const afterFreshStart = failRegWords(core);
+    assert(afterFreshStart.every((word) => word === 0),
+        `Comanche055: V36E fresh start did not clear FAILREG: ${afterFreshStart.map((word) => `0o${word.toString(8).padStart(5, '0')}`).join(' ')}`);
+    assert(errors.length === 0, 'Comanche055: error during V36E fresh start');
+
+    return {coldStartAlarm, afterFreshStart};
 }
 
 function enterProgram00(core, errors, channelUpdates) {
@@ -668,6 +700,7 @@ async function main() {
     assert(typeof version === 'string' && version.length > 0,
         'Comanche055: yaAGC version export returned no usable string');
 
+    const freshStart = proveComancheFreshStart(core, errors, channelUpdates);
     const v16n65 = proveV16N65Monitor(core, errors, channelUpdates);
     const v06n65 = proveV06N65DecimalDisplay(core, errors, channelUpdates);
     const v05n09 = proveV05N09AlarmDisplay(core, errors, channelUpdates);
@@ -712,6 +745,7 @@ async function main() {
         'Comanche055: reset + peripheral setup must return to true-reset mission accounting');
 
     console.log(`real yaAGC ${ROPE_NAME}: PASS (${version})`);
+    console.log(`  V36E cold-start recovery: PASS (FAILREG ${freshStart.coldStartAlarm.map((word) => word.toString(8).padStart(5, '0')).join(' ')} -> ${freshStart.afterFreshStart.map((word) => word.toString(8).padStart(5, '0')).join(' ')})`);
     console.log(`  V16N65E monitor: PASS (V=0o${v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${v16n65.nounRelay.toString(8).padStart(4, '0')}; selectors ${v16n65.responseRelays.join(',')}; within ${v16n65.responseSteps} steps)`);
     console.log(`  V06N65E three-component decimal display: PASS (selectors ${v06n65.responseRows.join(',')}; within ${v06n65.responseSteps} steps)`);
     console.log(`  V05N09E alarm-code display: PASS (selectors ${v05n09.responseRows.join(',')}; within ${v05n09.responseSteps} steps)`);

@@ -1,3 +1,9 @@
+## 2026-10-04 Comanche cold-start and fresh-start accuracy audit
+
+The real-WASM semantic gate reset the AGC and proceeded directly to P00. With the exact pinned Comanche055 rope, that cold start reproducibly sets FAILREG word 1 to `01107`: Comanche's documented phase-table consistency check raises the alarm before mission fresh-start initialization. This was a test-sequence gap, not evidence of a DSKY or yaAGC fault. The host gate now verifies the raw `01107 00000 00000` cold-start state, sends the authentic Pinball `V36E` fresh-start sequence, and requires all three FAILREG words to clear before continuing its normal command tests. Source documentation identifies `V36E`/SLAP1 as the operator-initiated fresh start that clears FAILREG and initializes the phase tables.
+
+Validation: `node --check tools/wasm-runtime-smoke.js` and `node tools/wasm-runtime-smoke.js` passed against the real pinned yaAGC WASM and Comanche055 rope. The run reported `V36E cold-start recovery: PASS (FAILREG 01107 00000 00000 -> 00000 00000 00000)` and all existing V16N65, V06N65, V05N09, V14N09, P00, V35, MARK/KEYRUPT2, optics, PRO, and input-backpressure checks passed. This is host-WASM evidence; packaged Android and physical-device startup behavior remain separate gates.
+
 ## 2026-10-04 real-WASM normal-key make/release audit
 
 The host Comanche command helper sent consecutive channel-015 key makes without modeling the physical all-keys-released KEYRST between taps. The real-WASM smoke now requires each key make to be accepted, allows the configured processing interval, calls the production `keyRelease()` path, advances one MCT, and confirms channel 015 is electrically clear before sending the next key. This improves the semantic gate's input fidelity; no production behavior changed and no DSKY defect was found in this check.
