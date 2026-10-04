@@ -255,6 +255,8 @@ function dskyExpression() {
     const api=window.AGCDSKY;
     if(!api||typeof api.appStatus!=='function'||typeof api.hardware!=='function')return null;
     const app=api.appStatus(),hw=api.hardware(),d=app.display||{};
+    const core=typeof api.getCore==='function'?api.getCore():null;
+    const failReg=core&&typeof core.readErasable==='function'?[0o375,0o376,0o377].map(address=>core.readErasable(0,address)):null;
     const reg=(r)=>({sign:r?(r.plus?'+':(r.minus?'-':' ')):' ',digits:r&&Array.isArray(r.digits)?r.digits.join(''):''});
     const rendered=(id,kind)=>Array.from(document.querySelectorAll('#'+id+' > g[data-el-slot="'+kind+'"]'))
       .map(slot=>{const value=slot.getAttribute('data-el-value')||'',split=value.indexOf(':');return split<0?'':value.slice(split+1)}).join('');
@@ -265,6 +267,7 @@ function dskyExpression() {
       mode:app.mode,
       mission:app.mission,
       coreRunning:app.coreRunning,
+      failReg,
       channels:app.channels||{},
       relays:hw.latches||{},
       display:{prog:(d.prog||[]).join(''),verb:(d.verb||[]).join(''),noun:(d.noun||[]).join(''),r1:reg(d.r1),r2:reg(d.r2),r3:reg(d.r3)},
@@ -482,6 +485,10 @@ async function proveV05N09AlarmDisplay(cdp) {
   const entered = await cdp.evaluate(dskyExpression());
   assert(entered && entered.display.prog === '00' && entered.display.verb === '05' && entered.display.noun === '09',
     `V05N09 did not latch through the live DSKY input path: ${JSON.stringify(entered)}`);
+  assert(Array.isArray(entered.failReg) && entered.failReg.length === 3
+      && entered.failReg.every(word => Number.isInteger(word) && word >= 0 && word <= 0o77777),
+    `V05N09 could not read the three raw FAILREG words before execution: ${JSON.stringify(entered.failReg)}`);
+  const expectedFailReg = entered.failReg.map(word => word.toString(8).padStart(5, '0'));
 
   const executeTraceStart = keySequenceTrace.length;
   await keySequence(cdp, ['E'], 1400);
@@ -497,7 +504,17 @@ async function proveV05N09AlarmDisplay(cdp) {
     const operatorError = last && (Number(last.channels.ch0163 || 0) & 0o00100) !== 0;
     if (last && last.mode === 'agc' && last.display.prog === '00'
         && last.display.verb === '05' && last.display.noun === '09'
-        && octalResponse && !operatorError && !last.lamps.oprerr) return last;
+        && octalResponse && !operatorError && !last.lamps.oprerr) {
+      const displayedFailReg = [last.display.r1.digits,last.display.r2.digits,last.display.r3.digits];
+      const renderedFailReg = [last.rendered.r1,last.rendered.r2,last.rendered.r3];
+      assert(JSON.stringify(last.failReg) === JSON.stringify(entered.failReg),
+        `V05N09 changed read-only FAILREG: before ${JSON.stringify(entered.failReg)} after ${JSON.stringify(last.failReg)}`);
+      assert(JSON.stringify(displayedFailReg) === JSON.stringify(expectedFailReg),
+        `V05N09 display disagreed with raw FAILREG: displayed ${displayedFailReg.join(' ')} expected ${expectedFailReg.join(' ')}`);
+      assert(JSON.stringify(renderedFailReg) === JSON.stringify(expectedFailReg),
+        `V05N09 rendered EL disagreed with raw FAILREG: rendered ${renderedFailReg.join(' ')} expected ${expectedFailReg.join(' ')}`);
+      return {...last, expectedFailReg};
+    }
     if (last && last.modeText.includes('AGC ERROR')) throw new Error(`AGC stopped during V05N09E: ${last.modeText}`);
     await delay(75);
   }

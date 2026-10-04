@@ -22,6 +22,10 @@ const CHANNEL_DSKY_DISCRETES = 0o163;
 const OPR_ERR_BIT = 0o100;
 const FAILREG_ADDRESSES = [0o375, 0o376, 0o377];
 const COLD_START_PHASE_TABLE_ALARM = 0o1107;
+const OCTAL_DIGIT_BY_RELAY_CODE = new Map([
+    [0o25, '0'], [0o03, '1'], [0o31, '2'], [0o33, '3'],
+    [0o17, '4'], [0o36, '5'], [0o34, '6'], [0o23, '7']
+]);
 const RELAY_ZERO = 0o25;
 const RELAY_EIGHT = 0o35;
 const RELAY_SIGN_BIT = 0o2000;
@@ -167,6 +171,26 @@ function failRegWords(core) {
     const base = core.exports.get_erasable_ptr() >>> 1;
     const erasable = new Uint16Array(core.memory.buffer);
     return FAILREG_ADDRESSES.map((address) => erasable[base + address]);
+}
+
+function decodeOctalNoun09(relays) {
+    const digit = (relay, contact) => {
+        const word = relays.get(relay);
+        assert(word !== undefined, `Comanche055: V05N09 missing relay ${relay}`);
+        const code = contact === 'C' ? (word >> 5) & 0o37 : word & 0o37;
+        const value = OCTAL_DIGIT_BY_RELAY_CODE.get(code);
+        assert(value !== undefined,
+            `Comanche055: V05N09 relay ${relay} ${contact} contact has non-octal code 0o${code.toString(8).padStart(2, '0')}`);
+        return value;
+    };
+    const rows = [
+        [digit(8, 'D'), digit(7, 'C'), digit(7, 'D'), digit(6, 'C'), digit(6, 'D')],
+        [digit(5, 'C'), digit(5, 'D'), digit(4, 'C'), digit(4, 'D'), digit(3, 'C')],
+        [digit(3, 'D'), digit(2, 'C'), digit(2, 'D'), digit(1, 'C'), digit(1, 'D')]
+    ];
+    const signRelays = [7, 6, 5, 4, 2, 1];
+    const signed = signRelays.some((relay) => ((relays.get(relay) || 0) & RELAY_SIGN_BIT) !== 0);
+    return {words: rows.map((row) => row.join('')), signed};
 }
 
 function proveComancheFreshStart(core, errors, channelUpdates) {
@@ -329,6 +353,11 @@ function proveV05N09AlarmDisplay(core, errors, channelUpdates) {
     errors.length = 0;
     core.step(100000);
 
+    const expectedFailReg = failRegWords(core);
+    assert(expectedFailReg[0] === COLD_START_PHASE_TABLE_ALARM
+            && expectedFailReg[1] === 0 && expectedFailReg[2] === 0,
+        `Comanche055: V05N09 setup did not reproduce FAILREG 01107 00000 00000: ${expectedFailReg.map((word) => `0o${word.toString(8).padStart(5, '0')}`).join(' ')}`);
+
     enterProgram00(core, errors, channelUpdates);
     channelUpdates.length = 0;
     // Comanche055 documents V05 as a three-component octal display and N09
@@ -345,11 +374,11 @@ function proveV05N09AlarmDisplay(core, errors, channelUpdates) {
         `Comanche055: N09 relay state is wrong: ${nounRelay === undefined ? 'missing' : `0o${(nounRelay & 0o3777).toString(8)}`}`);
 
     channelUpdates.length = 0;
-    core.keyPress(0o34);
+    keyAndRun(core, 0o34);
     const responseRows = new Set();
     let operatorErrorObserved = false;
     let eventIndex = 0;
-    let responseSteps = 0;
+    let responseSteps = 12000;
     const maxResponseSteps = 350000;
     const chunkSteps = 10000;
 
@@ -371,7 +400,14 @@ function proveV05N09AlarmDisplay(core, errors, channelUpdates) {
     assert(!operatorErrorObserved, 'Comanche055: V05N09E asserted OPR ERR');
     assert(responseRows.size === 8,
         `Comanche055: V05N09E did not display all three octal components; rows ${Array.from(responseRows).sort((a,b)=>a-b).join(',')}`);
-    return {responseSteps, responseRows: Array.from(responseRows).sort((a,b)=>a-b)};
+    const responseRelays = relayStateFromUpdates(channelUpdates);
+    const displayedFailReg = decodeOctalNoun09(responseRelays);
+    const expectedDisplay = expectedFailReg.map((word) => word.toString(8).padStart(5, '0'));
+    assert(!displayedFailReg.signed,
+        'Comanche055: V05N09 displayed a sign on its octal FAILREG words');
+    assert(JSON.stringify(displayedFailReg.words) === JSON.stringify(expectedDisplay),
+        `Comanche055: V05N09 display did not match raw FAILREG: displayed ${displayedFailReg.words.join(' ')}; erasable ${expectedDisplay.join(' ')}`);
+    return {responseSteps, responseRows: Array.from(responseRows).sort((a,b)=>a-b), displayedFailReg: displayedFailReg.words};
 }
 
 function proveV14N09TwoComponentMonitor(core, errors, channelUpdates) {
@@ -748,7 +784,7 @@ async function main() {
     console.log(`  V36E cold-start recovery: PASS (FAILREG ${freshStart.coldStartAlarm.map((word) => word.toString(8).padStart(5, '0')).join(' ')} -> ${freshStart.afterFreshStart.map((word) => word.toString(8).padStart(5, '0')).join(' ')})`);
     console.log(`  V16N65E monitor: PASS (V=0o${v16n65.verbRelay.toString(8).padStart(4, '0')}; N=0o${v16n65.nounRelay.toString(8).padStart(4, '0')}; selectors ${v16n65.responseRelays.join(',')}; within ${v16n65.responseSteps} steps)`);
     console.log(`  V06N65E three-component decimal display: PASS (selectors ${v06n65.responseRows.join(',')}; within ${v06n65.responseSteps} steps)`);
-    console.log(`  V05N09E alarm-code display: PASS (selectors ${v05n09.responseRows.join(',')}; within ${v05n09.responseSteps} steps)`);
+    console.log(`  V05N09E alarm-code display: PASS (${v05n09.displayedFailReg.join(' ')}; selectors ${v05n09.responseRows.join(',')}; within ${v05n09.responseSteps} steps)`);
     console.log(`  V14N09E two-component monitor: PASS (selectors ${v14n09.responseRows.join(',')}; within ${v14n09.responseSteps} steps)`);
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
