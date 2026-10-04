@@ -167,6 +167,17 @@
     const position=equatorialOfDate(star,date);
     return horizontalRaDec(position.ra,position.dec,latDeg,lonDeg,date);
   }
+  // Bennett's true-altitude approximation for visible light at standard
+  // sea-level conditions (1010 hPa, 10 C). The phone finder has no local
+  // pressure/temperature feed, so this is an estimate for its camera cue.
+  function standardRefractionDeg(trueAltDeg){
+    if(!Number.isFinite(trueAltDeg)||trueAltDeg<0||trueAltDeg>=89.9)return 0;
+    return 1.02/Math.tan((trueAltDeg+10.3/(trueAltDeg+5.11))*d2r)/60;
+  }
+  function apparentHorizontal(star,latDeg,lonDeg,date=new Date()){
+    const geometric=horizontal(star,latDeg,lonDeg,date),refraction=standardRefractionDeg(geometric.alt);
+    return {...geometric,geometricAlt:geometric.alt,refraction,alt:geometric.alt+refraction};
+  }
   function sunEquatorial(date=new Date()){
     const n=julianDate(date)-2451545.0,L=wrap360(280.460+.9856474*n),g=wrap360(357.528+.9856003*n)*d2r;
     const lam=wrap360(L+1.915*Math.sin(g)+.020*Math.sin(2*g))*d2r,eps=(23.439-.0000004*n)*d2r;
@@ -226,5 +237,5 @@
   function bestPair(lat,lon,date=new Date(),minAlt=12){
     const r=candidatePairs(lat,lon,date,minAlt,1);return r.pairs[0]||null;
   }
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_APOLLO_STARS',{stars,horizontal,horizontalRaDec,equatorialOfDate,sunEquatorial,skyConditions,angularSeparation,bearingDelta,candidatePairs,bestPair,wrap180,wrap360},'apollo-stars publication');
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_APOLLO_STARS',{stars,horizontal,apparentHorizontal,standardRefractionDeg,horizontalRaDec,equatorialOfDate,sunEquatorial,skyConditions,angularSeparation,bearingDelta,candidatePairs,bestPair,wrap180,wrap360},'apollo-stars publication');
 })();
