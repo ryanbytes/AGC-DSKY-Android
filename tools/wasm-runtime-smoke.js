@@ -32,6 +32,7 @@ const RELAY_SIGN_BIT = 0o2000;
 const PROGRAM00_LOW11 = (RELAY_ZERO << 5) | RELAY_ZERO;
 const VERB16_LOW11 = (0o03 << 5) | 0o34;
 const VERB06_LOW11 = (0o25 << 5) | 0o34;
+const NOUN34_LOW11 = (0o33 << 5) | 0o17;
 const NOUN65_LOW11 = (0o34 << 5) | 0o36;
 const COMANCHE_V35_RELAY12_LOW11 = 0o650;
 
@@ -553,9 +554,28 @@ function proveP21OptionLoadPrompt(core, errors, channelUpdates) {
         'Comanche V22N06 option load asserted raw channel-011 OPR ERR');
     assert(errors.length === 0, 'Comanche P21 V22N06 option load raised a host runtime error');
 
+    channelUpdates.length = 0;
+    assert(core.proceedKey(true) > 0,
+        'Comanche P21 option perform request rejected PRO make');
+    core.step(12000);
+    assert(core.proceedKey(false) > 0,
+        'Comanche P21 option perform request rejected PRO release');
+    core.step(500000);
+    const acceptedRelays = relayStateFromUpdates(channelUpdates);
+    const acceptedVerb = acceptedRelays.get(10);
+    const acceptedNoun = acceptedRelays.get(9);
+    assert(acceptedVerb !== undefined && (acceptedVerb & 0o3777) === VERB06_LOW11
+            && acceptedNoun !== undefined && (acceptedNoun & 0o3777) === NOUN34_LOW11,
+        `Comanche P21 did not accept CM R2=00000 and advance to V06N34; V/N=${acceptedVerb?.toString(8) ?? 'missing'}/${acceptedNoun?.toString(8) ?? 'missing'}`);
+    assert(core.readErasable(2, 0o132) === 0,
+        'Comanche P21 changed the loaded CM vehicle choice after the prompt was accepted');
+    assert(!channelUpdates.some(([channel, value]) => channel === 0o11 && (value & OPR_ERR_BIT) !== 0),
+        'Comanche P21 asserted raw channel-011 OPR ERR after accepting the CM vehicle choice');
+    assert(errors.length === 0, 'Comanche P21 CM option acceptance raised a host runtime error');
+
     core.reset();
     core.configureInputMasks();
-    return {promptValues, returnedValues, option2};
+    return {promptValues, returnedValues, option2, acceptedPrompt: 'V06N34'};
 }
 
 function proveV35LightTest(core, errors, channelUpdates) {
@@ -879,7 +899,7 @@ async function main() {
     console.log(`  V06N65E three-component decimal display: PASS (selectors ${v06n65.responseRows.join(',')}; within ${v06n65.responseSteps} steps)`);
     console.log(`  V05N09E alarm-code display: PASS (${v05n09.displayedFailReg.join(' ')}; selectors ${v05n09.responseRows.join(',')}; within ${v05n09.responseSteps} steps)`);
     console.log(`  V14N09E two-component monitor: PASS (selectors ${v14n09.responseRows.join(',')}; within ${v14n09.responseSteps} steps)`);
-    console.log(`  P21 V04N06 -> V22N06 CM option load: PASS (${p21OptionLoad.promptValues.join(' / ')} -> ${p21OptionLoad.returnedValues.join(' / ')}; N06 R2 is 0o${p21OptionLoad.option2.toString(8)}; raw OPR ERR clear)`);
+    console.log(`  P21 V04N06 -> V22N06 CM option load: PASS (${p21OptionLoad.promptValues.join(' / ')} -> ${p21OptionLoad.returnedValues.join(' / ')}; N06 R2 is 0o${p21OptionLoad.option2.toString(8)}; PRO advances to ${p21OptionLoad.acceptedPrompt}; raw OPR ERR clear)`);
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);
