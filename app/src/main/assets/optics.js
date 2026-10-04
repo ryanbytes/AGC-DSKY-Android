@@ -52,6 +52,7 @@
   let pairComputedAt = 0;
   const CENTER_TOL_DEG = 0.08;
   const SKY_LOCATION_MAX_AGE_MS = 300000;
+  const MEAN_EARTH_RADIUS_M = 6371008.8;
 
   function skyLocationAgeMs(location=skyLocation,now=Date.now()){
     return location&&Number.isFinite(location.timestamp)?now-location.timestamp:Infinity;
@@ -59,6 +60,10 @@
   function skyLocationFresh(location=skyLocation,now=Date.now()){
     const age=skyLocationAgeMs(location,now);
     return age>=0&&age<=SKY_LOCATION_MAX_AGE_MS;
+  }
+  function skyLocationUncertaintyDeg(location=skyLocation){
+    const accuracy=location?.accuracy;
+    return Number.isFinite(accuracy)&&accuracy>=0?Math.min(180,accuracy/MEAN_EARTH_RADIUS_M*180/Math.PI):Infinity;
   }
 
   function core(){ return typeof api.getCore === 'function' ? api.getCore() : null; }
@@ -351,10 +356,11 @@
     const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');if(!cat||!skyLocationFresh())return null;
     const now=Date.now();
     if(selectedPair&&now-pairComputedAt<5000)return selectedPair;
-    pairMeta=typeof cat.candidatePairs==='function'?cat.candidatePairs(skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date(),12,6):null;
+    const locationUncertainty=skyLocationUncertaintyDeg(),minAltitude=12+(Number.isFinite(locationUncertainty)?locationUncertainty:0);
+    pairMeta=typeof cat.candidatePairs==='function'?cat.candidatePairs(skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date(),minAltitude,6):null;
     pairCandidates=pairMeta?.pairs||[];
     if(pairIndex>=pairCandidates.length)pairIndex=0;
-    selectedPair=pairCandidates[pairIndex]||cat.bestPair(skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date(),12);pairComputedAt=now;
+    selectedPair=pairCandidates[pairIndex]||cat.bestPair(skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date(),minAltitude);pairComputedAt=now;
     if(selectedPair&&(!selectedStar||![selectedPair.a.star,selectedPair.b.star].includes(selectedStar)))selectedStar=selectedPair.a.star;
     return selectedPair;
   }
@@ -448,21 +454,24 @@
     }
     const projected=typeof api.projectSkyTarget==='function'?api.projectSkyTarget(targetPos.az,targetPos.alt):null;
     const d=projected?{distance:projected.distance,angle:projected.screenAngle}:cat.bearingDelta(pointing,targetPos);
+    const locationUncertainty=skyLocationUncertaintyDeg(),edge=SXT_FOV_DEG/2;
     arrow.style.transform=`rotate(${d.angle.toFixed(1)}deg)`;
     if(cue){
       const eye=document.getElementById('sxt-eyepiece');
       const radius=Math.max(20,Math.min(eye?.clientWidth||200,eye?.clientHeight||200)*.43);
-      const edge=SXT_FOV_DEG/2,rr=Math.min(radius,radius*(d.distance/edge)),aa=d.angle*Math.PI/180;
+      const rr=Math.min(radius,radius*(d.distance/edge)),aa=d.angle*Math.PI/180;
       cue.style.setProperty('--cue-x',(Math.sin(aa)*rr).toFixed(1)+'px');
       cue.style.setProperty('--cue-y',(-Math.cos(aa)*rr).toFixed(1)+'px');
-      cue.classList.add('active');cue.classList.toggle('outside',d.distance>edge);cue.classList.toggle('centered',d.distance<=CENTER_TOL_DEG);
+      cue.classList.add('active');cue.classList.toggle('outside',d.distance-locationUncertainty>edge);cue.classList.toggle('centered',d.distance+locationUncertainty<=CENTER_TOL_DEG);
     }
     const src=pointing.source?` · ${String(pointing.source).toUpperCase()}`:'';
-    err.textContent=d.distance<=CENTER_TOL_DEG
+    err.textContent=d.distance+locationUncertainty<=CENTER_TOL_DEG
       ?`CENTERED · ${d.distance.toFixed(3)}°${src}`
-      :(d.distance<=SXT_FOV_DEG/2
+      :(d.distance+locationUncertainty<=edge
         ?`IN FIELD · ${d.distance.toFixed(2)}°${src}`
-        :`MOVE ${d.distance.toFixed(1)}° · PHONE AZ ${pointing.az.toFixed(1)} ALT ${pointing.alt.toFixed(1)}${src}`);
+        :(d.distance-locationUncertainty<=edge
+          ?`POSITION UNCERTAIN · ${Number.isFinite(locationUncertainty)?'LOCATION ±'+locationUncertainty.toFixed(2)+'°':'LOCATION ACCURACY UNKNOWN'} · TARGET ${d.distance.toFixed(1)}°${src}`
+          :`MOVE ${d.distance.toFixed(1)}° · PHONE AZ ${pointing.az.toFixed(1)} ALT ${pointing.alt.toFixed(1)}${src}`));
   }
 
   function zeroSight(){

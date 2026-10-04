@@ -24,13 +24,18 @@ assert(source.includes('lat < -90||lat > 90||lon < -180||lon > 180'),
   'saved or geolocation coordinates must be bounded to valid latitude/longitude ranges');
 for(const marker of [
   'const SKY_LOCATION_MAX_AGE_MS = 300000;',
+  'const MEAN_EARTH_RADIUS_M = 6371008.8;',
   'function skyLocationAgeMs(location=skyLocation,now=Date.now())',
   'function skyLocationFresh(location=skyLocation,now=Date.now())',
+  'function skyLocationUncertaintyDeg(location=skyLocation)',
   'function setSkyLocation(lat,lon,alt=0,accuracy=NaN,timestamp=Date.now())',
   'setSkyLocation(c.lat,c.lon,c.alt,c.accuracy,c.timestamp)',
   'p.coords.latitude,p.coords.longitude,p.coords.altitude||0,p.coords.accuracy,p.timestamp',
   'maximumAge:SKY_LOCATION_MAX_AGE_MS',
   'if(!cat||!skyLocationFresh())return null',
+  'const locationUncertainty=skyLocationUncertaintyDeg(),minAltitude=12+(Number.isFinite(locationUncertainty)?locationUncertainty:0);',
+  'cue.classList.add(\'active\');cue.classList.toggle(\'outside\',d.distance-locationUncertainty>edge);cue.classList.toggle(\'centered\',d.distance+locationUncertainty<=CENTER_TOL_DEG);',
+  "`POSITION UNCERTAIN · ${Number.isFinite(locationUncertainty)?'LOCATION ±'+locationUncertainty.toFixed(2)+'°':'LOCATION ACCURACY UNKNOWN'} · TARGET ${d.distance.toFixed(1)}°${src}`",
   "pairEl.textContent='PAIR WAITING · LOCATION STALE'",
   "targ.textContent='TARGET WAITING FOR FRESH LOCATION'",
   "err.textContent='LOCATION STALE · REFRESH STAR FINDER'",
@@ -38,14 +43,19 @@ for(const marker of [
 ])assert(source.includes(marker),`star-finder location freshness policy missing: ${marker}`);
 const freshnessStart=source.indexOf('  function skyLocationAgeMs('),freshnessEnd=source.indexOf('  function core()',freshnessStart);
 assert(freshnessStart>=0&&freshnessEnd>freshnessStart,'could not isolate the production location-freshness policy');
-const freshnessContext={Date,Number};
-vm.runInNewContext(`let skyLocation=null;const SKY_LOCATION_MAX_AGE_MS=300000;${source.slice(freshnessStart,freshnessEnd)}globalThis.locationFresh=skyLocationFresh;`,freshnessContext,{filename:'optics.js:location-freshness'});
+const freshnessContext={Date,Number,Math};
+vm.runInNewContext(`let skyLocation=null;const SKY_LOCATION_MAX_AGE_MS=300000;const MEAN_EARTH_RADIUS_M=6371008.8;${source.slice(freshnessStart,freshnessEnd)}globalThis.locationFresh=skyLocationFresh;globalThis.locationUncertaintyDeg=skyLocationUncertaintyDeg;`,freshnessContext,{filename:'optics.js:location-freshness'});
 const fixedNow=1760000000000;
 assert(freshnessContext.locationFresh({timestamp:fixedNow},fixedNow),'current location must be fresh');
 assert(freshnessContext.locationFresh({timestamp:fixedNow-300000},fixedNow),'location at the geolocation maximum age remains usable');
 assert(!freshnessContext.locationFresh({timestamp:fixedNow-300001},fixedNow),'location older than the geolocation maximum age must be stale');
 assert(!freshnessContext.locationFresh({timestamp:fixedNow+1},fixedNow),'future-dated location must not be treated as fresh');
 assert(!freshnessContext.locationFresh({},fixedNow),'location without a fix timestamp must be stale');
+assert(freshnessContext.locationUncertaintyDeg({accuracy:0})===0,'zero horizontal accuracy must map to zero angular uncertainty');
+assert(Math.abs(freshnessContext.locationUncertaintyDeg({accuracy:9000})-0.08094)<0.0001,'9 km horizontal accuracy must map to about 0.081 degrees');
+assert(freshnessContext.locationUncertaintyDeg({accuracy:9000})>0.08,'9 km location uncertainty must exceed the CENTERED tolerance');
+assert(freshnessContext.locationUncertaintyDeg({accuracy:-1})===Infinity,'negative accuracy must be treated as unknown');
+assert(freshnessContext.locationUncertaintyDeg({})===Infinity,'missing horizontal accuracy must be treated as unknown');
 for(const forbidden of ['api.openSextant =','api.closeSextant =','api.sextantStatus ='])
   assert(!source.includes(forbidden),`optics regained direct public-facade mutation: ${forbidden}`);
 for(const marker of [
