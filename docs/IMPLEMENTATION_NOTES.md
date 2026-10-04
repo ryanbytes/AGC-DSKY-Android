@@ -90,7 +90,7 @@ DreamService never starts yaAGC. The rebuilt core defaults `CmOrLm` to CM and ex
 
 ### AGC clocking and lifecycle
 
-The wrapper follows webAGC's approximate timing model (~11.72 μs per AGC instruction with a JavaScript scheduling/drain loop). A catch-up cap prevents a delayed WebView timer from running an unbounded burst.
+The wrapper advances the pinned yaAGC engine at approximately 85,333 machine cycles per second (11.72 μs per MCT) using a JavaScript scheduling/drain loop. Each `cpu_step` iteration calls `agc_engine` once, and the engine tracks multi-cycle instructions across multiple calls; 11.72 μs is therefore the machine-cycle period, not a complete instruction duration. The estimate follows the [pinned `agc_engine.c`](https://github.com/virtualagc/virtualagc/blob/ddc65e7bed41f1301921b934fcbaaee93db99dda/yaAGC/agc_engine.c#L1809) and [WASM `cpu_step`](https://github.com/virtualagc/virtualagc/blob/ddc65e7bed41f1301921b934fcbaaee93db99dda/yaAGC/wasm.c#L106) behavior. JavaScript/WebView scheduling remains approximate; a catch-up cap prevents a delayed callback from running an unbounded burst.
 
 Lifecycle distinction:
 
