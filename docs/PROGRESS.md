@@ -1,3 +1,9 @@
+## 2026-10-03 macOS/iOS WebKit runtime audit
+
+On source tree containing `e3fca37f39e407893e3aaf245778db53fcddcc95`, `xcodebuild -quiet -project apple/AGCDSKY.xcodeproj -scheme AGCDSKYmacOS -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/AGC-DSKY-audit-derived-data build` passed, and the built macOS Debug app launched. Its WebKit accessibility tree exposed the Apollo DSKY and all normal key controls.
+
+The iOS Debug target also built for the iPhone 17e / iOS 26.5 simulator. `xcrun simctl boot`, `bootstatus`, `install`, and `launch` completed. The rendered frame at `/tmp/AGC-DSKY-ios-sim.png` shows the complete DSKY and HOLD PANEL FOR OPTIONS control; the initialized live display showed V16 N65, three numeric registers, and OPR ERR clear. This proves target startup/rendering, not touch/keyboard interaction. Physical Apple behavior, haptics, and printing remain unverified.
+
 ## 2026-10-03 channel-016 navigation input-order audit
 
 A real pinned-WASM probe filled the yaAGC input ring with 1,023 PIPA increments, leaving one free slot for MARK. `AgcCore.navKeyPress()` advanced one MCT and asserted KEYRUPT2 while channel 016 was still zero. Since the ring can defer channel-016 delivery behind unprogrammed counter packets, Comanche could service the interrupt before NAVKEYIN contained the pressed key. The prior test only pressed MARK with an empty input queue and did not catch this ordering error.
