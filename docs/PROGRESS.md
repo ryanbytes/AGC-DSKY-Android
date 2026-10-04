@@ -4,7 +4,7 @@
 
 Moved normalization/comparison into the pure `ReleaseVersionPolicy`. It compares canonical decimal strings by length and then lexicographically, so version components are ordered numerically without fixed-width overflow. Existing `v` prefix, suffix truncation, leading-zero equality, and trailing-zero component behavior remain intact. Added a compiled Java regression for ordering, 32-bit overflow boundaries, larger components, and invalid inputs; the updater smoke compiles and runs it.
 
-Validation: `node tools/self-update-smoke.js` passed, including compiled Java release URL and version policy checks; `env TZ=UTC bash tools/run-source-smokes.sh` passed all 105 Node tests, NTP shell smoke, and real pinned yaAGC + Comanche055 semantic gate. A clean Regular/Fire Android build remains pending. No Android release was created.
+Validation: `node tools/self-update-smoke.js` passed, including compiled Java release URL and version policy checks; `env TZ=UTC bash tools/run-source-smokes.sh` passed all 105 Node tests, NTP shell smoke, and real pinned yaAGC + Comanche055 semantic gate. Clean detached commit `e2341f89f3614682e7e7ec8536368060b654d122` passed the canonical `tools/build-local.sh`; both Regular and Fire debug APKs passed `tools/verify-apk.sh`. No Android release was created.
 
 ## 2026-10-04 Comanche decimal-display command audit
 
