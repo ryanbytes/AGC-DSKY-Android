@@ -98,7 +98,7 @@
 
   // True camera boresight from the native absolute rotation vector. This is
   // phone-side star-finder data only and is never written to the AGC.
-  let skyPointing = {seen:false,az:NaN,alt:NaN,accuracy:0,declination:0,timestamp:0,source:'none'};
+  let skyPointing = {seen:false,az:NaN,alt:NaN,accuracy:0,declination:0,timestamp:0,monotonicTimestamp:0,source:'none'};
   let rawNativeSky = {seen:false,az:NaN,alt:NaN,accuracy:0,declination:0,timestamp:0};
   let skyDeclination = NaN;
   let skyReference = null;
@@ -781,7 +781,7 @@
     skyPointing={seen:true,az:((az%360)+360)%360,alt,
       accuracy:Number.isFinite(accuracy)?accuracy:0,
       declination:Number.isFinite(declination)?declination:0,
-      timestamp:Date.now(),source:String(source||'native')};
+      timestamp:Date.now(),monotonicTimestamp:performance.now(),source:String(source||'native')};
     try{dispatchEvent(new CustomEvent('agcdsky-skypointing',{detail:{...skyPointing}}))}catch(_){ }
   }
 
@@ -805,7 +805,8 @@
   }
 
   function clearSkyPointing(source='declination-unavailable'){
-    skyPointing={seen:false,az:NaN,alt:NaN,accuracy:0,declination:NaN,timestamp:Date.now(),source};
+    skyPointing={seen:false,az:NaN,alt:NaN,accuracy:0,declination:NaN,
+      timestamp:Date.now(),monotonicTimestamp:performance.now(),source};
     try{dispatchEvent(new CustomEvent('agcdsky-skypointing',{detail:{...skyPointing}}))}catch(_){ }
   }
 

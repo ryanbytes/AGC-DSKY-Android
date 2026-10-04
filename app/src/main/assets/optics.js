@@ -61,6 +61,16 @@
     const age=skyLocationAgeMs(location,now);
     return age>=0&&age<=SKY_LOCATION_MAX_AGE_MS;
   }
+  function skyPointingAgeMs(pointing,now=performance.now(),wallNow=Date.now()){
+    const sampleTime=Number(pointing?.monotonicTimestamp);
+    if(Number.isFinite(sampleTime))return now-sampleTime;
+    const timestamp=Number(pointing?.timestamp);
+    return Number.isFinite(timestamp)?wallNow-timestamp:Infinity;
+  }
+  function skyPointingFresh(pointing,now=performance.now(),wallNow=Date.now()){
+    const age=skyPointingAgeMs(pointing,now,wallNow);
+    return age>=0&&age<=1500;
+  }
   function skyLocationUncertaintyDeg(location=skyLocation){
     const accuracy=location?.accuracy;
     return Number.isFinite(accuracy)&&accuracy>=0?Math.min(180,accuracy/MEAN_EARTH_RADIUS_M*180/Math.PI):Infinity;
@@ -450,7 +460,7 @@
     cmd.textContent=`AFTER MARK: V21 N71 E 000${selectedStar.code} E`;
     const cue=document.getElementById('sxt-star-cue');
     const pointing=typeof api.phoneSkyPointing==='function'?api.phoneSkyPointing():null;
-    if(!pointing||!pointing.seen||Date.now()-(pointing.timestamp||0)>1500){
+    if(!pointing||!pointing.seen||!skyPointingFresh(pointing)){
       const webStatus=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function'
         ?window.AGCDSKYPWA.parityStatus():null;
       err.textContent=webStatus?.sensorBlock==='brave-android-motion-sensors-blocked'

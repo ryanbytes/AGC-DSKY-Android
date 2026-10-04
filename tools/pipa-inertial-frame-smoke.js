@@ -27,13 +27,14 @@ function createHarness(screenAngle=0){
     get(name){if(name==='AGCDSKY_PHONE')return service;if(name==='AGCDSKY_WMM2025')return geomagnetic;assert(false,`unexpected service requested: ${name}`)},
     publish(name,value){assert(name==='AGCDSKY_WMM2025','unexpected model service publication');geomagnetic=value}
   };
+  let monotonicNow=0;
   const context={
     window:null,
     AGCDSKY:api,
     AGCDSKY_SERVICE_REGISTRY:registry,
     document:{get hidden(){return hidden},getElementById:id=>buttons[id]||null,addEventListener(name,handler){if(name==='click')clickHandler=handler;else documentListeners[name]=handler}},
     screen:{orientation:{angle:screenAngle}},
-    performance:{now:()=>0},
+    performance:{now:()=>monotonicNow},
     localStorage:{getItem:()=>null,setItem(){}},
     navigator:{},
     addEventListener(name,handler){windowListeners[name]=handler},
@@ -47,6 +48,7 @@ function createHarness(screenAngle=0){
   vm.runInContext(source,context,{filename:'phone-icdu.js'});
   api.__buttons=buttons;
   api.__core=core;
+  api.__setMonotonicNow=value=>{monotonicNow=Number(value)};
   api.__setHidden=value=>{hidden=!!value;if(documentListeners.visibilitychange)documentListeners.visibilitychange()};
   api.__fireWindowEvent=(name,event)=>{if(windowListeners[name])windowListeners[name](event)};
   api.__tick=()=>intervals.forEach(fn=>fn());
@@ -181,6 +183,16 @@ staleRefreshProbe.nativeMagneticSensorStatus('test-magnetic',false);
 staleRefreshProbe.updateSkyLocation(40,-75,250,new Date(Date.UTC(2026,6,4)));
 assert(!staleRefreshProbe.phoneSkyPointing().seen,
   'later location update revived raw magnetic coordinates retained after sensor loss');
+const pointingClockProbe=createHarness();
+pointingClockProbe.updateSkyLocation(39.77,-86.16,250,new Date(Date.UTC(2026,6,4)));
+pointingClockProbe.__setMonotonicNow(1234);
+pointingClockProbe.nativeMagneticPointing(90,30,3);
+assert(pointingClockProbe.phoneSkyPointing().monotonicTimestamp===1234,
+  'published sky pointing did not retain its monotonic receipt timestamp');
+pointingClockProbe.__setMonotonicNow(1300);
+pointingClockProbe.nativeMagneticSensorStatus('test-magnetic',false);
+assert(pointingClockProbe.phoneSkyPointing().monotonicTimestamp===1300,
+  'cleared sky pointing did not retain its monotonic invalidation timestamp');
 
 // Sensor availability must not silently calibrate while the phone may be
 // moving. PIPA integration remains disabled until the user starts calibration.
