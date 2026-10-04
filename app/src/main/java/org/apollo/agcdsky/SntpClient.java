@@ -78,7 +78,7 @@ final class SntpClient {
             int mode = response[0] & 0x7;
             int stratum = response[1] & 0xff;
             if (leap == 3 || version < 3 || version > 4
-                    || (mode != 4 && mode != 5) || stratum == 0 || stratum > 15) {
+                    || mode != 4 || stratum == 0 || stratum > 15) {
                 throw new IOException("invalid NTP response");
             }
             // Reconstruct T4 on the monotonic timeline after rejecting wall-clock steps.

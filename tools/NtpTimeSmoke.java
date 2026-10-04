@@ -11,7 +11,7 @@ public final class NtpTimeSmoke {
 
     public static void main(String[] args) throws Exception {
         testSuccess();
-        testProtocolVersions();
+        testProtocolVersionsAndServerMode();
         testMonotonicReceiveTimestamp();
         testWallClockStepDetection();
         testElapsedTimeIncludesSimulatedSleep();
@@ -23,7 +23,7 @@ public final class NtpTimeSmoke {
         testPersistedSyncAgeAcrossBoots();
         if (args.length > 0 && "--live".equals(args[0])) testLiveCloudflare();
         System.out.println("ntp time smoke: PASS");
-        System.out.println("  four-timestamp offset, wall-clock step rejection, sleep-inclusive elapsed timing, reboot-aware freshness, server-processing correction, wrong-peer/malformed rejection, timeout, and recovery verified");
+        System.out.println("  four-timestamp offset, server-mode validation, wall-clock step rejection, sleep-inclusive elapsed timing, reboot-aware freshness, server-processing correction, wrong-peer/malformed rejection, timeout, and recovery verified");
     }
 
     private static void testSuccess() throws Exception {
@@ -49,14 +49,16 @@ public final class NtpTimeSmoke {
         }
     }
 
-    private static void testProtocolVersions() throws Exception {
-        assertVersionAccepted(3, true);
-        assertVersionAccepted(4, true);
-        assertVersionAccepted(2, false);
-        assertVersionAccepted(5, false);
+    private static void testProtocolVersionsAndServerMode() throws Exception {
+        assertVersionAndModeAccepted(3, 4, true);
+        assertVersionAndModeAccepted(4, 4, true);
+        assertVersionAndModeAccepted(2, 4, false);
+        assertVersionAndModeAccepted(5, 4, false);
+        assertVersionAndModeAccepted(4, 3, false);
+        assertVersionAndModeAccepted(4, 5, false);
     }
 
-    private static void assertVersionAccepted(int version, boolean expected) throws Exception {
+    private static void assertVersionAndModeAccepted(int version, int mode, boolean expected) throws Exception {
         try (DatagramSocket server = new DatagramSocket(0)) {
             AtomicReference<Throwable> failure = new AtomicReference<>();
             Thread responder = new Thread(() -> {
@@ -65,7 +67,7 @@ public final class NtpTimeSmoke {
                     DatagramPacket incoming = new DatagramPacket(request, request.length);
                     server.receive(incoming);
                     byte[] response = new byte[48];
-                    response[0] = (byte) ((version << 3) | 4);
+                    response[0] = (byte) ((version << 3) | mode);
                     response[1] = 1;
                     System.arraycopy(request, 40, response, 24, 8);
                     writeTimestamp(response, 32, System.currentTimeMillis());
@@ -85,9 +87,9 @@ public final class NtpTimeSmoke {
                 accepted = false;
             }
             responder.join(2_000);
-            check(!responder.isAlive(), "version " + version + " responder did not finish");
-            check(failure.get() == null, "version " + version + " responder failed");
-            check(accepted == expected, "unexpected acceptance for NTP version " + version);
+            check(!responder.isAlive(), "version/mode " + version + "/" + mode + " responder did not finish");
+            check(failure.get() == null, "version/mode " + version + "/" + mode + " responder failed");
+            check(accepted == expected, "unexpected acceptance for NTP version/mode " + version + "/" + mode);
         }
     }
 
