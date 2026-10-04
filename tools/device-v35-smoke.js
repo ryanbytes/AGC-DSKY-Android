@@ -7,7 +7,7 @@
  * Path proven by this smoke:
  *   pointer events -> Pinball -> real yaAGC/Comanche055 -> channel 010/011/0163
  *   -> hardware-fidelity latches + app state -> rendered DSKY/annunciators.
- * It runs V16N65E, V05N09E, and V14N09E between P00 entry and V35E.
+ * It runs V16N65E, V06N65E, V05N09E, and V14N09E between P00 entry and V35E.
  *
  * Requires the DevTools socket to have already been adb-forwarded by
  * tools/device-agc-smoke.sh. No npm packages are used; Node 18+ is enough.
@@ -435,6 +435,41 @@ async function proveV16N65Monitor(cdp) {
   throw new Error(`V16N65E produced no numeric, OPR-ERR-free response; last state: ${JSON.stringify(last)}`);
 }
 
+async function proveV06N65DecimalDisplay(cdp) {
+  const entryTraceStart = keySequenceTrace.length;
+  await keySequence(cdp, ['V','0','6','N','6','5'], 1300);
+  const entryCodes = keySequenceTrace.slice(entryTraceStart).map(item => item.keyCode);
+  const expectedEntryCodes = [0o21,0o20,0o06,0o37,0o06,0o05];
+  assert(entryCodes.length === expectedEntryCodes.length
+      && entryCodes.every((code,index) => code === expectedEntryCodes[index]),
+    `V06N65 Pinball key-code trace mismatch: ${entryCodes.map(code => `0o${Number(code).toString(8)}`).join(',')}`);
+
+  const entered = await cdp.evaluate(dskyExpression());
+  assert(entered && entered.display.prog === '00' && entered.display.verb === '06' && entered.display.noun === '65',
+    `V06N65 did not latch through the live DSKY input path: ${JSON.stringify(entered)}`);
+
+  const executeTraceStart = keySequenceTrace.length;
+  await keySequence(cdp, ['E'], 1400);
+  assert(keySequenceTrace[executeTraceStart]?.keyCode === 0o34,
+    'V06N65E did not reach yaAGC as Pinball ENTR 0o34');
+
+  const deadline = Date.now() + 10000;
+  let last;
+  while (Date.now() < deadline) {
+    last = await cdp.evaluate(dskyExpression());
+    const decimalComponent = value => value && value.digits.length === 5
+      && /^[0-9 ]{5}$/.test(value.digits) && value.sign !== '-';
+    const threeComponents = last && [last.display.r1,last.display.r2,last.display.r3].every(decimalComponent);
+    const operatorError = last && (Number(last.channels.ch0163 || 0) & 0o00100) !== 0;
+    if (last && last.mode === 'agc' && last.display.prog === '00'
+        && last.display.verb === '06' && last.display.noun === '65'
+        && threeComponents && !operatorError && !last.lamps.oprerr) return last;
+    if (last && last.modeText.includes('AGC ERROR')) throw new Error(`AGC stopped during V06N65E: ${last.modeText}`);
+    await delay(75);
+  }
+  throw new Error(`V06N65E produced no three-component decimal response without OPR ERR; last state: ${JSON.stringify(last)}`);
+}
+
 async function proveV05N09AlarmDisplay(cdp) {
   const entryTraceStart = keySequenceTrace.length;
   await keySequence(cdp, ['V','0','5','N','0','9'], 1300);
@@ -595,6 +630,9 @@ async function main() {
     const monitor = await proveV16N65Monitor(cdp);
     await keySequence(cdp, ['V','3','7','E','0','0','E'], 1500);
     await waitForP00(cdp);
+    const decimalDisplay = await proveV06N65DecimalDisplay(cdp);
+    await keySequence(cdp, ['V','3','7','E','0','0','E'], 1500);
+    await waitForP00(cdp);
     const alarmDisplay = await proveV05N09AlarmDisplay(cdp);
     await keySequence(cdp, ['V','3','7','E','0','0','E'], 1500);
     await waitForP00(cdp);
@@ -606,6 +644,8 @@ async function main() {
 
     console.log('Device Comanche055 V16N65 monitor smoke: PASS');
     console.log(`  V16N65E response: ${monitor.display.r1.sign}${monitor.display.r1.digits} ${monitor.display.r2.sign}${monitor.display.r2.digits} ${monitor.display.r3.sign}${monitor.display.r3.digits}`);
+    console.log('Device Comanche055 V06N65 three-component decimal display: PASS');
+    console.log(`  V06N65E response: ${decimalDisplay.display.r1.digits} ${decimalDisplay.display.r2.digits} ${decimalDisplay.display.r3.digits}`);
     console.log('Device Comanche055 V05N09 octal alarm-code display: PASS');
     console.log(`  V05N09E response: ${alarmDisplay.display.r1.digits} ${alarmDisplay.display.r2.digits} ${alarmDisplay.display.r3.digits}`);
     console.log('Device Comanche055 V14N09 two-component monitor: PASS');
