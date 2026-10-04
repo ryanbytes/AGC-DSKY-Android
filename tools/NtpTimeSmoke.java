@@ -2,6 +2,7 @@ package org.apollo.agcdsky;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Host-only deterministic protocol tests for the small native SNTP client. */
@@ -13,6 +14,7 @@ public final class NtpTimeSmoke {
         testProtocolVersions();
         testMonotonicReceiveTimestamp();
         testWallClockStepDetection();
+        testElapsedTimeIncludesSimulatedSleep();
         testServerProcessingDoesNotBiasOffset();
         testWrongPeerRejected();
         testMalformedResponse();
@@ -21,7 +23,7 @@ public final class NtpTimeSmoke {
         testPersistedSyncAgeAcrossBoots();
         if (args.length > 0 && "--live".equals(args[0])) testLiveCloudflare();
         System.out.println("ntp time smoke: PASS");
-        System.out.println("  four-timestamp offset, wall-clock step rejection, reboot-aware freshness, server-processing correction, wrong-peer/malformed rejection, timeout, and recovery verified");
+        System.out.println("  four-timestamp offset, wall-clock step rejection, sleep-inclusive elapsed timing, reboot-aware freshness, server-processing correction, wrong-peer/malformed rejection, timeout, and recovery verified");
     }
 
     private static void testSuccess() throws Exception {
@@ -125,6 +127,45 @@ public final class NtpTimeSmoke {
             rejected = "device wall clock changed during NTP request".equals(expected.getMessage());
         }
         check(rejected, direction + " wall-clock adjustment did not reject the sample");
+    }
+
+    private static void testElapsedTimeIncludesSimulatedSleep() throws Exception {
+        final long sleepMs = 600L;
+        final AtomicLong wallMs = new AtomicLong(System.currentTimeMillis());
+        final AtomicLong elapsedNs = new AtomicLong(9_000_000_000_000L);
+        SntpClient.TimeSource clock = new SntpClient.TimeSource() {
+            @Override public long wallTimeMs() { return wallMs.get(); }
+            @Override public long monotonicNanos() { return elapsedNs.get(); }
+        };
+        try (DatagramSocket server = new DatagramSocket(0)) {
+            AtomicReference<Throwable> failure = new AtomicReference<>();
+            Thread responder = new Thread(() -> {
+                try {
+                    byte[] request = new byte[48];
+                    DatagramPacket incoming = new DatagramPacket(request, request.length);
+                    server.receive(incoming);
+                    elapsedNs.addAndGet(sleepMs * 1_000_000L);
+                    wallMs.addAndGet(sleepMs);
+                    byte[] response = new byte[48];
+                    response[0] = 0x24;
+                    response[1] = 1;
+                    System.arraycopy(request, 40, response, 24, 8);
+                    writeTimestamp(response, 32, wallMs.get());
+                    writeTimestamp(response, 40, wallMs.get());
+                    server.send(new DatagramPacket(response, response.length,
+                            incoming.getAddress(), incoming.getPort()));
+                } catch (Throwable error) {
+                    failure.set(error);
+                }
+            });
+            responder.start();
+            SntpClient.Sample sample = SntpClient.query("127.0.0.1", server.getLocalPort(), 1_000, clock);
+            responder.join(2_000);
+            check(!responder.isAlive(), "sleep-inclusive responder did not finish");
+            check(failure.get() == null, "sleep-inclusive responder failed");
+            check(sample.roundTripMs == sleepMs,
+                    "elapsed timing omitted simulated deep sleep: " + sample.roundTripMs + "ms");
+        }
     }
 
     private static void testServerProcessingDoesNotBiasOffset() throws Exception {

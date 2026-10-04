@@ -26,6 +26,8 @@ for(const needle of [
   'onAvailable(Network network)',
   'SystemClock.elapsedRealtime()',
   'SystemClock.elapsedRealtimeNanos()',
+  'return SystemClock.elapsedRealtimeNanos();',
+  'SntpClient.query(SERVER,TIMEOUT_MS,TIME_SOURCE)',
   'SntpClient.verifyNoWallClockStep(syncStartWallMs',
   'Settings.Global.BOOT_COUNT',
   'NtpSyncAge.ageMs(',

@@ -13,6 +13,16 @@ final class SntpClient {
     private static final long ERA_SECONDS = 1L << 32;
     private static final long MAX_WALL_CLOCK_STEP_MS = 250L;
 
+    interface TimeSource {
+        long wallTimeMs();
+        long monotonicNanos();
+    }
+
+    private static final TimeSource JVM_TIME_SOURCE = new TimeSource() {
+        @Override public long wallTimeMs() { return System.currentTimeMillis(); }
+        @Override public long monotonicNanos() { return System.nanoTime(); }
+    };
+
     static final class Sample {
         final long offsetMs;
         final long roundTripMs;
@@ -27,24 +37,33 @@ final class SntpClient {
     private SntpClient() {}
 
     static Sample query(String host, int timeoutMs) throws IOException {
-        return query(host, NTP_PORT, timeoutMs);
+        return query(host, NTP_PORT, timeoutMs, JVM_TIME_SOURCE);
     }
 
     static Sample query(String host, int port, int timeoutMs) throws IOException {
+        return query(host, port, timeoutMs, JVM_TIME_SOURCE);
+    }
+
+    static Sample query(String host, int timeoutMs, TimeSource timeSource) throws IOException {
+        return query(host, NTP_PORT, timeoutMs, timeSource);
+    }
+
+    static Sample query(String host, int port, int timeoutMs, TimeSource timeSource) throws IOException {
+        if (timeSource == null) throw new IllegalArgumentException("time source is required");
         InetAddress address = InetAddress.getByName(host);
         byte[] request = new byte[PACKET_SIZE];
         request[0] = 0x23; // LI=0, VN=4, client mode=3.
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setSoTimeout(timeoutMs);
-            long requestWallMs = System.currentTimeMillis();
-            long requestElapsedNs = System.nanoTime();
+            long requestWallMs = timeSource.wallTimeMs();
+            long requestElapsedNs = timeSource.monotonicNanos();
             writeTimestamp(request, 40, requestWallMs);
             socket.send(new DatagramPacket(request, request.length, address, port));
             byte[] response = new byte[PACKET_SIZE];
             DatagramPacket packet = new DatagramPacket(response, response.length);
             socket.receive(packet);
-            long receiveElapsedNs = System.nanoTime();
-            long receiveWallMs = System.currentTimeMillis();
+            long receiveElapsedNs = timeSource.monotonicNanos();
+            long receiveWallMs = timeSource.wallTimeMs();
             long rttMs = Math.max(0L, (receiveElapsedNs - requestElapsedNs) / 1_000_000L);
             verifyNoWallClockStep(requestWallMs, receiveWallMs, requestElapsedNs, receiveElapsedNs);
             if (!address.equals(packet.getAddress()) || packet.getPort() != port) {

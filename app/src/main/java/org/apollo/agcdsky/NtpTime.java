@@ -45,6 +45,10 @@ public final class NtpTime {
     private static final AtomicBoolean STARTED = new AtomicBoolean();
     private static final AtomicBoolean IN_FLIGHT = new AtomicBoolean();
     private static final CopyOnWriteArrayList<Listener> LISTENERS = new CopyOnWriteArrayList<>();
+    private static final SntpClient.TimeSource TIME_SOURCE = new SntpClient.TimeSource() {
+        @Override public long wallTimeMs() { return System.currentTimeMillis(); }
+        @Override public long monotonicNanos() { return SystemClock.elapsedRealtimeNanos(); }
+    };
 
     public interface Listener { void onNtpStatusChanged(Status status); }
 
@@ -114,7 +118,7 @@ public final class NtpTime {
         long syncStartWallMs=System.currentTimeMillis();
         long syncStartElapsedNs=SystemClock.elapsedRealtimeNanos();
         for(int i=0;i<SAMPLES;i++){
-            try{samples.add(SntpClient.query(SERVER,TIMEOUT_MS));}
+            try{samples.add(SntpClient.query(SERVER,TIMEOUT_MS,TIME_SOURCE));}
             catch(Exception error){
                 lastFailure=error.getClass().getSimpleName()+(error.getMessage()==null?"":": "+error.getMessage());
                 Log.w(TAG,"SNTP sample failed: "+reason+" #"+(i+1),error);
