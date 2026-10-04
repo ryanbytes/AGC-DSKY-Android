@@ -5,6 +5,39 @@ final class AGCAssetSchemeHandler: NSObject, WKURLSchemeHandler {
     static let scheme = "agcdsky"
     static let host = "app"
 
+    enum AssetURLResolution {
+        case invalidPath
+        case outsideResourceRoot
+        case asset(URL)
+    }
+
+    static func resolveAssetURL(_ url: URL, under resourceRoot: URL) -> AssetURLResolution {
+        let rawPath = url.path.removingPercentEncoding ?? url.path
+        let components = rawPath.split(separator: "/", omittingEmptySubsequences: true)
+        guard !components.isEmpty,
+              !components.contains(where: { $0 == "." || $0 == ".." || $0.contains("\\") }) else {
+            return .invalidPath
+        }
+
+        let relativePath = components.map(String.init).joined(separator: "/")
+        let resourceParent = resourceRoot.deletingLastPathComponent()
+            .resolvingSymlinksInPath()
+            .standardizedFileURL
+        let expectedRoot = resourceParent
+            .appendingPathComponent(resourceRoot.lastPathComponent, isDirectory: true)
+            .standardizedFileURL
+        let resolvedRoot = resourceRoot.resolvingSymlinksInPath().standardizedFileURL
+        guard resolvedRoot.path == expectedRoot.path else { return .outsideResourceRoot }
+
+        let candidate = resourceRoot
+            .appendingPathComponent(relativePath, isDirectory: false)
+            .resolvingSymlinksInPath()
+            .standardizedFileURL
+        let rootPath = resolvedRoot.path.hasSuffix("/") ? resolvedRoot.path : resolvedRoot.path + "/"
+        guard candidate.path.hasPrefix(rootPath) else { return .outsideResourceRoot }
+        return .asset(candidate)
+    }
+
     private let resourceRoot: URL?
 
     override init() {
@@ -23,23 +56,16 @@ final class AGCAssetSchemeHandler: NSObject, WKURLSchemeHandler {
             return
         }
 
-        let rawPath = url.path.removingPercentEncoding ?? url.path
-        let components = rawPath.split(separator: "/", omittingEmptySubsequences: true)
-        guard !components.isEmpty,
-              !components.contains(where: { $0 == "." || $0 == ".." || $0.contains("\\") }) else {
+        let candidate: URL
+        switch Self.resolveAssetURL(url, under: resourceRoot) {
+        case .invalidPath:
             send(status: 404, body: Data("Not Found".utf8), mime: "text/plain", for: urlSchemeTask)
             return
-        }
-
-        let relativePath = components.map(String.init).joined(separator: "/")
-        let candidate = resourceRoot
-            .appendingPathComponent(relativePath, isDirectory: false)
-            .standardizedFileURL
-
-        let rootPath = resourceRoot.path.hasSuffix("/") ? resourceRoot.path : resourceRoot.path + "/"
-        guard candidate.path.hasPrefix(rootPath) else {
+        case .outsideResourceRoot:
             send(status: 403, body: Data("Forbidden".utf8), mime: "text/plain", for: urlSchemeTask)
             return
+        case .asset(let resolvedURL):
+            candidate = resolvedURL
         }
 
         do {
