@@ -29,6 +29,14 @@ jobs:
       - name: Verify Apple wrapper permission policy
         run: node apple/tools/apple-wrapper-policy-smoke.js
 
+      - name: Verify Apple asset scheme path containment
+        run: |
+          swiftc -framework WebKit \
+            apple/Sources/AGCAssetSchemeHandler.swift \
+            apple/tools/asset-scheme-path-smoke.swift \
+            -o "$RUNNER_TEMP/asset-scheme-path-smoke"
+          "$RUNNER_TEMP/asset-scheme-path-smoke"
+
       - name: Build macOS app
         run: |
           xcodebuild \
