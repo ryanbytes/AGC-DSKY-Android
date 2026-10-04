@@ -141,7 +141,7 @@ final class AppUpdater {
                     notifyStatus(listener, "UPDATE CHECKSUM FAILED");
                     return;
                 }
-                if (!verifyApkIdentity(context, candidate)) {
+                if (!verifyApkIdentity(context, candidate, release.version)) {
                     candidate.delete();
                     notifyStatus(listener, "UPDATE REJECTED");
                     return;
@@ -391,6 +391,10 @@ final class AppUpdater {
     }
 
     private static boolean verifyApkIdentity(Context context, File apk) throws Exception {
+        return verifyApkIdentity(context, apk, null);
+    }
+
+    private static boolean verifyApkIdentity(Context context, File apk, String expectedReleaseVersion) throws Exception {
         PackageManager pm = context.getPackageManager();
         int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
                 ? PackageManager.GET_SIGNING_CERTIFICATES | PackageManager.GET_SIGNATURES
@@ -398,6 +402,8 @@ final class AppUpdater {
         PackageInfo archive = pm.getPackageArchiveInfo(apk.getAbsolutePath(), flags);
         PackageInfo current = pm.getPackageInfo(context.getPackageName(), flags);
         if (archive == null || !context.getPackageName().equals(archive.packageName)) return false;
+        if (expectedReleaseVersion != null
+                && !ReleaseVersionPolicy.matchesRelease(expectedReleaseVersion, archive.versionName)) return false;
         if (versionCode(archive) <= versionCode(current)) return false;
         return signerDigests(archive).equals(signerDigests(current));
     }

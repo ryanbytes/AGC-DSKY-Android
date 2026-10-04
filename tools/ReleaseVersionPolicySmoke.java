@@ -23,7 +23,15 @@ public final class ReleaseVersionPolicySmoke {
                 "existing prefix/suffix normalization changed");
         require(ReleaseVersionPolicy.compare("invalid", "1.2.3") == 0,
                 "invalid versions must retain neutral ordering");
+        require(ReleaseVersionPolicy.matchesRelease("1.2.3", "1.2.3"),
+                "matching release tag and APK version must be accepted");
+        require(ReleaseVersionPolicy.matchesRelease("1.2.0", "1.2.0.0"),
+                "equivalent trailing zero components must match");
+        require(!ReleaseVersionPolicy.matchesRelease("1.2.3", "1.2.2"),
+                "APK version must match the release tag, not only have a higher version code");
+        require(!ReleaseVersionPolicy.matchesRelease("1.2.3", "invalid"),
+                "invalid APK version names must not match a release tag");
         System.out.println("release version policy smoke: PASS");
-        System.out.println("  numeric ordering, trailing zeros, prefixes, suffixes, and unbounded components verified");
+        System.out.println("  numeric ordering, release identity, trailing zeros, prefixes, suffixes, and unbounded components verified");
     }
 }

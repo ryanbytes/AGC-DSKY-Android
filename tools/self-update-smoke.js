@@ -37,7 +37,8 @@ for(const marker of [
   'sha256For(apkName, apk.digest)',
   'ReleaseAssetUrlPolicy.requireTrusted(',
   'expectedSha256.equalsIgnoreCase(actualSha256)',
-  'verifyApkIdentity(context, candidate)',
+  'verifyApkIdentity(context, candidate, release.version)',
+  'ReleaseVersionPolicy.matchesRelease(expectedReleaseVersion, archive.versionName)',
   'versionCode(archive) <= versionCode(current)',
   'signerDigests(archive).equals(signerDigests(current))',
   'PackageManager.GET_SIGNING_CERTIFICATES',
@@ -95,6 +96,8 @@ assert(java.includes('now - prefs.getLong(PREF_LAST_CHECK, 0L) < minimumInterval
 assert(java.includes('connection.setUseCaches(false)')&&java.includes('Cache-Control')&&java.includes('no-cache'),'release discovery must bypass stale HTTP response caches');
 assert(java.includes('return ReleaseVersionPolicy.normalize(raw);')&&java.includes('return ReleaseVersionPolicy.compare(left, right);'),
   'updater version parsing and ordering must use the tested numeric policy');
+assert(versionPolicy.includes('static boolean matchesRelease(String releaseVersion, String apkVersionName)'),
+  'release tag and embedded APK version must be compared by the tested numeric version policy');
 assert(!versionPolicy.includes('Integer.parseInt('),'release version components must not use overflow-prone fixed-width parsing');
 assert(activity.includes('AppUpdater.onBackground(this)'),'launcher activity must clear updater foreground ownership on pause');
 assert(activity.includes('new UpdateBridge(),"UpdateBridge"'),'launcher must expose the manual updater bridge to packaged UI');
