@@ -186,10 +186,17 @@
   function skyConditions(lat,lon,date=new Date()){
     const sun=sunEquatorial(date),sunPos=horizontalRaDec(sun.ra,sun.dec,lat,lon,date),a=sunPos.alt;
     let maxMag=3.4,label='NIGHT';
-    if(a>-2){maxMag=-.3;label='DAYLIGHT'}
-    else if(a>-6){maxMag=.5;label='CIVIL TWILIGHT'}
-    else if(a>-12){maxMag=1.8;label='NAUTICAL TWILIGHT'}
-    else if(a>-18){maxMag=2.8;label='ASTRONOMICAL TWILIGHT'}
+    if(a>-2)maxMag=-.3;
+    else if(a>-6)maxMag=.5;
+    else if(a>-12)maxMag=1.8;
+    else if(a>-18)maxMag=2.8;
+    // Keep the visibility magnitude gate independent from the named solar
+    // phase. USNO defines sunrise when the Sun's center is 50 arcmin below
+    // the geometric horizon (upper limb plus average horizon refraction).
+    if(a>-50/60)label='DAYLIGHT';
+    else if(a>-6)label='CIVIL TWILIGHT';
+    else if(a>-12)label='NAUTICAL TWILIGHT';
+    else if(a>-18)label='ASTRONOMICAL TWILIGHT';
     return {sunAlt:a,maxMag,label};
   }
   function angularSeparation(a,b){
