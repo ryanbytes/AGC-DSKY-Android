@@ -1,3 +1,9 @@
+## 2026-10-04 AGC machine-cycle timing accuracy audit
+
+The implementation notes described the 11.72 μs runtime interval as a complete AGC instruction. The pinned yaAGC `wasm.c` calls `agc_engine` once for each `cpu_step` iteration; pinned `agc_engine.c` defines that call as one machine cycle and models multi-cycle instructions across subsequent calls. Corrected the notes to say 11.72 μs per machine cycle (MCT), approximately 85,333 MCT/s, and retained the existing caveat that JavaScript scheduling is approximate. Runtime timing is unchanged.
+
+Evidence: source files fetched from the exact audited VirtualAGC commit `ddc65e7bed41f1301921b934fcbaaee93db99dda` and checked against the local pinned build README and wrapper. `git diff --check` passed.
+
 ## 2026-10-04 Dream snapshot UI prevalidation audit
 
 The DreamService clone path imported saved WASM memory before applying its saved DSKY UI, bypassing the validator added to interactive restore. Malformed UI could therefore be rejected only after the Dream-owned core had already taken the saved memory, then that core would still start as if it were a fresh Dream. Dream clone now requires and runs the display service's side-effect-free UI validator before importing core memory. The Dream runtime smoke confirms valid snapshots still clone, while malformed UI causes zero core imports/UI applies and Dream continues from a fresh core without reporting `STATE CLONED`.
