@@ -40,6 +40,8 @@
       const payload=JSON.parse(raw);
       if(!payload||payload.schema!==1||payload.mission!==snapshotState.selectedMission)throw new Error('snapshot mission/schema mismatch');
       if(typeof payload.coreVersion!=='string'||payload.coreVersion!==core.version())throw new Error('snapshot core version mismatch');
+      if(typeof snapshotDisplay.validateSnapshotUi!=='function')throw new Error('snapshot UI validator unavailable');
+      snapshotDisplay.validateSnapshotUi(payload.ui);
       core.importSnapshot(payload.core);snapshotDisplay.applySnapshotUi(payload.ui);
       lastSnapshotError='';lastSnapshotAction='restored';return true;
     }catch(error){lastSnapshotError=String(error&&error.message||error);lastSnapshotAction='restore failed';snapshotShell.store.remove(keys.snapshot);snapshotShell.store.remove(keys.meta);console.error('AGC snapshot restore',error);return false}
