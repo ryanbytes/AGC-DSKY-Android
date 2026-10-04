@@ -425,24 +425,11 @@ final class AppUpdater {
     }
 
     private static String normalizeVersion(String raw) {
-        if (raw == null) return null;
-        String value = raw.trim();
-        if (value.startsWith("v") || value.startsWith("V")) value = value.substring(1);
-        int suffix = value.indexOf('-');
-        if (suffix >= 0) value = value.substring(0, suffix);
-        return value.matches("[0-9]+(?:\\.[0-9]+){1,3}") ? value : null;
+        return ReleaseVersionPolicy.normalize(raw);
     }
 
     private static int compareVersion(String left, String right) {
-        String a = normalizeVersion(left), b = normalizeVersion(right);
-        if (a == null || b == null) return 0;
-        String[] aa = a.split("\\."), bb = b.split("\\.");
-        for (int i = 0; i < Math.max(aa.length, bb.length); i++) {
-            int av = i < aa.length ? Integer.parseInt(aa[i]) : 0;
-            int bv = i < bb.length ? Integer.parseInt(bb[i]) : 0;
-            if (av != bv) return Integer.compare(av, bv);
-        }
-        return 0;
+        return ReleaseVersionPolicy.compare(left, right);
     }
 
     private static String parseSha256(String text) {

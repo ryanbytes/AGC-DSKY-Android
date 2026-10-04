@@ -14,6 +14,7 @@ const manifest=fs.readFileSync(path.join(ROOT,'app/src/main/AndroidManifest.xml'
 const prep=fs.readFileSync(path.join(ROOT,'tools/prepare-update-release.sh'),'utf8');
 const retryPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateRetryPolicy.java'),'utf8');
 const releaseUrlPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseAssetUrlPolicy.java'),'utf8');
+const versionPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseVersionPolicy.java'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 for(const marker of [
   'releases/latest',
@@ -92,6 +93,9 @@ assert((java.match(/if \(userInitiated\) offerPendingToForeground\(\);/g)||[]).l
   'only an explicit manual check may open permission or package-installer UI for a pending update');
 assert(java.includes('now - prefs.getLong(PREF_LAST_CHECK, 0L) < minimumIntervalMs'),'updater check interval must be selected by caller');
 assert(java.includes('connection.setUseCaches(false)')&&java.includes('Cache-Control')&&java.includes('no-cache'),'release discovery must bypass stale HTTP response caches');
+assert(java.includes('return ReleaseVersionPolicy.normalize(raw);')&&java.includes('return ReleaseVersionPolicy.compare(left, right);'),
+  'updater version parsing and ordering must use the tested numeric policy');
+assert(!versionPolicy.includes('Integer.parseInt('),'release version components must not use overflow-prone fixed-width parsing');
 assert(activity.includes('AppUpdater.onBackground(this)'),'launcher activity must clear updater foreground ownership on pause');
 assert(activity.includes('new UpdateBridge(),"UpdateBridge"'),'launcher must expose the manual updater bridge to packaged UI');
 assert(activity.includes('AppUpdater.checkNow(SensorMainActivity.this, SensorMainActivity.this::pushUpdateStatus)'),
@@ -178,8 +182,11 @@ const temp=fs.mkdtempSync(path.join(os.tmpdir(),'agcdsky-release-url-'));
 try{
   execFileSync('javac',['-d',temp,
     path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseAssetUrlPolicy.java'),
-    path.join(ROOT,'tools/ReleaseAssetUrlPolicySmoke.java')],{stdio:'inherit'});
+    path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseVersionPolicy.java'),
+    path.join(ROOT,'tools/ReleaseAssetUrlPolicySmoke.java'),
+    path.join(ROOT,'tools/ReleaseVersionPolicySmoke.java')],{stdio:'inherit'});
   execFileSync('java',['-cp',temp,'org.apollo.agcdsky.ReleaseAssetUrlPolicySmoke'],{stdio:'inherit'});
+  execFileSync('java',['-cp',temp,'org.apollo.agcdsky.ReleaseVersionPolicySmoke'],{stdio:'inherit'});
 }finally{
   fs.rmSync(temp,{recursive:true,force:true});
 }
