@@ -1,3 +1,9 @@
+## 2026-10-04 native SNTP response-version audit
+
+`SntpClient` sent NTPv4 requests and validated response mode, leap state, stratum, source, and originate timestamp, but did not validate the response version. It could therefore use timestamps from unsupported version values. The response gate now accepts NTPv3/v4, preserving RFC 5905's documented NTPv4 backward compatibility with NTPv3, and rejects v2 and v5 before using server time. Added local UDP regression fixtures for both supported versions and both version boundaries.
+
+Validation: `bash tools/ntp-time-smoke.sh`, `node tools/ntp-policy-smoke.js`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed; the full suite ran 105 Node tests, the SNTP shell smoke, and the real pinned yaAGC + Comanche055 semantic gate. Clean detached commit `43e4fbb42e3d775466d0e2df1b962dbd69f29927` passed `ANDROID_SDK_ROOT=/Users/ryan/Library/Android/sdk bash tools/build-local.sh`; both Regular and Fire debug APKs passed the included `tools/verify-apk.sh` checks with exact pinned assets and source-matched packaging. No live external NTP query or physical device run was performed.
+
 ## 2026-10-04 updater numeric-version overflow audit
 
 `AppUpdater.normalizeVersion()` accepted digit components longer than a signed Java `int`, while `compareVersion()` parsed each component with `Integer.parseInt()`. A release tag such as `1.2147483648` therefore throws `NumberFormatException` instead of being compared; a validly shaped but unusually large upstream version could leave manual update discovery at `UPDATE ERROR`.

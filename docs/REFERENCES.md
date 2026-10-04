@@ -2,7 +2,7 @@
 
 ## Network time
 
-- IETF RFC 5905, section 8, NTP four-timestamp offset and round-trip-delay equations: https://datatracker.ietf.org/doc/html/rfc5905#section-8
+- IETF RFC 5905 describes NTPv4 as backward-compatible with NTPv3 and defines section 8's four-timestamp offset and round-trip-delay equations: https://datatracker.ietf.org/doc/html/rfc5905
 
 ## Apollo / VirtualAGC
 
