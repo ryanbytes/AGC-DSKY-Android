@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
-const fs=require('fs'),path=require('path');
+const fs=require('fs'),os=require('os'),path=require('path');
+const {execFileSync}=require('child_process');
 const ROOT=path.resolve(__dirname,'..');
 const java=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/AppUpdater.java'),'utf8');
 const provider=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateInitProvider.java'),'utf8');
@@ -12,6 +13,7 @@ const shell=fs.readFileSync(path.join(ROOT,'app/src/main/assets/app-shell-runtim
 const manifest=fs.readFileSync(path.join(ROOT,'app/src/main/AndroidManifest.xml'),'utf8');
 const prep=fs.readFileSync(path.join(ROOT,'tools/prepare-update-release.sh'),'utf8');
 const retryPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateRetryPolicy.java'),'utf8');
+const releaseUrlPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseAssetUrlPolicy.java'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 for(const marker of [
   'releases/latest',
@@ -32,6 +34,7 @@ for(const marker of [
   'app-fire-release.apk',
   'app-regular-release.apk',
   'sha256For(apkName, apk.digest)',
+  'ReleaseAssetUrlPolicy.requireTrusted(',
   'expectedSha256.equalsIgnoreCase(actualSha256)',
   'verifyApkIdentity(context, candidate)',
   'versionCode(archive) <= versionCode(current)',
@@ -46,6 +49,18 @@ for(const marker of [
   'Intent.FLAG_GRANT_READ_URI_PERMISSION',
   'UpdateApkProvider.uriFor(activity, apk)'
 ])assert(java.includes(marker)||apkProvider.includes(marker)||retryPolicy.includes(marker),`missing updater safety marker: ${marker}`);
+for(const marker of [
+  'sidecar.url, version, sidecar.name',
+  'PATH_PREFIX = "/ryanbytes/AGC-DSKY-Android/releases/download/v"',
+  'HOST = "github.com"'
+])assert(java.includes(marker)||releaseUrlPolicy.includes(marker),`updater release URL policy missing ${marker}`);
+for(const marker of [
+  'uri.getRawQuery() != null',
+  'uri.getRawUserInfo() != null',
+  'uri.getRawFragment() != null',
+  'uri.getPort() != 443',
+  'uri.getRawPath()'
+])assert(releaseUrlPolicy.includes(marker),`release asset URL policy missing ${marker}`);
 const fetchIndex=java.indexOf('Release release = fetchLatestReleaseResilient();');
 const noUpdateIndex=java.indexOf('if (release == null || compareVersion(release.version, BuildConfig.VERSION_NAME) <= 0)');
 const noUpdateSuccessIndex=java.indexOf('putLong(PREF_LAST_CHECK, System.currentTimeMillis())',noUpdateIndex);
@@ -159,3 +174,12 @@ for(const method of ['fetchLatestRelease','downloadText']){
 }
 console.log('self update smoke: PASS');
 console.log('  forced startup discovery + periodic checks, manual CHECK FOR UPDATE status, API fallback, foreground direct APK installer handoff, phone/Fire selection, release integrity, signer/version checks, and Android 9 compatibility verified');
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'agcdsky-release-url-'));
+try{
+  execFileSync('javac',['-d',temp,
+    path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseAssetUrlPolicy.java'),
+    path.join(ROOT,'tools/ReleaseAssetUrlPolicySmoke.java')],{stdio:'inherit'});
+  execFileSync('java',['-cp',temp,'org.apollo.agcdsky.ReleaseAssetUrlPolicySmoke'],{stdio:'inherit'});
+}finally{
+  fs.rmSync(temp,{recursive:true,force:true});
+}
