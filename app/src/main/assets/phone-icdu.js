@@ -812,6 +812,7 @@
   function calibrationStatus(){
     if(!skyCalibration)return {calibrated:false,stale:false,reason:'not-calibrated'};
     if(!skyReference)return {calibrated:false,stale:true,reason:'location-or-date-unavailable'};
+    if(magneticAccuracy<=0)return {calibrated:false,stale:true,reason:'orientation-unreliable'};
     if(skyReference.blackout)return {calibrated:false,stale:true,reason:'wmm-blackout-zone'};
     if(skyReference.caution)return {calibrated:false,stale:true,reason:'wmm-caution-zone'};
     if(skyCalibration.model!=='WMM2025')return {calibrated:false,stale:true,reason:'model-changed'};
@@ -834,6 +835,7 @@
   api.calibrateSkyBoresight = (targetAz,targetAlt,label='') => {
     targetAz=Number(targetAz);targetAlt=Number(targetAlt);
     if(!magneticRawQ||![targetAz,targetAlt].every(Number.isFinite))return {ok:false,error:'ABSOLUTE ROTATION VECTOR WAITING'};
+    if(magneticAccuracy<=0)return {ok:false,error:'ABSOLUTE ORIENTATION UNRELIABLE · WAIT FOR SENSOR RECOVERY'};
     if(!skyReference)return {ok:false,error:'MAGNETIC DECLINATION UNAVAILABLE · REFRESH LOCATION'};
     if(skyReference.caution)return {ok:false,error:'COMPASS IN WMM CAUTION / BLACKOUT ZONE'};
     // Convert true target azimuth into the magnetic ENU frame used by Android.

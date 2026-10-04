@@ -150,6 +150,7 @@ public final class SensorMainActivity extends Activity implements SensorEventLis
 
     @Override public void onSensorChanged(SensorEvent event){
         if(event==null||webView==null)return;
+        if(event.sensor==magneticAttitudeSensor&&magneticAttitudeRegistered)magneticAccuracy=event.accuracy;
         if(event.sensor==attitudeSensor&&attitudeRegistered){if(lastSensorPushNs!=0L&&event.timestamp-lastSensorPushNs<SENSOR_PUSH_INTERVAL_NS)return;lastSensorPushNs=event.timestamp;try{float[] q=new float[4];SensorManager.getQuaternionFromVector(q,event.values);int angle=displayAngleDegrees();pushPhoneQuaternion(q,angle,event.timestamp);if(event.sensor==magneticAttitudeSensor){pushMagneticQuaternion(q,angle);pushSkyPointing(event.values);}}catch(RuntimeException ignored){}return;}
         if(event.sensor==magneticAttitudeSensor&&magneticAttitudeRegistered){if(lastMagneticPushNs!=0L&&event.timestamp-lastMagneticPushNs<MAGNETIC_PUSH_INTERVAL_NS)return;lastMagneticPushNs=event.timestamp;try{float[] q=new float[4];SensorManager.getQuaternionFromVector(q,event.values);int angle=displayAngleDegrees();pushMagneticQuaternion(q,angle);pushSkyPointing(event.values);}catch(RuntimeException ignored){}return;}
         if(event.sensor==gravitySensor&&gravitySensorRegistered){accelerometerGravityFilter.onGravitySample(event.values[0],event.values[1],event.values[2],event.timestamp);return;}

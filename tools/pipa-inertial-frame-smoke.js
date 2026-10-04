@@ -134,6 +134,21 @@ assert(calibration.ok&&calibration.calibration.schema===2&&calibration.calibrati
 let projected=pointingProbe.projectSkyTarget(90,30);
 assert(projected?.calibrated&&projected.distance<1e-6,
   'calibrated target was not projected at its star-reference location');
+pointingProbe.nativeMagneticQuaternion(1,0,0,0,0,0);
+skyStatus=pointingProbe.skyCalibrationStatus();
+assert(skyStatus.stale&&skyStatus.reason==='orientation-unreliable'
+    &&!pointingProbe.projectSkyTarget(90,30).calibrated,
+  'saved calibration remained confident after the orientation sensor reported UNRELIABLE');
+calibration=pointingProbe.calibrateSkyBoresight(90,30,'UNRELIABLE SENSOR');
+assert(!calibration.ok&&calibration.error.includes('UNRELIABLE'),
+  'boresight recalibration was accepted while absolute orientation was UNRELIABLE');
+pointingProbe.nativeMagneticQuaternion(1,0,0,0,0,-1);
+assert(pointingProbe.skyCalibrationStatus().reason==='orientation-unreliable'
+    &&!pointingProbe.calibrateSkyBoresight(90,30,'NO CONTACT').ok,
+  'nonpositive absolute-orientation status was treated as usable compass data');
+pointingProbe.nativeMagneticQuaternion(1,0,0,0,0,3);
+assert(pointingProbe.skyCalibrationStatus().calibrated,
+  'valid saved calibration did not recover after orientation accuracy became reliable');
 skyStatus=pointingProbe.updateSkyLocation(40,-75,250,new Date(Date.UTC(2026,6,4)));
 assert(skyStatus.stale&&skyStatus.reason==='magnetic-reference-shifted'
     &&!pointingProbe.projectSkyTarget(90,30).calibrated,

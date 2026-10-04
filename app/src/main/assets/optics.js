@@ -416,6 +416,7 @@
     const cs=typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null;
     if(cal){
       if(cs?.calibrated){const when=cs.calibration?.timestamp?new Date(cs.calibration.timestamp).toLocaleTimeString():'';cal.textContent=`POINTING CALIBRATED · ${cs.calibration?.label||'STAR'}${when?' · '+when:''}`}
+      else if(cs?.reason==='orientation-unreliable')cal.textContent='POINTING CALIBRATION PAUSED · COMPASS DATA UNRELIABLE';
       else if(cs?.stale)cal.textContent='POINTING CALIBRATION STALE · CENTER A KNOWN STAR AND CALIBRATE AGAIN';
       else cal.textContent='POINTING CALIBRATION: NONE · CENTER A KNOWN STAR VISUALLY, THEN CALIBRATE';
     }
