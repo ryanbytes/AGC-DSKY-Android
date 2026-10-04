@@ -23,7 +23,7 @@ const LATE_SERVICE_GLOBALS=[
 ];
 const RESERVED=[
   'services','lifecycle','agcChannel','getCore','setAppVisible','getMission',
-  'enterClock','enterAgc','appStatus','saveAgcState','clearSavedAgcState',
+  'enterClock','enterAgc','appStatus','snapshotRelays','snapshotChannels','snapshotDsky','saveAgcState','clearSavedAgcState',
   'savedSnapshotInfo','verifySnapshotRoundTrip','scheduleAgcAutosave',
   'accurateTime','accurateDate','ntpStatus','nativeNtpStatus',
   'hardware','audioStatus','relayShow','openDiagnostics','closeDiagnostics',
@@ -71,6 +71,10 @@ for(const marker of [
   'function publicEnterAgc()',
   'function publicEnterClock()',
   'function publicHardware()',
+  'function copySnapshot(value)',
+  'function publicSnapshotRelays()',
+  'function publicSnapshotChannels()',
+  'function publicSnapshotDsky()',
   'function publicAudioStatus()',
   'function publicOpenDiagnostics(...args)',
   'function publicCloseDiagnostics(...args)',
@@ -108,3 +112,4 @@ require('./late-service-publication-smoke.js');
 require('./phone-api-runtime-smoke.js');
 require('./optics-service-smoke.js');
 require('./late-public-facade-mutation-smoke.js');
+require('./public-diagnostics-snapshot-smoke.js');
