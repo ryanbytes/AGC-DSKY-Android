@@ -25,6 +25,10 @@ for(const needle of [
   'scheduleWithFixedDelay',
   'onAvailable(Network network)',
   'SystemClock.elapsedRealtime()',
+  'SystemClock.elapsedRealtimeNanos()',
+  'return SystemClock.elapsedRealtimeNanos();',
+  'SntpClient.query(SERVER,TIMEOUT_MS,TIME_SOURCE)',
+  'SntpClient.verifyNoWallClockStep(syncStartWallMs',
   'Settings.Global.BOOT_COUNT',
   'NtpSyncAge.ageMs(',
   'Math.abs(sample.offsetMs-median)<=2_000L',
@@ -46,6 +50,8 @@ for(const needle of [
   'short NTP response',
   'unexpected NTP response source',
   'NTP originate timestamp mismatch',
+  'verifyNoWallClockStep',
+  'device wall clock changed during NTP request',
   'invalid NTP response'
 ]) requireText(client,needle,'SntpClient');
 
@@ -65,6 +71,8 @@ requireText(shell,'function requestNetworkTimeSync()','app shell manual network-
 requireText(shell,"typeof TimeBridge.syncNow==='function'",'app shell native manual sync bridge');
 requireText(shell,"method:'HEAD',cache:'no-store'","browser network-time request");
 requireText(shell,"response.headers.get('date')","browser network-time Date header");
+requireText(shell,'performance.now()','monotonic browser network-time measurements');
+requireText(shell,'Device wall clock changed during network time sync','browser wall-clock-step rejection');
 requireText(shell,"source:'http-date'","browser network-time status");
 requireText(shell,"setInterval(refreshTimeStatus,60000)",'time-status refresh');
 requireText(shell,'window.AGCDSKY_SHELL=Object.freeze({','shell service');

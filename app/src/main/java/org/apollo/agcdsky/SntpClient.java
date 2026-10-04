@@ -11,6 +11,17 @@ final class SntpClient {
     private static final int PACKET_SIZE = 48;
     private static final long OFFSET_1900_TO_1970 = 2_208_988_800L;
     private static final long ERA_SECONDS = 1L << 32;
+    private static final long MAX_WALL_CLOCK_STEP_MS = 250L;
+
+    interface TimeSource {
+        long wallTimeMs();
+        long monotonicNanos();
+    }
+
+    private static final TimeSource JVM_TIME_SOURCE = new TimeSource() {
+        @Override public long wallTimeMs() { return System.currentTimeMillis(); }
+        @Override public long monotonicNanos() { return System.nanoTime(); }
+    };
 
     static final class Sample {
         final long offsetMs;
@@ -26,24 +37,35 @@ final class SntpClient {
     private SntpClient() {}
 
     static Sample query(String host, int timeoutMs) throws IOException {
-        return query(host, NTP_PORT, timeoutMs);
+        return query(host, NTP_PORT, timeoutMs, JVM_TIME_SOURCE);
     }
 
     static Sample query(String host, int port, int timeoutMs) throws IOException {
+        return query(host, port, timeoutMs, JVM_TIME_SOURCE);
+    }
+
+    static Sample query(String host, int timeoutMs, TimeSource timeSource) throws IOException {
+        return query(host, NTP_PORT, timeoutMs, timeSource);
+    }
+
+    static Sample query(String host, int port, int timeoutMs, TimeSource timeSource) throws IOException {
+        if (timeSource == null) throw new IllegalArgumentException("time source is required");
         InetAddress address = InetAddress.getByName(host);
         byte[] request = new byte[PACKET_SIZE];
         request[0] = 0x23; // LI=0, VN=4, client mode=3.
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setSoTimeout(timeoutMs);
-            long requestWallMs = System.currentTimeMillis();
-            long requestElapsedNs = System.nanoTime();
+            long requestWallMs = timeSource.wallTimeMs();
+            long requestElapsedNs = timeSource.monotonicNanos();
             writeTimestamp(request, 40, requestWallMs);
             socket.send(new DatagramPacket(request, request.length, address, port));
             byte[] response = new byte[PACKET_SIZE];
             DatagramPacket packet = new DatagramPacket(response, response.length);
             socket.receive(packet);
-            long receiveElapsedNs = System.nanoTime();
+            long receiveElapsedNs = timeSource.monotonicNanos();
+            long receiveWallMs = timeSource.wallTimeMs();
             long rttMs = Math.max(0L, (receiveElapsedNs - requestElapsedNs) / 1_000_000L);
+            verifyNoWallClockStep(requestWallMs, receiveWallMs, requestElapsedNs, receiveElapsedNs);
             if (!address.equals(packet.getAddress()) || packet.getPort() != port) {
                 throw new IOException("unexpected NTP response source");
             }
@@ -56,14 +78,13 @@ final class SntpClient {
             int mode = response[0] & 0x7;
             int stratum = response[1] & 0xff;
             if (leap == 3 || version < 3 || version > 4
-                    || (mode != 4 && mode != 5) || stratum == 0 || stratum > 15) {
+                    || mode != 4 || stratum == 0 || stratum > 15) {
                 throw new IOException("invalid NTP response");
             }
-            // Use monotonic elapsed time for T4 so a wall-clock adjustment while
-            // the request is in flight cannot corrupt the four-timestamp offset.
-            long receiveWallMs = receiveTimeMs(requestWallMs, requestElapsedNs, receiveElapsedNs);
-            long serverReceiveMs = readTimestamp(response, 32, receiveWallMs);
-            long serverTransmitMs = readTimestamp(response, 40, receiveWallMs);
+            // Reconstruct T4 on the monotonic timeline after rejecting wall-clock steps.
+            long receiveTimeMs = receiveTimeMs(requestWallMs, requestElapsedNs, receiveElapsedNs);
+            long serverReceiveMs = readTimestamp(response, 32, receiveTimeMs);
+            long serverTransmitMs = readTimestamp(response, 40, receiveTimeMs);
             if (serverReceiveMs <= 0L || serverTransmitMs <= 0L) {
                 throw new IOException("missing NTP server timestamp");
             }
@@ -72,7 +93,7 @@ final class SntpClient {
             long networkDelayMs = Math.max(0L, rttMs - serverProcessingMs);
             // RFC 5905 section 8: theta = ((T2 - T1) + (T3 - T4)) / 2.
             long offsetMs = ((serverReceiveMs - requestWallMs)
-                    + (serverTransmitMs - receiveWallMs)) / 2L;
+                    + (serverTransmitMs - receiveTimeMs)) / 2L;
             return new Sample(offsetMs, networkDelayMs, serverTransmitMs);
         }
     }
@@ -83,6 +104,21 @@ final class SntpClient {
 
     static long receiveTimeMs(long requestWallMs, long requestElapsedNs, long receiveElapsedNs) {
         return requestWallMs + (receiveElapsedNs - requestElapsedNs) / 1_000_000L;
+    }
+
+    static long wallClockStepMs(long requestWallMs, long receiveWallMs,
+                                long requestElapsedNs, long receiveElapsedNs) {
+        long wallElapsedMs = receiveWallMs - requestWallMs;
+        long monotonicElapsedMs = (receiveElapsedNs - requestElapsedNs) / 1_000_000L;
+        return wallElapsedMs - monotonicElapsedMs;
+    }
+
+    static void verifyNoWallClockStep(long requestWallMs, long receiveWallMs,
+                                      long requestElapsedNs, long receiveElapsedNs) throws IOException {
+        long stepMs = wallClockStepMs(requestWallMs, receiveWallMs, requestElapsedNs, receiveElapsedNs);
+        if (stepMs > MAX_WALL_CLOCK_STEP_MS || stepMs < -MAX_WALL_CLOCK_STEP_MS) {
+            throw new IOException("device wall clock changed during NTP request");
+        }
     }
 
     static long readTimestamp(byte[] buffer, int offset, long referenceTimeMs) throws IOException {

@@ -3,6 +3,7 @@
 ## Network time
 
 - IETF RFC 5905 describes NTPv4 as backward-compatible with NTPv3 and defines section 8's four-timestamp offset and round-trip-delay equations: https://datatracker.ietf.org/doc/html/rfc5905
+- Android `SystemClock` documents that `System.nanoTime()` follows uptime and stops during deep sleep, whereas `elapsedRealtimeNanos()` includes deep sleep; the native SNTP request uses the latter so its receive timestamp and delay account for suspended time: https://developer.android.com/reference/android/os/SystemClock
 
 ## Apollo / VirtualAGC
 
