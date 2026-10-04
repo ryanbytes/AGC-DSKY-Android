@@ -60,6 +60,8 @@ assert(geomagnetic.includes("publish('AGCDSKY_WMM2025'")
     'shared WMM2025 publication or official declination uncertainty model missing');
 assert(activity.includes('AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)'),
     'SensorMainActivity resume must force a hidden transition before visible resume');
+assert(compact(activity).includes('if(event.sensor==magneticAttitudeSensor&&magneticAttitudeRegistered)magneticAccuracy=event.accuracy;'),
+    'Android magnetic orientation bridge must preserve each SensorEvent accuracy status');
 const activityCompact = compact(activity);
 assert(activityCompact.includes('accelerometerGravityFilter.removeGravity(x,y,z,event.timestamp,gravitySensorRegistered)'),
     'accelerometer callback must use the independently testable gravity-removal filter');
