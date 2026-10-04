@@ -30,8 +30,12 @@ for(const marker of [
   'function skyPointingAgeMs(pointing,now=performance.now(),wallNow=Date.now())',
   'function skyPointingFresh(pointing,now=performance.now(),wallNow=Date.now())',
   'function skyLocationUncertaintyDeg(location=skyLocation)',
+  'let skyLocationRequestId = 0;',
+  'let skyLocationAppliedRequestId = 0;',
   'function setSkyLocation(lat,lon,alt=0,accuracy=NaN,timestamp=Date.now())',
   'setSkyLocation(c.lat,c.lon,c.alt,c.accuracy,c.timestamp)',
+  'if(requestId<skyLocationAppliedRequestId)return;',
+  'if(requestId===skyLocationRequestId)updateStarFinder()',
   'p.coords.latitude,p.coords.longitude,p.coords.altitude||0,p.coords.accuracy,p.timestamp',
   'maximumAge:SKY_LOCATION_MAX_AGE_MS',
   'if(!cat||!skyLocationFresh())return null',
@@ -68,6 +72,33 @@ assert(pointingFreshContext.pointingFresh({timestamp:fixedNow-500},1000,fixedNow
   'legacy pointing records without a monotonic timestamp should use wall-clock age');
 assert(!pointingFreshContext.pointingFresh({timestamp:fixedNow+1},1000,fixedNow),
   'future wall-clock pointing without a monotonic timestamp must be stale');
+const locationRequestStart=source.indexOf('  function requestSkyLocation('),locationRequestEnd=source.indexOf('  function requestWebStarFinderSensors(',locationRequestStart);
+assert(locationRequestStart>=0&&locationRequestEnd>locationRequestStart,'could not isolate production geolocation request ordering');
+const pendingLocationRequests=[],appliedLocations=[];
+let locationUiRefreshes=0;
+const locationRequestContext={
+  navigator:{geolocation:{getCurrentPosition(success,error,options){pendingLocationRequests.push({success,error,options})}}},
+  localStorage:{getItem(){return null}},JSON,Number,
+  SKY_LOCATION_MAX_AGE_MS:300000,
+  setSkyLocation(...location){appliedLocations.push(location);return true},
+  updateStarFinder(){locationUiRefreshes++}
+};
+vm.runInNewContext(`let skyLocationRequestId=0;let skyLocationAppliedRequestId=0;${source.slice(locationRequestStart,locationRequestEnd)}globalThis.requestLocation=requestSkyLocation;`,locationRequestContext,{filename:'optics.js:location-request-order'});
+locationRequestContext.requestLocation();
+locationRequestContext.requestLocation();
+pendingLocationRequests[1].success({coords:{latitude:40,longitude:-75,altitude:20,accuracy:5},timestamp:2000});
+pendingLocationRequests[0].success({coords:{latitude:39,longitude:-86,altitude:10,accuracy:50},timestamp:1000});
+assert(appliedLocations.length===1&&appliedLocations[0][0]===40&&appliedLocations[0][1]===-75,
+  'late older geolocation callback replaced the newer accepted fix');
+pendingLocationRequests[0].error();
+assert(locationUiRefreshes===0,'stale geolocation error refreshed UI after a newer request succeeded');
+locationRequestContext.requestLocation();
+locationRequestContext.requestLocation();
+pendingLocationRequests[3].error();
+assert(locationUiRefreshes===1,'the current geolocation failure did not refresh star-finder status');
+pendingLocationRequests[2].success({coords:{latitude:41,longitude:-87,altitude:15,accuracy:8},timestamp:3000});
+assert(appliedLocations.length===2&&appliedLocations[1][0]===41&&appliedLocations[1][1]===-87,
+  'a valid older in-flight fix was discarded after the newest request failed');
 assert(freshnessContext.locationUncertaintyDeg({accuracy:0})===0,'zero horizontal accuracy must map to zero angular uncertainty');
 assert(Math.abs(freshnessContext.locationUncertaintyDeg({accuracy:9000})-0.08094)<0.0001,'9 km horizontal accuracy must map to about 0.081 degrees');
 assert(freshnessContext.locationUncertaintyDeg({accuracy:9000})>0.08,'9 km location uncertainty must exceed the CENTERED tolerance');

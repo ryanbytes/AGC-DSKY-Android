@@ -50,6 +50,8 @@
   let pairIndex = 0;
   let pairMeta = null;
   let pairComputedAt = 0;
+  let skyLocationRequestId = 0;
+  let skyLocationAppliedRequestId = 0;
   const CENTER_TOL_DEG = 0.08;
   const SKY_LOCATION_MAX_AGE_MS = 300000;
   const MEAN_EARTH_RADIUS_M = 6371008.8;
@@ -345,7 +347,15 @@
   function requestSkyLocation(){
     try{const c=JSON.parse(localStorage.getItem('sxtSkyLocation')||'null');if(c)setSkyLocation(c.lat,c.lon,c.alt,c.accuracy,c.timestamp)}catch(_){ }
     if(!navigator.geolocation)return;
-    navigator.geolocation.getCurrentPosition(p=>setSkyLocation(p.coords.latitude,p.coords.longitude,p.coords.altitude||0,p.coords.accuracy,p.timestamp),()=>updateStarFinder(),{enableHighAccuracy:true,maximumAge:SKY_LOCATION_MAX_AGE_MS,timeout:12000});
+    const requestId=++skyLocationRequestId;
+    navigator.geolocation.getCurrentPosition(p=>{
+      if(requestId<skyLocationAppliedRequestId)return;
+      // Multiple controls can request location while an earlier fix is pending.
+      // Ignore a result only after a newer request has supplied a valid fix;
+      // keep an earlier valid fix if the newest request fails.
+      const applied=setSkyLocation(p.coords.latitude,p.coords.longitude,p.coords.altitude||0,p.coords.accuracy,p.timestamp);
+      if(applied)skyLocationAppliedRequestId=requestId;
+    },()=>{if(requestId===skyLocationRequestId)updateStarFinder()},{enableHighAccuracy:true,maximumAge:SKY_LOCATION_MAX_AGE_MS,timeout:12000});
   }
 
   function requestWebStarFinderSensors(){
