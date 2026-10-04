@@ -166,6 +166,22 @@ cautionProbe.nativeMagneticQuaternion(1,0,0,0,0,3);
 assert(!cautionProbe.calibrateSkyBoresight(0,0).ok,
   'boresight calibration was allowed in a WMM caution zone');
 
+const sensorLossProbe=createHarness();
+sensorLossProbe.updateSkyLocation(39.77,-86.16,250,new Date(Date.UTC(2026,6,4)));
+sensorLossProbe.nativeMagneticPointing(90,30,3);
+assert(sensorLossProbe.phoneSkyPointing().seen,'valid native magnetic azimuth was not published');
+sensorLossProbe.nativeMagneticSensorStatus('test-magnetic',false);
+assert(!sensorLossProbe.phoneSkyPointing().seen,'magnetic sensor loss did not immediately clear the last sky pointing');
+sensorLossProbe.updateSkyLocation(40,-75,250,new Date(Date.UTC(2026,6,4)));
+assert(!sensorLossProbe.phoneSkyPointing().seen,'location refresh republished a magnetic heading after its sensor became unavailable');
+const staleRefreshProbe=createHarness();
+staleRefreshProbe.updateSkyLocation(39.77,-86.16,250,new Date(Date.UTC(2026,6,4)));
+staleRefreshProbe.nativeMagneticPointing(90,30,3);
+staleRefreshProbe.nativeMagneticSensorStatus('test-magnetic',false);
+staleRefreshProbe.updateSkyLocation(40,-75,250,new Date(Date.UTC(2026,6,4)));
+assert(!staleRefreshProbe.phoneSkyPointing().seen,
+  'later location update revived raw magnetic coordinates retained after sensor loss');
+
 // Sensor availability must not silently calibrate while the phone may be
 // moving. PIPA integration remains disabled until the user starts calibration.
 api.nativePhoneQuaternion(1,0,0,0,0);
