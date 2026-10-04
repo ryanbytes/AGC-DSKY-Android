@@ -78,6 +78,10 @@ The canonical host preflight (`tools/wasm-runtime-smoke.js`) instantiates the **
 
 The app loads the pinned `Comanche055.bin` rope. The former mission selector and Luminary rope path have been removed; old `agcMission` values are normalized to `comanche055` on startup. The DSKY uses the CM face, including blank ALT/VEL positions. Phone PIPA scaling and sextant/navigation input follow the CM calibration.
 
+### Phone-side real-sky star finder
+
+`apollo-stars.js` keeps the Apollo 11 Comanche star vectors intact as historical AGC data. Those vectors belong to the Apollo NBY 1969/1970 mean reference frame; the phone-side star finder precesses them into the observation-date mean equator/equinox before combining them with Greenwich sidereal time. This transformation is only for the phone overlay and never changes AGC star vectors or navigation state. The historical table contains no proper motions, and NASA documents its roughly 5-arcsecond accuracy only within ±3 years of epoch. The present-day overlay therefore remains an approximate finding aid, not a current-epoch precision star catalog or navigation source.
+
 DreamService never starts yaAGC. The rebuilt core defaults `CmOrLm` to CM and exposes a configuration/readback API that the wrapper invokes before CPU startup. Comanche is the only supported rope; this DSKY-focused app does not implement unrelated spacecraft peripherals.
 
 ### AGC clocking and lifecycle

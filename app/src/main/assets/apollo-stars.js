@@ -50,15 +50,38 @@
     [37,'45','FOMALHAUT', .8342971408,-.2392481515,-.4966976975, 1.16]
   ];
   const d2r=Math.PI/180, r2d=180/Math.PI;
+  // Comanche 055 (Apollo 11) uses the 1969/1970 Nearest Besselian Year
+  // Basic Reference Coordinate System. Its star vectors are not J2000.
+  const starCatalogEpoch=1970.0;
   const wrap360=x=>((x%360)+360)%360;
   const wrap180=x=>((x+180)%360+360)%360-180;
   const stars=raw.map(([internal,code,name,x,y,z,mag])=>({
     internal,code,name,x,y,z,mag,
+    coordinateEpoch:starCatalogEpoch,
     ra:wrap360(Math.atan2(y,x)*r2d),
     dec:Math.asin(Math.max(-1,Math.min(1,z)))*r2d
   }));
 
   function julianDate(date=new Date()){return date.getTime()/86400000+2440587.5}
+  function julianEpoch(date=new Date()){return 2000+(julianDate(date)-2451545.0)/365.25}
+  // Lieske/IAU 1976 precession, matching the IAU SOFA prec76/pmat76 model.
+  // Inputs and output are mean equator/equinox coordinates; proper motion and
+  // nutation are not present in the historical AGC star table.
+  function precessEquatorial(raDeg,decDeg,fromEpoch,toEpoch){
+    if(fromEpoch===toEpoch)return {ra:wrap360(raDeg),dec:decDeg};
+    const T=(fromEpoch-2000)/100,t=(toEpoch-fromEpoch)/100;
+    const zeta=((2306.2181+(1.39656-.000139*T)*T)*t+(.30188-.000344*T)*t*t+.017998*t*t*t)/3600*d2r;
+    const z=((2306.2181+(1.39656-.000139*T)*T)*t+(1.09468+.000066*T)*t*t+.018203*t*t*t)/3600*d2r;
+    const theta=((2004.3109+(-.85330-.000217*T)*T)*t+(-.42665-.000217*T)*t*t-.041833*t*t*t)/3600*d2r;
+    const ra=raDeg*d2r,dec=decDeg*d2r;
+    const A=Math.cos(dec)*Math.sin(ra+zeta);
+    const B=Math.cos(theta)*Math.cos(dec)*Math.cos(ra+zeta)-Math.sin(theta)*Math.sin(dec);
+    const C=Math.sin(theta)*Math.cos(dec)*Math.cos(ra+zeta)+Math.cos(theta)*Math.sin(dec);
+    return {ra:wrap360((Math.atan2(A,B)+z)*r2d),dec:Math.asin(Math.max(-1,Math.min(1,C)))*r2d};
+  }
+  function equatorialOfDate(star,date=new Date()){
+    return precessEquatorial(star.ra,star.dec,starCatalogEpoch,julianEpoch(date));
+  }
   function gmstDeg(date=new Date()){
     const jd=julianDate(date),t=(jd-2451545.0)/36525;
     return wrap360(280.46061837+360.98564736629*(jd-2451545.0)+.000387933*t*t-t*t*t/38710000);
@@ -71,7 +94,8 @@
     return {az:wrap360(Math.atan2(east,north)*r2d),alt:Math.asin(Math.max(-1,Math.min(1,up)))*r2d};
   }
   function horizontal(star,latDeg,lonDeg,date=new Date()){
-    return horizontalRaDec(star.ra,star.dec,latDeg,lonDeg,date);
+    const position=equatorialOfDate(star,date);
+    return horizontalRaDec(position.ra,position.dec,latDeg,lonDeg,date);
   }
   function sunEquatorial(date=new Date()){
     const n=julianDate(date)-2451545.0,L=wrap360(280.460+.9856474*n),g=wrap360(357.528+.9856003*n)*d2r;
@@ -123,5 +147,5 @@
   function bestPair(lat,lon,date=new Date(),minAlt=12){
     const r=candidatePairs(lat,lon,date,minAlt,1);return r.pairs[0]||null;
   }
-  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_APOLLO_STARS',{stars,horizontal,horizontalRaDec,sunEquatorial,skyConditions,angularSeparation,bearingDelta,candidatePairs,bestPair,wrap180,wrap360},'apollo-stars publication');
+  window.AGCDSKY_SERVICE_REGISTRY.publish('AGCDSKY_APOLLO_STARS',{stars,horizontal,horizontalRaDec,equatorialOfDate,sunEquatorial,skyConditions,angularSeparation,bearingDelta,candidatePairs,bestPair,wrap180,wrap360},'apollo-stars publication');
 })();
