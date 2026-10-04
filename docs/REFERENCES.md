@@ -60,6 +60,7 @@ The documented spring rate and assembled stroke allow only the spring-force *inc
 
 ### CM optics CDU scaling
 
+- NASA's Apollo navigation-systems characteristics, §5.5.1.1, describes the Command Module sextant as a 28×, dual-line-of-sight instrument with a 1.8° field of view. The app uses 1.8° as the full circular field diameter (±0.9° from center) for its cue thresholds; its single camera view and reticle remain a simplified proxy, not a complete dual-LOS/magnified optical simulation. https://www.ibiblio.org/apollo/Documents/apollo_nav_systems_characteristics.pdf
 - Comanche erasable assignments identify location 0035 as CDUT (optics trunnion) and 0036 as CDUS (optics shaft).
 - The Block II optical shaft CDU uses 32768 counts per 360 degrees (39.55078125 arcsec/count). The optical trunnion CDU uses 32768 counts per 90 degrees (9.8876953125 arcsec/count); these scales must not be shared.
 - Comanche ZERO OPTICS stores zero in CDUS and `-20DEGS` in CDUT. The programmed `20DEGS` magnitude is 7200 signed CDUT counts, equivalent to 19.775390625 degrees. True trunnion line-of-sight angle is therefore decoded from signed CDUT plus that programmed bias.
