@@ -4,7 +4,7 @@
 
 Added an isolated subprocess smoke using a temporary repository and fake Android build-tool outputs: expected v2/v3.1 signatures and matching metadata stage files and correct SHA-256 sidecars; wrong certificates, v1-only/failed signatures, version mismatch, swapped Regular/Fire payloads, missing Fire classes, and unequal version codes are rejected before staging without deleting existing staging data. Registered it in the canonical source suite. This verifies policy handling, not the unavailable private release key or an actual signed production APK.
 
-Validation: `bash -n tools/prepare-update-release.sh`, `node tools/update-release-prep-smoke.js`, `node tools/self-update-smoke.js`, `node tools/source-smoke-manifest-smoke.js`, and `git diff --check` passed. Full source suite and canonical Android build for this revision remain to be run; no release was created.
+Validation: `env TZ=UTC bash tools/run-source-smokes.sh` passed all 106 Node tests, the SNTP shell smoke, and real pinned yaAGC + Comanche055 semantics. Clean detached commit `6e7787b072e392b76075aa3ddeed9e310ef0dcf4` passed the canonical local `tools/build-local.sh`; Regular and Fire debug APKs passed the included `tools/verify-apk.sh` checks. The fake-tool release-prep smoke passed; an actual standalone-key release artifact was unavailable for testing. No release was created.
 
 ## 2026-10-04 updater release-identity audit
 
