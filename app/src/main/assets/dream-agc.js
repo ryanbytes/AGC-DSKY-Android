@@ -43,6 +43,8 @@
           || payload.coreVersion !== dreamCore.core.version() || !payload.core) {
         return false;
       }
+      if (typeof dreamDisplay.validateSnapshotUi !== 'function') return false;
+      dreamDisplay.validateSnapshotUi(payload.ui);
       dreamCore.core.importSnapshot(payload.core);
       dreamDisplay.applySnapshotUi(payload.ui);
       return true;
