@@ -466,6 +466,98 @@ function proveV14N09TwoComponentMonitor(core, errors, channelUpdates) {
     return {responseSteps, responseRows: Array.from(responseRows).sort((a,b)=>a-b)};
 }
 
+function proveP21OptionLoadPrompt(core, errors, channelUpdates) {
+    core.reset();
+    core.configureInputMasks();
+    assert(core.totalSteps === 0,
+        'P21 option-load setup must leave mission accounting at the true reset vector');
+    channelUpdates.length = 0;
+    errors.length = 0;
+    core.step(100000);
+    sendKeys(core, [0o21, 0o03, 0o06, 0o34]); // V36E fresh start
+    core.step(1280000);
+    assert(failRegWords(core).every((word) => word === 0),
+        'P21 option-load setup did not clear cold-start FAILREG with V36E');
+
+    enterProgram00(core, errors, channelUpdates);
+    channelUpdates.length = 0;
+    // P21's Comanche source calls GOPERF4 for option code 00002 and presents
+    // V04N06. Its existing R2 choice is left unchanged during this test.
+    sendKeys(core, [0o21, 0o03, 0o07, 0o34, 0o02, 0o01, 0o34]); // V37E21E
+    core.step(500000);
+
+    const promptRelays = relayStateFromUpdates(channelUpdates);
+    const promptVerb = promptRelays.get(10);
+    const promptNoun = promptRelays.get(9);
+    assert(promptVerb !== undefined && (promptVerb & 0o3777) === ((0o25 << 5) | 0o17),
+        'Comanche P21 GOPERF4 did not display V04');
+    assert(promptNoun !== undefined && (promptNoun & 0o3777) === ((0o25 << 5) | 0o34),
+        'Comanche P21 GOPERF4 did not display N06');
+
+    const digit = (relay, contact) => {
+        const word = promptRelays.get(relay);
+        assert(word !== undefined, `Comanche P21 option prompt is missing relay ${relay}`);
+        const code = contact === 'C' ? (word >> 5) & 0o37 : word & 0o37;
+        const value = OCTAL_DIGIT_BY_RELAY_CODE.get(code);
+        assert(value !== undefined,
+            `Comanche P21 option prompt contains non-octal relay ${relay} ${contact}: 0o${code.toString(8)}`);
+        return value;
+    };
+    const promptValues = [
+        [digit(8, 'D'), digit(7, 'C'), digit(7, 'D'), digit(6, 'C'), digit(6, 'D')].join(''),
+        [digit(5, 'C'), digit(5, 'D'), digit(4, 'C'), digit(4, 'D'), digit(3, 'C')].join('')
+    ];
+    assert(JSON.stringify(promptValues) === JSON.stringify(['00002', '00001']),
+        `Comanche P21 GOPERF4 option prompt showed ${promptValues.join(' / ')} instead of the source-defined code/default`);
+    assert(!channelUpdates.some(([channel, value]) => channel === 0o11 && (value & OPR_ERR_BIT) !== 0),
+        'Comanche P21 GOPERF4 prompt asserted raw channel-011 OPR ERR');
+
+    channelUpdates.length = 0;
+    // Exercise BLOAD (V22) only while P21 owns the source-defined option
+    // prompt. Select 00000, which this Comanche routine documents as THIS
+    // vehicle (CM), keeping the audit within the app's CM-only scope.
+    sendKeys(core, [0o21, 0o02, 0o02, 0o34, 0o37, 0o20, 0o06, 0o34]); // V22N06
+    sendKeys(core, [0o20, 0o20, 0o20, 0o20, 0o20, 0o34]); // 00000
+    core.step(350000);
+
+    const returnedRelays = relayStateFromUpdates(channelUpdates);
+    const sawVerb22 = channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY
+        && ((value >> 11) & 0o17) === 10
+        && (value & 0o3777) === ((0o31 << 5) | 0o31));
+    const returnedVerb = returnedRelays.get(10);
+    const returnedNoun = returnedRelays.get(9);
+    assert(sawVerb22, 'Comanche P21 option prompt did not exercise the real V22 BLOAD selection');
+    assert(returnedVerb !== undefined && (returnedVerb & 0o3777) === ((0o25 << 5) | 0o17)
+            && returnedNoun !== undefined && (returnedNoun & 0o3777) === ((0o25 << 5) | 0o34),
+        'Comanche P21 did not return to its V04N06 option prompt after V22N06');
+
+    const returnedDigit = (relay, contact) => {
+        const word = returnedRelays.get(relay);
+        assert(word !== undefined, `Comanche P21 returned option prompt is missing relay ${relay}`);
+        const code = contact === 'C' ? (word >> 5) & 0o37 : word & 0o37;
+        const value = OCTAL_DIGIT_BY_RELAY_CODE.get(code);
+        assert(value !== undefined,
+            `Comanche P21 returned prompt contains non-octal relay ${relay} ${contact}: 0o${code.toString(8)}`);
+        return value;
+    };
+    const returnedValues = [
+        [returnedDigit(8, 'D'), returnedDigit(7, 'C'), returnedDigit(7, 'D'), returnedDigit(6, 'C'), returnedDigit(6, 'D')].join(''),
+        [returnedDigit(5, 'C'), returnedDigit(5, 'D'), returnedDigit(4, 'C'), returnedDigit(4, 'D'), returnedDigit(3, 'C')].join('')
+    ];
+    assert(JSON.stringify(returnedValues) === JSON.stringify(['00002', '00000']),
+        `Comanche P21 returned option prompt showed ${returnedValues.join(' / ')} instead of the loaded selection`);
+    const option2 = core.readErasable(2, 0o132);
+    assert(option2 === 0,
+        `Comanche P21 option load changed N06 component 2 unexpectedly: ${option2}`);
+    assert(!channelUpdates.some(([channel, value]) => channel === 0o11 && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V22N06 option load asserted raw channel-011 OPR ERR');
+    assert(errors.length === 0, 'Comanche P21 V22N06 option load raised a host runtime error');
+
+    core.reset();
+    core.configureInputMasks();
+    return {promptValues, returnedValues, option2};
+}
+
 function proveV35LightTest(core, errors, channelUpdates) {
     core.reset();
     core.configureInputMasks();
@@ -741,6 +833,7 @@ async function main() {
     const v06n65 = proveV06N65DecimalDisplay(core, errors, channelUpdates);
     const v05n09 = proveV05N09AlarmDisplay(core, errors, channelUpdates);
     const v14n09 = proveV14N09TwoComponentMonitor(core, errors, channelUpdates);
+    const p21OptionLoad = proveP21OptionLoadPrompt(core, errors, channelUpdates);
     const v35 = proveV35LightTest(core, errors, channelUpdates);
     const mark = proveComancheNavigationKeyInterrupt(core, errors);
     const optics = proveComancheFastOpticsInputs(core, errors);
@@ -786,6 +879,7 @@ async function main() {
     console.log(`  V06N65E three-component decimal display: PASS (selectors ${v06n65.responseRows.join(',')}; within ${v06n65.responseSteps} steps)`);
     console.log(`  V05N09E alarm-code display: PASS (${v05n09.displayedFailReg.join(' ')}; selectors ${v05n09.responseRows.join(',')}; within ${v05n09.responseSteps} steps)`);
     console.log(`  V14N09E two-component monitor: PASS (selectors ${v14n09.responseRows.join(',')}; within ${v14n09.responseSteps} steps)`);
+    console.log(`  P21 V04N06 -> V22N06 CM option load: PASS (${p21OptionLoad.promptValues.join(' / ')} -> ${p21OptionLoad.returnedValues.join(' / ')}; N06 R2 is 0o${p21OptionLoad.option2.toString(8)}; raw OPR ERR clear)`);
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);

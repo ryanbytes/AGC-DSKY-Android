@@ -1,10 +1,10 @@
 ## 2026-10-04 Comanche option/load-path audit checkpoint
 
-Investigated the open extended-verb/load path against the pinned Comanche055 source and real yaAGC. A standalone `V24N06` probe entered two octal words and read them back from `OPTION1`/`OPTION1+1` as `00001`/`00002`, but channel `011` bit `00100` (OPR ERR) was asserted during that sequence. The result is not a clean load-path pass and does not establish an app defect.
+Resolved the open extended-verb/load path against the pinned Comanche055 source and real yaAGC. A standalone `V24N06` probe entered two octal words and read them back from `OPTION1`/`OPTION1+1` as `00001`/`00002`, but channel `011` bit `00100` (OPR ERR) was asserted during that sequence. That off-context probe is not a clean load-path pass and does not establish an app defect.
 
-The source's documented option-selection flow is program-owned: `GOPERF4` stores the requested option internally, displays `V04N06`, and follows with a `V50N06` perform prompt. Therefore a standalone `V24N06` test does not verify that documented flow. Next, exercise a source-confirmed program-owned option prompt or select an independently documented loadable noun and verify both expected data and annunciator state before adding a regression gate.
+Added a source-driven regression through P21's actual `GOPERF4` `V04N06` option prompt. It verifies the displayed option code/default, uses `V22N06` BLOAD to enter `00000`, and requires the prompt to return as `00002 / 00000`, N06 component 2 to contain zero, raw channel-011 OPR ERR to remain clear, and no host runtime error. P21 source comments define zero as this vehicle (CM) and one as the other vehicle (LM), so the regression stays within the app's CM-only policy.
 
-Validation: the exploratory probe used the pinned yaAGC WASM and Comanche055 rope; `env TZ=UTC bash tools/run-source-smokes.sh` passed 107 canonical Node smokes plus the NTP shell smoke. `adb devices -l` reported no attached Android target, so packaged-WebView load behavior remains unverified.
+Validation: `node --check tools/wasm-runtime-smoke.js`, `node tools/wasm-runtime-smoke.js`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed against the pinned yaAGC WASM and Comanche055 rope; the canonical suite ran 107 Node tests plus the NTP shell smoke. `git diff --check` passed. `adb devices -l` reported no attached Android target, so packaged-WebView load behavior remains unverified.
 
 ## 2026-10-04 Comanche V05N09 data-fidelity audit
 
