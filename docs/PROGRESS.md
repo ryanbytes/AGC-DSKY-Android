@@ -1,3 +1,9 @@
+## 2026-10-04 star-pointing freshness clock audit
+
+The camera star finder used `Date.now()` timestamps for the 1.5-second orientation freshness gate. A backward system-clock correction could make an old sensor sample appear current until wall time caught up. The W3C High Resolution Time specification defines `performance.now()` as monotonic and unaffected by system-clock adjustments. Published and cleared sky-pointing records now include that monotonic receipt time, and the star finder uses it for its stale-sample decision while retaining epoch time for diagnostics and compatibility. The focused optics regression simulates a backward wall-clock jump, checks the 1.5-second boundary, and covers legacy records without the monotonic field.
+
+Validation: focused JavaScript syntax, optics, PIPA, and phone API smokes passed. `env TZ=UTC bash tools/run-source-smokes.sh` passed 107 canonical Node tests, the NTP shell smoke, and real pinned yaAGC + Comanche055 semantics. Gradle `:app:verifyPinnedAgcAssets :app:assembleRegularDebug :app:assembleFireDebug :app:lint` passed; both debug APKs passed `tools/verify-apk.sh`. A fresh PWA site passed `pwa-smoke.js` and `pwa-parity-smoke.js` with 73 shared assets. No Android device or emulator is attached, so live sensor and wall-clock behavior on hardware remain unverified.
+
 ## 2026-10-04 stale star-pointing sensor-loss audit
 
 The Android/browser magnetic-sensor-unavailable path cleared the quaternions but retained `rawNativeSky` and the last published `skyPointing`. `updateSkyLocation()` can reprocess `rawNativeSky`; a later geolocation refresh could therefore timestamp and publish the last azimuth again after the sensor had stopped. A production-module regression initially failed because the last sky pointing remained marked seen immediately after sensor loss.

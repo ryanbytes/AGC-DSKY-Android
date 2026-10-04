@@ -27,6 +27,8 @@ for(const marker of [
   'const MEAN_EARTH_RADIUS_M = 6371008.8;',
   'function skyLocationAgeMs(location=skyLocation,now=Date.now())',
   'function skyLocationFresh(location=skyLocation,now=Date.now())',
+  'function skyPointingAgeMs(pointing,now=performance.now(),wallNow=Date.now())',
+  'function skyPointingFresh(pointing,now=performance.now(),wallNow=Date.now())',
   'function skyLocationUncertaintyDeg(location=skyLocation)',
   'function setSkyLocation(lat,lon,alt=0,accuracy=NaN,timestamp=Date.now())',
   'setSkyLocation(c.lat,c.lon,c.alt,c.accuracy,c.timestamp)',
@@ -35,6 +37,7 @@ for(const marker of [
   'if(!cat||!skyLocationFresh())return null',
   'const locationUncertainty=skyLocationUncertaintyDeg(),minAltitude=12+(Number.isFinite(locationUncertainty)?locationUncertainty:0);',
   'const cueState=skyPointingCue(d.distance,skyLocationUncertaintyDeg(),!!projected?.calibrated);',
+  'if(!pointing||!pointing.seen||!skyPointingFresh(pointing)){',
   'cue.classList.add(\'active\');cue.classList.toggle(\'outside\',cueState===\'move\');cue.classList.toggle(\'centered\',cueState===\'centered\');',
   '`BORESIGHT UNCALIBRATED · AIM ESTIMATE ${d.distance.toFixed(1)}° · CENTER A KNOWN STAR, THEN CALIBRATE${src}`',
   "`POSITION UNCERTAIN · ${Number.isFinite(locationUncertainty)?'LOCATION ±'+locationUncertainty.toFixed(2)+'°':'LOCATION ACCURACY UNKNOWN'} · TARGET ${d.distance.toFixed(1)}°${src}`",
@@ -53,6 +56,18 @@ assert(freshnessContext.locationFresh({timestamp:fixedNow-300000},fixedNow),'loc
 assert(!freshnessContext.locationFresh({timestamp:fixedNow-300001},fixedNow),'location older than the geolocation maximum age must be stale');
 assert(!freshnessContext.locationFresh({timestamp:fixedNow+1},fixedNow),'future-dated location must not be treated as fresh');
 assert(!freshnessContext.locationFresh({},fixedNow),'location without a fix timestamp must be stale');
+const pointingFreshStart=source.indexOf('  function skyPointingAgeMs('),pointingFreshEnd=source.indexOf('  function skyLocationUncertaintyDeg(',pointingFreshStart);
+assert(pointingFreshStart>=0&&pointingFreshEnd>pointingFreshStart,'could not isolate the production monotonic pointing-freshness policy');
+const pointingFreshContext={Date,Number,performance:{now:()=>0}};
+vm.runInNewContext(`${source.slice(pointingFreshStart,pointingFreshEnd)}globalThis.pointingFresh=skyPointingFresh;`,pointingFreshContext,{filename:'optics.js:pointing-freshness'});
+assert(pointingFreshContext.pointingFresh({timestamp:fixedNow,monotonicTimestamp:250},275, fixedNow-60000),
+  'a fresh sensor sample must stay fresh across a backward wall-clock correction');
+assert(!pointingFreshContext.pointingFresh({timestamp:fixedNow,monotonicTimestamp:250},1751,fixedNow),
+  'sensor pointing older than 1.5 monotonic seconds must be stale');
+assert(pointingFreshContext.pointingFresh({timestamp:fixedNow-500},1000,fixedNow),
+  'legacy pointing records without a monotonic timestamp should use wall-clock age');
+assert(!pointingFreshContext.pointingFresh({timestamp:fixedNow+1},1000,fixedNow),
+  'future wall-clock pointing without a monotonic timestamp must be stale');
 assert(freshnessContext.locationUncertaintyDeg({accuracy:0})===0,'zero horizontal accuracy must map to zero angular uncertainty');
 assert(Math.abs(freshnessContext.locationUncertaintyDeg({accuracy:9000})-0.08094)<0.0001,'9 km horizontal accuracy must map to about 0.081 degrees');
 assert(freshnessContext.locationUncertaintyDeg({accuracy:9000})>0.08,'9 km location uncertainty must exceed the CENTERED tolerance');
