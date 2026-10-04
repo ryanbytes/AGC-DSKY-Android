@@ -51,6 +51,7 @@ function makeEnv(search,snapshotCoreVersion='dream-test-core'){
   const decoders=Object.fromEntries(['decodeChannel10','decodeChannel11','decodeChannel13','decodeChannel163'].map(name=>[name,value=>{calls.channels.push({name,value});return true}]));
   const display={
     implementation(name){if(!decoders[name])throw new Error(`unknown Dream decoder ${name}`);return decoders[name]},
+    validateSnapshotUi(ui){calls.validations=(calls.validations||0)+1;if(!ui||!ui.relayWords||typeof ui.relayWords!=='object')throw new Error('malformed Dream snapshot UI');return true},
     applySnapshotUi(ui){calls.apply++;calls.appliedUi=ui;return true},
     resetFace(){calls.reset++},
     renderSnapshot(){calls.render++}
@@ -70,6 +71,7 @@ async function flush(){for(let i=0;i<8;i++)await Promise.resolve()}
   assert(calls.loads.length===1&&calls.loads[0].wasmUrl==='yaAGC.wasm'&&calls.loads[0].ropeUrl==='Comanche055.bin','Dream AGC assets changed');
   assert(session.loadedMission==='comanche055'&&state.mode==='dream-agc','Dream AGC mission/mode did not settle');
   assert(calls.storeGets.length===1&&calls.storeGets[0]==='agcSnapshotV1','Dream snapshot clone bypassed shell storage service');
+  assert(calls.validations===1,'Dream snapshot UI was not validated before cloning');
   assert(calls.imports.length===1&&calls.imports[0].memoryB64==='snapshot','Dream snapshot core clone changed');
   assert(calls.apply===1&&calls.appliedUi.relayWords[10]===123&&calls.render===1,'Dream snapshot UI clone/render changed');
   assert(core.running&&calls.starts.length===1&&calls.starts[0]===1,'visible Dream AGC core did not start');
@@ -87,6 +89,10 @@ async function flush(){for(let i=0;i<8;i++)await Promise.resolve()}
   const incompatible=makeEnv('?dream=1&agc=1','prior-core-version');await flush();
   assert(incompatible.state.mode==='dream-agc'&&incompatible.session.core.running,'incompatible snapshot prevented fresh Dream AGC startup');
   assert(incompatible.calls.imports.length===0&&incompatible.calls.apply===0&&incompatible.calls.render===0,'Dream AGC cloned UI or memory from a different core version');
+  const malformedUi=makeEnv('?dream=1&agc=1');malformedUi.payload.ui={};await flush();
+  assert(malformedUi.state.mode==='dream-agc'&&malformedUi.session.core.running,'malformed UI prevented fresh Dream AGC startup');
+  assert(malformedUi.calls.validations===1&&malformedUi.calls.imports.length===0&&malformedUi.calls.apply===0&&malformedUi.calls.render===0,'malformed Dream UI was rejected after importing core state');
+  assert(!malformedUi.status.textContent.includes('STATE CLONED'),'rejected Dream snapshot was reported as cloned');
   console.log('Dream AGC runtime smoke: PASS');
   console.log('  CM-only rope/snapshot ownership, read-only snapshot clone, dynamic channel implementations, lifecycle pause/resume, and clock-Dream isolation verified');
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});
