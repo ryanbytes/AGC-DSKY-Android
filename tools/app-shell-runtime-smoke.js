@@ -58,6 +58,8 @@ verifyBrowserNetworkTimeout().then(async()=>{
   const recoveryResult=await shell.syncBrowserNetworkTime(true);
   assert(recoveryResult===true&&state.ntpStatus.source==='http-date'&&state.ntpStatus.lastAttemptResult==='success'&&state.ntpStatus.syncInFlight===false,'browser network time did not recover after rejected clock-step samples');
   const browserTimeBeforeStep=shell.accurateTime();nowMs+=3600000;performanceNow+=250;assert(shell.accurateTime()===browserTimeBeforeStep+250,'browser network time followed a forward wall-clock step after synchronization');nowMs-=7200000;performanceNow+=250;assert(shell.accurateTime()===browserTimeBeforeStep+500,'browser network time followed a backward wall-clock step after synchronization');shell.refreshTimeStatus();assert(state.ntpStatus.state==='synced'&&state.ntpStatus.ageMs===500,'browser network-time freshness followed a wall-clock step after synchronization');
+  context.document.hidden=true;documentListeners.visibilitychange();nowMs+=10000;performanceNow+=10000;context.document.hidden=false;documentListeners.visibilitychange();assert(state.ntpStatus.state==='synced','browser network time was invalidated after a normal background interval');
+  context.document.hidden=true;documentListeners.visibilitychange();nowMs+=3600000;context.document.hidden=false;documentListeners.visibilitychange();assert(state.ntpStatus.state==='stale'&&!state.ntpStatus.usingNetworkTime&&state.ntpStatus.syncInFlight&&shell.accurateTime()===nowMs,'browser retained a synced network-time anchor or failed to resync after suspend stopped performance.now');const resumedSyncResult=await shell.syncBrowserNetworkTime(true);assert(resumedSyncResult===true&&state.ntpStatus.state==='synced'&&state.ntpStatus.ageMs===0,'browser network time did not recover after a suspend-related clock divergence');
   context.fetch=originalFetch;vm.runInContext('fetch = window.fetch',context);
   context.AGCDSKY=shellApi;assert(typeof shell.cycleMission==='undefined','LM/CM mission switching must be removed');
   console.log('app shell runtime smoke: PASS');
@@ -65,5 +67,6 @@ verifyBrowserNetworkTimeout().then(async()=>{
   console.log('  browser HTTP-Date timeout aborts stalled requests and clears sync-in-flight state');
   console.log('  native and browser time sampling reject device wall-clock steps within requests and across sample batches');
   console.log('  Android and browser network time stays anchored across forward and backward post-sync wall-clock steps');
+  console.log('  browser resume preserves matching clocks and marks/resynchronizes after suspend-related divergence');
   console.log('  recovered UI: persistent tap-to-close controls and COMP ACTY screen-exit guarded');
 }).catch(error=>{console.error(error);process.exitCode=1});
