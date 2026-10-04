@@ -1,3 +1,11 @@
+## 2026-10-04 self-updater latest-release fallback accuracy audit
+
+Found a release-discovery fallback mismatch. The updater used `main/VERSION`, which is an Android build candidate and can be ahead of published releases. Current GitHub state confirms `main/VERSION` is `1.1.65`, while `/releases/latest` is `v1.1.64`; both deterministic `v1.1.65` APK URLs return HTTP 404. During GitHub API failure, the old fallback therefore selected an unpublished candidate and could not offer the actual latest release to older installed clients.
+
+Changed fallback discovery to follow GitHub's `/releases/latest` page and derive the candidate version only from the final canonical `github.com/ryanbytes/AGC-DSKY-Android/releases/tag/v...` URL. The new policy rejects non-HTTPS, foreign-host/repository, malformed, prerelease, query, fragment, userinfo, and nonstandard-port redirects. Existing APK digest, package, version, versionCode, and signer checks remain in force.
+
+Validation: direct read-only GitHub checks observed latest tag `v1.1.64`, `main/VERSION` `1.1.65`, missing v1.1.65 APK assets, and a `/releases/latest` redirect to the v1.1.64 tag. Java `HttpURLConnection` independently returned HTTP 200 and the expected final tag URL. `node --check tools/self-update-smoke.js`, `node tools/self-update-smoke.js`, and `env TZ=UTC bash tools/run-source-smokes.sh` passed (107 Node smokes plus NTP shell smoke). Gradle 9.6.1 `:app:compileRegularDebugJavaWithJavac`, `:app:compileFireDebugJavaWithJavac`, `:app:lintRegularDebug`, and `:app:lintFireDebug` passed with build output isolated under `/tmp`; existing APK outputs were preserved. `git diff --check` passed. No Android device is attached; fallback execution inside the packaged app remains unverified.
+
 ## 2026-10-04 Comanche option/load-path audit checkpoint
 
 Resolved the open extended-verb/load path against the pinned Comanche055 source and real yaAGC. A standalone `V24N06` probe entered two octal words and read them back from `OPTION1`/`OPTION1+1` as `00001`/`00002`, but channel `011` bit `00100` (OPR ERR) was asserted during that sequence. That off-context probe is not a clean load-path pass and does not establish an app defect.
