@@ -20,8 +20,9 @@ const document={
   createElement(){return marker;},
   addEventListener(){}
 };
-let writes=0,marks=0,service=null;
-const core={running:true,writeIo(){writes++;return 1;},navKeyPulse(){marks++;return true;}};
+const writes=[];
+let marks=0,service=null;
+const core={running:true,writeIo(channel,value){writes.push([channel,value]);return 1;},navKeyPulse(){marks++;return true;}};
 const context={
   window:null,document,performance:{now(){return 0;}},console,
   setTimeout(fn,ms){const timer={fn,ms};timers.push(timer);return timer;},
@@ -41,11 +42,13 @@ listeners.pointerup({pointerId:7,clientX:75,clientY:75,preventDefault(){}});
 (async()=>{
   for(let i=0;i<8;i++)await Promise.resolve();
   const pulseTimers=timers.filter(timer=>timer.ms===4);
-  if(writes!==16||pulseTimers.length!==2)fail(`expected one 8-pulse batch per CDU before cancellation; got ${writes} writes and ${pulseTimers.length} timers`);
+  if(writes.length!==16||pulseTimers.length!==2)fail(`expected one 8-pulse batch per CDU before cancellation; got ${writes.length} writes and ${pulseTimers.length} timers`);
+  const expectedFirstBatch=[...Array(8)].map(()=>[0o236,0o21]).concat([...Array(8)].map(()=>[0o235,0o23]));
+  if(JSON.stringify(writes)!==JSON.stringify(expectedFirstBatch))fail('tap-to-mark must use source-backed fast PCDU/MCDU sequences for both optical CDUs');
   service.cancel();
   for(const timer of pulseTimers)timer.fn();
   for(let i=0;i<8;i++)await Promise.resolve();
-  if(writes!==16)fail(`cancelled tap continued sending CDU pulses (${writes} total)`);
+  if(writes.length!==16)fail(`cancelled tap continued sending CDU pulses (${writes.length} total)`);
   if(marks!==0)fail('cancelled tap emitted MARK');
   console.log('sextant tap mark smoke: PASS');
   console.log('  cancellation during CDU pulse settling stops later pulses and suppresses MARK');

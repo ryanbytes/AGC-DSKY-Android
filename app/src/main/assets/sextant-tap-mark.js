@@ -19,8 +19,10 @@
   const TRUNNION_COUNTS_PER_DEG = 32768 / 90;
   const SHAFT_CH = 0o200 | 0o36;
   const TRUNNION_CH = 0o200 | 0o35;
-  const PCDU = 0o01;
-  const MCDU = 0o03;
+  // Match the phone-motion optics path. VirtualAGC defines 021/023 as the
+  // genuine 6400-count/s CDU sequences; 001/003 select the 400-count/s path.
+  const PCDU_FAST = 0o21;
+  const MCDU_FAST = 0o23;
   const MARK_BIT = 0o40;
   const SXT_FOV_DEG = 1.8;
   const MAX_PULSES_PER_STEP = 8;
@@ -98,7 +100,7 @@
         const sign = left > 0 ? 1 : -1;
         const count = Math.min(Math.abs(left), MAX_PULSES_PER_STEP);
         for (let i = 0; i < count; i++) {
-          const rc = c.writeIo(channel, sign > 0 ? PCDU : MCDU);
+          const rc = c.writeIo(channel, sign > 0 ? PCDU_FAST : MCDU_FAST);
           if (!(rc > 0)) { reject(new Error('optics input busy')); return; }
           left -= sign;
         }

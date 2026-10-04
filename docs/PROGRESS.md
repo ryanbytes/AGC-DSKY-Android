@@ -1,3 +1,11 @@
+## 2026-10-04 sextant CDU pulse-rate accuracy audit
+
+The tap-to-MARK helper sent the slow PCDU/MCDU sequences `001`/`003`, while phone-controlled sextant motion already used the fast sequences `021`/`023`. VirtualAGC documents the slow CDU rate as 400 counts/second and the fast rate as 6,400 counts/second ([peripheral interface documentation](https://www.ibiblio.org/apollo/developer.html)). That made the same CM optical CDU behave at different commanded rates depending on whether the user aimed by phone motion or tapped the image.
+
+Tap-to-MARK now uses fast PCDU/MCDU on CDUS/CDUT, matching the regular optics path. The UI regression checks the actual shaft/trunnion packet values and cancellation behavior. A real pinned Comanche055/WASM regression queues positive shaft and negative trunnion fast pulses, verifies the erasable counters reached `+12` and `-12`, then verifies MARK reaches channel 016 after those packets.
+
+Validation: focused tap-mark, optics service, operation-authority, and real-WASM smokes passed; `env TZ=UTC bash tools/run-source-smokes.sh` passed all 101 canonical Node smokes plus the NTP shell smoke. Gradle 9.5.1 `:app:verifyPinnedAgcAssets :app:assembleRegularDebug :app:assembleFireDebug` passed. Both v1.1.65/versionCode 2026100303 debug APKs passed `tools/verify-apk.sh`, including byte-for-byte current frontend asset checks and exact WASM/rope verification. `adb devices -l` showed no attached Android target, so the changed tap path was not exercised in a packaged WebView or on physical hardware. No signed release was created.
+
 ## 2026-10-03 macOS/iOS WebKit runtime audit
 
 On source tree containing `e3fca37f39e407893e3aaf245778db53fcddcc95`, `xcodebuild -quiet -project apple/AGCDSKY.xcodeproj -scheme AGCDSKYmacOS -configuration Debug -destination 'platform=macOS' build` passed, and the built macOS Debug app launched. Its WebKit accessibility tree exposed the Apollo DSKY and all normal key controls.
