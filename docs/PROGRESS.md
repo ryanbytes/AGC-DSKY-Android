@@ -1,3 +1,11 @@
+## 2026-10-04 Comanche option/load-path audit checkpoint
+
+Investigated the open extended-verb/load path against the pinned Comanche055 source and real yaAGC. A standalone `V24N06` probe entered two octal words and read them back from `OPTION1`/`OPTION1+1` as `00001`/`00002`, but channel `011` bit `00100` (OPR ERR) was asserted during that sequence. The result is not a clean load-path pass and does not establish an app defect.
+
+The source's documented option-selection flow is program-owned: `GOPERF4` stores the requested option internally, displays `V04N06`, and follows with a `V50N06` perform prompt. Therefore a standalone `V24N06` test does not verify that documented flow. Next, exercise a source-confirmed program-owned option prompt or select an independently documented loadable noun and verify both expected data and annunciator state before adding a regression gate.
+
+Validation: the exploratory probe used the pinned yaAGC WASM and Comanche055 rope; `env TZ=UTC bash tools/run-source-smokes.sh` passed 107 canonical Node smokes plus the NTP shell smoke. `adb devices -l` reported no attached Android target, so packaged-WebView load behavior remains unverified.
+
 ## 2026-10-04 Comanche V05N09 data-fidelity audit
 
 The V05N09 host gate previously stopped after seeing each numeric relay selector, so it could pass even if the displayed alarm codes were wrong. It now reads the three source-mapped FAILREG erasable words, independently decodes the octal C/D relay contacts for all 15 digit positions, requires blank signs, and compares all three five-digit display words to raw memory. It also releases ENTR through the production KEYRST path before waiting for the response. The real pinned core displayed `01107 00000 00000`, matching FAILREG exactly.
