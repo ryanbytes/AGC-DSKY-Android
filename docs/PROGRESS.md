@@ -1,3 +1,11 @@
+## 2026-10-04 USNO star-pointing and refraction audit
+
+Compared the phone star-finder horizontal conversion with the USNO Celestial Navigation API using a fixed Indianapolis sample (39.77 N, 86.16 W; 2026-10-03 12:00 UT1). Joined the 13 shared stars by their computed sky positions, avoiding misleading name aliases (`NAVI`/Schedar and `REGOR`/Suhail). Before correction, the maximum geometric separation from USNO Hc/Zn was 21.72 arcseconds. The API confirms that standard atmospheric refraction is a separate correction; at a 13.97-degree star altitude its correction is 3.88 arcminutes, large enough to matter to the camera pointing cue.
+
+Added Bennett's standard 1010 hPa / 10 C sea-level refraction estimate to the star-finder camera target and boresight-calibration target. The displayed altitude is now explicitly marked `APP ALT ≈`. Pair ranking and the 12-degree geometric visibility threshold remain unrefracted. The app has no local pressure/temperature or reliable elevation-atmosphere model, so the corrected target remains an estimate; nutation, aberration, and separate UT1 handling are still absent.
+
+Validation: `tools/apollo-stars-usno-smoke.js` uses 13 fixed USNO API samples and requires under 30 arcseconds geometric and apparent direction error, plus under 5 arcseconds refraction-model error. The independent comparison found a maximum geometric direction error of 21.72 arcseconds, maximum apparent direction error of 19.43 arcseconds, and maximum Bennett-vs-USNO refraction error of 4.09 arcseconds. This validates a fixed host calculation sample, not physical phone compass/camera pointing or local atmospheric conditions.
+
 ## 2026-10-04 current-epoch P51 pair separation audit
 
 After adding modern astrometry to the phone finder, `candidatePairs()` still measured displayed P51 pair angles from the historical 1970 Comanche vectors while target altitudes and azimuths used date-corrected Hipparcos positions. At the fixed regression date, the recommended Capella/Sirius separation was consequently stale by about 32 arcseconds. Candidate generation now evaluates each star's observation-date equatorial position once and uses it consistently for horizontal coordinates and pair separation. This affects only phone-side star-finder metadata; AGC/P51 navigation data remains unchanged.

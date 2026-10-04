@@ -355,7 +355,7 @@
 
   function currentTargetPosition(){
     const cat=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_APOLLO_STARS');if(!cat||!skyLocation||!selectedStar)return null;
-    return cat.horizontal(selectedStar,skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date());
+    return cat.apparentHorizontal(selectedStar,skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date());
   }
 
   function calibratePointing(){
@@ -401,8 +401,8 @@
     for(const x of [pair.a,pair.b]){const b=document.createElement('button');b.type='button';b.textContent=`${x.star.code} ${x.star.name}`;b.className=selectedStar===x.star?'selected':'';b.onclick=()=>chooseStar(x.star);buttons.appendChild(b)}
     if(pairCandidates.length>1){const nb=document.createElement('button');nb.type='button';nb.textContent='NEXT STAR PAIR';nb.onclick=cyclePair;buttons.appendChild(nb)}
     if(!selectedStar)selectedStar=pair.a.star;
-    const targetPos=cat.horizontal(selectedStar,skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date());
-    targ.textContent=`TARGET ${selectedStar.code} ${selectedStar.name} · MAG ${selectedStar.mag.toFixed(2)} · AZ ${targetPos.az.toFixed(1)}° · ALT ${targetPos.alt.toFixed(1)}°`;
+    const targetPos=cat.apparentHorizontal(selectedStar,skyLocation.lat,skyLocation.lon,api.accurateDate?api.accurateDate():new Date());
+    targ.textContent=`TARGET ${selectedStar.code} ${selectedStar.name} · MAG ${selectedStar.mag.toFixed(2)} · AZ ${targetPos.az.toFixed(1)}° · APP ALT ≈${targetPos.alt.toFixed(1)}°`;
     cmd.textContent=`AFTER MARK: V21 N71 E 000${selectedStar.code} E`;
     const cue=document.getElementById('sxt-star-cue');
     const pointing=typeof api.phoneSkyPointing==='function'?api.phoneSkyPointing():null;
