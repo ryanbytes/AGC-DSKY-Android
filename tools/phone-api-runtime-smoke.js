@@ -11,8 +11,8 @@ const apiSource=read('agc-api-runtime.js'),runtime=read('phone-api-runtime.js'),
 const expected=[
   'nativePhoneQuaternion','setOpticsCaptureActive','zeroOpticsCapture','phoneOpticsAngles',
   'nativePhoneSensorStatus','calibrateSkyBoresight','clearSkyBoresightCalibration',
-  'skyCalibrationStatus','projectSkyTarget','nativeMagneticQuaternion',
-  'nativeMagneticSensorStatus','nativeSkyPointing','phoneSkyPointing',
+  'skyCalibrationStatus','projectSkyTarget','updateSkyLocation','nativeMagneticQuaternion',
+  'nativeMagneticSensorStatus','nativeMagneticPointing','phoneSkyPointing',
   'nativePipaSensorStatus','nativePhoneLinearAcceleration','phoneIcduStatus','recenterPhoneImu'
 ];
 for(const marker of [
@@ -63,15 +63,18 @@ function loadCalibration(value){
   vm.runInContext(`${calibrationLoader[0]};loadSkyCalibration()`,context);
   return {boresight:Array.from(context.cameraBoresightDevice),calibration:context.skyCalibration};
 }
-const invalidCalibration=loadCalibration({schema:1,boresight:[0,0,0]});
+const invalidCalibration=loadCalibration({schema:2,model:'WMM2025',declination:-5,boresight:[0,0,0]});
 same(invalidCalibration.boresight,[0,0,-1],'zero-length saved boresight replaced the default camera direction');
 assert(invalidCalibration.calibration===null,'zero-length saved boresight was accepted');
-const oversizedCalibration=loadCalibration({schema:1,boresight:[1.7e308,1.7e308,1.7e308]});
+const oversizedCalibration=loadCalibration({schema:2,model:'WMM2025',declination:-5,boresight:[1.7e308,1.7e308,1.7e308]});
 same(oversizedCalibration.boresight,[0,0,-1],'non-finite saved boresight magnitude replaced the default camera direction');
 assert(oversizedCalibration.calibration===null,'non-finite saved boresight magnitude was accepted');
-const validCalibration=loadCalibration({schema:1,boresight:[0,3,4]});
+const validCalibration=loadCalibration({schema:2,model:'WMM2025',declination:-5,boresight:[0,3,4]});
 same(validCalibration.boresight,[0,.6,.8],'valid saved boresight was not normalized');
 assert(validCalibration.calibration!==null,'valid saved camera calibration was rejected');
+const obsoleteCalibration=loadCalibration({schema:1,boresight:[0,3,4]});
+same(obsoleteCalibration.boresight,[0,0,-1],'pre-WMM calibration remained active after north-reference migration');
+assert(obsoleteCalibration.calibration===null,'pre-WMM calibration was accepted without declination provenance');
 
 const gimbalMatch=phone.match(/function apolloGimbals\(q, previous=null\) \{[\s\S]*?\n  \}/);
 assert(gimbalMatch,'apolloGimbals implementation missing');

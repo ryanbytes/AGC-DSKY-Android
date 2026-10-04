@@ -179,7 +179,7 @@
       if(native){
         if(typeof TimeBridge.getStatus!=='function'||typeof TimeBridge.syncNow!=='function')throw new Error('TimeBridge incomplete');
         if(!window.PrintBridge||typeof PrintBridge.printChecklist!=='function')throw new Error('PrintBridge unavailable');
-        return 'Android TimeBridge and PrintBridge present'+(window.SkyBridge?' · SkyBridge present':'');
+        return 'Android TimeBridge and PrintBridge present';
       }
       const parity=window.AGCDSKYPWA&&typeof window.AGCDSKYPWA.parityStatus==='function';
       if(!parity)throw new Error('no native bridge or PWA parity bridge');

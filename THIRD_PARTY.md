@@ -62,6 +62,17 @@ The nineteen DSKY pushbutton legends use selected Gorton Normal glyph outlines c
 
 Historical Apollo documentation, Virtual AGC data, and CuriousMarc restoration material were used as technical/visual references. CuriousMarc restoration imagery is a useful cross-check for surviving hardware appearance but does not override the original engineering drawings. No CuriousMarc video frames are bundled.
 
+## NOAA World Magnetic Model 2025
+
+The phone star-finder's true-north correction uses NOAA NCEI's WMM2025 spherical-harmonic coefficients and published model/error equations. WMM2025 is valid for 2025.0 through 2030.0; the app declines magnetic-to-true conversion outside that interval. The coefficient data are U.S. Government work and are not subject to copyright restrictions.
+
+- Model, official software/data, and validity: [NOAA NCEI World Magnetic Model](https://www.ncei.noaa.gov/products/world-magnetic-model)
+- Official WMM2025 test vectors: distributed with NOAA's WMM2025 software package (`WMM2025_TEST_VALUES.txt`)
+- Accuracy limits, compass blackout/caution definitions, and declination uncertainty equation: [NOAA NCEI WMM accuracy, limitations, and error model](https://www.ncei.noaa.gov/products/world-magnetic-model/accuracy-limitations-error-model)
+- Apple WebKit documents `webkitCompassHeading` as magnetic north: [DeviceOrientationEvent.webkitCompassHeading](https://developer.apple.com/documentation/webkitjs/deviceorientationevent/1804777-webkitcompassheading)
+
+The JavaScript implementation in `app/src/main/assets/geomagnetic-model.js` is a project implementation of the published model equations, not bundled NOAA executable code. `tools/wmm2025-smoke.js` checks its results against the official vectors. The model does not represent local crustal anomalies or external magnetic fields; see NOAA's stated compass limits before interpreting the star-finder as a precision instrument.
+
 ## NASA / U.S. Government non-endorsement
 
 AGC DSKY Android is an independent historical simulator. It is not affiliated with, sponsored by, or endorsed by NASA or the United States Government. NASA names and mission references are used descriptively.

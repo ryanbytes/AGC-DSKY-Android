@@ -7,8 +7,8 @@
   const NAMES=Object.freeze([
     'nativePhoneQuaternion','setOpticsCaptureActive','zeroOpticsCapture','phoneOpticsAngles',
     'nativePhoneSensorStatus','calibrateSkyBoresight','clearSkyBoresightCalibration',
-    'skyCalibrationStatus','projectSkyTarget','nativeMagneticQuaternion',
-    'nativeMagneticSensorStatus','nativeSkyPointing','phoneSkyPointing',
+    'skyCalibrationStatus','projectSkyTarget','updateSkyLocation','nativeMagneticQuaternion',
+    'nativeMagneticSensorStatus','nativeMagneticPointing','phoneSkyPointing',
     'nativePipaSensorStatus','nativePhoneLinearAcceleration','phoneIcduStatus','recenterPhoneImu'
   ]);
   const allowed=new Set(NAMES);

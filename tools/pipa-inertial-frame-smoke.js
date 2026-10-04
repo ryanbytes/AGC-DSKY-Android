@@ -6,6 +6,7 @@ const path=require('path');
 const vm=require('vm');
 const root=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'app/src/main/assets/phone-icdu.js'),'utf8');
+const geomagneticSource=fs.readFileSync(path.join(root,'app/src/main/assets/geomagnetic-model.js'),'utf8');
 const nativeActivity=fs.readFileSync(path.join(root,'app/src/main/java/org/apollo/agcdsky/SensorMainActivity.java'),'utf8');
 function assert(ok,message){if(!ok)throw new Error(message)}
 
@@ -21,10 +22,15 @@ function createHarness(screenAngle=0){
   let clickHandler=null,hidden=false;
   const documentListeners={},windowListeners={},intervals=[];
   const service={installImplementations(implementations){Object.assign(api,implementations)}};
+  let geomagnetic=null;
+  const registry={
+    get(name){if(name==='AGCDSKY_PHONE')return service;if(name==='AGCDSKY_WMM2025')return geomagnetic;assert(false,`unexpected service requested: ${name}`)},
+    publish(name,value){assert(name==='AGCDSKY_WMM2025','unexpected model service publication');geomagnetic=value}
+  };
   const context={
     window:null,
     AGCDSKY:api,
-    AGCDSKY_SERVICE_REGISTRY:{get(name){assert(name==='AGCDSKY_PHONE','unexpected service requested');return service}},
+    AGCDSKY_SERVICE_REGISTRY:registry,
     document:{get hidden(){return hidden},getElementById:id=>buttons[id]||null,addEventListener(name,handler){if(name==='click')clickHandler=handler;else documentListeners[name]=handler}},
     screen:{orientation:{angle:screenAngle}},
     performance:{now:()=>0},
@@ -37,6 +43,7 @@ function createHarness(screenAngle=0){
   };
   context.window=context;
   vm.createContext(context);
+  vm.runInContext(geomagneticSource,context,{filename:'geomagnetic-model.js'});
   vm.runInContext(source,context,{filename:'phone-icdu.js'});
   api.__buttons=buttons;
   api.__core=core;
@@ -106,6 +113,43 @@ for(const displayAngle of [0,90,180,270]){
 }
 
 const api=createHarness();
+
+// A magnetic sensor is not true-north pointing until the shared WMM model has
+// a supported date and fresh location. Android and browser paths use this same
+// production correction service.
+const pointingProbe=createHarness();
+pointingProbe.nativeMagneticPointing(90,30,3);
+assert(!pointingProbe.phoneSkyPointing().seen,'magnetic azimuth was presented as true north before location/model data arrived');
+pointingProbe.nativeMagneticQuaternion(1,0,0,0,0,3);
+assert(!pointingProbe.phoneSkyPointing().seen,'absolute magnetic quaternion was presented as true north before declination was known');
+let skyStatus=pointingProbe.updateSkyLocation(39.77,-86.16,250,new Date(Date.UTC(2026,6,4)));
+assert(skyStatus.reference?.model==='WMM2025'&&Math.abs(skyStatus.declination-(-5.025))<.01,
+  `shared sky reference did not use WMM2025: ${JSON.stringify(skyStatus)}`);
+pointingProbe.nativeMagneticPointing(90,30,3);
+assert(Math.abs(pointingProbe.phoneSkyPointing().az-(90+skyStatus.declination))<1e-9,
+  'native magnetic azimuth did not receive the shared true-north correction');
+let calibration=pointingProbe.calibrateSkyBoresight(90,30,'NOAA VECTOR');
+assert(calibration.ok&&calibration.calibration.schema===2&&calibration.calibration.model==='WMM2025',
+  'star calibration did not record the current WMM model identity');
+let projected=pointingProbe.projectSkyTarget(90,30);
+assert(projected?.calibrated&&projected.distance<1e-6,
+  'calibrated target was not projected at its star-reference location');
+skyStatus=pointingProbe.updateSkyLocation(40,-75,250,new Date(Date.UTC(2026,6,4)));
+assert(skyStatus.stale&&skyStatus.reason==='magnetic-reference-shifted'
+    &&!pointingProbe.projectSkyTarget(90,30).calibrated,
+  'calibration was kept confident after the WMM reference shifted materially');
+skyStatus=pointingProbe.updateSkyLocation(39.77,-86.16,250,new Date(Date.UTC(2026,6,4)));
+assert(skyStatus.calibrated,'returning to the calibration reference did not restore the valid calibration');
+skyStatus=pointingProbe.updateSkyLocation(39.77,-86.16,250,new Date(Date.UTC(2030,0,1)));
+assert(skyStatus.stale&&skyStatus.reason==='location-or-date-unavailable'
+    &&!pointingProbe.phoneSkyPointing().seen,
+  'expired WMM model date retained a true-north pointing result');
+
+const cautionProbe=createHarness();
+cautionProbe.updateSkyLocation(80,-110,250,new Date(Date.UTC(2026,6,4)));
+cautionProbe.nativeMagneticQuaternion(1,0,0,0,0,3);
+assert(!cautionProbe.calibrateSkyBoresight(0,0).ok,
+  'boresight calibration was allowed in a WMM caution zone');
 
 // Sensor availability must not silently calibrate while the phone may be
 // moving. PIPA integration remains disabled until the user starts calibration.

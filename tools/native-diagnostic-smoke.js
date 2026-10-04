@@ -49,10 +49,15 @@ assert(activity.includes('DebugReporter.install(this)'),
     'SensorMainActivity must install the native crash/error reporter');
 assert(compact(activity).includes('newDebugReporter.JsBridge(this),"DebugBridge"'),
     'SensorMainActivity must expose the local diagnostic bridge to packaged content');
-assert(compact(activity).includes('latitudeDeg<-90.0||latitudeDeg>90.0||longitudeDeg<-180.0||longitudeDeg>180.0'),
-    'native sky-location bridge must reject finite but geographically invalid coordinates');
-assert(compact(activity).includes('catch(RuntimeExceptionignored){magneticDeclinationDeg=0f;skyLocationKnown=false;}'),
-    'failed geomagnetic-field calculation must not report location as known');
+assert(!activity.includes('GeomagneticField')&&!activity.includes('SkyBridge'),
+    'native Android WMM-2020 bridge must not override the shared offline WMM2025 model');
+assert(compact(activity).includes('AGCDSKY.nativeMagneticPointing(%.5f,%.5f,%d)'),
+    'Android pointing bridge must send magnetic azimuth for shared WMM2025 correction');
+const geomagnetic = fs.readFileSync(
+    path.join(ROOT, 'app/src/main/assets/geomagnetic-model.js'), 'utf8');
+assert(geomagnetic.includes("publish('AGCDSKY_WMM2025'")
+    && geomagnetic.includes('Math.sqrt(0.26*0.26+Math.pow(5417/horizontalIntensityNt,2))'),
+    'shared WMM2025 publication or official declination uncertainty model missing');
 assert(activity.includes('AGCDSKY.setAppVisible(false);AGCDSKY.setAppVisible(true)'),
     'SensorMainActivity resume must force a hidden transition before visible resume');
 const activityCompact = compact(activity);
