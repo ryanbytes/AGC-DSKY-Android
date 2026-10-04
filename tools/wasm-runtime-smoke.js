@@ -26,6 +26,10 @@ const OCTAL_DIGIT_BY_RELAY_CODE = new Map([
     [0o25, '0'], [0o03, '1'], [0o31, '2'], [0o33, '3'],
     [0o17, '4'], [0o36, '5'], [0o34, '6'], [0o23, '7']
 ]);
+const DECIMAL_DIGIT_BY_RELAY_CODE = new Map([
+    [0o25, '0'], [0o03, '1'], [0o31, '2'], [0o33, '3'], [0o17, '4'],
+    [0o36, '5'], [0o34, '6'], [0o23, '7'], [0o35, '8'], [0o37, '9']
+]);
 const RELAY_ZERO = 0o25;
 const RELAY_EIGHT = 0o35;
 const RELAY_SIGN_BIT = 0o2000;
@@ -192,6 +196,56 @@ function decodeOctalNoun09(relays) {
     const signRelays = [7, 6, 5, 4, 2, 1];
     const signed = signRelays.some((relay) => ((relays.get(relay) || 0) & RELAY_SIGN_BIT) !== 0);
     return {words: rows.map((row) => row.join('')), signed};
+}
+
+function decodeOctalTwoComponent(relays) {
+    const digit = (relay, contact) => {
+        const word = relays.get(relay);
+        assert(word !== undefined, `Comanche two-component octal display missing relay ${relay}`);
+        const code = contact === 'C' ? (word >> 5) & 0o37 : word & 0o37;
+        const value = OCTAL_DIGIT_BY_RELAY_CODE.get(code);
+        assert(value !== undefined,
+            `Comanche two-component octal relay ${relay} ${contact} has invalid code 0o${code.toString(8).padStart(2, '0')}`);
+        return value;
+    };
+    const words = [
+        [digit(8, 'D'), digit(7, 'C'), digit(7, 'D'), digit(6, 'C'), digit(6, 'D')].join(''),
+        [digit(5, 'C'), digit(5, 'D'), digit(4, 'C'), digit(4, 'D'), digit(3, 'C')].join('')
+    ];
+    // R1 and R2 each have independent plus and minus sign relays.
+    const signed = [7, 6, 5, 4].some((relay) => ((relays.get(relay) || 0) & RELAY_SIGN_BIT) !== 0);
+    return {words, signed};
+}
+
+function proveOctalTwoComponentSignDecoder() {
+    const zero = (RELAY_ZERO << 5) | RELAY_ZERO;
+    const relays = new Map(Array.from({length: 8}, (_, index) => [index + 1, zero]));
+    const unsigned = decodeOctalTwoComponent(relays);
+    assert(!unsigned.signed && JSON.stringify(unsigned.words) === JSON.stringify(['00000', '00000']),
+        'Comanche two-component octal decoder rejected an unsigned zero readback');
+    for (const relay of [7, 6, 5, 4]) {
+        const withSign = new Map(relays);
+        withSign.set(relay, withSign.get(relay) | RELAY_SIGN_BIT);
+        assert(decodeOctalTwoComponent(withSign).signed,
+            `Comanche two-component octal decoder ignored sign relay ${relay}`);
+    }
+}
+
+function decodeDecimalHms(relays) {
+    const digit = (relay, contact) => {
+        const word = relays.get(relay);
+        assert(word !== undefined, `Comanche HMS display missing relay ${relay}`);
+        const code = contact === 'C' ? (word >> 5) & 0o37 : word & 0o37;
+        const value = DECIMAL_DIGIT_BY_RELAY_CODE.get(code);
+        assert(value !== undefined,
+            `Comanche HMS relay ${relay} ${contact} has invalid decimal code 0o${code.toString(8).padStart(2, '0')}`);
+        return value;
+    };
+    return [
+        [digit(8, 'D'), digit(7, 'C'), digit(7, 'D'), digit(6, 'C'), digit(6, 'D')].join(''),
+        [digit(5, 'C'), digit(5, 'D'), digit(4, 'C'), digit(4, 'D'), digit(3, 'C')].join(''),
+        [digit(3, 'D'), digit(2, 'C'), digit(2, 'D'), digit(1, 'C'), digit(1, 'D')].join('')
+    ];
 }
 
 function proveComancheFreshStart(core, errors, channelUpdates) {
@@ -510,8 +564,8 @@ function proveP21OptionLoadPrompt(core, errors, channelUpdates) {
     ];
     assert(JSON.stringify(promptValues) === JSON.stringify(['00002', '00001']),
         `Comanche P21 GOPERF4 option prompt showed ${promptValues.join(' / ')} instead of the source-defined code/default`);
-    assert(!channelUpdates.some(([channel, value]) => channel === 0o11 && (value & OPR_ERR_BIT) !== 0),
-        'Comanche P21 GOPERF4 prompt asserted raw channel-011 OPR ERR');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche P21 GOPERF4 prompt asserted raw channel-0163 OPR ERR');
 
     channelUpdates.length = 0;
     // Exercise BLOAD (V22) only while P21 owns the source-defined option
@@ -550,8 +604,8 @@ function proveP21OptionLoadPrompt(core, errors, channelUpdates) {
     const option2 = core.readErasable(2, 0o132);
     assert(option2 === 0,
         `Comanche P21 option load changed N06 component 2 unexpectedly: ${option2}`);
-    assert(!channelUpdates.some(([channel, value]) => channel === 0o11 && (value & OPR_ERR_BIT) !== 0),
-        'Comanche V22N06 option load asserted raw channel-011 OPR ERR');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V22N06 option load asserted raw channel-0163 OPR ERR');
     assert(errors.length === 0, 'Comanche P21 V22N06 option load raised a host runtime error');
 
     channelUpdates.length = 0;
@@ -569,13 +623,176 @@ function proveP21OptionLoadPrompt(core, errors, channelUpdates) {
         `Comanche P21 did not accept CM R2=00000 and advance to V06N34; V/N=${acceptedVerb?.toString(8) ?? 'missing'}/${acceptedNoun?.toString(8) ?? 'missing'}`);
     assert(core.readErasable(2, 0o132) === 0,
         'Comanche P21 changed the loaded CM vehicle choice after the prompt was accepted');
-    assert(!channelUpdates.some(([channel, value]) => channel === 0o11 && (value & OPR_ERR_BIT) !== 0),
-        'Comanche P21 asserted raw channel-011 OPR ERR after accepting the CM vehicle choice');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche P21 asserted raw channel-0163 OPR ERR after accepting the CM vehicle choice');
     assert(errors.length === 0, 'Comanche P21 CM option acceptance raised a host runtime error');
 
     core.reset();
     core.configureInputMasks();
     return {promptValues, returnedValues, option2, acceptedPrompt: 'V06N34'};
+}
+
+function proveV24N06TwoComponentLoad(core, errors, channelUpdates) {
+    core.reset();
+    core.configureInputMasks();
+    channelUpdates.length = 0;
+    errors.length = 0;
+    core.step(100000);
+    sendKeys(core, [0o21, 0o03, 0o06, 0o34]); // V36E fresh start
+    core.step(1280000);
+    assert(failRegWords(core).every((word) => word === 0),
+        'V24 N06 load setup did not clear cold-start FAILREG with V36E');
+    enterProgram00(core, errors, channelUpdates);
+
+    // N06 is the two-component octal option noun. Comanche's P21 source
+    // identifies component 2 = 00000 as the valid CM selection.
+    sendKeys(core, [0o21, 0o02, 0o04, 0o37, 0o20, 0o06, 0o34]); // V24N06E
+    const firstRequestVerb = core.readErasable(2, 0o001);
+    const firstRequestNoun = core.readErasable(2, 0o002);
+    assert(firstRequestVerb === 21 && firstRequestNoun === 6,
+        `Comanche V24N06 did not request its first component as V21N06; got ${firstRequestVerb}/${firstRequestNoun}`);
+    sendKeys(core, [0o20, 0o20, 0o20, 0o20, 0o02, 0o34]); // 00002 ENTER (octal omits sign)
+    assert(core.readErasable(2, 0o001) === 22 && core.readErasable(2, 0o002) === 6,
+        `Comanche V24N06 did not advance to its V22 second-component request; got ${core.readErasable(2, 0o001)}/${core.readErasable(2, 0o002)}`);
+    sendKeys(core, [0o20, 0o20, 0o20, 0o20, 0o20, 0o34]); // 00000 ENTER (octal omits sign)
+
+    const option1 = core.readErasable(2, 0o131);
+    const option2 = core.readErasable(2, 0o132);
+    assert(option1 === 2 && option2 === 0,
+        `Comanche V24N06 stored N06 as 0o${option1.toString(8).padStart(5, '0')} / 0o${option2.toString(8).padStart(5, '0')}, expected 00002 / 00000`);
+    assert(failRegWords(core).every((word) => word === 0),
+        'Comanche V24N06 raised FAILREG while loading valid octal components');
+    assert(errors.length === 0, 'Comanche V24N06 load raised a host runtime error');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V24N06 load asserted raw channel-0163 OPR ERR');
+
+    const baselineDisplay = new Map(relayStateFromUpdates(channelUpdates));
+    channelUpdates.length = 0;
+    sendKeys(core, [0o21, 0o20, 0o06, 0o37, 0o06, 0o05]); // V06N65 baseline
+    keyAndRun(core, 0o34);
+    core.step(350000);
+    assert(core.readErasable(2, 0o001) === 6 && core.readErasable(2, 0o002) === 65,
+        'Comanche V06N65 did not establish the distinct display baseline for V24 readback');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V06N65 baseline asserted raw channel-0163 OPR ERR');
+    for (const [relay, value] of relayStateFromUpdates(channelUpdates)) baselineDisplay.set(relay, value);
+
+    channelUpdates.length = 0;
+    sendKeys(core, [0o21, 0o20, 0o04, 0o37, 0o20, 0o06]); // V04N06
+    const enteredRelays = relayStateFromUpdates(channelUpdates);
+    assert((enteredRelays.get(10) & 0o3777) === ((0o25 << 5) | 0o17)
+            && (enteredRelays.get(9) & 0o3777) === ((0o25 << 5) | 0o34),
+        'Comanche V04N06 did not select the expected verb and loaded noun');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V04N06 command entry asserted raw channel-0163 OPR ERR');
+    assert(errors.length === 0, 'Comanche V04N06 command entry raised a host runtime error');
+
+    channelUpdates.length = 0;
+    keyAndRun(core, 0o34);
+    core.step(350000);
+    const readbackUpdates = relayStateFromUpdates(channelUpdates);
+    assert(Array.from(readbackUpdates.keys()).some((relay) => relay >= 1 && relay <= 8),
+        `Comanche V04N06 changed no numeric relay latches; FAILREG=${failRegWords(core).map((word) => `0o${word.toString(8)}`).join('/')}; V/N=${core.readErasable(2, 0o001)}/${core.readErasable(2, 0o002)}`);
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V04N06 asserted raw channel-0163 OPR ERR');
+    assert(errors.length === 0, 'Comanche V04N06 readback raised a host runtime error');
+    const readbackDisplay = new Map(baselineDisplay);
+    for (const [relay, value] of readbackUpdates) readbackDisplay.set(relay, value);
+    const readback = decodeOctalTwoComponent(readbackDisplay);
+    assert(!readback.signed,
+        'Comanche V04N06 displayed a sign on its two octal-only N06 components');
+    assert(JSON.stringify(readback.words) === JSON.stringify(['00002', '00000']),
+        `Comanche V04N06 read back ${readback.words.join(' / ')} instead of 00002 / 00000`);
+
+    core.reset();
+    core.configureInputMasks();
+    return {readback: readback.words};
+}
+
+function proveV25N34HmsLoad(core, errors, channelUpdates) {
+    core.reset();
+    core.configureInputMasks();
+    channelUpdates.length = 0;
+    errors.length = 0;
+    core.step(100000);
+    sendKeys(core, [0o21, 0o03, 0o06, 0o34]); // V36E fresh start
+    core.step(1280000);
+    assert(failRegWords(core).every((word) => word === 0),
+        'V25 N34 load setup did not clear cold-start FAILREG with V36E');
+    enterProgram00(core, errors, channelUpdates);
+
+    const before = [0, 1].map((offset) => core.readErasable(2, 0o45 + offset));
+    channelUpdates.length = 0;
+    // ABCLOAD requests each component as V21/V22/V23. These valid HMS values
+    // are 12 hours, 34 minutes, and 56.78 seconds (centiseconds).
+    sendKeys(core, [0o21, 0o02, 0o05, 0o37, 0o03, 0o04, 0o34]); // V25N34E
+    const firstRequestVerb = core.readErasable(2, 0o001);
+    const firstRequestNoun = core.readErasable(2, 0o002);
+    assert(firstRequestVerb === 21 && firstRequestNoun === 34,
+        `Comanche V25N34 did not enter V21N34 first-component request: ${firstRequestVerb}/${firstRequestNoun}`);
+    sendKeys(core, [0o32, 0o20, 0o20, 0o20, 0o01, 0o02, 0o34]); // +00012 ENTER
+    assert(core.readErasable(2, 0o001) === 22,
+        'Comanche V25N34 did not advance to its V22 second-component request');
+    sendKeys(core, [0o32, 0o20, 0o20, 0o20, 0o03, 0o04, 0o34]); // +00034 ENTER
+    assert(core.readErasable(2, 0o001) === 23,
+        'Comanche V25N34 did not advance to its V23 third-component request');
+    sendKeys(core, [0o32, 0o20, 0o05, 0o06, 0o07, 0o10, 0o34]); // +05678 ENTER
+
+    const after = [0, 1].map((offset) => core.readErasable(2, 0o45 + offset));
+    assert(after.some((word, index) => word !== before[index]),
+        `Comanche V25N34 did not update source-defined DSPTEM1 storage: ${before} -> ${after}`);
+    assert(failRegWords(core).every((word) => word === 0),
+        'Comanche V25N34 raised FAILREG while loading valid HMS components');
+    assert(errors.length === 0, 'Comanche V25N34 load raised a host runtime error');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V25N34 load asserted raw channel-0163 OPR ERR');
+
+    // Change the numeric latches with the AGC clock display so the following
+    // V06N34 readback must emit the loaded HMS words onto the physical rows.
+    const loadedDisplay = relayStateFromUpdates(channelUpdates);
+    channelUpdates.length = 0;
+    sendKeys(core, [0o21, 0o20, 0o06, 0o37, 0o06, 0o05]); // V06N65
+    assert(core.keyPress(0o34) > 0, 'Comanche V06N65 rejected ENTER before V25 readback');
+    core.step(350000);
+    assert(core.keyRelease(), 'Comanche V06N65 KEYRST failed before V25 readback');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V06N65 baseline asserted raw channel-0163 OPR ERR');
+    const clockUpdates = relayStateFromUpdates(channelUpdates);
+    const clockDisplay = new Map(loadedDisplay);
+    for (const [relay, value] of clockUpdates) clockDisplay.set(relay, value);
+    assert(clockUpdates.size > 0,
+        'Comanche V06N65 did not change any numeric relay rows before V25 readback');
+    assert((clockDisplay.get(10) & 0o3777) === VERB06_LOW11
+            && (clockDisplay.get(9) & 0o3777) === NOUN65_LOW11,
+        'Comanche V06N65 did not select the expected clock noun before V25 readback');
+
+    channelUpdates.length = 0;
+    sendKeys(core, [0o21, 0o20, 0o06, 0o37, 0o03, 0o04]); // V06N34
+    assert(core.keyPress(0o34) > 0, 'Comanche V06N34 rejected ENTER for the loaded HMS noun');
+    core.step(350000);
+    assert(core.keyRelease(), 'Comanche V06N34 KEYRST failed after HMS readback');
+    const readbackUpdates = relayStateFromUpdates(channelUpdates);
+    const readbackDisplay = new Map(clockDisplay);
+    for (const [relay, value] of readbackUpdates) readbackDisplay.set(relay, value);
+    assert([1, 2, 3, 4, 5, 6, 7, 8].some((relay) => readbackUpdates.has(relay)),
+        'Comanche V06N34 did not change a numeric relay row during the HMS readback');
+    assert((readbackDisplay.get(10) & 0o3777) === VERB06_LOW11
+            && (readbackDisplay.get(9) & 0o3777) === NOUN34_LOW11,
+        'Comanche V06N34 did not select the expected loaded HMS noun');
+    const readback = decodeDecimalHms(readbackDisplay);
+    assert(JSON.stringify(readback) === JSON.stringify(['00012', '00034', '05678']),
+        `Comanche V06N34 read back ${readback.join(' / ')} instead of the loaded HMS value`);
+    const plusSigns = [7, 5, 2].every((relay) => ((readbackDisplay.get(relay) || 0) & RELAY_SIGN_BIT) !== 0);
+    const minusSigns = [6, 4, 1].some((relay) => ((readbackDisplay.get(relay) || 0) & RELAY_SIGN_BIT) !== 0);
+    assert(plusSigns && !minusSigns,
+        'Comanche V06N34 did not show positive signs for all three positive HMS components');
+    assert(!channelUpdates.some(([channel, value]) => channel === CHANNEL_DSKY_DISCRETES && (value & OPR_ERR_BIT) !== 0),
+        'Comanche V06N34 readback asserted raw channel-0163 OPR ERR');
+    assert(errors.length === 0, 'Comanche V06N34 readback raised a host runtime error');
+
+    core.reset();
+    core.configureInputMasks();
+    return {loadedWords: after, readback};
 }
 
 function proveV35LightTest(core, errors, channelUpdates) {
@@ -818,6 +1035,7 @@ function proveNavigationKeyOrderingSurvivesBackpressure(core) {
 }
 
 async function main() {
+    proveOctalTwoComponentSignDecoder();
     const wasmBytes = requireFile(WASM, 27270);
     const ropeBytes = requireFile(ROPE, 73728);
     verifyBinaryImportContract(wasmBytes);
@@ -854,6 +1072,8 @@ async function main() {
     const v05n09 = proveV05N09AlarmDisplay(core, errors, channelUpdates);
     const v14n09 = proveV14N09TwoComponentMonitor(core, errors, channelUpdates);
     const p21OptionLoad = proveP21OptionLoadPrompt(core, errors, channelUpdates);
+    const v24n06 = proveV24N06TwoComponentLoad(core, errors, channelUpdates);
+    const v25n34 = proveV25N34HmsLoad(core, errors, channelUpdates);
     const v35 = proveV35LightTest(core, errors, channelUpdates);
     const mark = proveComancheNavigationKeyInterrupt(core, errors);
     const optics = proveComancheFastOpticsInputs(core, errors);
@@ -900,6 +1120,8 @@ async function main() {
     console.log(`  V05N09E alarm-code display: PASS (${v05n09.displayedFailReg.join(' ')}; selectors ${v05n09.responseRows.join(',')}; within ${v05n09.responseSteps} steps)`);
     console.log(`  V14N09E two-component monitor: PASS (selectors ${v14n09.responseRows.join(',')}; within ${v14n09.responseSteps} steps)`);
     console.log(`  P21 V04N06 -> V22N06 CM option load: PASS (${p21OptionLoad.promptValues.join(' / ')} -> ${p21OptionLoad.returnedValues.join(' / ')}; N06 R2 is 0o${p21OptionLoad.option2.toString(8)}; PRO advances to ${p21OptionLoad.acceptedPrompt}; raw OPR ERR clear)`);
+    console.log(`  V24N06 two-component octal load/readback: PASS (${v24n06.readback.join(' / ')}; raw OPR ERR clear)`);
+    console.log(`  V25N34 three-component HMS load/readback: PASS (${v25n34.readback.join(' / ')}; raw OPR ERR clear)`);
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);
