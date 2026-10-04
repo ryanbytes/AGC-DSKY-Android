@@ -1,3 +1,9 @@
+## 2026-10-04 DSKY input release-path audit
+
+Reviewed the CM normal-key path from the window-capture interlock through the input service and yaAGC channel 015, plus maintained PRO channel 032 and optics/navigation channel 016. The current implementation preserves one-key-at-a-time behavior, KEYRST only after all normal switches release, PRO's separate active-low maintained contact, and navigation-key make/release on the real channel. Existing tests cover key mappings, auto-repeat suppression, key release, CLOCK handoff, PRO release on pause, and queued-input backpressure. Added direct keyboard-interlock regressions for pointercancel, window blur during pointer input, and window blur during hardware-keyboard input; these assert pressed state clears and exactly one KEYRST is sent. No production-code defect was found in these reviewed paths.
+
+Validation: focused `node tools/keyboard-electrical-interlock-smoke.js` passed with the new release-path cases. The existing focused DSKY input, AGC core, app-visibility/PRO, and PRO electrical smokes also passed.
+
 ## 2026-10-04 AGC machine-cycle timing accuracy audit
 
 The implementation notes described the 11.72 μs runtime interval as a complete AGC instruction. The pinned yaAGC `wasm.c` calls `agc_engine` once for each `cpu_step` iteration; pinned `agc_engine.c` defines that call as one machine cycle and models multi-cycle instructions across subsequent calls. Corrected the notes to say 11.72 μs per machine cycle (MCT), approximately 85,333 MCT/s, and retained the existing caveat that JavaScript scheduling is approximate. Runtime timing is unchanged.
