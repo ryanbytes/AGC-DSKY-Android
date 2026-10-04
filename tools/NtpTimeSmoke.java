@@ -10,6 +10,7 @@ public final class NtpTimeSmoke {
 
     public static void main(String[] args) throws Exception {
         testSuccess();
+        testProtocolVersions();
         testMonotonicReceiveTimestamp();
         testServerProcessingDoesNotBiasOffset();
         testWrongPeerRejected();
@@ -42,6 +43,48 @@ public final class NtpTimeSmoke {
             catch (Exception expected) { rejected = true; }
             responder.join(2_000); check(failure.get() == null, "malformed responder failed");
             check(rejected, "malformed NTP response was accepted");
+        }
+    }
+
+    private static void testProtocolVersions() throws Exception {
+        assertVersionAccepted(3, true);
+        assertVersionAccepted(4, true);
+        assertVersionAccepted(2, false);
+        assertVersionAccepted(5, false);
+    }
+
+    private static void assertVersionAccepted(int version, boolean expected) throws Exception {
+        try (DatagramSocket server = new DatagramSocket(0)) {
+            AtomicReference<Throwable> failure = new AtomicReference<>();
+            Thread responder = new Thread(() -> {
+                try {
+                    byte[] request = new byte[48];
+                    DatagramPacket incoming = new DatagramPacket(request, request.length);
+                    server.receive(incoming);
+                    byte[] response = new byte[48];
+                    response[0] = (byte) ((version << 3) | 4);
+                    response[1] = 1;
+                    System.arraycopy(request, 40, response, 24, 8);
+                    writeTimestamp(response, 32, System.currentTimeMillis());
+                    writeTimestamp(response, 40, System.currentTimeMillis());
+                    server.send(new DatagramPacket(response, response.length,
+                            incoming.getAddress(), incoming.getPort()));
+                } catch (Throwable error) {
+                    failure.set(error);
+                }
+            });
+            responder.start();
+            boolean accepted;
+            try {
+                SntpClient.query("127.0.0.1", server.getLocalPort(), 1_000);
+                accepted = true;
+            } catch (Exception rejected) {
+                accepted = false;
+            }
+            responder.join(2_000);
+            check(!responder.isAlive(), "version " + version + " responder did not finish");
+            check(failure.get() == null, "version " + version + " responder failed");
+            check(accepted == expected, "unexpected acceptance for NTP version " + version);
         }
     }
 

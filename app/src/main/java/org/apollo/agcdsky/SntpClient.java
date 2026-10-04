@@ -52,9 +52,11 @@ final class SntpClient {
                 throw new IOException("NTP originate timestamp mismatch");
             }
             int leap = (response[0] >> 6) & 0x3;
+            int version = (response[0] >> 3) & 0x7;
             int mode = response[0] & 0x7;
             int stratum = response[1] & 0xff;
-            if (leap == 3 || (mode != 4 && mode != 5) || stratum == 0 || stratum > 15) {
+            if (leap == 3 || version < 3 || version > 4
+                    || (mode != 4 && mode != 5) || stratum == 0 || stratum > 15) {
                 throw new IOException("invalid NTP response");
             }
             // Use monotonic elapsed time for T4 so a wall-clock adjustment while
