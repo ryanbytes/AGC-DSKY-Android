@@ -132,7 +132,9 @@ final class AppUpdater {
                 if (!updateDir.isDirectory() && !updateDir.mkdirs()) return;
                 File candidate = new File(updateDir, apkName);
                 notifyStatus(listener, "DOWNLOADING · " + release.version);
-                downloadToFile(apk.url, candidate);
+                String apkUrl = ReleaseAssetUrlPolicy.requireTrusted(
+                        apk.url, release.version, apkName);
+                downloadToFile(apkUrl, candidate);
                 String actualSha256 = sha256(candidate);
                 if (!expectedSha256.equalsIgnoreCase(actualSha256)) {
                     candidate.delete();
@@ -467,7 +469,10 @@ final class AppUpdater {
             String direct = parseSha256(digest);
             if (direct != null) return direct;
             Asset sidecar = find(apkName + ".sha256");
-            return sidecar == null ? null : parseSha256(downloadText(sidecar.url));
+            if (sidecar == null) return null;
+            String sidecarUrl = ReleaseAssetUrlPolicy.requireTrusted(
+                    sidecar.url, version, sidecar.name);
+            return parseSha256(downloadText(sidecarUrl));
         }
     }
 }
