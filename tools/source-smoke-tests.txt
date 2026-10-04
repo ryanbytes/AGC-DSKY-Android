@@ -10,6 +10,7 @@ manifest-policy-smoke.js
 ntp-policy-smoke.js
 fire-home-setup-smoke.js
 self-update-smoke.js
+update-release-prep-smoke.js
 csp-smoke.js
 compat-boundary-smoke.js
 public-facade-boundary-smoke.js

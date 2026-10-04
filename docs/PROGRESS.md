@@ -1,3 +1,11 @@
+## 2026-10-04 release APK signer-gate audit
+
+`tools/prepare-update-release.sh` ran `apksigner verify` but discarded its report; it would stage an APK signed by any valid certificate or signed only with v1. It also did not verify the APK package/version metadata or that the two positional inputs were actually Regular then Fire builds. The documented handoff requires the standalone release certificate and APK Signature Scheme v2 or newer. The helper now requires a verified v2/v3/v3.1/v4 scheme and the established certificate SHA-256, checks the package and versionName against `VERSION`, requires equal version codes, and verifies Fire-only classes are present only in the Fire APK before it clears or writes staging output.
+
+Added an isolated subprocess smoke using a temporary repository and fake Android build-tool outputs: expected v2/v3.1 signatures and matching metadata stage files and correct SHA-256 sidecars; wrong certificates, v1-only/failed signatures, version mismatch, swapped Regular/Fire payloads, missing Fire classes, and unequal version codes are rejected before staging without deleting existing staging data. Registered it in the canonical source suite. This verifies policy handling, not the unavailable private release key or an actual signed production APK.
+
+Validation: `bash -n tools/prepare-update-release.sh`, `node tools/update-release-prep-smoke.js`, `node tools/self-update-smoke.js`, `node tools/source-smoke-manifest-smoke.js`, and `git diff --check` passed. Full source suite and canonical Android build for this revision remain to be run; no release was created.
+
 ## 2026-10-04 updater release-identity audit
 
 The updater compared the GitHub release tag with its installed `BuildConfig.VERSION_NAME`, then verified a candidate APK's package, increasing version code, and signer, but did not compare the APK's own `versionName` with that release tag. The publication workflow checks the payload `VERSION` and APK sidecar hashes, so a correctly signed higher-version-code APK with mismatched embedded version could be published and accepted; after installation the app would keep discovering the newer tag and redownload/reject the same version-code APK.
