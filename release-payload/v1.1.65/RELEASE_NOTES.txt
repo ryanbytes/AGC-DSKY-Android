@@ -1,0 +1,5 @@
+AGC DSKY 1.1.65
+
+This maintenance release uses a version-neutral Android app label and adds source-backed regression coverage for Comanche two-component octal and HMS load/readback paths.
+
+Use the Regular APK for Android phones and the Fire APK for Fire tablets. SHA-256 sidecars are included for both signed APKs.
