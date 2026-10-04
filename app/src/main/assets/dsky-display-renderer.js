@@ -117,7 +117,32 @@
     slot.setAttribute('data-el-base-value',key);return true;
   }
 
+  const LAMP_LABELS=Object.freeze({uplink:'UPLINK ACTY',temp:'TEMP',noatt:'NO ATT',gimbal:'GIMBAL LOCK',stby:'STBY',prog:'PROG',keyrel:'KEY REL',restart:'RESTART',oprerr:'OPR ERR',tracker:'TRACKER',comp:'COMP ACTY'});
+  const accessibleDisplay={prog:'  ',verb:'  ',noun:'  ',r1:{sign:' ',digits:'     '},r2:{sign:' ',digits:'     '},r3:{sign:' ',digits:'     '}};
   let glyphSlot,signSlot,digitsSlot,regSlot,set2Slot,setRegSlot,setLampSlot,clearLampsSlot;
+  function accessibleCells(value){return Array.from(String(value),ch=>/[0-9]/.test(ch)?ch:ch===' '?'blank':'partial segment').join(' ')}
+  function syncAccessibleDisplay(){
+    const panel=document.getElementById('elpanel');if(!panel)return;
+    const signText=value=>value==='+'?'plus':value==='-'?'minus':'no sign';
+    const registerText=name=>`${signText(accessibleDisplay[name].sign)} ${accessibleCells(accessibleDisplay[name].digits)}`;
+    const phrases=[
+      `DSKY electroluminescent display. Program ${accessibleCells(accessibleDisplay.prog)}.`,
+      `Verb ${accessibleCells(accessibleDisplay.verb)}. Noun ${accessibleCells(accessibleDisplay.noun)}.`,
+      `Register 1 ${registerText('r1')}. Register 2 ${registerText('r2')}. Register 3 ${registerText('r3')}.`
+    ];
+    const classes=document.body&&document.body.classList;
+    if(classes&&classes.contains('el-off'))phrases.unshift('EL display off; values below are last latched.');
+    else if(classes&&classes.contains('vn-flash-off'))phrases.unshift('Verb and noun are blanked by AGC modulation; their values below are retained.');
+    const lit=[];
+    for(const [name,label] of Object.entries(LAMP_LABELS)){
+      const lamp=document.querySelector(`[data-lamp="${name}"]`);if(!lamp)continue;
+      const on=!!(lamp.classList&&lamp.classList.contains('on'));
+      if(lamp.getAttribute('aria-label')!==`${label} ${on?'on':'off'}`)lamp.setAttribute('aria-label',`${label} ${on?'on':'off'}`);
+      if(on)lit.push(label);
+    }
+    phrases.push(`Annunciators on: ${lit.length?lit.join(', '):'none'}.`);
+    const value=phrases.join(' ');if(panel.getAttribute('aria-label')!==value)panel.setAttribute('aria-label',value);
+  }
   function baseRenderDigits(el,text){
     const chars=String(text).split(''),slots=stableSlots(el,'digits',chars.length),version=glyphSlot.version();
     chars.forEach((ch,i)=>paintBaseDigit(slots[i],ch,i*14,version));
@@ -127,10 +152,10 @@
     paintBaseSign(slots[0],text[0],signSlot.version());
     chars.forEach((ch,i)=>paintBaseDigit(slots[i+1],ch,7+i*14,glyphSlot.version()));
   }
-  function baseSet2(id,text){digitsSlot.get()(document.getElementById(id),String(text).padEnd(2,' ').slice(0,2))}
-  function baseSetReg(id,sign,digits){regSlot.get()(document.getElementById(id),(sign||' ')+String(digits).padEnd(5,' ').slice(0,5))}
-  function baseSetLamp(name,on){const x=document.querySelector(`[data-lamp="${name}"]`);if(x)x.classList.toggle('on',!!on)}
-  function baseClearLamps(){document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.remove('on'));document.body.classList.remove('vn-flash-off','el-off')}
+  function baseSet2(id,text){text=String(text).padEnd(2,' ').slice(0,2);digitsSlot.get()(document.getElementById(id),text);if(Object.prototype.hasOwnProperty.call(accessibleDisplay,id)){accessibleDisplay[id]=text;syncAccessibleDisplay()}}
+  function baseSetReg(id,sign,digits){sign=sign||' ';digits=String(digits).padEnd(5,' ').slice(0,5);regSlot.get()(document.getElementById(id),sign+digits);if(Object.prototype.hasOwnProperty.call(accessibleDisplay,id)){accessibleDisplay[id]={sign,digits};syncAccessibleDisplay()}}
+  function baseSetLamp(name,on){const x=document.querySelector(`[data-lamp="${name}"]`);if(x)x.classList.toggle('on',!!on);syncAccessibleDisplay()}
+  function baseClearLamps(){document.querySelectorAll('[data-lamp]').forEach(x=>x.classList.remove('on'));document.body.classList.remove('vn-flash-off','el-off');syncAccessibleDisplay()}
 
   const isFn=value=>typeof value==='function';
   glyphSlot=createImplementationSlot('glyph',baseGlyph,isFn);
@@ -179,6 +204,7 @@
     setReg:(...args)=>setRegSlot.get()(...args),
     setLamp:(...args)=>setLampSlot.get()(...args),
     clearLamps:(...args)=>clearLampsSlot.get()(...args),
+    refreshAccessibleState:()=>syncAccessibleDisplay(),
     implementation,
     installImplementation,
     segmentPattern,

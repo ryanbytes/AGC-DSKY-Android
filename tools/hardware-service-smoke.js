@@ -28,7 +28,7 @@ const clockSlots={
   lampTest:()=>{}
 };
 
-context.AGCDSKY_RENDERER={setLamp:(name,on)=>lamps.set(name,!!on)};
+context.AGCDSKY_RENDERER={setLamp:(name,on)=>lamps.set(name,!!on),refreshAccessibleState(){}};
 context.AGCDSKY_AUDIO={ensure:()=>null,emitTick:()=>{}};
 context.AGCDSKY_CLOCK={
   relayGroups:()=>CLOCK_GROUPS,
@@ -129,7 +129,7 @@ const dispatchContext={console,window:null,document,performance:{now:()=>dispatc
 dispatchContext.window=dispatchContext;installServiceRegistry(dispatchContext);vm.createContext(dispatchContext);
 new vm.Script(stateSource,{filename:'app-state-runtime.js'}).runInContext(dispatchContext);
 new vm.Script(topologySource,{filename:'dsky-relay-topology.js'}).runInContext(dispatchContext);
-dispatchContext.AGCDSKY_RENDERER={setLamp(){},set2(){},setReg(){},clearLamps(){}};
+dispatchContext.AGCDSKY_RENDERER={setLamp(){},set2(){},setReg(){},clearLamps(){},refreshAccessibleState(){}};
 dispatchContext.AGCDSKY_AUDIO={playBurst(){}};
 const dispatchClockSlots={stopQueue(){},runQueue(){},cancelLampTest(){},lampTest(){}};
 dispatchContext.AGCDSKY_CLOCK={relayGroups:()=>[],desiredDigits:()=>({}),relayWord:()=>0,digitRelayCode:()=>0,digits:()=>({}),relayWords:()=>({}),queue:()=>[],queueBusy:()=>false,setQueueBusy(){},lampTestActive:()=>false,setLampTestActive(){},lampTestTimer:()=>0,setLampTestTimer(){},implementation:name=>dispatchClockSlots[name],installImplementation(name,next){dispatchClockSlots[name]=next;return next},cancelLampTest(){},stopQueue(){},runQueue(){},lampTest(){},renderReg(){},syncFace(){},tick(){}};
