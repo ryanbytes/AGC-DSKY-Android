@@ -34,7 +34,9 @@ for(const marker of [
   'maximumAge:SKY_LOCATION_MAX_AGE_MS',
   'if(!cat||!skyLocationFresh())return null',
   'const locationUncertainty=skyLocationUncertaintyDeg(),minAltitude=12+(Number.isFinite(locationUncertainty)?locationUncertainty:0);',
-  'cue.classList.add(\'active\');cue.classList.toggle(\'outside\',d.distance-locationUncertainty>edge);cue.classList.toggle(\'centered\',d.distance+locationUncertainty<=CENTER_TOL_DEG);',
+  'const cueState=skyPointingCue(d.distance,skyLocationUncertaintyDeg(),!!projected?.calibrated);',
+  'cue.classList.add(\'active\');cue.classList.toggle(\'outside\',cueState===\'move\');cue.classList.toggle(\'centered\',cueState===\'centered\');',
+  '`BORESIGHT UNCALIBRATED · AIM ESTIMATE ${d.distance.toFixed(1)}° · CENTER A KNOWN STAR, THEN CALIBRATE${src}`',
   "`POSITION UNCERTAIN · ${Number.isFinite(locationUncertainty)?'LOCATION ±'+locationUncertainty.toFixed(2)+'°':'LOCATION ACCURACY UNKNOWN'} · TARGET ${d.distance.toFixed(1)}°${src}`",
   "pairEl.textContent='PAIR WAITING · LOCATION STALE'",
   "targ.textContent='TARGET WAITING FOR FRESH LOCATION'",
@@ -56,6 +58,16 @@ assert(Math.abs(freshnessContext.locationUncertaintyDeg({accuracy:9000})-0.08094
 assert(freshnessContext.locationUncertaintyDeg({accuracy:9000})>0.08,'9 km location uncertainty must exceed the CENTERED tolerance');
 assert(freshnessContext.locationUncertaintyDeg({accuracy:-1})===Infinity,'negative accuracy must be treated as unknown');
 assert(freshnessContext.locationUncertaintyDeg({})===Infinity,'missing horizontal accuracy must be treated as unknown');
+const cueStart=source.indexOf('  function skyPointingCue('),cueEnd=source.indexOf('\n  function core()',cueStart);
+assert(cueStart>=0&&cueEnd>cueStart,'could not isolate the production star-pointer confidence policy');
+const cueContext={Math};
+vm.runInNewContext(`const CENTER_TOL_DEG=0.08;const SXT_FOV_DEG=1.8;${source.slice(cueStart,cueEnd)}globalThis.skyPointingCue=skyPointingCue;`,cueContext,{filename:'optics.js:sky-pointing-cue'});
+assert(cueContext.skyPointingCue(0,0,false)==='uncalibrated','uncalibrated device-axis estimate must not be reported as centered');
+assert(cueContext.skyPointingCue(0.075,0,true)==='centered','calibrated target inside the centered tolerance must be centered');
+assert(cueContext.skyPointingCue(0.075,0.01,true)==='in-field','location uncertainty that exceeds the centered envelope must prevent a centered label');
+assert(cueContext.skyPointingCue(0.4,0,true)==='in-field','calibrated target within the sextant field must be in field');
+assert(cueContext.skyPointingCue(0.9,0.2,true)==='position-uncertain','target overlapping the field edge under location uncertainty must be uncertain');
+assert(cueContext.skyPointingCue(1.2,0.1,true)==='move','target outside the complete field uncertainty envelope must request movement');
 for(const forbidden of ['api.openSextant =','api.closeSextant =','api.sextantStatus ='])
   assert(!source.includes(forbidden),`optics regained direct public-facade mutation: ${forbidden}`);
 for(const marker of [
@@ -137,4 +149,4 @@ assert(source.includes('function close(){\n    releaseNavContact();'), 'closing 
 assert(source.includes("const tapMark=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_SEXTANT_TAP_MARK');\n    if(tapMark&&typeof tapMark.cancel==='function')tapMark.cancel();"), 'closing sextant must cancel an in-flight tap-to-mark operation');
 assert(source.includes('if (document.hidden) {\n      releaseNavContact();'), 'backgrounding sextant must release a held navigation contact');
 console.log('optics service smoke: PASS');
-console.log('  explicit sextant service publication, parser order, camera lifecycle, CDU/nav paths, fresh-location gating, autosave, and status telemetry retained');
+console.log('  explicit sextant service publication, parser order, camera lifecycle, CDU/nav paths, fresh-location and calibrated-boresight confidence gating, autosave, and status telemetry retained');
