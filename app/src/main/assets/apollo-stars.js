@@ -49,15 +49,63 @@
     [36,'44','ENIF', .8139832631,-.5557243189, .1691204557, 2.40],
     [37,'45','FOMALHAUT', .8342971408,-.2392481515,-.4966976975, 1.16]
   ];
+  // Hipparcos New Reduction (I/311) positions and linear proper motions for
+  // the matching bright stars. Coordinates are ICRS at J1991.25; pmRA is
+  // the eastward component mu_alpha*cos(dec), both proper-motion fields in
+  // mas/Julian-year. Keep the original Comanche vectors above unchanged.
+  const hipparcos = [
+    ['01',  677,   2.09653385,  29.09082837,  137.46, -163.44],
+    ['02', 3419,  10.89678447, -17.98668407,  232.55,   31.99],
+    ['03', 4427,  14.17708782,  60.71674955,   25.17,   -3.92],
+    ['04', 7588,  24.42813208, -57.23665985,   87.00,  -38.24],
+    ['05',11767,  37.94614300,  89.26413778,   44.48,  -11.85],
+    ['06',13847,  44.56548212, -40.30473465,  -52.89,   21.98],
+    ['07',14135,  45.56991317,   4.08992556,  -10.41,  -76.85],
+    ['10',15863,  51.08061917,  49.86124305,   23.75,  -26.23],
+    ['11',21421,  68.98000194,  16.50976158,   63.45, -188.94],
+    ['12',24436,  78.63446385,  -8.20163958,    1.31,    0.50],
+    ['13',24608,  79.17206466,  45.99902905,   75.25, -426.89],
+    ['14',30438,  95.98787790, -52.69571787,   19.93,   23.24],
+    ['15',32349, 101.28854105, -16.71314306, -546.01,-1223.07],
+    ['16',37279, 114.82724202,   5.22750758, -714.59,-1036.80],
+    ['17',39953, 122.38314733, -47.33661168,   -6.07,   10.43],
+    ['20',44127, 134.80349431,  48.04234950, -441.29, -215.32],
+    ['21',46390, 141.89688204,  -8.65868307,  -15.23,   34.37],
+    ['22',49669, 152.09358042,  11.96719519, -248.73,    5.59],
+    ['23',57632, 177.26615960,  14.57233678, -497.68, -114.67],
+    ['24',59803, 183.95194935, -17.54198359, -158.61,   21.86],
+    ['25',60718, 186.64975588, -63.09905674,  -35.83,  -14.86],
+    ['26',65474, 201.29835228, -11.16124494,  -42.35,  -30.67],
+    ['27',67301, 206.88560910,  49.31330297, -121.17,  -14.91],
+    ['30',68933, 211.67218593, -36.36869558, -520.53, -518.06],
+    ['31',69673, 213.91811408,  19.18727046,-1093.39,-2000.06],
+    ['32',76267, 233.67162276,  26.71491051,  120.27,  -89.58],
+    ['33',80763, 247.35194829, -26.43194598,  -12.11,  -23.30],
+    ['34',82273, 252.16610734, -69.02763509,   17.99,  -31.58],
+    ['35',86032, 263.73335361,  12.56057593,  108.07, -221.57],
+    ['36',91262, 279.23410825,  38.78299326,  200.94,  286.23],
+    ['37',92855, 283.81631936, -26.29659425,   15.14,  -53.43],
+    ['40',97649, 297.69450819,   8.86738473,  536.23,  385.29],
+    ['41',100345,305.25269233, -14.78140101,   44.92,    7.38],
+    ['42',100751,306.41187379, -56.73488065,    6.90,  -86.02],
+    ['43',102098,310.35797281,  45.28033431,    2.01,    1.85],
+    ['44',107315,326.04641750,   9.87500758,   26.92,    0.44],
+    ['45',113368,344.41177299, -29.62183680,  328.95, -164.67]
+  ];
   const d2r=Math.PI/180, r2d=180/Math.PI;
   // Comanche 055 (Apollo 11) uses the 1969/1970 Nearest Besselian Year
   // Basic Reference Coordinate System. Its star vectors are not J2000.
   const starCatalogEpoch=1970.0;
+  const hipparcosEpoch=1991.25;
+  const hipparcosByCode=new Map(hipparcos.map(([code,hip,ra,dec,pmRaCosDec,pmDec])=>[
+    code,{catalog:'Hipparcos New Reduction (I/311)',hip,ra,dec,pmRaCosDec,pmDec,referenceEpoch:hipparcosEpoch}
+  ]));
   const wrap360=x=>((x%360)+360)%360;
   const wrap180=x=>((x+180)%360+360)%360-180;
   const stars=raw.map(([internal,code,name,x,y,z,mag])=>({
     internal,code,name,x,y,z,mag,
     coordinateEpoch:starCatalogEpoch,
+    astrometry:hipparcosByCode.get(code),
     ra:wrap360(Math.atan2(y,x)*r2d),
     dec:Math.asin(Math.max(-1,Math.min(1,z)))*r2d
   }));
@@ -79,8 +127,30 @@
     const C=Math.sin(theta)*Math.cos(dec)*Math.cos(ra+zeta)+Math.cos(theta)*Math.sin(dec);
     return {ra:wrap360((Math.atan2(A,B)+z)*r2d),dec:Math.asin(Math.max(-1,Math.min(1,C)))*r2d};
   }
+  function propagateProperMotion(astrometry,toEpoch){
+    const dt=toEpoch-astrometry.referenceEpoch,ra=astrometry.ra*d2r,dec=astrometry.dec*d2r;
+    const cosRa=Math.cos(ra),sinRa=Math.sin(ra),cosDec=Math.cos(dec),sinDec=Math.sin(dec);
+    const direction=[cosDec*cosRa,cosDec*sinRa,sinDec];
+    const east=[-sinRa,cosRa,0],north=[-sinDec*cosRa,-sinDec*sinRa,cosDec];
+    const eastOffset=astrometry.pmRaCosDec*dt*d2r/3600000;
+    const northOffset=astrometry.pmDec*dt*d2r/3600000;
+    const distance=Math.hypot(eastOffset,northOffset);
+    if(distance===0)return {ra:wrap360(astrometry.ra),dec:astrometry.dec};
+    const tangentScale=Math.sin(distance)/distance,radialScale=Math.cos(distance);
+    const x=radialScale*direction[0]+tangentScale*(eastOffset*east[0]+northOffset*north[0]);
+    const y=radialScale*direction[1]+tangentScale*(eastOffset*east[1]+northOffset*north[1]);
+    const z=radialScale*direction[2]+tangentScale*(eastOffset*east[2]+northOffset*north[2]);
+    return {ra:wrap360(Math.atan2(y,x)*r2d),dec:Math.asin(Math.max(-1,Math.min(1,z)))*r2d};
+  }
   function equatorialOfDate(star,date=new Date()){
-    return precessEquatorial(star.ra,star.dec,starCatalogEpoch,julianEpoch(date));
+    const epoch=julianEpoch(date);
+    if(star.astrometry){
+      const position=propagateProperMotion(star.astrometry,epoch);
+      // Hipparcos astrometry is ICRS (effectively the J2000 inertial frame);
+      // precess the propagated direction to the observation-date mean frame.
+      return precessEquatorial(position.ra,position.dec,2000.0,epoch);
+    }
+    return precessEquatorial(star.ra,star.dec,starCatalogEpoch,epoch);
   }
   function gmstDeg(date=new Date()){
     const jd=julianDate(date),t=(jd-2451545.0)/36525;
