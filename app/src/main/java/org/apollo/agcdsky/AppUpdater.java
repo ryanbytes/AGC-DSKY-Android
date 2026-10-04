@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 final class AppUpdater {
     private static final String RELEASE_API = "https://api.github.com/repos/ryanbytes/AGC-DSKY-Android/releases/latest";
-    private static final String FALLBACK_VERSION_URL = "https://raw.githubusercontent.com/ryanbytes/AGC-DSKY-Android/main/VERSION";
+    private static final String RELEASES_LATEST_URL = "https://github.com/ryanbytes/AGC-DSKY-Android/releases/latest";
     private static final String RELEASE_DOWNLOAD_BASE = "https://github.com/ryanbytes/AGC-DSKY-Android/releases/download/v";
     private static final long CHECK_INTERVAL_MS = 12L * 60L * 60L * 1000L;
     private static final long FOREGROUND_CHECK_INTERVAL_MS = 60L * 1000L;
@@ -264,8 +264,16 @@ final class AppUpdater {
     }
 
     private static Release fetchFallbackRelease() throws Exception {
-        String version = normalizeVersion(downloadText(FALLBACK_VERSION_URL));
-        if (version == null) return null;
+        HttpURLConnection connection = open(RELEASES_LATEST_URL);
+        connection.setRequestProperty("Accept", "text/html");
+        final String version;
+        try {
+            int status = connection.getResponseCode();
+            if (status != 200) throw httpStatusException("latest release", connection, status);
+            version = LatestReleaseTagPolicy.versionFrom(connection.getURL().toString());
+        } finally {
+            connection.disconnect();
+        }
         String base = RELEASE_DOWNLOAD_BASE + version + "/";
         return new Release(version, new Asset[]{
                 new Asset("app-fire-release.apk", base + "app-fire-release.apk", ""),

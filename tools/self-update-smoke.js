@@ -14,12 +14,13 @@ const manifest=fs.readFileSync(path.join(ROOT,'app/src/main/AndroidManifest.xml'
 const prep=fs.readFileSync(path.join(ROOT,'tools/prepare-update-release.sh'),'utf8');
 const retryPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/UpdateRetryPolicy.java'),'utf8');
 const releaseUrlPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseAssetUrlPolicy.java'),'utf8');
+const latestTagPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/LatestReleaseTagPolicy.java'),'utf8');
 const versionPolicy=fs.readFileSync(path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseVersionPolicy.java'),'utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 for(const marker of [
   'releases/latest',
-  'FALLBACK_VERSION_URL',
-  'raw.githubusercontent.com/ryanbytes/AGC-DSKY-Android/main/VERSION',
+  'RELEASES_LATEST_URL',
+  'github.com/ryanbytes/AGC-DSKY-Android/releases/latest',
   'RELEASE_DOWNLOAD_BASE',
   'fetchLatestReleaseResilient()',
   'fetchFallbackRelease()',
@@ -56,6 +57,16 @@ for(const marker of [
   'PATH_PREFIX = "/ryanbytes/AGC-DSKY-Android/releases/download/v"',
   'HOST = "github.com"'
 ])assert(java.includes(marker)||releaseUrlPolicy.includes(marker),`updater release URL policy missing ${marker}`);
+for(const marker of [
+  'LatestReleaseTagPolicy.versionFrom(connection.getURL().toString())',
+  'connection.setRequestProperty("Accept", "text/html")'
+])assert(java.includes(marker),`latest-release redirect fallback missing ${marker}`);
+for(const marker of [
+  'PATH_PREFIX = "/ryanbytes/AGC-DSKY-Android/releases/tag/v"',
+  'uri.getRawUserInfo() != null',
+  'uri.getRawQuery() != null',
+  'uri.getRawFragment() != null'
+])assert(latestTagPolicy.includes(marker),`latest-release redirect validation missing ${marker}`);
 for(const marker of [
   'uri.getRawQuery() != null',
   'uri.getRawUserInfo() != null',
@@ -188,10 +199,13 @@ const temp=fs.mkdtempSync(path.join(os.tmpdir(),'agcdsky-release-url-'));
 try{
   execFileSync('javac',['-d',temp,
     path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseAssetUrlPolicy.java'),
+    path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/LatestReleaseTagPolicy.java'),
     path.join(ROOT,'app/src/main/java/org/apollo/agcdsky/ReleaseVersionPolicy.java'),
     path.join(ROOT,'tools/ReleaseAssetUrlPolicySmoke.java'),
+    path.join(ROOT,'tools/LatestReleaseTagPolicySmoke.java'),
     path.join(ROOT,'tools/ReleaseVersionPolicySmoke.java')],{stdio:'inherit'});
   execFileSync('java',['-cp',temp,'org.apollo.agcdsky.ReleaseAssetUrlPolicySmoke'],{stdio:'inherit'});
+  execFileSync('java',['-cp',temp,'org.apollo.agcdsky.LatestReleaseTagPolicySmoke'],{stdio:'inherit'});
   execFileSync('java',['-cp',temp,'org.apollo.agcdsky.ReleaseVersionPolicySmoke'],{stdio:'inherit'});
 }finally{
   fs.rmSync(temp,{recursive:true,force:true});
