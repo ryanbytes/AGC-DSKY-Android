@@ -19,8 +19,10 @@
 (() => {
   const app = window.AGCDSKY;
   const phoneService = window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_PHONE');
+  const geomagneticService = window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_WMM2025');
   if (!app) throw new Error('AGCDSKY public facade unavailable');
   if (!phoneService || typeof phoneService.installImplementations !== 'function') throw new Error('AGCDSKY phone service unavailable');
+  if (!geomagneticService || typeof geomagneticService.field !== 'function') throw new Error('AGCDSKY WMM2025 service unavailable');
   // Preserve the historical local `api.name = implementation` definitions
   // without writing to the root facade. Read-only app services (notably
   // getCore) remain available through the prototype; all own function exports
@@ -98,7 +100,8 @@
   // phone-side star-finder data only and is never written to the AGC.
   let skyPointing = {seen:false,az:NaN,alt:NaN,accuracy:0,declination:0,timestamp:0,source:'none'};
   let rawNativeSky = {seen:false,az:NaN,alt:NaN,accuracy:0,declination:0,timestamp:0};
-  let skyDeclination = 0;
+  let skyDeclination = NaN;
+  let skyReference = null;
   const SKY_CAL_KEY = 'sxtCameraBoresightV1';
   let cameraBoresightDevice = [0,0,-1];
   let skyCalibration = null;
@@ -121,7 +124,8 @@
   function loadSkyCalibration(){
     try{
       const c=JSON.parse(localStorage.getItem(SKY_CAL_KEY)||'null');
-      if(c&&c.schema===1&&Array.isArray(c.boresight)&&c.boresight.length===3&&c.boresight.every(Number.isFinite)){
+      if(c&&c.schema===2&&c.model==='WMM2025'&&Number.isFinite(c.declination)
+          &&Array.isArray(c.boresight)&&c.boresight.length===3&&c.boresight.every(Number.isFinite)){
         const boresight=c.boresight.map(Number),magnitude=Math.hypot(...boresight);
         if(Number.isFinite(magnitude)&&magnitude>1e-9){
           cameraBoresightDevice=boresight.map(value=>value/magnitude);skyCalibration={...c,boresight:cameraBoresightDevice.slice()};
@@ -791,7 +795,7 @@
     return {az:((deg(Math.atan2(east,north))%360)+360)%360,alt:deg(Math.atan2(up,h))};
   }
   function skyFromAbsoluteQuaternion(rawQ,accuracy=0) {
-    if(!rawQ)return;
+    if(!rawQ||!Number.isFinite(skyDeclination)){clearSkyPointing('magnetic-only');return}
     // Android absolute ROTATION_VECTOR is referenced to magnetic East/North/Up.
     // The persisted boresight is a physical vector in the phone's device frame,
     // so camera/sensor mounting offsets remain valid in portrait and landscape.
@@ -800,13 +804,42 @@
       skyCalibration?'rotation-vector-calibrated':'rotation-vector');
   }
 
+  function clearSkyPointing(source='declination-unavailable'){
+    skyPointing={seen:false,az:NaN,alt:NaN,accuracy:0,declination:NaN,timestamp:Date.now(),source};
+    try{dispatchEvent(new CustomEvent('agcdsky-skypointing',{detail:{...skyPointing}}))}catch(_){ }
+  }
+
+  function calibrationStatus(){
+    if(!skyCalibration)return {calibrated:false,stale:false,reason:'not-calibrated'};
+    if(!skyReference)return {calibrated:false,stale:true,reason:'location-or-date-unavailable'};
+    if(skyReference.blackout)return {calibrated:false,stale:true,reason:'wmm-blackout-zone'};
+    if(skyReference.caution)return {calibrated:false,stale:true,reason:'wmm-caution-zone'};
+    if(skyCalibration.model!=='WMM2025')return {calibrated:false,stale:true,reason:'model-changed'};
+    if(Math.abs(wrap180(skyReference.declinationDeg-skyCalibration.declination))>0.08)
+      return {calibrated:false,stale:true,reason:'magnetic-reference-shifted'};
+    return {calibrated:true,stale:false,reason:null};
+  }
+
+  api.updateSkyLocation = (latitudeDeg,longitudeDeg,altitudeMeters=0,date=new Date()) => {
+    const lat=Number(latitudeDeg),lon=Number(longitudeDeg),alt=Number(altitudeMeters);
+    const field=geomagneticService.field(lat,lon,alt,date);
+    skyReference=field?{...field,latitudeDeg:lat,longitudeDeg:lon,altitudeMeters:alt}:null;
+    skyDeclination=field?field.declinationDeg:NaN;
+    if(!field)clearSkyPointing('declination-unavailable');
+    else if(magneticRawQ)skyFromAbsoluteQuaternion(magneticRawQ,magneticAccuracy);
+    else if(rawNativeSky.seen)api.nativeMagneticPointing(rawNativeSky.az,rawNativeSky.alt,rawNativeSky.accuracy);
+    return api.skyCalibrationStatus();
+  };
+
   api.calibrateSkyBoresight = (targetAz,targetAlt,label='') => {
     targetAz=Number(targetAz);targetAlt=Number(targetAlt);
     if(!magneticRawQ||![targetAz,targetAlt].every(Number.isFinite))return {ok:false,error:'ABSOLUTE ROTATION VECTOR WAITING'};
+    if(!skyReference)return {ok:false,error:'MAGNETIC DECLINATION UNAVAILABLE · REFRESH LOCATION'};
+    if(skyReference.caution)return {ok:false,error:'COMPASS IN WMM CAUTION / BLACKOUT ZONE'};
     // Convert true target azimuth into the magnetic ENU frame used by Android.
     const targetMag=horizontalVector(targetAz-skyDeclination,targetAlt);
     cameraBoresightDevice=unit3(qRotate(qConj(magneticRawQ),targetMag));
-    skyCalibration={schema:1,boresight:cameraBoresightDevice.slice(),timestamp:Date.now(),label:String(label||''),declination:skyDeclination};
+    skyCalibration={schema:2,model:'WMM2025',boresight:cameraBoresightDevice.slice(),timestamp:Date.now(),label:String(label||''),declination:skyDeclination};
     try{localStorage.setItem(SKY_CAL_KEY,JSON.stringify(skyCalibration))}catch(_){ }
     skyFromAbsoluteQuaternion(magneticRawQ,magneticAccuracy);
     return {ok:true,calibration:{...skyCalibration}};
@@ -817,10 +850,10 @@
     if(magneticRawQ)skyFromAbsoluteQuaternion(magneticRawQ,magneticAccuracy);
     return true;
   };
-  api.skyCalibrationStatus = () => ({calibrated:!!skyCalibration,calibration:skyCalibration?{...skyCalibration}:null,boresight:cameraBoresightDevice.slice(),declination:skyDeclination,rawNative:{...rawNativeSky}});
+  api.skyCalibrationStatus = () => ({...calibrationStatus(),calibration:skyCalibration?{...skyCalibration}:null,boresight:cameraBoresightDevice.slice(),declination:Number.isFinite(skyDeclination)?skyDeclination:null,reference:skyReference?{...skyReference}:null,rawNative:{...rawNativeSky}});
   api.projectSkyTarget = (targetAz,targetAlt) => {
     targetAz=Number(targetAz);targetAlt=Number(targetAlt);
-    if(!magneticRawQ||![targetAz,targetAlt].every(Number.isFinite))return null;
+    if(!magneticRawQ||!Number.isFinite(skyDeclination)||![targetAz,targetAlt].every(Number.isFinite))return null;
     const targetWorldMag=horizontalVector(targetAz-skyDeclination,targetAlt);
     const targetDevice=unit3(qRotate(qConj(magneticRawQ),targetWorldMag));
     const b=unit3(cameraBoresightDevice);
@@ -835,7 +868,7 @@
     const up=unit3(cross(right,b));
     const f=clamp(dot(targetDevice,b),-1,1),x=dot(targetDevice,right),y=dot(targetDevice,up);
     const distance=deg(Math.acos(f));
-    return {distance,screenAngle:deg(Math.atan2(x,y)),x,y,forward:f,accuracy:magneticAccuracy,calibrated:!!skyCalibration,timestamp:Date.now()};
+    return {distance,screenAngle:deg(Math.atan2(x,y)),x,y,forward:f,accuracy:magneticAccuracy,calibrated:calibrationStatus().calibrated,timestamp:Date.now()};
   };
 
   api.nativeMagneticQuaternion = (w,x,y,z,displayAngle=0,accuracy=1) => {
@@ -865,15 +898,13 @@
     updateButton();
   };
 
-  api.nativeSkyPointing = (az,alt,accuracy=0,declination=0) => {
-    az=Number(az);alt=Number(alt);accuracy=Number(accuracy);declination=Number(declination);
+  api.nativeMagneticPointing = (az,alt,accuracy=0) => {
+    az=Number(az);alt=Number(alt);accuracy=Number(accuracy);
     if(!Number.isFinite(az)||!Number.isFinite(alt))return;
-    skyDeclination=Number.isFinite(declination)?declination:0;
-    rawNativeSky={seen:true,az:((az%360)+360)%360,alt,accuracy:Number.isFinite(accuracy)?accuracy:0,declination:skyDeclination,timestamp:Date.now()};
-    // Once calibrated, the physical camera boresight derived from the absolute
-    // quaternion is authoritative. Native az/alt remains visible in diagnostics.
-    if(skyCalibration&&magneticRawQ)skyFromAbsoluteQuaternion(magneticRawQ,magneticAccuracy);
-    else publishSkyPointing(az,alt,accuracy,skyDeclination,'native');
+    rawNativeSky={seen:true,az:((az%360)+360)%360,alt,accuracy:Number.isFinite(accuracy)?accuracy:0,timestamp:Date.now()};
+    if(!Number.isFinite(skyDeclination)){clearSkyPointing('magnetic-only');return}
+    if(calibrationStatus().calibrated&&magneticRawQ)skyFromAbsoluteQuaternion(magneticRawQ,magneticAccuracy);
+    else publishSkyPointing(az+skyDeclination,alt,accuracy,skyDeclination,'native-magnetic-corrected');
   };
 
   api.phoneSkyPointing = () => ({...skyPointing});

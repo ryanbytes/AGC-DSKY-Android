@@ -27,7 +27,7 @@
     'AGCDSKY_PROCEED','AGCDSKY_AUDIO_RECOVERY','AGCDSKY_FLIGHT_HARDWARE_UI',
     'AGCDSKY_LIGHTING_RHEOSTAT_STOP','AGCDSKY_KEY_MECHANICAL_SPEC','AGCDSKY_KEY_ELECTRICAL_SPEC','AGCDSKY_KEY_TACTILE','AGCDSKY_KEYBOARD_ELECTRICAL',
     'AGCDSKY_LIGHTING_ELECTRICAL','AGCDSKY_RELAY_SHOW','AGCDSKY_HARDWARE_COLOR_MODE','AGCDSKY_DIAGNOSTICS',
-    'AGCDSKY_APOLLO_STARS','AGCDSKY_PARALLAX','AGCDSKY_SCREEN_ONLY_GEOMETRY'
+    'AGCDSKY_APOLLO_STARS','AGCDSKY_WMM2025','AGCDSKY_PARALLAX','AGCDSKY_SCREEN_ONLY_GEOMETRY'
   ]);
   function createLateServiceRegistry(){
     const allowed=new Set(LATE_SERVICE_GLOBALS),values=Object.create(null),versions=Object.create(null),reasons=Object.create(null);
@@ -91,8 +91,8 @@
   const PHONE_API_NAMES=Object.freeze([
     'nativePhoneQuaternion','setOpticsCaptureActive','zeroOpticsCapture','phoneOpticsAngles',
     'nativePhoneSensorStatus','calibrateSkyBoresight','clearSkyBoresightCalibration',
-    'skyCalibrationStatus','projectSkyTarget','nativeMagneticQuaternion',
-    'nativeMagneticSensorStatus','nativeSkyPointing','phoneSkyPointing',
+    'skyCalibrationStatus','projectSkyTarget','updateSkyLocation','nativeMagneticQuaternion',
+    'nativeMagneticSensorStatus','nativeMagneticPointing','phoneSkyPointing',
     'nativePipaSensorStatus','nativePhoneLinearAcceleration','phoneIcduStatus','recenterPhoneImu'
   ]);
   function publicPhoneImplementation(name){const service=lateService('AGCDSKY_PHONE');return service&&typeof service.implementation==='function'?service.implementation(name):null}

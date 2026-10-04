@@ -9,8 +9,8 @@ const OWNER='agc-api-runtime.js';
 const PHONE_API=[
   'nativePhoneQuaternion','setOpticsCaptureActive','zeroOpticsCapture','phoneOpticsAngles',
   'nativePhoneSensorStatus','calibrateSkyBoresight','clearSkyBoresightCalibration',
-  'skyCalibrationStatus','projectSkyTarget','nativeMagneticQuaternion',
-  'nativeMagneticSensorStatus','nativeSkyPointing','phoneSkyPointing',
+  'skyCalibrationStatus','projectSkyTarget','updateSkyLocation','nativeMagneticQuaternion',
+  'nativeMagneticSensorStatus','nativeMagneticPointing','phoneSkyPointing',
   'nativePipaSensorStatus','nativePhoneLinearAcceleration','phoneIcduStatus','recenterPhoneImu'
 ];
 const LATE_SERVICE_GLOBALS=[
@@ -19,7 +19,7 @@ const LATE_SERVICE_GLOBALS=[
   'AGCDSKY_PROCEED','AGCDSKY_AUDIO_RECOVERY','AGCDSKY_FLIGHT_HARDWARE_UI',
   'AGCDSKY_LIGHTING_RHEOSTAT_STOP','AGCDSKY_KEY_MECHANICAL_SPEC','AGCDSKY_KEYBOARD_ELECTRICAL',
   'AGCDSKY_LIGHTING_ELECTRICAL','AGCDSKY_RELAY_SHOW','AGCDSKY_HARDWARE_COLOR_MODE','AGCDSKY_DIAGNOSTICS',
-  'AGCDSKY_APOLLO_STARS','AGCDSKY_PARALLAX','AGCDSKY_SCREEN_ONLY_GEOMETRY'
+  'AGCDSKY_APOLLO_STARS','AGCDSKY_WMM2025','AGCDSKY_PARALLAX','AGCDSKY_SCREEN_ONLY_GEOMETRY'
 ];
 const RESERVED=[
   'services','lifecycle','agcChannel','getCore','setAppVisible','getMission',

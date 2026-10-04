@@ -323,7 +323,12 @@
     if(!Number.isFinite(timestamp)||timestamp<=0)return false;
     skyLocation={lat,lon,alt:Number.isFinite(alt)?alt:0,accuracy:Number(accuracy),timestamp};
     try{localStorage.setItem('sxtSkyLocation',JSON.stringify(skyLocation))}catch(_){ }
-    try{if(skyLocationFresh()&&window.SkyBridge&&typeof SkyBridge.setLocation==='function')SkyBridge.setLocation(lat,lon,skyLocation.alt)}catch(_){ }
+    try{
+      if(typeof api.updateSkyLocation==='function'){
+        if(skyLocationFresh())api.updateSkyLocation(lat,lon,skyLocation.alt,api.accurateDate?api.accurateDate():new Date());
+        else api.updateSkyLocation(NaN,NaN,NaN,new Date(NaN));
+      }
+    }catch(_){ }
     selectedPair=null;pairCandidates=[];pairIndex=0;pairMeta=null;pairComputedAt=0;updateStarFinder();return true;
   }
 
@@ -411,6 +416,7 @@
     const cs=typeof api.skyCalibrationStatus==='function'?api.skyCalibrationStatus():null;
     if(cal){
       if(cs?.calibrated){const when=cs.calibration?.timestamp?new Date(cs.calibration.timestamp).toLocaleTimeString():'';cal.textContent=`POINTING CALIBRATED · ${cs.calibration?.label||'STAR'}${when?' · '+when:''}`}
+      else if(cs?.stale)cal.textContent='POINTING CALIBRATION STALE · CENTER A KNOWN STAR AND CALIBRATE AGAIN';
       else cal.textContent='POINTING CALIBRATION: NONE · CENTER A KNOWN STAR VISUALLY, THEN CALIBRATE';
     }
     if(!skyLocation){loc.textContent='LOCATION REQUIRED · ALLOW LOCATION';pairEl.textContent='PAIR WAITING';if(cond)cond.textContent='';buttons.innerHTML='';return}
@@ -454,7 +460,7 @@
             ?'COMPASS PERMISSION ERROR · TAP STAR FINDER OFF / ON'
             :webStatus?.absoluteOrientation==='unsupported'&&webStatus?.genericAbsolute==='unsupported'
               ?'ABSOLUTE COMPASS UNAVAILABLE IN THIS BROWSER'
-              :'PHONE TRUE POINTING WAITING';
+              :'PHONE TRUE POINTING WAITING · WMM2025 LOCATION REQUIRED';
       arrow.style.transform='rotate(0deg)';
       if(cue){cue.classList.remove('active','outside','centered');cue.style.removeProperty('--cue-x');cue.style.removeProperty('--cue-y')}
       return

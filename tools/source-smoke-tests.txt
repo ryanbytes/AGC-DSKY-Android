@@ -52,6 +52,7 @@ sextant-tap-mark-smoke.js
 audio-recovery-smoke.js
 cheatsheet-smoke.js
 optics-service-smoke.js
+wmm2025-smoke.js
 optics-lifecycle-smoke.js
 relay-show-smoke.js
 relay-visual-coupling-smoke.js
