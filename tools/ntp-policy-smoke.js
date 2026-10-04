@@ -32,7 +32,7 @@ for(const needle of [
   'Settings.Global.BOOT_COUNT',
   'NtpSyncAge.ageMs(',
   'Math.abs(sample.offsetMs-median)<=2_000L',
-  'status.usingNetworkTime?status.offsetMs:0L',
+  'NtpSyncAge.networkTimeMs(status.lastSyncUtcMs,status.ageMs,wallNow)',
   'requestSyncNow(Context context)',
   'lastAttemptUtcMs',
   'lastAttemptResult',
@@ -40,7 +40,7 @@ for(const needle of [
   'usingNetworkTime',
   'syncInFlight'
 ]) requireText(ntp,needle,'NtpTime');
-for(const needle of ['bootCountAtSync >= 0','bootCountNow == bootCountAtSync','wallNowMs + offsetMs - syncUtcMs'])
+for(const needle of ['bootCountAtSync >= 0','bootCountNow == bootCountAtSync','wallNowMs + offsetMs - syncUtcMs','static long networkTimeMs(long syncUtcMs, long ageMs, long wallNowMs)','syncUtcMs + ageMs'])
   requireText(ntpAge,needle,'NtpSyncAge');
 if(!/for\(Listener listener:LISTENERS\)\{\s*try\{listener\.onNtpStatusChanged\(status\);\}\s*catch\(RuntimeException error\)\{Log\.w\(TAG,"NTP status listener failed",error\);\}\s*\}/.test(ntp))
   fail('one NTP status listener must not prevent sync work or later listener notifications');
@@ -64,7 +64,9 @@ requireText(state,"source:'system'",'shared app state');
 requireText(state,"usingNetworkTime:false",'shared app state');
 requireText(state,"syncInFlight:false",'shared app state');
 
-requireText(shell,"function accurateTime(){return Date.now()+(shellState.ntpStatus.state==='synced'?(Number(shellState.ntpStatus.offsetMs)||0):0)}",'app shell clock');
+requireText(shell,'let networkTimeAnchor=null;','app shell network-time anchor');
+requireText(shell,"function accurateTime(){if(shellState.ntpStatus.state==='synced'&&networkTimeAnchor)return Math.round(networkTimeAnchor.utcMs+(performance.now()-networkTimeAnchor.elapsedMs));",'app shell clock');
+requireText(shell,"const age=Math.max(0,performance.now()-networkTimeAnchor.elapsedMs);",'app shell network-time freshness');
 requireText(shell,'function loadNativeNtpStatus()','app shell native NTP bridge');
 requireText(shell,'function syncBrowserNetworkTime(force=false)','app shell browser network-time fallback');
 requireText(shell,'function requestNetworkTimeSync()','app shell manual network-time sync');

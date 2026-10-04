@@ -88,7 +88,7 @@ public final class NtpTime {
     public static void addListener(Listener listener){if(listener!=null)LISTENERS.addIfAbsent(listener);}
     public static void removeListener(Listener listener){LISTENERS.remove(listener);}
     public static Status status(Context context){return readStatus(context.getApplicationContext());}
-    public static long accurateNow(Context context){Status status=readStatus(context.getApplicationContext());return System.currentTimeMillis()+(status.usingNetworkTime?status.offsetMs:0L);}
+    public static long accurateNow(Context context){Status status=readStatus(context.getApplicationContext());long wallNow=System.currentTimeMillis();return status.usingNetworkTime?NtpSyncAge.networkTimeMs(status.lastSyncUtcMs,status.ageMs,wallNow):wallNow;}
     public static boolean requestSyncNow(Context context){Context app=context.getApplicationContext();start(app);return requestSync(app,"manual");}
 
     private static void registerConnectivity(Context context){

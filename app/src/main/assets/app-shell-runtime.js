@@ -4,6 +4,7 @@
 // AGCDSKY_SHELL service; classic helper bindings remain temporarily available to
 // late presentation/fidelity layers until that separate compatibility pass.
 const shellState=window.AGCDSKY_APP_STATE;
+let networkTimeAnchor=null;
 if(!shellState)throw new Error('Shared application state unavailable');
 const q=new URLSearchParams(location.search);
 shellState.dream=q.get('dream')==='1';
@@ -34,14 +35,14 @@ const BROWSER_TIME_STALE_MS=2*60*60*1000;
 const BROWSER_TIME_REQUEST_TIMEOUT_MS=5000;
 let browserTimeLastAttemptMs=0,browserTimeInFlight=null;
 function hasNativeTimeBridge(){return !!(window.TimeBridge&&typeof TimeBridge.getStatus==='function')}
-function accurateTime(){return Date.now()+(shellState.ntpStatus.state==='synced'?(Number(shellState.ntpStatus.offsetMs)||0):0)}
+function accurateTime(){if(shellState.ntpStatus.state==='synced'&&networkTimeAnchor)return Math.round(networkTimeAnchor.utcMs+(performance.now()-networkTimeAnchor.elapsedMs));return Date.now()+(shellState.ntpStatus.state==='synced'?(Number(shellState.ntpStatus.offsetMs)||0):0)}
 function accurateDate(){return new Date(accurateTime())}
 function clockTimeLabel(){
   if(shellState.ntpStatus.state==='synced')return shellState.ntpStatus.source==='http-date'?'PHONE CLOCK · NETWORK TIME':'PHONE CLOCK · NTP TIME';
   if(shellState.ntpStatus.state==='stale')return hasNativeTimeBridge()?'PHONE CLOCK · ANDROID WALL TIME · NTP STALE':'PHONE CLOCK · BROWSER WALL TIME · NETWORK STALE';
   return hasNativeTimeBridge()?'PHONE CLOCK · ANDROID WALL TIME':'PHONE CLOCK · BROWSER WALL TIME';
 }
-function updateNtpStatus(value){try{const parsed=typeof value==='string'?JSON.parse(value):value;if(parsed&&typeof parsed==='object'){shellState.ntpStatus={...shellState.ntpStatus,...parsed};if(shellState.mode==='clock')$('mode').textContent=clockTimeLabel()}}catch(_){/* malformed bridge data must not affect the DSKY */}}
+function updateNtpStatus(value){try{const parsed=typeof value==='string'?JSON.parse(value):value;if(parsed&&typeof parsed==='object'){shellState.ntpStatus={...shellState.ntpStatus,...parsed};if(parsed.state&&parsed.state!=='synced')networkTimeAnchor=null;else if(parsed.state==='synced'&&Number.isFinite(Number(parsed.lastSyncUtcMs))&&Number(parsed.lastSyncUtcMs)>0&&Number.isFinite(Number(parsed.ageMs))&&Number(parsed.ageMs)>=0)networkTimeAnchor={utcMs:Number(parsed.lastSyncUtcMs)+Number(parsed.ageMs),elapsedMs:performance.now(),source:parsed.source};if(shellState.mode==='clock')$('mode').textContent=clockTimeLabel()}}catch(_){/* malformed bridge data must not affect the DSKY */}}
 function loadNativeNtpStatus(){try{if(hasNativeTimeBridge()){updateNtpStatus(TimeBridge.getStatus());return true}}catch(_){/* native bridge failure falls back to existing/wall time */}return false}
 function browserTimeUrl(){const url=new URL('manifest.webmanifest',location.href);url.searchParams.set('_agcdsky_time',String(Date.now()));return url.toString()}
 async function sampleBrowserNetworkTime(){
@@ -71,8 +72,8 @@ async function sampleBrowserNetworkTime(){
 }
 function refreshBrowserTimeAge(){
   if(shellState.ntpStatus.source!=='http-date'||!shellState.ntpStatus.lastSyncUtcMs)return;
-  const correctedNow=Date.now()+(Number(shellState.ntpStatus.offsetMs)||0);
-  const age=Math.max(0,correctedNow-Number(shellState.ntpStatus.lastSyncUtcMs));
+  if(!networkTimeAnchor||networkTimeAnchor.source!=='http-date')return;
+  const age=Math.max(0,performance.now()-networkTimeAnchor.elapsedMs);
   const state=age>BROWSER_TIME_STALE_MS?'stale':'synced';
   updateNtpStatus({ageMs:age,state,usingNetworkTime:state==='synced'});
 }
