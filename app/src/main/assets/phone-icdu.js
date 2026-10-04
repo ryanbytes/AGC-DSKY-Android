@@ -895,6 +895,8 @@
       magneticRawQ = null;
       magneticReferenceYaw = null;
       magneticYawCorrection = 0;
+      rawNativeSky={seen:false,az:NaN,alt:NaN,accuracy:0,declination:NaN,timestamp:Date.now()};
+      clearSkyPointing('sensor-unavailable');
     }
     updateMagButton();
     updateButton();

@@ -1,3 +1,9 @@
+## 2026-10-04 stale star-pointing sensor-loss audit
+
+The Android/browser magnetic-sensor-unavailable path cleared the quaternions but retained `rawNativeSky` and the last published `skyPointing`. `updateSkyLocation()` can reprocess `rawNativeSky`; a later geolocation refresh could therefore timestamp and publish the last azimuth again after the sensor had stopped. A production-module regression initially failed because the last sky pointing remained marked seen immediately after sensor loss.
+
+Sensor unavailability now clears the raw native heading and immediately publishes a `sensor-unavailable` clear event. Regression coverage checks both immediate clearing and that a subsequent location update cannot revive the old azimuth. Validation: `node --check` and `node tools/pipa-inertial-frame-smoke.js` passed; the canonical `env TZ=UTC bash tools/run-source-smokes.sh` passed 107 Node tests, the NTP shell smoke, and real pinned yaAGC + Comanche055 semantics. Regular and Fire debug APK builds passed `tools/verify-apk.sh`, Android lint passed, and a fresh PWA build passed its smoke and 73-asset parity checks. No Android device/emulator is available for a live sensor-loss run.
+
 ## 2026-10-04 unreliable-orientation star-cue audit
 
 `calibrationStatus()` checked the WMM reference and saved boresight, but ignored the current absolute-orientation sensor status. Android defines `SENSOR_STATUS_UNRELIABLE` (`0`) as sensor readings that cannot be trusted. A saved calibration could therefore continue to produce calibrated confidence labels while the live magnetic orientation was explicitly unreliable, and a new boresight calibration could be saved in that state.
