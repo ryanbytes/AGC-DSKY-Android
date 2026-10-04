@@ -411,6 +411,46 @@ function proveComancheNavigationKeyInterrupt(core, errors) {
     return {input, consumed: true};
 }
 
+function proveComancheFastOpticsInputs(core, errors) {
+    core.reset();
+    core.configureInputMasks();
+    core.step(1000);
+    errors.length = 0;
+
+    // The sextant's tap-to-mark path sends both optical CDU channels before
+    // MARK. Exercise the same fast PCDU sequence used by phone-motion optics
+    // against the real Comanche rope, then require channel 016/KEYRUPT2 to
+    // follow those queued counter packets.
+    const base = core.exports.get_erasable_ptr() >>> 1;
+    const erasable = new Uint16Array(core.memory.buffer);
+    const shaftBefore = erasable[base + 0o36];
+    const trunnionBefore = erasable[base + 0o35];
+    for (let i = 0; i < 12; i++) {
+        assert(core.writeIo(0o236, 0o21) > 0,
+            'Comanche055: fast PCDU shaft packet was rejected');
+        assert(core.writeIo(0o235, 0o23) > 0,
+            'Comanche055: fast MCDU trunnion packet was rejected');
+    }
+
+    assert(core.navKeyPress(0o40),
+        'Comanche055: MARK after fast optical CDU packets was rejected');
+    assert(erasable[base + 0o36] === shaftBefore + 12,
+        'Comanche055: MARK was asserted before the queued shaft CDU counts reached the rope');
+    assert((erasable[base + 0o35] & 0o77777) === ((trunnionBefore - 12) & 0o77777),
+        'Comanche055: MARK was asserted before the queued trunnion CDU counts reached the rope');
+    assert(core.inputChannelBits(0o16, 0o177) === 0o40,
+        'Comanche055: MARK after optical CDU input did not reach NAVKEYIN');
+    assert(core.navKeyRelease(),
+        'Comanche055: MARK after optical CDU input did not release');
+    core.step(1000);
+    assert(errors.length === 0,
+        'Comanche055: real optical CDU/MARK path reported an error');
+    const trunnionAfter = erasable[base + 0o35] & 0o77777;
+    const trunnionDelta = ((trunnionAfter - (trunnionBefore & 0o77777)) & 0o77777);
+    return {shaft:erasable[base + 0o36] - shaftBefore,
+        trunnion:trunnionDelta >= 0o40000 ? trunnionDelta - 0o100000 : trunnionDelta};
+}
+
 function proveProLevelSurvivesInputBackpressure(core) {
     core.reset();
     core.configureInputMasks();
@@ -572,6 +612,7 @@ async function main() {
     const v14n09 = proveV14N09TwoComponentMonitor(core, errors, channelUpdates);
     const v35 = proveV35LightTest(core, errors, channelUpdates);
     const mark = proveComancheNavigationKeyInterrupt(core, errors);
+    const optics = proveComancheFastOpticsInputs(core, errors);
 
     core.reset();
     core.configureInputMasks();
@@ -615,6 +656,7 @@ async function main() {
     console.log(`  P00 precondition relay 11: 0o${v35.p00Relay11.toString(8).padStart(4, '0')}`);
     console.log(`  V35E relay 12 low-11: 0o${v35.relay12.toString(8).padStart(4, '0')} within ${v35.responseSteps} steps`);
     console.log(`  MARK channel 016 / KEYRUPT2: PASS (NAVKEYIN 0o${mark.input.toString(8)}; real request consumed)`);
+    console.log(`  optical CDU PCDU/MCDU fast -> MARK: PASS (shaft +${optics.shaft}; trunnion ${optics.trunnion} before NAVKEYIN)`);
     console.log('  PRO contact: PASS (real Comanche055 observes channel 032 bit 020000 held low and released high)');
     console.log(`  PRO input backpressure: PASS (${backpressurePackets} real queued PIPA increments; release retried after one MCT)`);
     console.log(`  normal-key input backpressure: PASS (${normalKeyBackpressurePackets} real queued PIPA increments; deferred KEYRST prevented a late stuck key)`);

@@ -38,6 +38,8 @@ assert(!source.includes('const COUNTS_PER_DEG = COUNTS_PER_REV / 360'),
 for(const marker of [
   'const SHAFT_COUNTS_PER_DEG = 32768 / 360',
   'const TRUNNION_COUNTS_PER_DEG = 32768 / 90',
+  'const PCDU_FAST = 0o21;',
+  'const MCDU_FAST = 0o23;',
   'shaftOffsetDeg * SHAFT_COUNTS_PER_DEG',
   'trunnionOffsetDeg * TRUNNION_COUNTS_PER_DEG'
 ])assert(tap.includes(marker),`tap-to-mark CDU scale marker missing: ${marker}`);
