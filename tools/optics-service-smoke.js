@@ -3,6 +3,7 @@
 
 const fs=require('fs');
 const path=require('path');
+const vm=require('vm');
 const ROOT=path.resolve(__dirname,'..');
 const ASSETS=path.join(ROOT,'app/src/main/assets');
 const source=fs.readFileSync(path.join(ASSETS,'optics.js'),'utf8');
@@ -21,6 +22,30 @@ assert(source.includes("function comancheMissionSelected(){ return typeof api.ge
   'CM optics must identify the active Comanche mission before sending CM-specific channel inputs');
 assert(source.includes('lat < -90||lat > 90||lon < -180||lon > 180'),
   'saved or geolocation coordinates must be bounded to valid latitude/longitude ranges');
+for(const marker of [
+  'const SKY_LOCATION_MAX_AGE_MS = 300000;',
+  'function skyLocationAgeMs(location=skyLocation,now=Date.now())',
+  'function skyLocationFresh(location=skyLocation,now=Date.now())',
+  'function setSkyLocation(lat,lon,alt=0,accuracy=NaN,timestamp=Date.now())',
+  'setSkyLocation(c.lat,c.lon,c.alt,c.accuracy,c.timestamp)',
+  'p.coords.latitude,p.coords.longitude,p.coords.altitude||0,p.coords.accuracy,p.timestamp',
+  'maximumAge:SKY_LOCATION_MAX_AGE_MS',
+  'if(!cat||!skyLocationFresh())return null',
+  "pairEl.textContent='PAIR WAITING · LOCATION STALE'",
+  "targ.textContent='TARGET WAITING FOR FRESH LOCATION'",
+  "err.textContent='LOCATION STALE · REFRESH STAR FINDER'",
+  "if(!skyLocationFresh()){if(st)st.textContent='SXT · REFRESH LOCATION BEFORE CALIBRATION';return}"
+])assert(source.includes(marker),`star-finder location freshness policy missing: ${marker}`);
+const freshnessStart=source.indexOf('  function skyLocationAgeMs('),freshnessEnd=source.indexOf('  function core()',freshnessStart);
+assert(freshnessStart>=0&&freshnessEnd>freshnessStart,'could not isolate the production location-freshness policy');
+const freshnessContext={Date,Number};
+vm.runInNewContext(`let skyLocation=null;const SKY_LOCATION_MAX_AGE_MS=300000;${source.slice(freshnessStart,freshnessEnd)}globalThis.locationFresh=skyLocationFresh;`,freshnessContext,{filename:'optics.js:location-freshness'});
+const fixedNow=1760000000000;
+assert(freshnessContext.locationFresh({timestamp:fixedNow},fixedNow),'current location must be fresh');
+assert(freshnessContext.locationFresh({timestamp:fixedNow-300000},fixedNow),'location at the geolocation maximum age remains usable');
+assert(!freshnessContext.locationFresh({timestamp:fixedNow-300001},fixedNow),'location older than the geolocation maximum age must be stale');
+assert(!freshnessContext.locationFresh({timestamp:fixedNow+1},fixedNow),'future-dated location must not be treated as fresh');
+assert(!freshnessContext.locationFresh({},fixedNow),'location without a fix timestamp must be stale');
 for(const forbidden of ['api.openSextant =','api.closeSextant =','api.sextantStatus ='])
   assert(!source.includes(forbidden),`optics regained direct public-facade mutation: ${forbidden}`);
 for(const marker of [
@@ -102,4 +127,4 @@ assert(source.includes('function close(){\n    releaseNavContact();'), 'closing 
 assert(source.includes("const tapMark=window.AGCDSKY_SERVICE_REGISTRY.get('AGCDSKY_SEXTANT_TAP_MARK');\n    if(tapMark&&typeof tapMark.cancel==='function')tapMark.cancel();"), 'closing sextant must cancel an in-flight tap-to-mark operation');
 assert(source.includes('if (document.hidden) {\n      releaseNavContact();'), 'backgrounding sextant must release a held navigation contact');
 console.log('optics service smoke: PASS');
-console.log('  explicit sextant service publication, parser order, camera lifecycle, CDU/nav paths, autosave, and status telemetry retained');
+console.log('  explicit sextant service publication, parser order, camera lifecycle, CDU/nav paths, fresh-location gating, autosave, and status telemetry retained');
