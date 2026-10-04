@@ -1,3 +1,9 @@
+## 2026-10-04 DSKY menu viewport regression audit
+
+Rechecked the AUX menu against the reported portrait and landscape clipping using the current `main` assets in WebKit mobile emulation. The actual long-press-to-show-controls then AUX-open path displayed both submenu actions. The menu rectangle remained inside both the controls scrollport and viewport at 320x568, 360x640, 402x681, 568x320, 800x480, and 1280x720 CSS pixels; the controls panel and DSKY also remained centered as a group in landscape. No source defect reproduced, so no layout change was made.
+
+This was browser-emulation evidence, not the owner's Android handset. The local Android-assets server emitted missing `manifest.webmanifest` HTTP 404s because the PWA-only file and native time bridge were not part of that standalone browser fixture; these did not affect layout or menu interaction. Physical safe-area, system-bar, and pixel-level review remain open.
+
 ## 2026-10-04 self-updater latest-release fallback accuracy audit
 
 Found a release-discovery fallback mismatch. The updater used `main/VERSION`, which is an Android build candidate and can be ahead of published releases. Current GitHub state confirms `main/VERSION` is `1.1.65`, while `/releases/latest` is `v1.1.64`; both deterministic `v1.1.65` APK URLs return HTTP 404. During GitHub API failure, the old fallback therefore selected an unpublished candidate and could not offer the actual latest release to older installed clients.
