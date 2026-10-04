@@ -166,7 +166,7 @@
     if (!state || state.cancelled || state.presented) return false;
     state.presented = true;
     keySound(state.button, false);
-    if (state.source === 'pointer') keyHaptic(state.button, false);
+    if (state.source === 'pointer' || state.source === 'accessibility') keyHaptic(state.button, false);
     return true;
   }
 
@@ -375,7 +375,32 @@
   window.addEventListener('pointerup', event => finishPointer(event, false), {capture:true, passive:false});
   window.addEventListener('pointercancel', event => finishPointer(event, true), {capture:true, passive:false});
   window.addEventListener('click', event => {
-    if (!normalButton(event)) return;
+    const button = normalButton(event);
+    if (!button) return;
+    // Native accessibility activation produces a click without the pointer
+    // make/release events that normally own a physical DSKY key. Treat that
+    // completed activation as one contact cycle so VoiceOver/AXPress buttons
+    // remain usable without bypassing channel 015 or the shared KEYRST path.
+    if (event.isTrusted && event.detail === 0 && pointers.size === 0 && !keyboardState) {
+      const accepted = !cycleLatched;
+      if (accepted) cycleLatched = true;
+      const state = {
+        button, source:'accessibility', down:true, accepted, made:false, presented:false, cancelled:false, timer:0
+      };
+      button.classList.add('pressed');
+      makeContact(state);
+      presentContact(state);
+      state.down = false;
+      button.classList.remove('pressed');
+      if (state.made) {
+        const p = personality(button);
+        setTimeout(() => {
+          keySound(button, true);
+          keyHaptic(button, true);
+        }, Math.max(0, Number(p.returnSoundMs) || FALLBACK_RETURN_MS));
+      }
+      assertKeyResetIfReady();
+    }
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
