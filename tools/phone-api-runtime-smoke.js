@@ -31,6 +31,8 @@ assert(phone.includes('const api = Object.create(app);'),'phone-icdu must define
 assert(phone.includes("phoneService.installImplementations(api,'phone-icdu module registration');"),'phone-icdu explicit batch registration missing');
 assert(!phone.includes('const api = window.AGCDSKY;'),'phone-icdu regained direct root-facade alias');
 assert(phone.includes('const e = apolloGimbals(correctedRel, lastEuler);'),'flight IMU path must decompose the corrected attitude continuously with Apollo gimbal geometry');
+assert(phone.includes('const CDU_CHANNEL = [0o200 | 0o32, 0o200 | 0o33, 0o200 | 0o34];'),
+  'Apollo outer/inner/middle gimbal angles must enter the matching CDUX/CDUY/CDUZ counters');
 assert(phone.includes('const CM_PIPA_DV_PER_PULSE = 0.0585;')&&!phone.includes('LM_PIPA_DV_PER_PULSE'),
   'phone PIPA input must use only the CM pulse scale');
 const pipaScaleMatch=phone.match(/function pipaDvPerPulse\([\s\S]*?\n  \}/);
