@@ -1,0 +1,8 @@
+AGC DSKY v1.1.66
+
+- PHONE CLOCK now uses YEAR, MONTH and DAY labels in the original Apollo DSKY label typography and position, with a two-digit year/month/day.
+- Adds a DREAM DATE option for date-labelled clock presentation in Android Dream Mode (defaults off).
+- Normal AGC restores the original PROG, VERB and NOUN labels.
+- Keeps hours, minutes and seconds in the three existing clock registers.
+
+Regular and Fire APKs use the established standalone release signer, not a CI signing identity.
