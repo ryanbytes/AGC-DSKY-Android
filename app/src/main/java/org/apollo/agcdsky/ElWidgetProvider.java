@@ -22,26 +22,25 @@ import android.widget.RemoteViews;
 import java.util.Calendar;
 import java.util.Locale;
 
-public final class ElWidgetProvider extends AppWidgetProvider {
+public class ElWidgetProvider extends AppWidgetProvider {
     private static final String ACTION_TICK="org.apollo.agcdsky.EL_WIDGET_TICK";
     private static final long MINUTE_MS=60_000L;
     private static final int TICK_REQUEST_CODE=21;
-    private static final String WIDGET_PREFS="dsky_widget";
-    private static final String MODE_KEY="mode";
-
-    // The widget cannot access WebView localStorage. Only the interactive app
-    // reports committed CLOCK/AGC transitions; Dream never changes this state.
-    static void setMode(Context context,String mode){
-      if(!"clock".equals(mode)&&!"agc".equals(mode))return;
-      Context app=context.getApplicationContext();
-      android.content.SharedPreferences prefs=app.getSharedPreferences(WIDGET_PREFS,Context.MODE_PRIVATE);
-      if(mode.equals(prefs.getString(MODE_KEY,"clock")))return;
-      prefs.edit().putString(MODE_KEY,mode).apply();
-      AppWidgetManager manager=AppWidgetManager.getInstance(app);
-      int[] ids=manager.getAppWidgetIds(new ComponentName(app,ElWidgetProvider.class));
-      for(int id:ids)updateOne(app,manager,id);
+    // Two independent, fixed-identity Android widget picker entries.
+    // Existing ElWidgetProvider instances remain the classic DSKY clock after upgrade.
+    protected boolean isDateWidget(){return false;}
+    private static int[] widgetIds(Context context,AppWidgetManager manager,Class<?> provider){
+      return manager.getAppWidgetIds(new ComponentName(context,provider));
     }
-    private static boolean clockMode(Context context){return !"agc".equals(context.getSharedPreferences(WIDGET_PREFS,Context.MODE_PRIVATE).getString(MODE_KEY,"clock"));}
+    private static void refreshAll(Context context){
+      AppWidgetManager manager=AppWidgetManager.getInstance(context);
+      int[] classics=widgetIds(context,manager,ElWidgetProvider.class);
+      int[] dates=widgetIds(context,manager,DateElWidgetProvider.class);
+      for(int id:classics)updateOne(context,manager,id,false);
+      for(int id:dates)updateOne(context,manager,id,true);
+      if(classics.length+dates.length>0)scheduleNextMinute(context);
+      else cancelTick(context);
+    }
 
     // MIT/IL SCD 1006315G sheet 2: the active EL face is 2.360 x 4.060 in
     // inside a 2.620 x 4.420-in hardware frame.  Nominal frame insets are
@@ -68,12 +67,18 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       R.drawable.el_sec_55,R.drawable.el_sec_56,R.drawable.el_sec_57,R.drawable.el_sec_58,R.drawable.el_sec_59};
 
     @Override public void onEnabled(Context context){super.onEnabled(context);scheduleNextMinute(context);}
-    @Override public void onDisabled(Context context){cancelTick(context);super.onDisabled(context);}
-    @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){NtpTime.start(context);for(int id:ids)updateOne(context,manager,id);if(ids.length>0)scheduleNextMinute(context);}
-    @Override public void onAppWidgetOptionsChanged(Context context,AppWidgetManager manager,int appWidgetId,Bundle newOptions){super.onAppWidgetOptionsChanged(context,manager,appWidgetId,newOptions);updateOne(context,manager,appWidgetId);}
-    @Override public void onReceive(Context context,Intent intent){super.onReceive(context,intent);String action=intent.getAction();if(!ACTION_TICK.equals(action)&&!Intent.ACTION_TIME_CHANGED.equals(action)&&!Intent.ACTION_TIMEZONE_CHANGED.equals(action)&&!Intent.ACTION_DATE_CHANGED.equals(action)&&!Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))return;AppWidgetManager manager=AppWidgetManager.getInstance(context);int[] ids=manager.getAppWidgetIds(new ComponentName(context,ElWidgetProvider.class));for(int id:ids)updateOne(context,manager,id);if(ids.length>0)scheduleNextMinute(context);else cancelTick(context);}
+    @Override public void onDisabled(Context context){super.onDisabled(context);refreshAll(context);}
+    @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){NtpTime.start(context);for(int id:ids)updateOne(context,manager,id,isDateWidget());if(ids.length>0)scheduleNextMinute(context);}
+    @Override public void onAppWidgetOptionsChanged(Context context,AppWidgetManager manager,int appWidgetId,Bundle newOptions){super.onAppWidgetOptionsChanged(context,manager,appWidgetId,newOptions);updateOne(context,manager,appWidgetId,isDateWidget());}
+    @Override public void onReceive(Context context,Intent intent){
+      super.onReceive(context,intent);
+      String action=intent.getAction();
+      if(ACTION_TICK.equals(action)||Intent.ACTION_TIME_CHANGED.equals(action)
+          ||Intent.ACTION_TIMEZONE_CHANGED.equals(action)||Intent.ACTION_DATE_CHANGED.equals(action)
+          ||Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))refreshAll(context);
+    }
 
-    private static void updateOne(Context context,AppWidgetManager manager,int appWidgetId){
+    private static void updateOne(Context context,AppWidgetManager manager,int appWidgetId,boolean date){
       Bundle options=manager.getAppWidgetOptions(appWidgetId);
       int widthDp=Math.max(80,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,118));
       int heightDp=Math.max(96,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,199));
@@ -83,13 +88,14 @@ public final class ElWidgetProvider extends AppWidgetProvider {
       int panelWidthPx=clamp(Math.round(panelWidthDp*density),1,1200),panelHeightPx=clamp(Math.round(panelHeightDp*density),1,1800);
       Calendar now=Calendar.getInstance();now.setTimeInMillis(NtpTime.accurateNow(context));
       RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.el_widget);
-      boolean clock=clockMode(context);
-      boolean staticFallbackRegisters=clock&&Build.VERSION.SDK_INT<31;
-      views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.render(panelWidthPx,panelHeightPx,now,staticFallbackRegisters,clock));
-      views.setContentDescription(R.id.el_widget_image,clock?"DSKY clock: year, month, day, hours, minutes, seconds":"DSKY AGC mode: hardware labels; live AGC output is not mirrored");
+      boolean staticFallbackRegisters=Build.VERSION.SDK_INT<31;
+      views.setImageViewBitmap(R.id.el_widget_image,ElRenderer.render(panelWidthPx,panelHeightPx,now,staticFallbackRegisters,date));
+      views.setContentDescription(R.id.el_widget_image,date
+          ?"DSKY date clock: year, month, day, hours, minutes, seconds"
+          :"DSKY classic clock: program, verb, noun legends and time registers");
       int[] flippers={R.id.el_hour_flipper,R.id.el_minute_flipper,R.id.el_seconds_flipper};
-      for(int flipper:flippers)views.setViewVisibility(flipper,clock&&Build.VERSION.SDK_INT>=31?View.VISIBLE:View.GONE);
-      if(clock&&Build.VERSION.SDK_INT>=31){
+      for(int flipper:flippers)views.setViewVisibility(flipper,Build.VERSION.SDK_INT>=31?View.VISIBLE:View.GONE);
+      if(Build.VERSION.SDK_INT>=31){
         RemoteViews.RemoteCollectionItems pairFrames=buildFrames(context,60),hourFrames=buildFrames(context,24);
         views.setRemoteAdapter(R.id.el_hour_flipper,hourFrames);
         views.setRemoteAdapter(R.id.el_minute_flipper,pairFrames);
@@ -177,14 +183,14 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         HARDWARE_STROKE_P.setStyle(Paint.Style.STROKE);HARDWARE_STROKE_P.setStrokeWidth(.48f);HARDWARE_STROKE_P.setColor(HARDWARE);HARDWARE_STROKE_P.setAlpha(184);
         HARDWARE_FILL_P.setStyle(Paint.Style.FILL);HARDWARE_FILL_P.setColor(HARDWARE);HARDWARE_FILL_P.setAlpha(224);
       }
-      static Bitmap render(int width,int height,Calendar now,boolean drawRegisters,boolean clock){
+      static Bitmap render(int width,int height,Calendar now,boolean drawRegisters,boolean date){
         width=Math.max(1,width);height=Math.max(1,height);
-        String key=width+"x"+height+(clock?(":date:"+now.get(Calendar.YEAR)+":"+now.get(Calendar.MONTH)+":"+now.get(Calendar.DAY_OF_MONTH)+(drawRegisters?(":"+now.get(Calendar.HOUR_OF_DAY)+":"+now.get(Calendar.MINUTE)+":"+now.get(Calendar.SECOND)):"")):":agc");
+        String key=width+"x"+height+(date?(":date:"+now.get(Calendar.YEAR)+":"+now.get(Calendar.MONTH)+":"+now.get(Calendar.DAY_OF_MONTH)):":classic")+(drawRegisters?(":time:"+now.get(Calendar.HOUR_OF_DAY)+":"+now.get(Calendar.MINUTE)+":"+now.get(Calendar.SECOND)):":animated");
         synchronized(BITMAP_CACHE){Bitmap cached=BITMAP_CACHE.get(key);if(cached!=null&&!cached.isRecycled())return cached;}
-        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(FRAME);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,now,drawRegisters,clock);
+        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);c.drawColor(FRAME);c.scale(width/PANEL_W,height/PANEL_H);drawPanel(c,now,drawRegisters,date);
         synchronized(BITMAP_CACHE){BITMAP_CACHE.put(key,b);}return b;
       }
-      private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters,boolean clock){
+      private static void drawPanel(Canvas c,Calendar now,boolean drawRegisters,boolean date){
         c.drawPath(box(.24f,.24f,PANEL_W-.48f,PANEL_H-.48f),HARDWARE_STROKE_P);
         c.drawPath(box(ACTIVE_X+FRAME_X,ACTIVE_Y,ACTIVE_W-FRAME_X,ACTIVE_H),PANEL_P);
         c.save();
@@ -192,13 +198,13 @@ public final class ElWidgetProvider extends AppWidgetProvider {
         dot(c,53.000f,6.914f,1.294f,1.369f);dot(c,53.000f,43.427f,1.294f,1.369f);dot(c,53.000f,79.949f,1.294f,1.369f);
         dot(c,100.863f,79.949f,1.294f,1.369f);dot(c,100.863f,114.085f,1.294f,1.369f);dot(c,100.863f,148.220f,1.294f,1.369f);
         dot(c,8.286f,148.220f,1.294f,1.369f);dot(c,8.286f,114.085f,1.294f,1.369f);dot(c,8.286f,79.949f,1.294f,1.369f);
-        section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(clock?YEAR_LABEL:PROG_LABEL,LABEL_P);
-        section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(clock?MONTH_LABEL:VERB_LABEL,LABEL_P);
-        section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(clock?DAY_LABEL:NOUN_LABEL,LABEL_P);
-        // COMP ACTY stays printed; only its dormant EL phosphor is absent from the clock state.
+        section(c,66.441f,.554f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(date?YEAR_LABEL:PROG_LABEL,LABEL_P);
+        section(c,0f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(date?MONTH_LABEL:VERB_LABEL,LABEL_P);
+        section(c,66.441f,41.203f,39.525f,11.678f,LEGEND_BG_P);c.drawPath(date?DAY_LABEL:NOUN_LABEL,LABEL_P);
+        // COMP ACTY stays printed; its dormant EL phosphor remains absent in both clock widgets.
         c.drawPath(COMP_LABEL,LABEL_P);c.drawPath(ACTY_LABEL,LABEL_P);
         rule(c,.020841f,78.602f,97.911123f,2.695f);rule(c,9.726333f,112.737f,88.205631f,2.695f);rule(c,9.726333f,146.873f,88.205631f,2.695f);
-        if(clock){digits(c,String.format(Locale.US,"%02d",now.get(Calendar.YEAR)%100),RIGHT_FIELD_X,PROG_Y);digits(c,String.format(Locale.US,"%02d",now.get(Calendar.MONTH)+1),LEFT_FIELD_X,VERB_NOUN_Y);digits(c,String.format(Locale.US,"%02d",now.get(Calendar.DAY_OF_MONTH)),RIGHT_FIELD_X,VERB_NOUN_Y);}
+        if(date){digits(c,String.format(Locale.US,"%02d",now.get(Calendar.YEAR)%100),RIGHT_FIELD_X,PROG_Y);digits(c,String.format(Locale.US,"%02d",now.get(Calendar.MONTH)+1),LEFT_FIELD_X,VERB_NOUN_Y);digits(c,String.format(Locale.US,"%02d",now.get(Calendar.DAY_OF_MONTH)),RIGHT_FIELD_X,VERB_NOUN_Y);}
         if(drawRegisters){register(c,'+',five(now.get(Calendar.HOUR_OF_DAY)),REGISTER_ROW_X,R1_Y);register(c,'+',five(now.get(Calendar.MINUTE)),REGISTER_ROW_X,R2_Y);register(c,'+',five(now.get(Calendar.SECOND)),REGISTER_ROW_X,R3_Y);}
         c.restore();
       }
