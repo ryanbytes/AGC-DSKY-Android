@@ -51,7 +51,14 @@ jobs:
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           MANAGER="$(find "$SDK/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -1)"
           test -x "$MANAGER"
-          "$MANAGER" --sdk_root="$SDK" --install 'platforms;android-37' 'build-tools;36.0.0'
+          "$MANAGER" --sdk_root="$SDK" --install 'build-tools;36.0.0'
+          # API 37 platform was provided as an official archive; sdkmanager's
+          # installed index on the hosted runner does not yet list this package.
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/platform37.zip" 'https://dl.google.com/android/repository/platform-37.0_r01.zip'
+          printf '%s  %s\n' '19bdcf42de0cb0e9500a27da6833fc30cdd49a7ec690aa5cabaa0ef893af9ebe' "$RUNNER_TEMP/platform37.zip" | sha256sum -c -
+          mkdir -p "$SDK/platforms"
+          unzip -q "$RUNNER_TEMP/platform37.zip" -d "$SDK/platforms"
+          mv "$SDK/platforms/android-37.0" "$SDK/platforms/android-37"
       - name: Run canonical source tests
         run: bash tools/run-source-smokes.sh
       - name: Build unsigned Regular and Fire releases
