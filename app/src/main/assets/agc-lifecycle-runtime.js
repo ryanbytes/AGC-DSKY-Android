@@ -38,6 +38,7 @@
   async function enterAgc(){
     if(lifecycleState.dream||lifecycleState.mode==='agc-loading'||lifecycleState.mode==='agc')return;
     lifecycleClock.cancelLampTest();
+    if(typeof lifecycleClock.restoreAgcHeader==='function')lifecycleClock.restoreAgcHeader();
     const selected=lifecycleShell.missionSpec();
     if(lifecycleCore.suspendedForClock&&lifecycleCore.core&&lifecycleCore.loadedMission===lifecycleState.selectedMission){
       lifecycleState.mode='agc';lifecycleCore.suspendedForClock=false;lifecycleShell.rememberRunMode('agc');lifecycleShell.updateModeControl();lifecycleShell.element('mode').textContent=`${selected.label} · ${lifecycleCore.core.version()}`;lifecycleDisplay.renderSnapshot();

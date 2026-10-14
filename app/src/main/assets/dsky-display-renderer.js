@@ -125,9 +125,10 @@
     const panel=document.getElementById('elpanel');if(!panel)return;
     const signText=value=>value==='+'?'plus':value==='-'?'minus':'no sign';
     const registerText=name=>`${signText(accessibleDisplay[name].sign)} ${accessibleCells(accessibleDisplay[name].digits)}`;
+    const dateHeader=panel.getAttribute('data-clock-header')==='date';
     const phrases=[
-      `DSKY electroluminescent display. Program ${accessibleCells(accessibleDisplay.prog)}.`,
-      `Verb ${accessibleCells(accessibleDisplay.verb)}. Noun ${accessibleCells(accessibleDisplay.noun)}.`,
+      `DSKY electroluminescent display. ${dateHeader?'Year':'Program'} ${accessibleCells(accessibleDisplay.prog)}.`,
+      `${dateHeader?'Month':'Verb'} ${accessibleCells(accessibleDisplay.verb)}. ${dateHeader?'Day':'Noun'} ${accessibleCells(accessibleDisplay.noun)}.`,
       `Register 1 ${registerText('r1')}. Register 2 ${registerText('r2')}. Register 3 ${registerText('r3')}.`
     ];
     const classes=document.body&&document.body.classList;

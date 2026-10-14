@@ -66,6 +66,7 @@
 
   async function startDreamAgc() {
     dreamClock.cancelLampTest();
+    if(typeof dreamClock.restoreAgcHeader==='function')dreamClock.restoreAgcHeader();
     dreamClock.stopQueue();
     dreamState.mode = 'dream-agc-loading';
     dreamDisplay.resetFace();

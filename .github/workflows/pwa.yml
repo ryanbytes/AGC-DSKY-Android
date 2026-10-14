@@ -85,7 +85,9 @@ jobs:
         run: node pwa/tools/pwa-auto-dim-smoke.js
 
       - name: Clock mode behavior test
-        run: node tools/clock-mode-behavior-smoke.js
+        run: |
+          node tools/clock-mode-behavior-smoke.js
+          node tools/clock-date-face-smoke.js
 
       - name: Relay show behavior test
         run: node tools/relay-show-smoke.js

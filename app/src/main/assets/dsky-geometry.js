@@ -225,6 +225,9 @@
 
   if(geometryState.mode==='agc'||geometryState.mode==='agc-loading'){
     display.renderSnapshot();
+  }else if(geometryState.mode==='clock'){
+    // Geometry reflow must not overwrite the CLOCK date header with AGC fields.
+    clock.syncFace();
   }else{
     renderer.set2('prog','00');
     shell.show(geometryState.verb,geometryState.noun);
@@ -233,8 +236,8 @@
 
   function restoreClockProg(){
     if(geometryState.mode!=='clock'||clock.lampTestActive())return;
-    const prog=document.getElementById('prog');
-    if(prog)renderer.renderDigits(prog,'00');
+    // Force a header redraw after reflow without reverting YEAR to old PROG 00.
+    clock.syncHeader();
   }
   setTimeout(restoreClockProg,0);
   window.addEventListener('load',restoreClockProg,{once:true});
