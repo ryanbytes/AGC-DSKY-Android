@@ -44,7 +44,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.7.1'
-      - uses: android-actions/setup-android@v3
       - name: Install pinned Android SDK components
         run: sdkmanager --install 'platforms;android-37' 'build-tools;36.0.0'
       - name: Run canonical source tests
