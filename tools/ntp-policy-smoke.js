@@ -92,7 +92,7 @@ for(const [label,text] of [['MainActivity',main],['SensorMainActivity',sensor],[
 }
 requireText(main,'WebViewTeardown.destroy(doomed,"DebugBridge","HapticBridge","TimeBridge","PrintBridge")','MainActivity TimeBridge teardown');
 
-requireText(clock,'function desiredClockDigitsImpl(){const d=clockShell.accurateDate()','phone clock shell-time service');
+requireText(clock,'function desiredClockDigitsImpl(d=clockShell.accurateDate())','phone clock shell-time service');
 requireText(api,'accurateTime:apiShell.accurateTime','public AGCDSKY time facade');
 requireText(api,'ntpStatus:()=>({...apiState.ntpStatus})','public AGCDSKY NTP status facade');
 requireText(api,'nativeNtpStatus:apiShell.updateNtpStatus','public AGCDSKY bridge');
