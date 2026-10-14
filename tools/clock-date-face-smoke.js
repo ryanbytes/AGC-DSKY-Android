@@ -29,6 +29,8 @@ const verify=(expectedLabels,expectedValues,mode)=>{
 };
 clock.syncFace();
 verify(['YEAR','MONTH','DAY'],['26','10','14'],'date');
+values.prog='00';clock.syncHeader();
+assert(values.prog==='26','delayed geometry redraw overwrote YEAR digits');
 assert(clock.digits().r1.join('')==='00013'&&clock.digits().r2.join('')==='00007','time registers changed');
 wall=new Date(2026,10,1,13,7,5);clock.tick();
 verify(['YEAR','MONTH','DAY'],['26','11','01'],'date');
@@ -45,6 +47,7 @@ const lifecycle=read('agc-lifecycle-runtime.js'),geometry=read('dsky-geometry.js
 assert(lifecycle.includes("lifecycleClock.restoreAgcHeader()"),'AGC transition did not restore Apollo labels');
 assert(dreamAgc.includes("dreamClock.restoreAgcHeader()"),'Dream AGC did not restore Apollo labels');
 assert(geometry.includes("clock.syncFace();"),'geometry reflow overwrote date');
+assert(geometry.includes('clock.syncHeader();')&&!geometry.includes("renderer.renderDigits(prog,'00')"),'delayed geometry redraw still resets YEAR to 00');
 assert(shellSource.includes("store.set('dreamDateFace'"),'Dream preference not persisted');
 assert(rendererSource.includes("dateHeader?'Year':'Program'"),'accessible date headings missing');
 console.log('clock date header smoke: PASS (clock/date rollover, Dream on/off, AGC restoration, time registers)');
