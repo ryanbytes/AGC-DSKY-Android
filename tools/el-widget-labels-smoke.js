@@ -25,7 +25,7 @@ for (const label of labels) {
   need(match[1].length > 300, `${label}: vector outline is incomplete`);
   const pair = {PROG:'YEAR',VERB:'MONTH',NOUN:'DAY',YEAR:'PROG',MONTH:'VERB',DAY:'NOUN'}[label];
   const drawn = pair ? source.includes(`c.drawPath(date?${['PROG','VERB','NOUN'].includes(label)?pair:label}_LABEL:${['PROG','VERB','NOUN'].includes(label)?label:pair}_LABEL,LABEL_P)`) : source.includes(`c.drawPath(${label}_LABEL,LABEL_P)`);
-  need(drawn, `${label}: renderer does not draw the correct clock/AGC outline`);
+  need(drawn, `${label}: renderer does not draw the correct date/classic outline`);
   const tokens = match[1].match(/[A-Z]|[-+]?(?:\d*\.\d+|\d+\.?\d*)/g);
   need(tokens && /^[MLCZ]/.test(tokens.join('')), `${label}: malformed SVG path`);
   need(!/[AaHhQqSsTtVv]/.test(match[1]), `${label}: unsupported SVG command in Android path parser input`);
