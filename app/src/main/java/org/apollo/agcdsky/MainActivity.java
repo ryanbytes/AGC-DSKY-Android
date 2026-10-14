@@ -33,6 +33,12 @@ public final class MainActivity extends Activity {
     private static final Uri LOCAL_ASSET_ORIGIN = Uri.parse(NetClient.ASSET_ORIGIN);
     private WebView webView;
     private final NtpTime.Listener ntpListener = status -> pushNtpStatus(status);
+    private final class WidgetBridge {
+        @JavascriptInterface public void setMode(String mode) {
+            // JavaScript bridge callbacks run off the UI thread.
+            runOnUiThread(() -> ElWidgetProvider.setMode(getApplicationContext(), mode));
+        }
+    }
     private final class ChecklistPrintBridge {
         @JavascriptInterface public void printChecklist() {
             runOnUiThread(MainActivity.this::printChecklistNow);
@@ -68,6 +74,7 @@ public final class MainActivity extends Activity {
         webView.addJavascriptInterface(new DebugReporter.JsBridge(this),"DebugBridge");
         webView.addJavascriptInterface(new KeyHapticBridge(webView),"HapticBridge");
         webView.addJavascriptInterface(new TimeBridge(),"TimeBridge");
+        webView.addJavascriptInterface(new WidgetBridge(),"WidgetBridge");
         webView.addJavascriptInterface(new ChecklistPrintBridge(),"PrintBridge");
         webView.setWebViewClient(new NetClient(this));
         webView.setWebChromeClient(new WebChromeClient(){@Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){if(!isLocalAssetOrigin(origin)){callback.invoke(origin,false,false);return;}if(hasLocationPermission()){callback.invoke(origin,true,false);return;}pendingGeoOrigin=origin;pendingGeoCallback=callback;requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},GEO_PERMISSION_REQUEST);}@Override public boolean onConsoleMessage(ConsoleMessage message){if(message!=null&&message.messageLevel()==ConsoleMessage.MessageLevel.ERROR){String text=message.message();if(text==null||!text.startsWith("[yaAGC]"))DebugReporter.appendWebError(MainActivity.this,message.sourceId()+":"+message.lineNumber()+"\n"+String.valueOf(text));}return super.onConsoleMessage(message);}});
@@ -97,6 +104,6 @@ public final class MainActivity extends Activity {
     @Override protected void onResume(){super.onResume();configureWindow();if(webView!=null){webView.onResume();webView.evaluateJavascript(JS_APP_VISIBLE,null);}}
     @Override protected void onPause(){if(webView!=null){webView.evaluateJavascript(JS_APP_HIDDEN,null);webView.onPause();}super.onPause();}
     @Override protected void onSaveInstanceState(Bundle outState){if(webView!=null)webView.saveState(outState);super.onSaveInstanceState(outState);}
-    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","HapticBridge","TimeBridge","PrintBridge");}
+    private void destroyWebView(){WebView doomed=webView;webView=null;WebViewTeardown.destroy(doomed,"DebugBridge","HapticBridge","TimeBridge","PrintBridge","WidgetBridge");}
     @Override protected void onDestroy(){NtpTime.removeListener(ntpListener);DebugReporter.dismissPendingReport(this);pendingWebViewState=null;if(pendingGeoCallback!=null){try{pendingGeoCallback.invoke(pendingGeoOrigin,false,false);}catch(RuntimeException ignored){}}pendingGeoOrigin=null;pendingGeoCallback=null;destroyWebView();super.onDestroy();}
 }
