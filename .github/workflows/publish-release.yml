@@ -1,15 +1,16 @@
-name: Publish signed release payload (v1.1.66 one-shot)
+name: Publish signed release payload
 
 on:
-  push:
-    branches:
-      - 'release-payload/v1.1.66'
-    paths:
-      - '.github/workflows/publish-release.yml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the v prefix (for example 1.1.62)
+        required: true
+        type: string
 
 jobs:
   publish:
-    if: github.ref == 'refs/heads/release-payload/v1.1.66'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -24,7 +25,7 @@ jobs:
       - name: Fetch and verify release payload
         shell: bash
         env:
-          VERSION_NAME: '1.1.66'
+          VERSION_NAME: ${{ inputs.version }}
         run: |
           set -euo pipefail
           [[ "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]] || { echo 'Invalid release version'; exit 1; }
