@@ -73,7 +73,7 @@ req(provider,'ElRenderer.render(panelWidthPx,panelHeightPx,now,staticFallbackReg
 req(provider,'views.setViewVisibility(flipper,Build.VERSION.SDK_INT>=31?View.VISIBLE:View.GONE)','both variants have clock flippers');
 req(provider,'if(Build.VERSION.SDK_INT>=31)','both variants configure live clock adapters');
 req(provider,'String key=width+"x"+height+(date?','date and classic bitmap caches differ');
-req(provider,':"classic")+(drawRegisters?','static clock cache retains time');
+req(provider,':":classic")+(drawRegisters?','static clock cache retains time');
 req(provider,'if(date){digits(c,String.format(Locale.US,"%02d"','upper date applies only to date variant');
 req(shell,"function rememberRunMode(next){if(!shellState.dream)store.set('runMode',next)}",'interactive mode persists independently of home widget identity');
 req(provider,'R.drawable.el_sec_59','generated frame table');
