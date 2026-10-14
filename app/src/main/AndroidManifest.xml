@@ -80,6 +80,7 @@
 
         <receiver
             android:name=".ElWidgetProvider"
+            android:label="@string/el_widget_classic_name"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -91,6 +92,22 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/el_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".DateElWidgetProvider"
+            android:label="@string/el_widget_date_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/el_date_widget_info" />
         </receiver>
 
         <service
