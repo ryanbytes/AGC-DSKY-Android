@@ -67,10 +67,7 @@ req(provider,'if(Build.VERSION.SDK_INT>=31)','both variants configure live clock
 req(provider,'String key=width+"x"+height+(date?','date and classic bitmap caches differ');
 req(provider,':"classic")+(drawRegisters?','static clock cache retains time');
 req(provider,'if(date){digits(c,String.format(Locale.US,"%02d"','upper date applies only to date variant');
-req(activity,'webView.addJavascriptInterface(new WidgetBridge(),"WidgetBridge")','native mode bridge installation');
-req(activity,'WebViewTeardown.destroy(doomed,"DebugBridge","HapticBridge","TimeBridge","PrintBridge","WidgetBridge")','bridge cleanup');
-req(shell,'if(shellState.dream)return;','Dream does not alter saved widget mode');
-req(shell,'WidgetBridge.setMode(next)','mode transition published to native widget');
+req(shell,"function rememberRunMode(next){if(!shellState.dream)store.set('runMode',next)}",'interactive mode persists independently of home widget identity');
 req(provider,'R.drawable.el_sec_59','generated frame table');
 req(provider,'pairFrames=buildFrames(context,60)','60-frame adapter');
 req(provider,'hourFrames=buildFrames(context,24)','24-frame adapter');
