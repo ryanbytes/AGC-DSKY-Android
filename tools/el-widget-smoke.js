@@ -40,6 +40,14 @@ req(provider,'widgetIds(context,manager,DateElWidgetProvider.class)','shared tic
 req(provider,'widgetIds(context,manager,ElWidgetProvider.class)','shared tick discovers classic widgets');
 req(provider,'for(int id:classics)updateOne(context,manager,id,false);','classic instances retain original lettering');
 req(provider,'for(int id:dates)updateOne(context,manager,id,true);','date instances use date lettering');
+req(provider,'for(int id:ids)updateOne(context,manager,id,isDateWidget());','per-receiver widget update uses fixed variant');
+req(provider,'updateOne(context,manager,appWidgetId,isDateWidget());','resize uses fixed variant');
+req(provider,'@Override public void onDisabled(Context context){super.onDisabled(context);refreshAll(context);}','removing one widget does not stop surviving variant');
+req(provider,'Intent tick=new Intent(context,ElWidgetProvider.class).setAction(ACTION_TICK)','shared timer targets classic receiver, which refreshes both');
+req(provider,'if(ACTION_TICK.equals(action)||Intent.ACTION_TIME_CHANGED.equals(action)','tick updates both types');
+req(provider,'String key=width+"x"+height+(date?','variant-aware native bitmap cache');
+req(provider,'views.setContentDescription(R.id.el_widget_image,date','variant-specific accessibility descriptions');
+
 req(provider,'if(classics.length+dates.length>0)scheduleNextMinute(context);','timer stays alive until both variants removed');
 req(dateInfo,'android:initialLayout="@layout/el_widget"','date widget shares EL layout');
 req(dateInfo,'android:widgetCategory="home_screen"','date widget picker category');
