@@ -150,7 +150,15 @@ function refreshNetworkTimeOnVisibility(visible){
 
 function missionSpec(){return MISSION}
 function applyMissionButton(){document.body.classList.add('spacecraft-cm')}
-function rememberRunMode(next){if(!shellState.dream)store.set('runMode',next)}
+function rememberRunMode(next){
+  if(shellState.dream)return;
+  store.set('runMode',next);
+  // Native widgets cannot read WebView localStorage. Publish only committed
+  // CLOCK/AGC states; never publish AGC-loading, relay-test, or Dream states.
+  if((next==='clock'||next==='agc')&&window.WidgetBridge&&typeof WidgetBridge.setMode==='function'){
+    try{WidgetBridge.setMode(next)}catch(error){console.warn('Widget mode sync failed',error)}
+  }
+}
 function updateModeButton(){
   const b=$('mode-toggle');if(!b)return;
   const mode=String(shellState.mode||'clock');
