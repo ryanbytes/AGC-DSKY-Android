@@ -185,6 +185,9 @@ manifest_tree="$($AAPT2 dump xmltree --file AndroidManifest.xml "$APK")"
 grep -Fq '="org.apollo.agcdsky.ElWidgetProvider"' <<<"$manifest_tree" \
   || grep -Fq '=".ElWidgetProvider"' <<<"$manifest_tree" \
   || fail "merged manifest is missing ElWidgetProvider receiver"
+grep -Fq '="org.apollo.agcdsky.DateElWidgetProvider"' <<<"$manifest_tree" \
+  || grep -Fq '=".DateElWidgetProvider"' <<<"$manifest_tree" \
+  || fail "merged manifest is missing DateElWidgetProvider receiver"
 grep -Fq 'android.appwidget.action.APPWIDGET_UPDATE' <<<"$manifest_tree" \
   || fail "merged manifest is missing APPWIDGET_UPDATE action"
 grep -Fq 'android.appwidget.provider' <<<"$manifest_tree" \
@@ -254,6 +257,8 @@ grep -Eq 'resource 0x[0-9a-f]+ layout/el_widget' <<<"$resources" \
   || fail "APK resource table is missing layout/el_widget"
 grep -Eq 'resource 0x[0-9a-f]+ xml/el_widget_info' <<<"$resources" \
   || fail "APK resource table is missing xml/el_widget_info"
+grep -Eq 'resource 0x[0-9a-f]+ xml/el_date_widget_info' <<<"$resources" \
+  || fail "APK resource table is missing xml/el_date_widget_info"
 
 DEXDUMP="$(find_verifier_tool dexdump || true)"
 [[ -n "$DEXDUMP" ]] \
@@ -261,6 +266,8 @@ DEXDUMP="$(find_verifier_tool dexdump || true)"
 dexdump_output="$("$DEXDUMP" -f "$APK" 2>/dev/null)"
 grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/ElWidgetProvider;'" <<<"$dexdump_output" \
   || fail "APK dex is missing ElWidgetProvider class"
+grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/DateElWidgetProvider;'" <<<"$dexdump_output" \
+  || fail "APK dex is missing DateElWidgetProvider class"
 grep -Fq "Class descriptor  : 'Lorg/apollo/agcdsky/SensorMainActivity;'" <<<"$dexdump_output" \
   || fail "APK dex is missing SensorMainActivity class"
 if [[ "$VARIANT" == fire ]]; then
@@ -284,7 +291,7 @@ printf '  APK is debuggable for the ADB smoke/report workflow\n'
 printf '  pinned yaAGC/WASM + Comanche 055 rope match exact Git blobs; LM rope absent\n'
 printf '  index.html and every referenced frontend asset match the current checkout byte-for-byte\n'
 printf '  SensorMainActivity has packaged MAIN/LAUNCHER and MAIN/HOME/DEFAULT handling\n'
-printf '  SensorMainActivity and EL AppWidget classes/resources are packaged\n'
+printf '  SensorMainActivity and both independent EL AppWidget classes/resources are packaged\n'
 if [[ "$VARIANT" == fire ]]; then
   printf '  same-package Fire accessibility redirect and boot receiver are packaged\n'
 else
