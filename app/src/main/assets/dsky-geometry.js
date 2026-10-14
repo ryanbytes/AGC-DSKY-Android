@@ -225,6 +225,9 @@
 
   if(geometryState.mode==='agc'||geometryState.mode==='agc-loading'){
     display.renderSnapshot();
+  }else if(geometryState.mode==='clock'){
+    // Geometry reflow must not overwrite the CLOCK date header with AGC fields.
+    clock.syncFace();
   }else{
     renderer.set2('prog','00');
     shell.show(geometryState.verb,geometryState.noun);

@@ -33,6 +33,7 @@ app-visibility-pro-smoke.js
 phone-api-runtime-smoke.js
 display-runtime-smoke.js
 phone-clock-runtime-smoke.js
+clock-date-face-smoke.js
 agc-display-runtime-smoke.js
 agc-snapshot-runtime-smoke.js
 agc-lifecycle-runtime-smoke.js

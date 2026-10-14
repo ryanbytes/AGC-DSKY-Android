@@ -19,6 +19,7 @@
   let clockDigitsValue={r1:['0','0','0','0','0'],r2:['0','0','0','0','0'],r3:['0','0','0','0','0']};
   let clockRelayWordsValue={},relayQueueValue=[],relayBusyValue=false;
   let relayQueueGenerationValue=0;
+  let lastClockHeader='';
   let lampTestActiveValue=false,lampTestTimerValue=0;
   const DIGIT_RELAY_VALUE={' ':0,'0':21,'1':3,'2':25,'3':27,'4':15,'5':30,'6':28,'7':19,'8':29,'9':31};
   const CLOCK_GROUPS_VALUE=[
@@ -60,7 +61,36 @@
   }
 
   function pad(n,len){return String(n).padStart(len,'0').slice(-len)}
-  function desiredClockDigitsImpl(){const d=clockShell.accurateDate();return {r1:pad(d.getHours(),5).split(''),r2:pad(d.getMinutes(),5).split(''),r3:pad(d.getSeconds(),5).split('')}}
+  function desiredClockDigitsImpl(d=clockShell.accurateDate()){return {r1:pad(d.getHours(),5).split(''),r2:pad(d.getMinutes(),5).split(''),r3:pad(d.getSeconds(),5).split('')}}
+  // The date header is synthetic CLOCK artwork. Never modify the Apollo labels
+  // or their underlying typeface/geometry in real AGC mode.
+  function baseSyncClockHeader(date=clockShell.accurateDate()){
+    if(clockState.mode!=='clock')return;
+    const dateFace=!clockState.dream||!!(clockShell.store&&clockShell.store.get('dreamDateFace')==='1');
+    const labels=dateFace?['YEAR','MONTH','DAY']:['PROG','VERB','NOUN'];
+    const values=dateFace?[pad(date.getFullYear(),2),pad(date.getMonth()+1,2),pad(date.getDate(),2)]:['00','16','65'];
+    const key=(dateFace?'date:':'legacy:')+values.join(':');
+    if(key===lastClockHeader)return;
+    const find=typeof document.getElementById==='function'?id=>document.getElementById(id):()=>null;
+    const panel=find('elpanel');
+    if(panel)panel.setAttribute('data-clock-header',dateFace?'date':'legacy');
+    for(let i=0;i<3;i++){
+      const field=['prog','verb','noun'][i],legend=find(field+'-label');
+      if(legend)legend.textContent=labels[i];
+      clockRenderer.set2(field,values[i]);
+    }
+    lastClockHeader=key;
+  }
+  function baseRestoreAgcHeader(){
+    lastClockHeader='';
+    if(typeof document.getElementById!=='function')return;
+    const panel=document.getElementById('elpanel');
+    if(panel)panel.removeAttribute('data-clock-header');
+    for(const [field,label] of [['prog','PROG'],['verb','VERB'],['noun','NOUN']]){
+      const node=document.getElementById(field+'-label');
+      if(node)node.textContent=label;
+    }
+  }
   function baseRenderClockReg(name){clockRenderer.setReg(name,'+',clockDigitsValue[name].join(''))}
   function clockWordImpl(group,want){
     let c=0,d=0;
@@ -70,7 +100,9 @@
   }
   function popcount11Impl(v){v&=0x7ff;let n=0;while(v){v&=v-1;n++}return n}
   function baseSyncClockFace(){
-    const want=desiredClockDigitsImpl();
+    const date=clockShell.accurateDate();
+    baseSyncClockHeader(date);
+    const want=desiredClockDigitsImpl(date);
     for(const name of ['r1','r2','r3'])clockDigitsValue[name]=want[name].slice();
     for(const group of CLOCK_GROUPS_VALUE)clockRelayWordsValue[group.relay]=clockWordImpl(group,want);
     ['r1','r2','r3'].forEach(name=>renderRegSlot.get()(name));
@@ -93,8 +125,11 @@
     setTimeout(()=>{if(generation===relayQueueGenerationValue)runQueueSlot.get()()},CLOCK_RELAY_MS);
   }
   function baseTick(){
-    if(clockState.mode!=='clock'||lampTestActiveValue||relayBusyValue)return;
-    const want=desiredClockDigitsImpl(),jobs=[];
+    if(clockState.mode!=='clock'||lampTestActiveValue)return;
+    const date=clockShell.accurateDate();
+    baseSyncClockHeader(date);
+    if(relayBusyValue)return;
+    const want=desiredClockDigitsImpl(date),jobs=[];
     for(const group of CLOCK_GROUPS_VALUE){const w=clockWordImpl(group,want);if(clockRelayWordsValue[group.relay]!==w)jobs.push({group,want,newWord:w})}
     if(!jobs.length)return;
     relayQueueValue=jobs;relayBusyValue=true;runQueueSlot.get()();
@@ -176,6 +211,8 @@
   window.AGCDSKY_CLOCK=Object.freeze({
     tick:(...args)=>tickSlot.get()(...args),
     syncFace:(...args)=>syncSlot.get()(...args),
+    syncHeader:baseSyncClockHeader,
+    restoreAgcHeader:baseRestoreAgcHeader,
     stopQueue:(...args)=>stopSlot.get()(...args),
     runQueue:(...args)=>runQueueSlot.get()(...args),
     cancelLampTest:(...args)=>cancelSlot.get()(...args),

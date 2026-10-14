@@ -168,6 +168,12 @@ function updateDreamOptionVisibility(){
   const b=$('dreambright');if(!b)return;
   b.hidden=!(window.TimeBridge&&!shellState.dream);
 }
+function updateDreamDateButton(){
+  const b=$('dreamdate');if(!b)return;
+  const enabled=store.get('dreamDateFace')==='1';
+  b.textContent=enabled?'ON':'OFF';
+  b.setAttribute('aria-pressed',enabled?'true':'false');
+}
 let updateButtonHeld=false,lastUpdateStatus='CHECK FOR UPDATE';
 function renderUpdateStatus(){
   const b=$('update'),talkback=$('update-talkback');if(!b||!talkback)return;
@@ -187,7 +193,7 @@ function nativeUpdateStatus(value){
 }
 function showControls(){
   if(shellState.dream||shellState.displayOnly)return;
-  updateModeButton();updateHapticsButton();updateDreamOptionVisibility();
+  updateModeButton();updateHapticsButton();updateDreamOptionVisibility();updateDreamDateButton();
   document.body.classList.add('controls-visible');
 }
 function hideControls(){document.body.classList.remove('controls-visible')}
@@ -256,6 +262,11 @@ function initializeAppShell(api,services){
   addEventListener('pagehide',()=>{const core=shellCore();if(shellState.mode==='agc'&&core){core.stop();api.saveAgcState('page hide')}});
   $('dim').addEventListener('click',()=>{shellState.dim=!shellState.dim;environment.applyDim();showControls()});
   $('dreambright').addEventListener('click',()=>{environment.cycleDreamMode();showControls()});
+  const dreamDateButton=$('dreamdate');
+  if(dreamDateButton)dreamDateButton.addEventListener('click',()=>{
+    store.set('dreamDateFace',store.get('dreamDateFace')==='1'?'0':'1');
+    updateDreamDateButton();showControls();
+  });
   $('sound').addEventListener('click',()=>{shellState.tickSound=!shellState.tickSound;audio.applySetting();if(shellState.tickSound)requestRelayAudioStart(true);showControls()});
   const hapticsButton=$('haptics');if(hapticsButton)hapticsButton.addEventListener('click',()=>{shellState.relayHaptics=!shellState.relayHaptics;store.set('relayHapticsV1',shellState.relayHaptics?'1':'0');updateHapticsButton();showControls()});
   $('display').addEventListener('click',()=>{shellState.displayOnly=true;environment.applyDisplayOnly()});
@@ -292,7 +303,7 @@ function initializeAppShell(api,services){
     document.body.classList.add('first-run');
     setTimeout(()=>{document.body.classList.remove('first-run');store.set('optionsHintV1','1')},4500);
   }
-  updateModeButton();updateHapticsButton();updateDreamOptionVisibility();refreshTimeStatus();environment.applyDim();environment.applyDreamMode();environment.applyDisplayOnly();audio.applySetting();applyMissionButton();renderer.clearLamps();renderer.set2('prog','00');show(shellState.verb,shellState.noun);clock.syncFace();
+  updateModeButton();updateHapticsButton();updateDreamOptionVisibility();updateDreamDateButton();refreshTimeStatus();environment.applyDim();environment.applyDreamMode();environment.applyDisplayOnly();audio.applySetting();applyMissionButton();renderer.clearLamps();renderer.set2('prog','00');show(shellState.verb,shellState.noun);clock.syncFace();
   setInterval(clock.tick,20);
   setInterval(refreshTimeStatus,60000);
   addEventListener('online',()=>{browserTimeLastAttemptMs=0;void syncBrowserNetworkTime(true)},{passive:true});
