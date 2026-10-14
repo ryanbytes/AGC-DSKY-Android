@@ -236,8 +236,8 @@
 
   function restoreClockProg(){
     if(geometryState.mode!=='clock'||clock.lampTestActive())return;
-    const prog=document.getElementById('prog');
-    if(prog)renderer.renderDigits(prog,'00');
+    // Force a header redraw after reflow without reverting YEAR to old PROG 00.
+    clock.syncHeader();
   }
   setTimeout(restoreClockProg,0);
   window.addEventListener('load',restoreClockProg,{once:true});

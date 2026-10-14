@@ -211,7 +211,7 @@
   window.AGCDSKY_CLOCK=Object.freeze({
     tick:(...args)=>tickSlot.get()(...args),
     syncFace:(...args)=>syncSlot.get()(...args),
-    syncHeader:baseSyncClockHeader,
+    syncHeader:(...args)=>{lastClockHeader='';return baseSyncClockHeader(...args)},
     restoreAgcHeader:baseRestoreAgcHeader,
     stopQueue:(...args)=>stopSlot.get()(...args),
     runQueue:(...args)=>runQueueSlot.get()(...args),
