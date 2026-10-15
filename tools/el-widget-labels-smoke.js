@@ -6,12 +6,15 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const source = fs.readFileSync(path.resolve(__dirname, '../app/src/main/java/org/apollo/agcdsky/ElWidgetProvider.java'), 'utf8');
 function need(condition, message) { if (!condition) throw new Error(message); }
-const labels = ['PROG', 'VERB', 'NOUN', 'COMP', 'ACTY'];
+const labels = ['PROG', 'VERB', 'NOUN', 'YEAR', 'MONTH', 'DAY', 'COMP', 'ACTY'];
 const labelPaths = {};
 const bounds = {
   PROG: [66.441, 0.554, 105.966, 12.232],
+  YEAR: [66.441, 0.554, 105.966, 12.232],
   VERB: [0, 41.203, 39.525, 52.881],
+  MONTH: [0, 41.203, 39.525, 52.881],
   NOUN: [66.441, 41.203, 105.966, 52.881],
+  DAY: [66.441, 41.203, 105.966, 52.881],
   COMP: [0, 0.633, 39.525, 36.471],
   ACTY: [0, 0.633, 39.525, 36.471],
 };
@@ -20,7 +23,9 @@ for (const label of labels) {
   need(match, `${label}: fixed vector outline missing`);
   labelPaths[label] = match[1];
   need(match[1].length > 300, `${label}: vector outline is incomplete`);
-  need(source.includes(`c.drawPath(${label}_LABEL,LABEL_P)`), `${label}: renderer does not draw fixed outline`);
+  const pair = {PROG:'YEAR',VERB:'MONTH',NOUN:'DAY',YEAR:'PROG',MONTH:'VERB',DAY:'NOUN'}[label];
+  const drawn = pair ? source.includes(`c.drawPath(date?${['PROG','VERB','NOUN'].includes(label)?pair:label}_LABEL:${['PROG','VERB','NOUN'].includes(label)?label:pair}_LABEL,LABEL_P)`) : source.includes(`c.drawPath(${label}_LABEL,LABEL_P)`);
+  need(drawn, `${label}: renderer does not draw the correct date/classic outline`);
   const tokens = match[1].match(/[A-Z]|[-+]?(?:\d*\.\d+|\d+\.?\d*)/g);
   need(tokens && /^[MLCZ]/.test(tokens.join('')), `${label}: malformed SVG path`);
   need(!/[AaHhQqSsTtVv]/.test(match[1]), `${label}: unsupported SVG command in Android path parser input`);
@@ -55,4 +60,4 @@ try {
 need(!/Typeface|drawText\s*\(/.test(source), 'runtime font or text draw remains in widget renderer');
 need(source.includes('private static Path labelPath(String d)'), 'Android widget label path adapter is missing');
 console.log('EL widget static label outline smoke: PASS');
-console.log('  fixed filled paths for PROG, VERB, NOUN, COMP, ACTY; no runtime font or text rendering');
+console.log('  fixed filled paths for PROG/VERB/NOUN, YEAR/MONTH/DAY, COMP/ACTY; real Java parser, legend bounds, no runtime fonts');

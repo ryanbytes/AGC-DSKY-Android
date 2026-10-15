@@ -89,6 +89,31 @@ app/build/outputs/apk/regular/debug/app-regular-debug.apk
 app/build/outputs/apk/fire/debug/app-fire-debug.apk
 ```
 
+## Two independent EL home-screen widgets
+
+Android's widget picker exposes two independently installable providers. `ElWidgetProvider`
+retains the original component identity, so widgets already installed before
+v1.1.67 become **DSKY Classic Clock** automatically. `DateElWidgetProvider`
+provides **DSKY Date Clock** separately. Both use the same SCD-derived
+EL drawing geometry and hour/minute/second register flippers.
+
+- **Classic:** original PROG / VERB / NOUN lettering with blank upper
+  numerical electrodes; clock runs in R1/R2/R3 as HH/MM/SS.
+- **Date:** YEAR / MONTH / DAY lettering and two-digit YY/MM/DD in upper
+  electrodes; clock runs in R1/R2/R3 as HH/MM/SS.
+- The two widgets can coexist, be resized independently, and do **not**
+  change when the in-app AGC/CLOCK mode changes or when DreamService runs.
+- Both variants share a non-wakeup minute tick; removing either variant
+  cannot cancel the scheduler while the other variant remains installed.
+- Run `node tools/el-widget-smoke.js` and
+  `node tools/el-widget-labels-smoke.js`. The latter uses the production
+  Java SVG parser, not a mock.
+
+Device acceptance requires opening the launcher widget picker and observing
+both names, placing both simultaneously, checking rollover of YY/MM/DD and
+HH/MM/SS, resizing both, switching app mode, removing each independently,
+and updating from an existing single-widget installation.
+
 ## EL home-screen widget source invariant
 
 `tools/el-widget-smoke.js` treats the owner's widget requirement as a build policy, not a visual suggestion. The home-screen widget must be the EL readout itself.

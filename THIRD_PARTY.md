@@ -37,6 +37,15 @@ The numeric-segment contours used by the WebView DSKY and native EL-only widget 
 
 The derived path data is adapted from the STEP model; the original model is not bundled. Earlier revisions used Ben Krasnow's `DSKY_EL_replica` (`graphics/DSKY V2.svg`), but its numeric contours were replaced by the drawing-backed STEP transcription and are no longer used by either current renderer.
 
+## Synthetic CLOCK date-label vector outlines
+
+The Android EL widget's YEAR/MONTH/DAY legends are static outline paths generated from League Spartan Medium; this is the same geometric-sans source family documented for the widget's original PROG/VERB/NOUN paths. The source is not a historic Apollo legend font: MIT/IL SCD 1006315G specifies Futura Demibold. No font file is packaged or rendered dynamically.
+
+- Source project: https://github.com/theleagueof/league-spartan
+- Source font: `fonts/ttf/LeagueSpartan-Medium.ttf`, Git blob `746206a2dd78020ac95a34480417f58eb27c9abf`
+- License: SIL Open Font License 1.1 (https://openfontlicense.org/)
+- Derived outline placement: same SCD header legend rectangles and lettering heights as the existing widget paths.
+
 ## Gorton Condensed annunciator vector outlines
 
 - Project: https://github.com/ehdorrii/dsky-fonts
