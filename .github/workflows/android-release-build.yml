@@ -72,13 +72,13 @@ jobs:
           for variant in regular fire; do
             apk="app/build/outputs/apk/${variant}/release/app-${variant}-release-unsigned.apk"
             test -s "$apk"
-            "$BT/aapt2" dump badging "$apk" | grep "package: name='org.apollo.agcdsky' versionCode='2026101401' versionName='1.1.66'"
+            "$BT/aapt2" dump badging "$apk" | grep "package: name='org.apollo.agcdsky' versionCode='2026101402' versionName='1.1.67'"
             sha256sum "$apk"
           done
           printf '%s\n' "${GITHUB_SHA}" > app/build/outputs/apk/source-commit.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: AGC-DSKY-1.1.66-unsigned
+          name: AGC-DSKY-1.1.67-unsigned
           path: |
             app/build/outputs/apk/regular/release/app-regular-release-unsigned.apk
             app/build/outputs/apk/fire/release/app-fire-release-unsigned.apk
