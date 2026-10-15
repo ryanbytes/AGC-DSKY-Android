@@ -1,0 +1,8 @@
+AGC DSKY v1.1.67
+
+- Adds two separate Android home widgets: DSKY Classic Clock and DSKY Date Clock.
+- Existing widgets retain their provider and become Classic DSKY Clock.
+- Classic shows PROG / VERB / NOUN with HH/MM/SS registers.
+- Date shows YEAR / MONTH / DAY with YY/MM/DD and HH/MM/SS registers.
+- Both widgets run independently of the app mode and Dream mode.
+- Original standalone-signed Regular and Fire APK payloads; physical device widgets not yet tested.
